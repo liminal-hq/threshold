@@ -1,0 +1,27 @@
+:root {
+  /* Canadian Cool Palette */
+  --ion-color-primary: #002244; /* Deep Night Blue */
+  --ion-color-primary-rgb: 0, 34, 68;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #001e3c;
+  --ion-color-primary-tint: #1a3857;
+
+  --ion-color-secondary: #FF4F00; /* Vibrant Orange (International Safety Orange / Autumn Leaf) */
+  --ion-color-secondary-rgb: 255, 79, 0;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #e04600;
+  --ion-color-secondary-tint: #ff611a;
+
+  /* App Backgrounds */
+  --ion-background-color: #f4f5f8;
+  --ion-text-color: #1a1a1a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ion-background-color: #121212;
+    --ion-text-color: #f4f5f8;
+  }
+}
