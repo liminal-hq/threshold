@@ -1,5 +1,5 @@
 {
-  "name": "Liminal Notes Dev",
+  "name": "Window Alarm",
   "dockerFile": "Dockerfile",
   "workspaceFolder": "/workspaces/window-alarm",
   "forwardPorts": [5173, 1420],

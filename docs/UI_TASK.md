@@ -1,7 +1,7 @@
 # UI Implementation Task: Window Alarm
 
 ## Overview
-The goal is to build a minimalist, mobile-first UI using **React** and **Ionic Framework** that matches the provided prototypes and functional requirements. The design should be clean, accessible, and follow Canadian spelling conventions.
+The goal is to build a minimalist, mobile-first UI using **React** and **Ionic Framework** that matches the provided prototypes and functional requirements. The design should be clean and accessible.
 
 ## Global Theme
 - **Framework:** Ionic React (`@ionic/react`).

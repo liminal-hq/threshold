@@ -3,23 +3,21 @@ import { IonItem, IonLabel, IonNote, IonToggle, IonItemSliding, IonItemOptions, 
 import { trash } from 'ionicons/icons';
 import { Alarm } from '../services/DatabaseService';
 import { format } from 'date-fns';
+import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 
 interface AlarmItemProps {
   alarm: Alarm;
+  is24h: boolean;
   onToggle: (enabled: boolean) => void;
   onDelete: () => void;
   onClick: () => void;
 }
 
-export const AlarmItem: React.FC<AlarmItemProps> = ({ alarm, onToggle, onDelete, onClick }) => {
+export const AlarmItem: React.FC<AlarmItemProps> = ({ alarm, is24h, onToggle, onDelete, onClick }) => {
 
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return '--:--';
-    // Check if it's 24h string HH:mm
-    const [h, m] = timeStr.split(':');
-    const date = new Date();
-    date.setHours(parseInt(h), parseInt(m));
-    return format(date, 'h:mm a');
+    return TimeFormatHelper.formatTimeString(timeStr, is24h);
   };
 
   const timeDisplay = alarm.mode === 'FIXED'
@@ -27,15 +25,21 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({ alarm, onToggle, onDelete,
     : `${formatTime(alarm.windowStart)} - ${formatTime(alarm.windowEnd)}`;
 
   const nextTriggerDisplay = alarm.enabled && alarm.nextTrigger
-    ? `Next: ${format(new Date(alarm.nextTrigger), 'EEE h:mm a')}`
+    ? `Next: ${TimeFormatHelper.format(alarm.nextTrigger, is24h)}` // We might want Day name here too
     : 'Disabled';
+
+  // Enhanced Next Trigger with day
+  const nextTriggerDetailed = alarm.enabled && alarm.nextTrigger
+    ? `Next: ${format(new Date(alarm.nextTrigger), 'EEE')} ${TimeFormatHelper.format(alarm.nextTrigger, is24h)}`
+    : 'Disabled';
+
 
   return (
     <IonItemSliding>
       <IonItem button onClick={onClick} detail={false}>
         <IonLabel>
           <h2>{timeDisplay}</h2>
-          <p>{alarm.label || 'Alarm'} • <IonNote>{nextTriggerDisplay}</IonNote></p>
+          <p>{alarm.label || 'Alarm'} • <IonNote>{nextTriggerDetailed}</IonNote></p>
         </IonLabel>
         <IonToggle
           slot="end"

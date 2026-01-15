@@ -10,4 +10,10 @@ This is the native Android implementation for the Alarm Manager plugin.
 
 ## Permissions
 
-Uses `SCHEDULE_EXACT_ALARM` and `USE_EXACT_ALARM` to ensure reliability.
+This library requires the following permissions to ensure the alarm wakes the device reliably:
+
+- `SCHEDULE_EXACT_ALARM` (Android 12+): Allows the app to schedule precise alarms.
+- `USE_EXACT_ALARM` (Android 13+): Declares the app as an alarm clock/timer app which requires exact timing.
+- `WAKE_LOCK`: Keeps the CPU running while the alarm is processing.
+- `RECEIVE_BOOT_COMPLETED`: allows the app to reschedule alarms after a reboot.
+- `POST_NOTIFICATIONS` (Android 13+): Required to show the full-screen alarm notification.

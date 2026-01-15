@@ -1,27 +1,59 @@
-:root {
-  /* Canadian Cool Palette */
-  --ion-color-primary: #002244; /* Deep Night Blue */
+/* Default Theme (Deep Night) */
+body.theme-deep-night {
+  --ion-color-primary: #002244;
   --ion-color-primary-rgb: 0, 34, 68;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
   --ion-color-primary-shade: #001e3c;
   --ion-color-primary-tint: #1a3857;
 
-  --ion-color-secondary: #FF4F00; /* Vibrant Orange (International Safety Orange / Autumn Leaf) */
+  --ion-color-secondary: #FF4F00;
   --ion-color-secondary-rgb: 255, 79, 0;
   --ion-color-secondary-contrast: #ffffff;
   --ion-color-secondary-contrast-rgb: 255, 255, 255;
   --ion-color-secondary-shade: #e04600;
   --ion-color-secondary-tint: #ff611a;
 
-  /* App Backgrounds */
   --ion-background-color: #f4f5f8;
   --ion-text-color: #1a1a1a;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  body.theme-deep-night {
     --ion-background-color: #121212;
     --ion-text-color: #f4f5f8;
+  }
+}
+
+/* Canadian Cottage Winter (HSL) */
+body.theme-canadian-cottage {
+  /* Warm Beige / Red / Blue-Grey */
+
+  /* Primary: Bluish Grey (Winter Sky/Lake) */
+  --ion-color-primary: hsl(210, 20%, 30%);
+  --ion-color-primary-rgb: 61, 77, 92;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: hsl(210, 20%, 26%);
+  --ion-color-primary-tint: hsl(210, 20%, 38%);
+
+  /* Secondary: Canadiana Red (Plaid) */
+  --ion-color-secondary: hsl(355, 65%, 45%);
+  --ion-color-secondary-rgb: 189, 40, 52;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: hsl(355, 65%, 40%);
+  --ion-color-secondary-tint: hsl(355, 65%, 55%);
+
+  /* Background: Warm Beige/Paper */
+  --ion-background-color: hsl(35, 30%, 94%);
+  --ion-text-color: hsl(210, 20%, 20%);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.theme-canadian-cottage {
+    /* Darker Cabin Wood feeling */
+    --ion-background-color: hsl(30, 15%, 15%);
+    --ion-text-color: hsl(35, 20%, 90%);
   }
 }

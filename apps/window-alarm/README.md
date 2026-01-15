@@ -41,3 +41,12 @@ Ensure you have your Android device connected or Emulator running.
 pnpm tauri android init
 pnpm tauri android dev
 ```
+
+## Desktop Development
+
+To run the application in desktop mode (Linux/macOS/Windows):
+
+```bash
+cd apps/window-alarm
+pnpm tauri dev
+```

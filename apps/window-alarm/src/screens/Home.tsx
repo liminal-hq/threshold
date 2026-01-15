@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFab, IonFabButton, IonIcon, IonList, useIonViewWillEnter, IonRefresher, IonRefresherContent } from '@ionic/react';
-import { add } from 'ionicons/icons';
+import React, { useState } from 'react';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonFab, IonFabButton, IonIcon, IonList, useIonViewWillEnter, IonRefresher, IonRefresherContent, IonButtons, IonButton } from '@ionic/react';
+import { add, ellipsisVertical } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { Alarm, databaseService } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { AlarmItem } from '../components/AlarmItem';
+import { SettingsService } from '../services/SettingsService';
 
 const Home: React.FC = () => {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
+  // Store preference locally in component to force re-render on enter if needed,
+  // though typically SettingsService is global.
+  // For now we just read it during render or map.
+  const is24h = SettingsService.getIs24h();
+
   const history = useHistory();
 
   const loadData = async () => {
@@ -35,6 +41,11 @@ const Home: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>Window Alarm</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={() => history.push('/settings')}>
+              <IonIcon icon={ellipsisVertical} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
@@ -47,6 +58,7 @@ const Home: React.FC = () => {
             <AlarmItem
               key={alarm.id}
               alarm={alarm}
+              is24h={is24h}
               onToggle={(enabled) => handleToggle(alarm, enabled)}
               onDelete={() => handleDelete(alarm.id)}
               onClick={() => history.push(\`/edit/\${alarm.id}\`)}

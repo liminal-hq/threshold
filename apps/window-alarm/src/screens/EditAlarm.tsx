@@ -5,14 +5,16 @@ import {
   IonList, IonNote
 } from '@ionic/react';
 import { useHistory, useParams } from 'react-router-dom';
-import { Alarm, databaseService } from '../services/DatabaseService';
+import { databaseService } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { DaySelector } from '../components/DaySelector';
+import { SettingsService } from '../services/SettingsService';
 
 const EditAlarm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const history = useHistory();
   const isNew = id === 'new';
+  const is24h = SettingsService.getIs24h();
 
   const [label, setLabel] = useState('');
   const [mode, setMode] = useState<'FIXED' | 'WINDOW'>('FIXED');
@@ -97,6 +99,7 @@ const EditAlarm: React.FC = () => {
                     <IonLabel position="stacked">Time</IonLabel>
                     <IonDatetime
                         presentation="time"
+                        hourCycle={is24h ? 'h23' : 'h12'}
                         value={fixedTime}
                         onIonChange={e => setFixedTime(Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!)}
                     />
@@ -107,6 +110,7 @@ const EditAlarm: React.FC = () => {
                         <IonLabel>Start Window</IonLabel>
                         <IonDatetime
                             presentation="time"
+                            hourCycle={is24h ? 'h23' : 'h12'}
                             value={windowStart}
                             onIonChange={e => setWindowStart(Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!)}
                         />
@@ -115,6 +119,7 @@ const EditAlarm: React.FC = () => {
                         <IonLabel>End Window</IonLabel>
                         <IonDatetime
                             presentation="time"
+                            hourCycle={is24h ? 'h23' : 'h12'}
                             value={windowEnd}
                             onIonChange={e => setWindowEnd(Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!)}
                         />
