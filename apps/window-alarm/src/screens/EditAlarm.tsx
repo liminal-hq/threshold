@@ -41,6 +41,11 @@ const EditAlarm: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (activeDays.length === 0) {
+      alert("Please select at least one day for the alarm to repeat.");
+      return;
+    }
+
     const alarmData: any = {
       label,
       mode,

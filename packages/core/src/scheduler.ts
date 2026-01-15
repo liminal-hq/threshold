@@ -1,5 +1,5 @@
 import { Alarm, AlarmMode, DayOfWeek } from './types';
-import { addDays, setHours, setMinutes, setSeconds, setMilliseconds, isBefore, isAfter, getDay, addSeconds } from 'date-fns';
+import { addDays, setHours, setMinutes, setSeconds, setMilliseconds, isBefore, isAfter, getDay, addSeconds, subDays } from 'date-fns';
 
 /**
  * Canadian Spelling:
@@ -15,6 +15,25 @@ export function calculateNextTrigger(alarm: Alarm, now: Date = new Date()): numb
 
   // Sort active days to ensure correct rotation behaviour
   const sortedDays = [...alarm.activeDays].sort((a, b) => a - b);
+
+  // EDGE CASE: Overnight Window Check for "Yesterday"
+  // If the window crosses midnight, and we are currently in the early morning (e.g. 01:00),
+  // we might effectively be in the window that started "Yesterday".
+  // We should check "Yesterday" first if it was an active day.
+  if (alarm.mode === AlarmMode.RandomWindow && alarm.windowStart && alarm.windowEnd) {
+      const [startH, startM] = parseTime(alarm.windowStart);
+      const [endH, endM] = parseTime(alarm.windowEnd);
+      // If window crosses midnight (start > end)
+      if (startH > endH || (startH === endH && startM > endM)) {
+          const yesterday = subDays(now, 1);
+          const yesterdayDayOfWeek = getDay(yesterday) as DayOfWeek;
+          if (sortedDays.includes(yesterdayDayOfWeek)) {
+              // Check if we are still inside yesterday's window
+              const trigger = getRandomWindowTrigger(alarm, yesterday, now);
+              if (trigger !== null) return trigger;
+          }
+      }
+  }
 
   // Look ahead up to 7 days (including today) to find the next active day
   for (let i = 0; i <= 7; i++) {
@@ -96,9 +115,6 @@ function getRandomWindowTrigger(alarm: Alarm, date: Date, now: Date): number | n
   const startMillis = sampleStart.getTime();
   const endMillis = windowEnd.getTime();
 
-  // Uniform distribution
-  // Note: In a real app, if a trigger is already persisted for this window, we should return that instead of re-rolling.
-  // However, this function calculates a *new* trigger. The UI layer checks persistence first.
   const randomOffset = Math.random() * (endMillis - startMillis);
   return Math.floor(startMillis + randomOffset);
 }
