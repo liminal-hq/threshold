@@ -24,35 +24,24 @@ class CancelRequest {
     var id: Int = 0
 }
 
+@InvokeArg
+class ImportedAlarm {
+    var id: Int = 0
+    var hour: Int = 0
+    var minute: Int = 0
+    var label: String = ""
+}
+
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
-    private val alarmManager: AlarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     @Command
     fun schedule(invoke: Invoke) {
         val args = invoke.parseArgs(ScheduleRequest::class.java)
-
         Log.d("AlarmManagerPlugin", "Scheduling alarm ${args.id} at ${args.triggerAt}")
 
-        val intent = Intent(activity, AlarmReceiver::class.java).apply {
-            action = "com.windowalarm.ALARM_TRIGGER"
-            putExtra("ALARM_ID", args.id)
-        }
-
-        // Use FLAG_IMMUTABLE | FLAG_UPDATE_CURRENT
-        val pendingIntent = PendingIntent.getBroadcast(
-            activity,
-            args.id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Use setAlarmClock for maximum reliability (wakes from Doze)
-        val alarmInfo = AlarmManager.AlarmClockInfo(args.triggerAt, pendingIntent)
-        alarmManager.setAlarmClock(alarmInfo, pendingIntent)
-
-        // Persist to SharedPreferences for BootReceiver restoration
-        saveAlarmToPrefs(args.id, args.triggerAt)
+        AlarmUtils.scheduleAlarm(activity, args.id, args.triggerAt)
+        AlarmUtils.saveAlarmToPrefs(activity, args.id, args.triggerAt)
 
         invoke.resolve()
     }
@@ -61,27 +50,58 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     fun cancel(invoke: Invoke) {
         val args = invoke.parseArgs(CancelRequest::class.java)
 
-        val intent = Intent(activity, AlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
-            activity,
-            args.id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        alarmManager.cancel(pendingIntent)
-        removeAlarmFromPrefs(args.id)
+        AlarmUtils.cancelAlarm(activity, args.id)
+        AlarmUtils.removeAlarmFromPrefs(activity, args.id)
 
         invoke.resolve()
     }
 
-    private fun saveAlarmToPrefs(id: Int, triggerAt: Long) {
-        val prefs = activity.getSharedPreferences("WindowAlarmNative", Context.MODE_PRIVATE)
-        prefs.edit().putLong("alarm_$id", triggerAt).apply()
-    }
+    @Command
+    fun get_launch_args(invoke: Invoke) {
+        // Check for imported alarms from SetAlarmActivity
+        val prefs = activity.getSharedPreferences("WindowAlarmImports", Context.MODE_PRIVATE)
+        val allImports = prefs.all
+        val importsList = mutableListOf<ImportedAlarm>()
 
-    private fun removeAlarmFromPrefs(id: Int) {
-        val prefs = activity.getSharedPreferences("WindowAlarmNative", Context.MODE_PRIVATE)
-        prefs.edit().remove("alarm_$id").apply()
+        for ((key, value) in allImports) {
+            if (key.startsWith("import_") && value is String) {
+                try {
+                    val id = key.removePrefix("import_").toInt()
+                    val parts = value.split("|")
+                    if (parts.size == 2) {
+                        val timeParts = parts[0].split(":")
+                        val hour = timeParts[0].toInt()
+                        val minute = timeParts[1].toInt()
+                        val label = parts[1]
+
+                        val import = ImportedAlarm()
+                        import.id = id
+                        import.hour = hour
+                        import.minute = minute
+                        import.label = label
+                        importsList.add(import)
+
+                        // Clean up
+                        prefs.edit().remove(key).apply()
+                    }
+                } catch (e: Exception) {
+                    Log.e("AlarmManagerPlugin", "Failed to parse import: $value", e)
+                }
+            }
+        }
+
+        // Serialize and return using JS Object/JSON
+        // Tauri 2 Android Plugin bridge handles object serialization automatically if using Invoke
+        // But we need to return a proper object.
+
+        val ret = app.tauri.plugin.JSObject()
+        val array = app.tauri.plugin.JSArray()
+
+        // Wait, manual JSObject construction is messy in Kotlin without proper bindings.
+        // It's easier to return a JSON string or rely on the InvokeArg serialization mechanism if `resolve` accepts a POJO.
+        // Tauri v2 Kotlin bridge supports resolving POJOs.
+
+        // Let's assume we can return the list directly.
+        invoke.resolve(importsList)
     }
 }

@@ -27,4 +27,10 @@ impl<R: Runtime> AlarmManager<R> {
       .run_mobile_plugin("cancel", payload)
       .map_err(Into::into)
   }
+
+  pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
+    self.0
+      .run_mobile_plugin("get_launch_args", ())
+      .map_err(Into::into)
+  }
 }

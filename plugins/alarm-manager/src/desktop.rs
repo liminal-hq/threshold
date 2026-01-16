@@ -23,4 +23,9 @@ impl<R: Runtime> AlarmManager<R> {
     println!("Desktop: Cancel alarm (Mock)");
     Ok(())
   }
+
+  pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
+    println!("Desktop: Get Launch Args (Mock)");
+    Ok(vec![])
+  }
 }
