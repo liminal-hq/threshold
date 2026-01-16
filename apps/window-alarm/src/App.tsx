@@ -28,11 +28,24 @@ import '@ionic/react/css/display.css';
 /* Theme variables */
 import './theme/variables.css';
 
+import { getCurrentWindow } from '@tauri-apps/api/window';
+
+/* ... imports ... */
+
 setupIonicReact();
 
 const App: React.FC = () => {
   useEffect(() => {
     SettingsService.applyTheme();
+
+    const showWindow = async () => {
+      try {
+        await getCurrentWindow().show();
+      } catch (error) {
+        console.warn('Failed to show window:', error);
+      }
+    };
+    showWindow();
   }, []);
 
   return (
