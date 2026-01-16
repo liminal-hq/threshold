@@ -116,6 +116,7 @@ body.theme-boring-light {
 
 @media (prefers-color-scheme: dark) {
 	body.theme-boring-light {
+		/* It's boring, but in the dark! Spooky! */
 		--ion-background-color: hsl(0, 0%, 100%);
 		--ion-text-color: hsl(0, 0%, 0%);
 	}
@@ -145,6 +146,7 @@ body.theme-boring-dark {
 
 @media (prefers-color-scheme: dark) {
 	body.theme-boring-dark {
+		/* Advanced Darkness: It's just as boring, but harder to see. */
 		--ion-background-color: hsl(0, 0%, 12%);
 		--ion-text-color: hsl(0, 0%, 90%);
 	}
