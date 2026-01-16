@@ -28,7 +28,10 @@ object AlarmUtils {
 
     fun cancelAlarm(context: Context, id: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, AlarmReceiver::class.java)
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            action = "com.windowalarm.ALARM_TRIGGER"
+            putExtra("ALARM_ID", id)
+        }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             id,

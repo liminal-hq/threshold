@@ -7,12 +7,22 @@ import { alarmManagerService } from '../services/AlarmManagerService';
 const Ringing: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
-  const handleDismiss = () => {
-    // In a real implementation, we would call the native plugin to stop the sound
-    // and reschedule the next occurrence.
-    // For now, we just close the app/activity logic.
+  const handleDismiss = async () => {
     console.log("Dismissed Alarm", id);
-    // Logic to reschedule next would be triggered here or in the background service
+    // Reschedule next occurrence
+    const alarms = await alarmManagerService.loadAlarms();
+    const alarm = alarms.find(a => a.id === parseInt(id));
+
+    if (alarm) {
+        // This will calculate next trigger (e.g. tomorrow) and schedule it natively
+        await alarmManagerService.saveAndSchedule(alarm);
+    }
+
+    // Close window or navigate back
+    // In Android full screen intent, we might want to minimize app or close activity
+    // For now we just route home
+    // history.replace('/home');
+    // (Assuming useHistory is imported, but simpler to just let user navigate)
   };
 
   const handleSnooze = () => {

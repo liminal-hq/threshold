@@ -59,7 +59,21 @@ export class AlarmManagerService {
                     continue;
                 }
 
+                // Use the native ID for the new DB record to keep them in sync if possible,
+                // or just to have a reference.
+                // However, saveAndSchedule will re-schedule the native alarm.
+                // To avoid double scheduling (one from Intent, one from here),
+                // we should cancel the native one first OR just update our DB.
+                // Since our scheduler logic might differ slightly (e.g. active days),
+                // it is safer to let our app "take over" the alarm management.
+
+                // 1. Cancel the 'temporary' native alarm created by the Intent
+                // (It will be immediately replaced by saveAndSchedule)
+                await this.cancelNativeAlarm(imp.id);
+
                 const newAlarm: Omit<Alarm, 'id'> & { id?: number } = {
+                    // We don't force imp.id as the DB ID because of autoincrement,
+                    // but we could store it if we had a column. For now, a new ID is fine.
                     label: imp.label,
                     mode: 'FIXED',
                     fixedTime: timeStr,

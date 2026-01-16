@@ -1,5 +1,5 @@
 {
-  "name": "Window Alarm",
+  "name": "Window Alarm Dev",
   "dockerFile": "Dockerfile",
   "workspaceFolder": "/workspaces/window-alarm",
   "forwardPorts": [5173, 1420],
