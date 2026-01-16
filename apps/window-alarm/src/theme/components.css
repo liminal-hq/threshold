@@ -10,7 +10,7 @@ ion-segment.custom-pill {
 
 ion-segment.custom-pill ion-segment-button {
 	--indicator-color: var(--ion-color-primary);
-	--color: var(--ion-text-color-step-600, #444); /* Darker text for unselected state */
+	--color: var(--ion-text-color, #333); /* Ensure high contrast */
 	--color-checked: var(--ion-color-primary-contrast, #fff);
 	--border-radius: 50px;
 	min-width: 100px;
@@ -22,27 +22,29 @@ ion-segment.custom-pill ion-segment-button {
 .day-selector {
 	display: flex;
 	flex-direction: row;
-	justify-content: center; /* Center them */
-	gap: 12px;
-	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 6px; /* Tighter gap */
+	flex-wrap: nowrap; /* Prevent wrapping */
 	width: 100%;
 	margin-top: 8px;
 }
 
 .day-pill {
-	width: 40px;
-	height: 40px;
+	width: 36px;
+	height: 36px;
 	border-radius: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	background: var(--ion-color-step-100, #f4f5f8);
-	color: var(--ion-text-color-step-600, #444);
+	color: var(--ion-text-color, #000); /* Use strong text color */
 	font-weight: 600;
-	font-size: 0.9rem;
+	font-size: 0.85rem;
 	cursor: pointer;
 	transition: all 0.2s;
-	border: 1px solid transparent; /* Prevent layout shift */
+	border: 1px solid transparent;
+	flex-shrink: 0; /* Don't squash */
 }
 
 .day-pill.selected {
