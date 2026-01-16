@@ -1,4 +1,4 @@
-export type Theme = 'deep-night' | 'canadian-cottage' | 'georgian-bay-plunge';
+export type Theme = 'deep-night' | 'canadian-cottage' | 'georgian-bay-plunge' | 'boring-light' | 'boring-dark';
 
 const KEY_THEME = 'window_alarm_theme';
 const KEY_24H = 'window_alarm_24h';

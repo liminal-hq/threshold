@@ -67,6 +67,8 @@ const Settings: React.FC = () => {
 							<IonSelectOption value="deep-night">Deep Night (Default)</IonSelectOption>
 							<IonSelectOption value="canadian-cottage">Canadian Cottage Winter</IonSelectOption>
 							<IonSelectOption value="georgian-bay-plunge">Georgian Bay Plunge</IonSelectOption>
+							<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
+							<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
 						</IonSelect>
 					</IonItem>
 

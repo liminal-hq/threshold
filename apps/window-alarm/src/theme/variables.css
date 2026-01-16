@@ -22,6 +22,7 @@ body.theme-deep-night {
 
 @media (prefers-color-scheme: dark) {
 	body.theme-deep-night {
+		/* It was a dark and stormy night... */
 		--ion-background-color: #121212;
 		--ion-text-color: #f4f5f8;
 	}
@@ -86,7 +87,65 @@ body.theme-georgian-bay-plunge {
 @media (prefers-color-scheme: dark) {
 	body.theme-georgian-bay-plunge {
 		/* Darker waters at night */
-		--ion-background-color: hsl(200, 20%, 12%);
+	--ion-background-color: hsl(200, 20%, 12%);
 		--ion-text-color: hsl(190, 30%, 90%);
+	}
+}
+
+/* Boring Light - Standard, accessible, unremarkable */
+body.theme-boring-light {
+	/* Primary: Standard Blue */
+	--ion-color-primary: hsl(210, 100%, 50%);
+	--ion-color-primary-rgb: 0, 128, 255;
+	--ion-color-primary-contrast: #ffffff;
+	--ion-color-primary-contrast-rgb: 255, 255, 255;
+	--ion-color-primary-shade: hsl(210, 100%, 40%);
+	--ion-color-primary-tint: hsl(210, 100%, 60%);
+
+	/* Secondary: Standard Gray */
+	--ion-color-secondary: hsl(0, 0%, 50%);
+	--ion-color-secondary-rgb: 128, 128, 128;
+	--ion-color-secondary-contrast: #ffffff;
+	--ion-color-secondary-contrast-rgb: 255, 255, 255;
+	--ion-color-secondary-shade: hsl(0, 0%, 40%);
+	--ion-color-secondary-tint: hsl(0, 0%, 60%);
+
+	--ion-background-color: hsl(0, 0%, 100%);
+	--ion-text-color: hsl(0, 0%, 0%);
+}
+
+@media (prefers-color-scheme: dark) {
+	body.theme-boring-light {
+		--ion-background-color: hsl(0, 0%, 100%);
+		--ion-text-color: hsl(0, 0%, 0%);
+	}
+}
+
+/* Boring Dark - Standard, accessible, unremarkable */
+body.theme-boring-dark {
+	/* Primary: Standard Blue */
+	--ion-color-primary: hsl(210, 100%, 50%);
+	--ion-color-primary-rgb: 0, 128, 255;
+	--ion-color-primary-contrast: #ffffff;
+	--ion-color-primary-contrast-rgb: 255, 255, 255;
+	--ion-color-primary-shade: hsl(210, 100%, 40%);
+	--ion-color-primary-tint: hsl(210, 100%, 60%);
+
+	/* Secondary: Standard Gray */
+	--ion-color-secondary: hsl(0, 0%, 50%);
+	--ion-color-secondary-rgb: 128, 128, 128;
+	--ion-color-secondary-contrast: #ffffff;
+	--ion-color-secondary-contrast-rgb: 255, 255, 255;
+	--ion-color-secondary-shade: hsl(0, 0%, 40%);
+	--ion-color-secondary-tint: hsl(0, 0%, 60%);
+
+	--ion-background-color: hsl(0, 0%, 12%);
+	--ion-text-color: hsl(0, 0%, 90%);
+}
+
+@media (prefers-color-scheme: dark) {
+	body.theme-boring-dark {
+		--ion-background-color: hsl(0, 0%, 12%);
+		--ion-text-color: hsl(0, 0%, 90%);
 	}
 }
