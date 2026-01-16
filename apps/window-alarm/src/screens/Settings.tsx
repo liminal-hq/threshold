@@ -93,7 +93,9 @@ const Settings: React.FC = () => {
 						minHeight: '100%',
 						background: 'var(--ion-background-color)',
 						position: 'relative',
-						zIndex: 10
+						zIndex: 10,
+						margin: '0 auto', /* Override CSS margin */
+						padding: '32px 16px' /* Use padding for spacing */
 					}}>
 						<div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
 							<IonButton fill="clear" onClick={() => history.goBack()} color="medium" style={{ margin: 0 }}>
