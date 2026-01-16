@@ -95,7 +95,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, is24h }
                             updateTime(newH, minute);
                         }
                     }}
-                    onBlur={(e) => {
+                    onBlur={() => {
                         // Ensure valid range
                         updateTime(hour, minute);
                     }}
@@ -122,7 +122,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, is24h }
                             updateTime(hour, val);
                         }
                     }}
-                    onBlur={(e) => {
+                    onBlur={() => {
                         updateTime(hour, minute);
                     }}
                 />
