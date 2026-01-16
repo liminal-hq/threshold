@@ -1,9 +1,11 @@
 # UI Implementation Task: Window Alarm
 
 ## Overview
+
 The goal is to build a minimalist, mobile-first UI using **React** and **Ionic Framework** that matches the provided prototypes and functional requirements. The design should be clean and accessible.
 
 ## Global Theme
+
 - **Framework:** Ionic React (`@ionic/react`).
 - **Styling:** Ionic Utility Classes + Custom CSS variables.
 - **Font:** System default (Roboto/San Francisco).
@@ -13,6 +15,7 @@ The goal is to build a minimalist, mobile-first UI using **React** and **Ionic F
   - Background: System Light/Dark mode compatible.
 
 ## Navigation Structure
+
 - **Single Activity App:** No bottom tabs.
 - **Router:** `IonReactRouter`.
 - **Routes:**
@@ -25,14 +28,17 @@ The goal is to build a minimalist, mobile-first UI using **React** and **Ionic F
 ## Screens & Components
 
 ### 1. Home Screen (`/home`)
+
 **Purpose:** Display the list of alarms and next scheduled event.
 
 **Layout:**
+
 - **Header:** Title "Window Alarm".
 - **Content:** List of alarm cards.
 - **Footer/FAB:** Floating Action Button (+) to add a new alarm.
 
 **Components:**
+
 - `AlarmList`: A virtualized list or simple map of `AlarmItem` components.
 - `AlarmItem`:
   - **Left:** Time Display (Large text).
@@ -46,9 +52,11 @@ The goal is to build a minimalist, mobile-first UI using **React** and **Ionic F
 ---
 
 ### 2. Edit Alarm Screen (`/edit/:id`)
+
 **Purpose:** Create or modify an alarm configuration.
 
 **Layout:**
+
 - **Header:**
   - Left: "Cancel" button.
   - Title: "Edit Alarm" / "New Alarm".
@@ -56,6 +64,7 @@ The goal is to build a minimalist, mobile-first UI using **React** and **Ionic F
 - **Content:** Form inputs.
 
 **Components:**
+
 - `ModeSelector`: `IonSegment` (Fixed | Random Window).
 - `TimeInput`:
   - **Fixed Mode:** `IonDatetime` (Presentation: time).
@@ -66,29 +75,34 @@ The goal is to build a minimalist, mobile-first UI using **React** and **Ionic F
 - `DeleteButton`: (Only if editing) Red outline button at the bottom.
 
 **Validation Logic:**
+
 - Window Mode: Start Time must be distinct from End Time.
 - Days: At least one day must be selected.
 
 ---
 
 ### 3. Ringing Screen (`/ringing/:id`)
+
 **Purpose:** The "Wake Up" screen. This must override the lock screen (handled by native activity, but UI is here).
 
 **Layout:**
+
 - **Full Screen:** Immersive mode.
 - **Visuals:** High contrast, large text.
 - **Animation:** Gentle pulsing background or icon to indicate ringing.
 
 **Components:**
+
 - `CurrentTime`: Massive digital clock display.
 - `Label`: "Wake Up!" or user label.
 - `SnoozeButton`: Large secondary button ("Snooze 10m").
 - `DismissButton`: Slide-to-unlock style or Long-Press button to prevent accidental dismissals.
-  - *Recommendation:* `IonRange` slider "Slide to Stop" or a Long Press button component.
+  - _Recommendation:_ `IonRange` slider "Slide to Stop" or a Long Press button component.
 
 ---
 
 ## State Management & Logic
+
 - **Hooks:**
   - `useAlarms()`: Subscribes to SQLite changes.
   - `useNextTrigger(alarm)`: Calculates the specific next time for UI display.
@@ -96,5 +110,6 @@ The goal is to build a minimalist, mobile-first UI using **React** and **Ionic F
   - `AlarmService`: Facade for SQLite + Native Plugin calls.
 
 ## Asset Requirements
+
 - **Icons:** Ionicons (Standard library).
   - `add`, `alarm`, `trash`, `create`, `close`, `checkmark`.

@@ -27,6 +27,6 @@ In your Tauri app:
 import { invoke } from '@tauri-apps/api/core';
 
 await invoke('plugin:alarm-manager|schedule', {
-  payload: { id: 1, triggerAt: 1715000000000 }
+	payload: { id: 1, triggerAt: 1715000000000 },
 });
 ```
