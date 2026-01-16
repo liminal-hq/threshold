@@ -89,7 +89,12 @@ const Settings: React.FC = () => {
 						</IonItem>
 					</IonList>
 				) : (
-					<div className="settings-container">
+					<div className="settings-container" style={{
+						minHeight: '100%',
+						background: 'var(--ion-background-color)',
+						position: 'relative',
+						zIndex: 10
+					}}>
 						<div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
 							<IonButton fill="clear" onClick={() => history.goBack()} color="medium" style={{ margin: 0 }}>
 								<IonIcon icon={arrowBack} slot="icon-only" />
