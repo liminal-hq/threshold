@@ -14,7 +14,6 @@ import {
 	IonRefresherContent,
 	IonButtons,
 	IonButton,
-	IonFooter,
 } from '@ionic/react';
 import { add, ellipsisVertical, settingsOutline } from 'ionicons/icons';
 import { platform } from '@tauri-apps/plugin-os';
