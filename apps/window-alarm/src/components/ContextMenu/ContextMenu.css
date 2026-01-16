@@ -1,0 +1,103 @@
+.context-menu {
+	position: fixed;
+	background: var(--ion-background-color, #fff);
+	border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	padding: 4px;
+	min-width: 180px;
+	max-width: 280px;
+	z-index: 10000;
+	color: var(--ion-text-color, #1a1a1a);
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	user-select: none;
+}
+
+.menu-section {
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.menu-section + .menu-section {
+	border-top: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.1));
+	margin-top: 4px;
+	padding-top: 4px;
+}
+
+.menu-section-title {
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--ion-color-medium, #92949c);
+	padding: 4px 12px;
+	margin-bottom: 2px;
+}
+
+.menu-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	padding: 8px 12px;
+	border: none;
+	background: transparent;
+	color: var(--ion-text-color, #1a1a1a);
+	font-size: 0.875rem;
+	text-align: left;
+	cursor: pointer;
+	border-radius: 6px;
+	transition: background-color 0.1s;
+	outline: none;
+}
+
+.menu-item:hover:not(.disabled) {
+	background: var(--ion-color-primary, #002244);
+	color: var(--ion-color-primary-contrast, #fff);
+}
+
+.menu-item:hover:not(.disabled) .menu-item-icon {
+	color: var(--ion-color-primary-contrast, #fff);
+}
+
+.menu-item.disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.menu-item-icon {
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ion-color-medium, #92949c);
+}
+
+.menu-item-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.menu-item-label {
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.2;
+}
+
+.menu-item-shortcut {
+	flex-shrink: 0;
+	font-size: 0.75rem;
+	color: var(--ion-color-medium, #92949c);
+	margin-left: 12px;
+}
+
+.menu-separator {
+	height: 1px;
+	background: var(--ion-border-color, rgba(0, 0, 0, 0.1));
+	margin: 4px 0;
+}
