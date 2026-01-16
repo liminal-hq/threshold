@@ -42,3 +42,74 @@ Follow this directory structure for React/Ionic applications:
 - **`src/services/`**: Singleton classes or modules for business logic (e.g., `DatabaseService`, `AlarmService`).
 - **`src/theme/`**: Global styles, Ionic variables, and theme definitions.
 - **`src/context/`**: React Context providers.
+
+## Tauri v2
+
+This project uses **Tauri v2** with native mobile support (iOS/Android).
+
+### Platform Detection
+
+Use `@tauri-apps/plugin-os` for reliable platform detection across all targets.
+
+**Key points:**
+- The `platform()` function is **synchronous** and determined at compile time
+- Returns: `'linux' | 'macos' | 'ios' | 'freebsd' | 'dragonfly' | 'netbsd' | 'openbsd' | 'solaris' | 'android' | 'windows'`
+- Use this for conditional UI rendering (e.g., mobile vs desktop layouts)
+
+**Example:**
+```tsx
+import { platform } from '@tauri-apps/plugin-os';
+
+const [isMobile, setIsMobile] = useState(false);
+
+useEffect(() => {
+  const os = platform();
+  setIsMobile(os === 'ios' || os === 'android');
+}, []);
+```
+
+### Window Management
+
+- **Desktop platforms**: Use custom title bars with `data-tauri-drag-region` attribute for draggable areas
+- **Mobile platforms**: Use native Ionic headers (`IonHeader`, `IonToolbar`)
+- Window controls (minimize, maximize, close) should only render on desktop
+
+### Tauri APIs
+
+- Prefer Tauri plugins over web APIs when available (e.g., `@tauri-apps/plugin-fs` over browser File API)
+- Most Tauri v2 APIs are async - use `async/await` pattern
+- Check plugin documentation for platform-specific limitations
+
+### Migration from Tauri v1
+
+**Configuration (`tauri.conf.json`) Breaking Changes:**
+- `tauri` → `app` (top-level rename)
+- `build.distDir` → `frontendDist`
+- `build.devPath` → `devUrl` (now only accepts URLs, not paths)
+- `tauri.allowlist` → **removed** - replaced by capabilities system (see below)
+- `tauri.windows.fileDropEnabled` → `app.windows.dragDropEnabled`
+- `tauri.bundle` → moved to top-level
+
+**JavaScript API Changes:**
+- `@tauri-apps/api` now only exports: `core`, `path`, `event`, `window`
+- All other modules moved to plugins: `@tauri-apps/plugin-*`
+  - `@tauri-apps/api/fs` → `@tauri-apps/plugin-fs`
+  - `@tauri-apps/api/dialog` → `@tauri-apps/plugin-dialog`
+  - `@tauri-apps/api/shell` → `@tauri-apps/plugin-shell`
+  - `@tauri-apps/api/os` → `@tauri-apps/plugin-os`
+  - etc.
+
+**Permissions & Capabilities (Critical!):**
+- v1's `allowlist` replaced by **capabilities** system (ACL-based)
+- Create capability files in `src-tauri/capabilities/` directory
+- Must explicitly grant permissions per plugin (e.g., `fs:allow-read-text-file`)
+- **Gotcha**: Simply installing a plugin is NOT enough - you must define permissions in capabilities
+- See [Tauri Security Docs](https://v2.tauri.app/security/) for details
+
+**Rust Changes:**
+- Many `tauri::api` modules moved to separate plugins
+- Use `std::fs` or `tauri_plugin_fs` instead of `tauri::api::file`
+- Menu and tray APIs moved to separate crates
+
+
+
