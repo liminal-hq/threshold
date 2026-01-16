@@ -131,6 +131,7 @@ const Settings: React.FC = () => {
 										<p>Override system color scheme</p>
 									</IonLabel>
 									<IonToggle
+										slot="end"
 										checked={forceDark}
 										onIonChange={(e) => handleForceDarkChange(e.detail.checked)}
 									/>
