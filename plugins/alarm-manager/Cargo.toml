@@ -1,0 +1,18 @@
+[package]
+name = "tauri-plugin-alarm-manager"
+version = "0.1.0"
+authors = ["Jules"]
+edition = "2021"
+description = "Native Alarm Manager for Window Alarm"
+
+[dependencies]
+tauri = { version = "2.0.0", features = [] }
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[build-dependencies]
+tauri-plugin = "2.0.0"
+
+[features]
+default = []

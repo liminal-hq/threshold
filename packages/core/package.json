@@ -1,0 +1,20 @@
+{
+  "name": "@window-alarm/core",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./types": "./dist/types.js",
+    "./scheduler": "./dist/scheduler.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "date-fns": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

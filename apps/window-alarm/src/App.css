@@ -1,0 +1,123 @@
+:root {
+  /* Use CSS variables for all colors to support theming */
+  --app-text-color: #0f0f0f;
+  --app-bg-color: #f6f6f6;
+  --app-link-color: #646cff;
+  --app-link-hover-color: #535bf2;
+  --app-btn-border-color: transparent;
+  --app-btn-bg-color: #ffffff;
+  --app-btn-hover-border: #396cd8;
+  --app-btn-active-bg: #e8e8e8;
+  --app-logo-filter: drop-shadow(0 0 2em #747bff);
+  --app-logo-react-filter: drop-shadow(0 0 2em #61dafb);
+  --app-logo-tauri-filter: drop-shadow(0 0 2em #24c8db);
+}
+
+.logo.vite:hover {
+  filter: var(--app-logo-filter);
+}
+
+.logo.react:hover {
+  filter: var(--app-logo-react-filter);
+}
+
+/* Base styles inheriting variables */
+body {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: var(--app-text-color);
+  background-color: var(--app-bg-color);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+.container {
+  margin: 0;
+  padding-top: 10vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: 0.75s;
+}
+
+.logo.tauri:hover {
+  filter: var(--app-logo-tauri-filter);
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+}
+
+a {
+  font-weight: 500;
+  color: var(--app-link-color);
+  text-decoration: inherit;
+}
+
+a:hover {
+  color: var(--app-link-hover-color);
+}
+
+h1 {
+  text-align: center;
+}
+
+input,
+button {
+  border-radius: 8px;
+  border: 1px solid var(--app-btn-border-color);
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--app-text-color);
+  background-color: var(--app-btn-bg-color);
+  transition: border-color 0.25s;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--app-btn-hover-border);
+}
+button:active {
+  border-color: var(--app-btn-hover-border);
+  background-color: var(--app-btn-active-bg);
+}
+
+input,
+button {
+  outline: none;
+}
+
+#greet-input {
+  margin-right: 5px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --app-text-color: #f6f6f6;
+    --app-bg-color: #2f2f2f;
+    --app-link-hover-color: #24c8db;
+    --app-btn-bg-color: #0f0f0f98;
+    --app-btn-active-bg: #0f0f0f69;
+  }
+}

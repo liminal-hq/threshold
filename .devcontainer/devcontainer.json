@@ -1,0 +1,25 @@
+{
+  "name": "Window Alarm Dev",
+  "dockerFile": "Dockerfile",
+  "workspaceFolder": "/workspaces/window-alarm",
+  "forwardPorts": [5173, 1420],
+  "runArgs": [
+    "--device=/dev/snd",
+    "--group-add=audio",
+    "--env=PULSE_SERVER=unix:/run/user/1000/pulse/native",
+    "--volume=/run/user/1000/pulse/native:/run/user/1000/pulse/native"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "tauri-apps.tauri-vscode",
+        "ms-vscode.vscode-typescript-next",
+        "streetsidesoftware.code-spell-checker"
+      ]
+    }
+  },
+  "postCreateCommand": "pnpm install"
+}
