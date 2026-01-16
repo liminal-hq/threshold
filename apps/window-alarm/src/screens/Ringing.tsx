@@ -62,7 +62,7 @@ const Ringing: React.FC = () => {
 	return (
 		<IonPage className="ringing-page">
 			<IonContent>
-				<div className="ringing-container">
+				<div className="ringing-container" data-tauri-drag-region="true">
 					<div className="ringing-time">{timeStr}</div>
 					<div className="ringing-label">{alarm?.label || 'Wake Up!'}</div>
 

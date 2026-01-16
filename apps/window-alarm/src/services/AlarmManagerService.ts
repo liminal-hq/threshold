@@ -178,7 +178,8 @@ export class AlarmManagerService {
 							alwaysOnTop: true,
 							center: true,
 							skipTaskbar: false,
-							decorations: true,
+							decorations: false,
+							transparent: true,
 							focus: true,
 						});
 
