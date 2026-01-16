@@ -13,7 +13,7 @@ ion-segment.custom-pill ion-segment-button {
 	--indicator-color: var(--ion-color-primary);
 	/* Use bold colors - High contrast for all themes */
 	--color: var(--ion-text-color) !important;
-	--color-checked: var(--ion-color-primary-contrast, #fff) !important;
+	--color-checked: var(--ion-text-color) !important; /* Force same color as unselected for consistency */
 	
 	/* Layout fixes */
 	min-height: 36px;
