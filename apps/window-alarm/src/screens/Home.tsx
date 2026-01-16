@@ -103,11 +103,25 @@ const Home: React.FC = () => {
 					))}
 				</IonList>
 
-				<IonFab vertical="bottom" horizontal="end" slot="fixed">
-					<IonFabButton color="secondary" onClick={() => history.push('/edit/new')}>
-						<IonIcon icon={add} />
-					</IonFabButton>
-				</IonFab>
+				{!isMobile ? (
+					<div style={{ padding: '16px', display: 'flex', justifyContent: 'center' }}>
+						<IonButton
+							expand="block"
+							color="secondary"
+							style={{ width: '100%', maxWidth: '400px', height: '48px', margin: '0' }}
+							onClick={() => history.push('/edit/new')}
+						>
+							<IonIcon slot="start" icon={add} />
+							Add Alarm
+						</IonButton>
+					</div>
+				) : (
+					<IonFab vertical="bottom" horizontal="end" slot="fixed">
+						<IonFabButton color="secondary" onClick={() => history.push('/edit/new')}>
+							<IonIcon icon={add} />
+						</IonFabButton>
+					</IonFab>
+				)}
 			</IonContent>
 		</IonPage>
 	);
