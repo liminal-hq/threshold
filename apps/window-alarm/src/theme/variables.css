@@ -8,13 +8,13 @@ body.theme-deep-night {
 	--ion-color-primary-shade: #001e3c;
 	--ion-color-primary-tint: #1a3857;
 
-	/* Secondary: Vibrant Orange - High visibility for actions */
-	--ion-color-secondary: #ff4f00;
-	--ion-color-secondary-rgb: 255, 79, 0;
+	/* Secondary: Deep Blue - Modern and professional */
+	--ion-color-secondary: #2563eb;
+	--ion-color-secondary-rgb: 37, 99, 235;
 	--ion-color-secondary-contrast: #ffffff;
 	--ion-color-secondary-contrast-rgb: 255, 255, 255;
-	--ion-color-secondary-shade: #e04600;
-	--ion-color-secondary-tint: #ff611a;
+	--ion-color-secondary-shade: #1d4ed8;
+	--ion-color-secondary-tint: #3b82f6;
 
 	--ion-background-color: #f4f5f8;
 	--ion-text-color: #1a1a1a;
@@ -57,5 +57,36 @@ body.theme-canadian-cottage {
 		/* Darker Cabin Wood feeling */
 		--ion-background-color: hsl(30, 15%, 15%);
 		--ion-text-color: hsl(35, 20%, 90%);
+	}
+}
+
+/* Georgian Bay Plunge - Refreshing turquoise waters */
+body.theme-georgian-bay-plunge {
+	/* Primary: Light Teal/Turquoise (Georgian Bay water) */
+	--ion-color-primary: hsl(190, 50%, 75%);
+	--ion-color-primary-rgb: 141, 209, 217;
+	--ion-color-primary-contrast: hsl(210, 15%, 20%);
+	--ion-color-primary-contrast-rgb: 43, 50, 56;
+	--ion-color-primary-shade: hsl(190, 50%, 65%);
+	--ion-color-primary-tint: hsl(190, 50%, 82%);
+
+	/* Secondary: Deeper Teal (Deep water) */
+	--ion-color-secondary: hsl(190, 50%, 35%);
+	--ion-color-secondary-rgb: 45, 122, 140;
+	--ion-color-secondary-contrast: #ffffff;
+	--ion-color-secondary-contrast-rgb: 255, 255, 255;
+	--ion-color-secondary-shade: hsl(190, 50%, 30%);
+	--ion-color-secondary-tint: hsl(190, 50%, 45%);
+
+	/* Background: Light gray with subtle blue tint */
+	--ion-background-color: hsl(210, 15%, 96%);
+	--ion-text-color: hsl(210, 15%, 20%);
+}
+
+@media (prefers-color-scheme: dark) {
+	body.theme-georgian-bay-plunge {
+		/* Darker waters at night */
+		--ion-background-color: hsl(200, 20%, 12%);
+		--ion-text-color: hsl(190, 30%, 90%);
 	}
 }
