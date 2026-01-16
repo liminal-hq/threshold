@@ -22,6 +22,7 @@ import { databaseService } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { DaySelector } from '../components/DaySelector';
 import { SettingsService } from '../services/SettingsService';
+import { TimePicker } from '../components/TimePicker';
 
 const EditAlarm: React.FC = () => {
 	const { id } = useParams<{ id: string }>();
@@ -134,9 +135,15 @@ const EditAlarm: React.FC = () => {
 						</IonSegmentButton>
 					</IonSegment>
 
-					{mode === 'FIXED' ? (
-						<IonItem>
-							<IonLabel position="stacked">Time</IonLabel>
+					<IonItem>
+						<IonLabel position={isMobile ? 'stacked' : undefined} style={!isMobile ? { display: 'none' } : {}}>
+							Time
+						</IonLabel>
+						{!isMobile ? (
+							<div style={{ width: '100%', padding: '16px 0' }}>
+								<TimePicker value={fixedTime} onChange={setFixedTime} is24h={is24h} />
+							</div>
+						) : (
 							<IonDatetime
 								presentation="time"
 								hourCycle={is24h ? 'h23' : 'h12'}
@@ -145,11 +152,19 @@ const EditAlarm: React.FC = () => {
 									setFixedTime(Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!)
 								}
 							/>
-						</IonItem>
+						)}
+					</IonItem>
 					) : (
-						<>
-							<IonItem>
-								<IonLabel>Start Window</IonLabel>
+					<>
+						<IonItem>
+							<IonLabel position={isMobile ? 'stacked' : undefined} style={!isMobile ? { width: '100%', textAlign: 'center', marginBottom: '8px' } : {}}>
+								Start Window
+							</IonLabel>
+							{!isMobile ? (
+								<div style={{ width: '100%', paddingBottom: '16px' }}>
+									<TimePicker value={windowStart} onChange={setWindowStart} is24h={is24h} />
+								</div>
+							) : (
 								<IonDatetime
 									presentation="time"
 									hourCycle={is24h ? 'h23' : 'h12'}
@@ -160,9 +175,17 @@ const EditAlarm: React.FC = () => {
 										)
 									}
 								/>
-							</IonItem>
-							<IonItem>
-								<IonLabel>End Window</IonLabel>
+							)}
+						</IonItem>
+						<IonItem>
+							<IonLabel position={isMobile ? 'stacked' : undefined} style={!isMobile ? { width: '100%', textAlign: 'center', marginBottom: '8px' } : {}}>
+								End Window
+							</IonLabel>
+							{!isMobile ? (
+								<div style={{ width: '100%', paddingBottom: '16px' }}>
+									<TimePicker value={windowEnd} onChange={setWindowEnd} is24h={is24h} />
+								</div>
+							) : (
 								<IonDatetime
 									presentation="time"
 									hourCycle={is24h ? 'h23' : 'h12'}
@@ -173,11 +196,12 @@ const EditAlarm: React.FC = () => {
 										)
 									}
 								/>
-							</IonItem>
-							<IonItem lines="none">
-								<IonNote>Alarm will ring once randomly between these times.</IonNote>
-							</IonItem>
-						</>
+							)}
+						</IonItem>
+						<IonItem lines="none">
+							<IonNote>Alarm will ring once randomly between these times.</IonNote>
+						</IonItem>
+					</>
 					)}
 
 					<IonItem>
