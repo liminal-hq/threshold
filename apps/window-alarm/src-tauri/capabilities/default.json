@@ -7,6 +7,7 @@
     "core:default",
     "opener:default",
     "sql:default",
-    "notification:default"
+    "notification:default",
+    "deep-link:default"
   ]
 }

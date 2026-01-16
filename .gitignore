@@ -1,0 +1,20 @@
+node_modules/
+target/
+dist/
+.DS_Store
+.env
+.idea/
+.vscode/
+build/
+apps/desktop/src-tauri/target/
+codex-backup.tar.gz
+
+# User Vault
+vault/*
+!vault/.gitkeep
+
+# pnpm store
+.pnpm-store/
+
+# Codex backup
+codex-backup.tar.gz

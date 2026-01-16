@@ -23,7 +23,9 @@
     }
   },
   "bundle": {
-    "deepLinks": {
+  },
+  "plugins": {
+    "deep-link": {
       "protocols": [
         {
           "name": "Window Alarm",

@@ -8,5 +8,5 @@
     "dev:desktop": "pnpm --filter window-alarm tauri dev",
     "dev:android": "pnpm --filter window-alarm tauri android dev"
   },
-  "packageManager": "pnpm@8.0.0"
+  "packageManager": "pnpm@10.28.0"
 }
