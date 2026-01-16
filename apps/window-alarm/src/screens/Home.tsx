@@ -78,11 +78,11 @@ const Home: React.FC = () => {
 
 				{/* Desktop settings button */}
 				{!isMobile && (
-					<div slot="fixed" style={{
-						position: 'absolute',
-						top: '16px',
+					<div style={{
+						position: 'fixed',
+						top: '48px', /* 32px titlebar + 16px margin */
 						right: '16px',
-						zIndex: 100
+						zIndex: 1000
 					}}>
 						<IonButton fill="clear" onClick={() => history.push('/settings')}>
 							<IonIcon icon={settingsOutline} style={{ fontSize: '1.5rem', color: 'var(--ion-text-color)' }} />
