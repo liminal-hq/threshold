@@ -5,6 +5,7 @@
 **REQUIREMENT:** All UI strings, code variables, comments, and documentation MUST use **Canadian English** spelling.
 
 Examples:
+
 - `colour` instead of `color`
 - `centre` instead of `center`
 - `neighbour` instead of `neighbor`

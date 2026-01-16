@@ -32,6 +32,7 @@ pnpm install
 #### Desktop Dev
 
 You can run the desktop development server from the root:
+
 ```bash
 pnpm dev:desktop
 ```
@@ -39,6 +40,7 @@ pnpm dev:desktop
 #### Android Dev
 
 You can run the android development server from the root:
+
 ```bash
 pnpm dev:android
 ```
