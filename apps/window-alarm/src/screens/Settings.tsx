@@ -23,6 +23,7 @@ import { SettingsService, Theme } from '../services/SettingsService';
 const Settings: React.FC = () => {
 	const history = useHistory();
 	const [theme, setTheme] = useState<Theme>(SettingsService.getTheme());
+	const [forceDark, setForceDark] = useState<boolean>(SettingsService.getForceDark());
 	const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
 	const [isMobile, setIsMobile] = useState(false);
 
@@ -34,6 +35,11 @@ const Settings: React.FC = () => {
 	const handleThemeChange = (newTheme: Theme) => {
 		setTheme(newTheme);
 		SettingsService.setTheme(newTheme);
+	};
+
+	const handleForceDarkChange = (enabled: boolean) => {
+		setForceDark(enabled);
+		SettingsService.setForceDark(enabled);
 	};
 
 	const handleTimeFormatChange = (enabled: boolean) => {
@@ -110,6 +116,17 @@ const Settings: React.FC = () => {
 										<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
 										<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
 									</IonSelect>
+								</IonItem>
+
+								<IonItem lines="none">
+									<IonLabel>
+										<h2>Force Dark Mode</h2>
+										<p>Override system color scheme</p>
+									</IonLabel>
+									<IonToggle
+										checked={forceDark}
+										onIonChange={(e) => handleForceDarkChange(e.detail.checked)}
+									/>
 								</IonItem>
 							</IonList>
 						</div>

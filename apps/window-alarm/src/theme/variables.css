@@ -28,6 +28,11 @@ body.theme-deep-night {
 	}
 }
 
+body.force-dark.theme-deep-night {
+	--ion-background-color: #121212;
+	--ion-text-color: #f4f5f8;
+}
+
 /* Canadian Cottage Winter (HSL) */
 body.theme-canadian-cottage {
 	/* Warm Beige / Red / Blue-Grey */
@@ -61,6 +66,11 @@ body.theme-canadian-cottage {
 	}
 }
 
+body.force-dark.theme-canadian-cottage {
+	--ion-background-color: hsl(30, 15%, 15%);
+	--ion-text-color: hsl(35, 20%, 90%);
+}
+
 /* Georgian Bay Plunge - Refreshing turquoise waters */
 body.theme-georgian-bay-plunge {
 	/* Primary: Light Teal/Turquoise (Georgian Bay water) */
@@ -87,9 +97,14 @@ body.theme-georgian-bay-plunge {
 @media (prefers-color-scheme: dark) {
 	body.theme-georgian-bay-plunge {
 		/* Darker waters at night */
-	--ion-background-color: hsl(200, 20%, 12%);
+		--ion-background-color: hsl(200, 20%, 12%);
 		--ion-text-color: hsl(190, 30%, 90%);
 	}
+}
+
+body.force-dark.theme-georgian-bay-plunge {
+	--ion-background-color: hsl(200, 20%, 12%);
+	--ion-text-color: hsl(190, 30%, 90%);
 }
 
 /* Boring Light - Standard, accessible, unremarkable */
@@ -122,6 +137,16 @@ body.theme-boring-light {
 	}
 }
 
+body.force-dark.theme-boring-light {
+	/* Force dark even on boring light? Sure, why not. */
+	/* Wait, boring-light is specifically light. */
+	/* But if forced dark, maybe we create an inverted boring light? */
+	/* Or just alias to Boring Dark styles? */
+	/* Let's alias to boring-dark styles for consistent dark mode enforcement */
+	--ion-background-color: hsl(0, 0%, 12%);
+	--ion-text-color: hsl(0, 0%, 90%);
+}
+
 /* Boring Dark - Standard, accessible, unremarkable */
 body.theme-boring-dark {
 	/* Primary: Standard Blue */
@@ -150,4 +175,9 @@ body.theme-boring-dark {
 		--ion-background-color: hsl(0, 0%, 12%);
 		--ion-text-color: hsl(0, 0%, 90%);
 	}
+}
+
+body.force-dark.theme-boring-dark {
+	--ion-background-color: hsl(0, 0%, 12%);
+	--ion-text-color: hsl(0, 0%, 90%);
 }

@@ -86,8 +86,13 @@ const EditAlarm: React.FC = () => {
 			alarmData.id = parseInt(id);
 		}
 
-		await alarmManagerService.saveAndSchedule(alarmData);
-		history.goBack();
+		try {
+			await alarmManagerService.saveAndSchedule(alarmData);
+			history.goBack();
+		} catch (e) {
+			console.error('Failed to save alarm:', e);
+			alert('Failed to save alarm. Please try again.');
+		}
 	};
 
 	return (
@@ -198,13 +203,22 @@ const EditAlarm: React.FC = () => {
 						</>
 					)}
 
-					<IonItem>
+					<IonItem lines="none" className="label-input-item">
 						<IonLabel position="stacked">Label</IonLabel>
-						<IonInput
-							placeholder="Wake up"
-							value={label}
-							onIonChange={(e) => setLabel(e.detail.value!)}
-						/>
+						<div style={{
+							border: '1px solid var(--ion-border-color)',
+							borderRadius: '8px',
+							padding: '0 8px',
+							marginTop: '8px',
+							background: 'var(--ion-card-background, #fff)'
+						}}>
+							<IonInput
+								placeholder="Alarm Label (e.g. Wake Up)"
+								value={label}
+								onIonChange={(e) => setLabel(e.detail.value!)}
+								clearInput
+							/>
+						</div>
 					</IonItem>
 
 					<IonItem lines="none">

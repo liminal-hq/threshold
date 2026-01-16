@@ -74,9 +74,32 @@ export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, is24h }
                 <button className="time-control-btn" onClick={() => adjustHour(1)}>
                     <IonIcon icon={add} />
                 </button>
-                <div className="time-value-box">
-                    {displayHour.toString().padStart(2, '0')}
-                </div>
+                <input
+                    type="text"
+                    className="time-value-input"
+                    value={displayHour.toString().padStart(2, '0')}
+                    onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) {
+                            // Basic clamp/wrap logic can be checking onBlur, 
+                            // but for typing we usually allow wide range then normalize.
+                            // For simplicity, we just update if it's a number.
+                            // But we need to handle the isPm offset logic if !is24h.
+                            // Actually, direct edit is tricky with 12h format.
+                            // Let's assume user types visual hour.
+                            let newH = val;
+                            if (!is24h) {
+                                if (isPm && newH !== 12) newH += 12;
+                                if (!isPm && newH === 12) newH = 0;
+                            }
+                            updateTime(newH, minute);
+                        }
+                    }}
+                    onBlur={(e) => {
+                        // Ensure valid range
+                        updateTime(hour, minute);
+                    }}
+                />
                 <button className="time-control-btn" onClick={() => adjustHour(-1)}>
                     <IonIcon icon={remove} />
                 </button>
@@ -89,9 +112,20 @@ export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, is24h }
                 <button className="time-control-btn" onClick={() => adjustMinute(1)}>
                     <IonIcon icon={add} />
                 </button>
-                <div className="time-value-box">
-                    {minute.toString().padStart(2, '0')}
-                </div>
+                <input
+                    type="text"
+                    className="time-value-input"
+                    value={minute.toString().padStart(2, '0')}
+                    onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) {
+                            updateTime(hour, val);
+                        }
+                    }}
+                    onBlur={(e) => {
+                        updateTime(hour, minute);
+                    }}
+                />
                 <button className="time-control-btn" onClick={() => adjustMinute(-1)}>
                     <IonIcon icon={remove} />
                 </button>
