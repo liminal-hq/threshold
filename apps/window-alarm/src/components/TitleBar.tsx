@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { platform } from '@tauri-apps/plugin-os';
 import {
 	WindowMinimizeIcon,
 	WindowMaximizeIcon,
@@ -9,44 +10,37 @@ import {
 import './TitleBar.css';
 
 export const TitleBar: React.FC = () => {
-	const [platform, setPlatform] = useState<'mac' | 'linux' | 'win'>('win');
+	const [platformType, setPlatformType] = useState<'mac' | 'linux' | 'win'>('linux');
 	const [isMaximized, setIsMaximized] = useState(false);
-	const [appWindow, setAppWindow] = useState<any>(null);
+
+	const appWindow = getCurrentWindow();
 
 	useEffect(() => {
-		// Safe access to window object for SSR/Browser checks
-		try {
-			const win = getCurrentWindow();
-			setAppWindow(win);
-
-			const updateState = async () => {
-				try {
-					setIsMaximized(await win.isMaximized());
-				} catch (e) {
-					console.error('Failed to check window state', e);
-				}
-			};
-
-			updateState();
-			const unlistenPromise = win.listen('tauri://resize', updateState);
-			return () => {
-				unlistenPromise.then((unlisten) => unlisten());
-			};
-		} catch (e) {
-			console.warn('Not running in Tauri context');
-		}
-
-		const ua = navigator.userAgent;
-		if (ua.includes('Mac')) {
-			setPlatform('mac');
-		} else if (ua.includes('Linux')) {
-			setPlatform('linux');
+		// Detect platform using Tauri's OS plugin
+		const os = platform();
+		if (os === 'macos') {
+			setPlatformType('mac');
+		} else if (os === 'linux') {
+			setPlatformType('linux');
 		} else {
-			setPlatform('win');
+			setPlatformType('win');
 		}
-	}, []);
 
-	if (!appWindow) return null;
+		const updateState = async () => {
+			try {
+				setIsMaximized(await appWindow.isMaximized());
+			} catch (e) {
+				console.error('Failed to check window state', e);
+			}
+		};
+
+		updateState();
+		const unlistenPromise = appWindow.listen('tauri://resize', updateState);
+
+		return () => {
+			unlistenPromise.then((unlisten) => unlisten());
+		};
+	}, []);
 
 	const minimize = () => appWindow.minimize();
 	const toggleMaximize = async () => {
@@ -83,28 +77,28 @@ export const TitleBar: React.FC = () => {
 		</div>
 	);
 
-	// Linux Controls (Simple fallback for now)
+	// Linux Controls (Adwaita-style)
 	const LinuxControls = () => (
-		<div className="window-controls win">
-			<button onClick={minimize} className="control-button win-minimize" title="Minimize">
+		<div className="window-controls linux">
+			<button onClick={minimize} className="control-button linux-minimize" title="Minimize">
 				<WindowMinimizeIcon />
 			</button>
 			<button
 				onClick={toggleMaximize}
-				className="control-button win-maximize"
+				className="control-button linux-maximize"
 				title={isMaximized ? 'Restore' : 'Maximize'}
 			>
 				{isMaximized ? <WindowRestoreIcon /> : <WindowMaximizeIcon />}
 			</button>
-			<button onClick={close} className="control-button win-close" title="Close">
+			<button onClick={close} className="control-button linux-close" title="Close">
 				<WindowCloseIcon />
 			</button>
 		</div>
 	);
 
 	return (
-		<div className={`title-bar is-${platform}`}>
-			{platform === 'mac' && (
+		<div className={`title-bar is-${platformType}`}>
+			{platformType === 'mac' && (
 				<>
 					<MacControls />
 					<div className="title-drag-region" data-tauri-drag-region />
@@ -116,9 +110,11 @@ export const TitleBar: React.FC = () => {
 				</>
 			)}
 
-			{platform === 'linux' && (
+			{platformType === 'linux' && (
 				<>
-					<div className="app-title left" data-tauri-drag-region>
+					<div className="window-controls-placeholder" />
+					<div className="title-drag-region" data-tauri-drag-region />
+					<div className="app-title" data-tauri-drag-region>
 						Window Alarm
 					</div>
 					<div className="title-drag-region" data-tauri-drag-region />
@@ -126,7 +122,7 @@ export const TitleBar: React.FC = () => {
 				</>
 			)}
 
-			{platform === 'win' && (
+			{platformType === 'win' && (
 				<>
 					<div className="app-title left" data-tauri-drag-region>
 						Window Alarm
@@ -140,3 +136,4 @@ export const TitleBar: React.FC = () => {
 };
 
 export default TitleBar;
+
