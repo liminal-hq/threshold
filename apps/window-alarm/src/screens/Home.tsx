@@ -57,6 +57,14 @@ const Home: React.FC = () => {
 		loadData();
 	};
 
+	const handleEdit = (id: number) => {
+		history.push(`/edit/${id}`);
+	};
+
+	const handleAdd = () => {
+		history.push('/edit/new');
+	};
+
 	return (
 		<IonPage>
 			{isMobile && (
