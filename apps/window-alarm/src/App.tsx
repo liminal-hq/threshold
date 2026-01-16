@@ -30,7 +30,8 @@ import './theme/variables.css';
 import './theme/ringing.css';
 import './theme/components.css'; /* Import custom component styles globally */
 
-import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
 import { platform } from '@tauri-apps/plugin-os';
 
 setupIonicReact();
