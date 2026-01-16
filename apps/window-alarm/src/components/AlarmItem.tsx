@@ -1,15 +1,13 @@
 import React from 'react';
 import {
 	IonItem,
-	IonLabel,
-	IonNote,
 	IonToggle,
 	IonItemSliding,
 	IonItemOptions,
 	IonItemOption,
 	IonIcon,
 } from '@ionic/react';
-import { trash } from 'ionicons/icons';
+import { trash, shuffle, time } from 'ionicons/icons';
 import { Alarm } from '../services/DatabaseService';
 import { format } from 'date-fns';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
@@ -22,12 +20,13 @@ interface AlarmItemProps {
 	onClick: () => void;
 }
 
-export const AlarmItem: React.FC<AlarmItemProps> = ({
+export const AlarmItem: React.FC<AlarmItemProps & { isMobile?: boolean }> = ({
 	alarm,
 	is24h,
 	onToggle,
 	onDelete,
 	onClick,
+	isMobile = false,
 }) => {
 	const formatTime = (timeStr?: string) => {
 		if (!timeStr) return '--:--';
@@ -39,39 +38,63 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 			? formatTime(alarm.fixedTime)
 			: `${formatTime(alarm.windowStart)} - ${formatTime(alarm.windowEnd)}`;
 
-	const nextTriggerDisplay =
-		alarm.enabled && alarm.nextTrigger
-			? `Next: ${TimeFormatHelper.format(alarm.nextTrigger, is24h)}` // We might want Day name here too
-			: 'Disabled';
-
-	// Enhanced Next Trigger with day
 	const nextTriggerDetailed =
 		alarm.enabled && alarm.nextTrigger
-			? `Next: ${format(new Date(alarm.nextTrigger), 'EEE')} ${TimeFormatHelper.format(alarm.nextTrigger, is24h)}`
+			? `${format(new Date(alarm.nextTrigger), 'EEE')} ${TimeFormatHelper.format(alarm.nextTrigger, is24h)}`
 			: 'Disabled';
 
-	return (
-		<IonItemSliding>
-			<IonItem button onClick={onClick} detail={false}>
-				<IonLabel>
-					<h2>{timeDisplay}</h2>
-					<p>
-						{alarm.label || 'Alarm'} • <IonNote>{nextTriggerDetailed}</IonNote>
-					</p>
-				</IonLabel>
+	const CardContent = () => (
+		<>
+			<div className="alarm-info">
+				<div className="alarm-time">{timeDisplay}</div>
+				<div className="alarm-label">{alarm.label || 'Alarm'}</div>
+				<div className="alarm-next">
+					{alarm.enabled && <IonIcon icon={alarm.mode === 'WINDOW' ? shuffle : time} style={{ fontSize: '12px' }} />}
+					{nextTriggerDetailed}
+				</div>
+			</div>
+			<div className="alarm-actions" onClick={(e) => e.stopPropagation()}>
+				{!isMobile && (
+					<button className="delete-btn" onClick={onDelete} title="Delete Alarm">
+						<IonIcon icon={trash} size="large" />
+					</button>
+				)}
 				<IonToggle
-					slot="end"
 					checked={alarm.enabled}
 					onIonChange={(e) => onToggle(e.detail.checked)}
-					onClick={(e) => e.stopPropagation()}
 				/>
-			</IonItem>
+			</div>
+		</>
+	);
 
-			<IonItemOptions side="end">
-				<IonItemOption color="danger" onClick={onDelete}>
-					<IonIcon slot="icon-only" icon={trash} />
-				</IonItemOption>
-			</IonItemOptions>
-		</IonItemSliding>
+	if (isMobile) {
+		return (
+			<IonItemSliding className="mobile-alarm-wrapper">
+				<IonItem
+					button
+					onClick={onClick}
+					detail={false}
+					lines="none"
+					className="alarm-card mobile-alarm-card"
+					style={{ '--padding-start': '0', '--inner-padding-end': '0', background: 'transparent' }}
+				>
+					<div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0' }}>
+						<CardContent />
+					</div>
+				</IonItem>
+
+				<IonItemOptions side="end">
+					<IonItemOption color="danger" onClick={onDelete}>
+						<IonIcon slot="icon-only" icon={trash} />
+					</IonItemOption>
+				</IonItemOptions>
+			</IonItemSliding>
+		);
+	}
+
+	return (
+		<div className="alarm-card" onClick={onClick}>
+			<CardContent />
+		</div>
 	);
 };

@@ -95,6 +95,7 @@ const Home: React.FC = () => {
 							key={alarm.id}
 							alarm={alarm}
 							is24h={is24h}
+							isMobile={isMobile}
 							onToggle={(enabled) => handleToggle(alarm, enabled)}
 							onDelete={() => handleDelete(alarm.id)}
 							onClick={() => history.push(`/edit/${alarm.id}`)}

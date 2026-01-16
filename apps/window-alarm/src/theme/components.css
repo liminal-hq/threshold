@@ -49,3 +49,88 @@ ion-segment.custom-pill ion-segment-button {
 .day-pill:hover:not(.selected) {
 	background: var(--ion-color-step-200, #eef);
 }
+
+/* Alarm Card */
+.alarm-card {
+	background: var(--ion-card-background, #fff);
+	border-radius: 16px;
+	padding: 16px 20px;
+	margin-bottom: 12px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	cursor: pointer;
+	border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.05));
+	position: relative;
+	overflow: hidden;
+}
+
+.alarm-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+	border-color: var(--ion-color-primary, #3880ff);
+}
+
+.alarm-info {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.alarm-time {
+	font-size: 2rem;
+	font-weight: 700;
+	color: var(--ion-text-color);
+	letter-spacing: -0.5px;
+	line-height: 1;
+}
+
+.alarm-label {
+	font-size: 1rem;
+	font-weight: 500;
+	color: var(--ion-text-color-step-400, #666);
+}
+
+.alarm-next {
+	font-size: 0.85rem;
+	color: var(--ion-color-secondary);
+	font-weight: 600;
+	margin-top: 4px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.alarm-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.delete-btn {
+	opacity: 0;
+	transition: opacity 0.2s;
+	background: transparent;
+	color: var(--ion-color-danger);
+	border: none;
+	cursor: pointer;
+	padding: 8px;
+	border-radius: 50%;
+}
+
+.delete-btn:hover {
+	background: var(--ion-color-danger-tint);
+	color: white;
+}
+
+.alarm-card:hover .delete-btn {
+	opacity: 1;
+}
+
+/* Mobile overrides for list-like feel but kept cardy */
+.mobile-alarm-card {
+	margin: 8px 16px;
+}
+
