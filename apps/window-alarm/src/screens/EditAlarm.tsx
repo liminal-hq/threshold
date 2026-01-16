@@ -214,7 +214,8 @@ const EditAlarm: React.FC = () => {
 							borderRadius: '8px',
 							padding: '0 8px',
 							marginTop: '8px',
-							background: 'var(--ion-card-background, #fff)'
+							background: 'var(--ion-card-background, #fff)',
+							width: '100%'
 						}}>
 							<IonInput
 								placeholder="Alarm Label (e.g. Wake Up)"
