@@ -1,5 +1,5 @@
 use tauri::{
-  plugin::{PluginApi, PluginHandle},
+  plugin::PluginApi,
   Runtime,
 };
 use crate::models::*;
@@ -14,6 +14,7 @@ pub fn init<R: Runtime>(
 }
 
 pub struct AlarmManager<R: Runtime> {
+  #[allow(dead_code)]
   app: tauri::AppHandle<R>,
 }
 
