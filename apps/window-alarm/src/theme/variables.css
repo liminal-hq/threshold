@@ -93,6 +93,12 @@ body.theme-canadian-cottage {
 		--ion-color-primary-shade: hsl(210, 20%, 62%);
 		--ion-color-primary-tint: hsl(210, 20%, 78%);
 	}
+	
+	/* Special override for Canadian Cottage Segments to be RED */
+	body.theme-canadian-cottage ion-segment.custom-pill ion-segment-button {
+		--indicator-color: var(--ion-color-secondary) !important;
+		--color-checked: #ffffff !important;
+	}
 }
 
 body.force-dark.theme-canadian-cottage {
@@ -111,6 +117,12 @@ body.force-dark.theme-canadian-cottage {
 	--ion-color-primary-contrast-rgb: 0, 0, 0;
 	--ion-color-primary-shade: hsl(210, 20%, 62%);
 	--ion-color-primary-tint: hsl(210, 20%, 78%);
+}
+
+/* Force Red Segment for Force Dark Canadian Cottage too */
+body.force-dark.theme-canadian-cottage ion-segment.custom-pill ion-segment-button {
+	--indicator-color: var(--ion-color-secondary) !important;
+	--color-checked: #ffffff !important;
 }
 
 /* Georgian Bay Plunge - Refreshing turquoise waters */
