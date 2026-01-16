@@ -18,6 +18,43 @@ ion-segment.custom-pill ion-segment-button {
 
 /* ... existing day styles ... */
 
+/* Day Selector Pills */
+.day-selector {
+	display: flex;
+	flex-direction: row;
+	justify-content: center; /* Center them */
+	gap: 12px;
+	flex-wrap: wrap;
+	width: 100%;
+	margin-top: 8px;
+}
+
+.day-pill {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--ion-color-step-100, #f4f5f8);
+	color: var(--ion-text-color-step-600, #444);
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all 0.2s;
+	border: 1px solid transparent; /* Prevent layout shift */
+}
+
+.day-pill.selected {
+	background: var(--ion-color-primary);
+	color: var(--ion-color-primary-contrast);
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.day-pill:hover:not(.selected) {
+	background: var(--ion-color-step-200, #eef);
+}
+
 /* Desktop Footer */
 .desktop-footer {
 	background: var(--ion-background-color);
@@ -42,7 +79,10 @@ ion-segment.custom-pill ion-segment-button {
 	border-radius: 16px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 	overflow: hidden;
-	border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.05));
+	/* Use a more subtle border color that works in both light and dark if vars are set correctly, 
+	   or use a very disparate fallback. 
+	   Better yet, use a transparent border if shadow is enough, but user complained about lines. */
+	border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.08));
 	margin-bottom: 24px;
 }
 

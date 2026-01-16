@@ -17,20 +17,24 @@
 	gap: 8px;
 }
 
-.time-value-box {
+.time-value-input {
 	background: var(--ion-background-color-step-100, #f4f5f8);
 	border: 1px solid var(--ion-border-color, #ddd);
 	border-radius: 8px;
-	padding: 12px 16px;
+	padding: 12px 0; /* Remove horizontal padding to prevent width issues, rely on text-align */
 	font-size: 2rem;
 	font-weight: 300;
-	min-width: 80px;
+	width: 80px; /* Fixed width */
 	text-align: center;
 	color: var(--ion-text-color, #000);
 	transition: background-color 0.2s, border-color 0.2s;
+	/* Input reset */
+	outline: none;
+	appearance: none;
+	-webkit-appearance: none;
 }
 
-.time-value-box.active {
+.time-value-input:focus {
 	border-color: var(--ion-color-primary, #3880ff);
 	background: var(--ion-background-color-step-200, #eef);
 }
