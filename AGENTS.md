@@ -15,6 +15,11 @@ Examples:
 
 - Use Conventional Commits format (e.g., `feat: ...`, `fix: ...`, `docs: ...`).
 
+## Application Protocol
+
+- The application registers the `window-alarm://` protocol.
+- **IMPORTANT:** If the app name or identifier changes, ensure this protocol registration is updated in `tauri.conf.json` and relevant documentation.
+
 ## Code Organization
 
 - This is a `pnpm` workspace monorepo.

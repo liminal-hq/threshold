@@ -23,6 +23,16 @@
     }
   },
   "bundle": {
+    "deepLinks": {
+      "protocols": [
+        {
+          "name": "Window Alarm",
+          "schemes": [
+            "window-alarm"
+          ]
+        }
+      ]
+    },
     "active": true,
     "targets": "all",
     "icon": [

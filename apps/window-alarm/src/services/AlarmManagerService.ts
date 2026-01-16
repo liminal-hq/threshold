@@ -38,24 +38,35 @@ export class AlarmManagerService {
         if (imports && imports.length > 0) {
             console.log("Importing native alarms:", imports);
             for (const imp of imports) {
-                // Convert simple Hour/Min to proper Fixed Alarm
+                // Deduplication Check:
+                // We check if an alarm with this native ID already exists in our DB.
+                // NOTE: This assumes we persist the native ID.
+                // Currently, our SQLite schema uses auto-increment ID.
+                // To support true dedupe, we should probably add `native_id` to schema or check approximate match.
+
+                // For this iteration, we'll check if an alarm with the exact same Time and Label exists.
+                const allAlarms = await databaseService.getAllAlarms();
                 const timeStr = \`\${imp.hour.toString().padStart(2, '0')}:\${imp.minute.toString().padStart(2, '0')}\`;
 
+                const duplicate = allAlarms.find(a =>
+                    a.mode === 'FIXED' &&
+                    a.fixedTime === timeStr &&
+                    a.label === imp.label
+                );
+
+                if (duplicate) {
+                    console.log("Skipping duplicate import:", imp);
+                    continue;
+                }
+
                 const newAlarm: Omit<Alarm, 'id'> & { id?: number } = {
-                    id: imp.id, // Use the ID generated natively to prevent duplication if possible
                     label: imp.label,
                     mode: 'FIXED',
                     fixedTime: timeStr,
-                    activeDays: [0,1,2,3,4,5,6], // Default to every day for external sets? Or just once?
-                    // Android default for "Set Alarm" is often non-repeating.
-                    // But our app logic requires active days for `calculateNextTrigger`.
-                    // Let's assume non-repeating isn't fully supported by our scheduler yet (it requires activeDays).
-                    // So we default to "Every Day" for now.
+                    activeDays: [0,1,2,3,4,5,6], // Default to every day
                     enabled: true
                 };
 
-                // We use saveAndSchedule to ensure SQLite is synced and the native alarm
-                // (which is already scheduled, but this confirms it) matches our logic.
                 await this.saveAndSchedule(newAlarm);
             }
         }
@@ -74,7 +85,6 @@ export class AlarmManagerService {
     }
   }
 
-  // Added missing reschedule helper
   private async rescheduleAlarm(alarm: Alarm) {
       return this.saveAndSchedule(alarm);
   }
