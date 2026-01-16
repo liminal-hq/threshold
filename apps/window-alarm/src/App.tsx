@@ -30,7 +30,7 @@ import './theme/variables.css';
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
-/* ... imports ... */
+
 
 setupIonicReact();
 
