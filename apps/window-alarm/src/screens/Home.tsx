@@ -97,7 +97,7 @@ const Home: React.FC = () => {
 					</div>
 				)}
 
-				<IonList style={!isMobile ? { marginTop: '64px', paddingBottom: '80px', background: 'transparent' } : {}}>
+				<IonList style={!isMobile ? { marginTop: '88px', paddingBottom: '80px', background: 'transparent' } : {}}>
 					{alarms.map((alarm) => (
 						<AlarmItem
 							key={alarm.id}
