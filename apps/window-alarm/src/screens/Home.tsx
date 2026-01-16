@@ -14,6 +14,7 @@ import {
 	IonRefresherContent,
 	IonButtons,
 	IonButton,
+	IonFooter,
 } from '@ionic/react';
 import { add, ellipsisVertical, settingsOutline } from 'ionicons/icons';
 import { platform } from '@tauri-apps/plugin-os';
@@ -77,14 +78,14 @@ const Home: React.FC = () => {
 
 				{/* Desktop settings button */}
 				{!isMobile && (
-					<div style={{
+					<div slot="fixed" style={{
 						position: 'absolute',
-						top: '8px',
+						top: '16px',
 						right: '16px',
-						zIndex: 10
+						zIndex: 100
 					}}>
 						<IonButton fill="clear" onClick={() => history.push('/settings')}>
-							<IonIcon icon={settingsOutline} style={{ fontSize: '1.5rem' }} />
+							<IonIcon icon={settingsOutline} style={{ fontSize: '1.5rem', color: 'var(--ion-text-color)' }} />
 						</IonButton>
 					</div>
 				)}
@@ -103,19 +104,7 @@ const Home: React.FC = () => {
 					))}
 				</IonList>
 
-				{!isMobile ? (
-					<div style={{ padding: '16px', display: 'flex', justifyContent: 'center' }}>
-						<IonButton
-							expand="block"
-							color="secondary"
-							style={{ width: '100%', maxWidth: '400px', height: '48px', margin: '0' }}
-							onClick={() => history.push('/edit/new')}
-						>
-							<IonIcon slot="start" icon={add} />
-							Add Alarm
-						</IonButton>
-					</div>
-				) : (
+				{isMobile && (
 					<IonFab vertical="bottom" horizontal="end" slot="fixed">
 						<IonFabButton color="secondary" onClick={() => history.push('/edit/new')}>
 							<IonIcon icon={add} />
@@ -123,6 +112,22 @@ const Home: React.FC = () => {
 					</IonFab>
 				)}
 			</IonContent>
+
+			{!isMobile && (
+				<IonFooter className="ion-no-border" style={{ background: 'transparent' }}>
+					<IonToolbar style={{ '--background': 'transparent', padding: '0 16px 16px 16px' }}>
+						<IonButton
+							expand="block"
+							color="secondary"
+							style={{ width: '100%', maxWidth: '400px', margin: '0 auto', height: '48px' }}
+							onClick={() => history.push('/edit/new')}
+						>
+							<IonIcon slot="start" icon={add} />
+							Add Alarm
+						</IonButton>
+					</IonToolbar>
+				</IonFooter>
+			)}
 		</IonPage>
 	);
 };
