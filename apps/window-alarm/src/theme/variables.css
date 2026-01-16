@@ -29,6 +29,10 @@ body.theme-deep-night {
 		--ion-card-background: #1a1a1a;
 		--ion-color-step-100: #1e1e1e;
 		--ion-color-step-200: #2a2a2a;
+
+		/* Ensure primary is distinguishable */
+		--ion-color-primary: #4c8dff;
+		--ion-color-primary-contrast: #ffffff;
 	}
 }
 
@@ -39,6 +43,9 @@ body.force-dark.theme-deep-night {
 	--ion-card-background: #1a1a1a;
 	--ion-color-step-100: #1e1e1e;
 	--ion-color-step-200: #2a2a2a;
+	
+	--ion-color-primary: #4c8dff;
+	--ion-color-primary-contrast: #ffffff;
 }
 
 /* Canadian Cottage Winter (HSL) */
@@ -77,6 +84,14 @@ body.theme-canadian-cottage {
 		--ion-color-step-200: hsl(30, 15%, 30%);
 		/* Fix contrast on pills/cards */
 		--ion-text-color-step-400: hsl(35, 10%, 70%);
+
+		/* Lighter Primary for Dark Mode (so Cancel button is visible) */
+		--ion-color-primary: hsl(210, 20%, 70%);
+		--ion-color-primary-rgb: 178, 194, 209;
+		--ion-color-primary-contrast: #000000;
+		--ion-color-primary-contrast-rgb: 0, 0, 0;
+		--ion-color-primary-shade: hsl(210, 20%, 62%);
+		--ion-color-primary-tint: hsl(210, 20%, 78%);
 	}
 }
 
@@ -88,6 +103,14 @@ body.force-dark.theme-canadian-cottage {
 	--ion-color-step-100: hsl(30, 15%, 25%);
 	--ion-color-step-200: hsl(30, 15%, 30%);
 	--ion-text-color-step-400: hsl(35, 10%, 70%);
+	
+	/* Lighter Primary for Dark Mode */
+	--ion-color-primary: hsl(210, 20%, 70%);
+	--ion-color-primary-rgb: 178, 194, 209;
+	--ion-color-primary-contrast: #000000;
+	--ion-color-primary-contrast-rgb: 0, 0, 0;
+	--ion-color-primary-shade: hsl(210, 20%, 62%);
+	--ion-color-primary-tint: hsl(210, 20%, 78%);
 }
 
 /* Georgian Bay Plunge - Refreshing turquoise waters */

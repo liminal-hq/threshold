@@ -18,7 +18,7 @@
 }
 
 .time-value-input {
-	background: var(--ion-background-color-step-100, #f4f5f8);
+	background: var(--ion-color-step-100, #f4f5f8); /* Use step-100 which is defined in variables.css */
 	border: 1px solid var(--ion-border-color, #ddd);
 	border-radius: 8px;
 	padding: 12px 0; /* Remove horizontal padding to prevent width issues, rely on text-align */

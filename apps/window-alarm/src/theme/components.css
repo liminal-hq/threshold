@@ -10,10 +10,20 @@ ion-segment.custom-pill {
 
 ion-segment.custom-pill ion-segment-button {
 	--indicator-color: var(--ion-color-primary);
-	--color: #333; /* Hardcode dark gray for unselected state visibility in light mode */
-	--color-checked: var(--ion-color-primary-contrast, #fff);
+	--color: #333 !important; /* Force dark gray for light mode */
+	--color-checked: var(--ion-color-primary-contrast, #fff) !important;
 	--border-radius: 50px;
 	min-width: 100px;
+}
+
+/* Dark mode overrides for custom pill to ensure text is light */
+@media (prefers-color-scheme: dark) {
+	ion-segment.custom-pill ion-segment-button {
+		--color: #e0e0e0 !important;
+	}
+}
+body.force-dark ion-segment.custom-pill ion-segment-button {
+	--color: #e0e0e0 !important;
 }
 
 /* ... existing day styles ... */
