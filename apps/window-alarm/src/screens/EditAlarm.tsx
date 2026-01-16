@@ -53,7 +53,7 @@ const EditAlarm: React.FC = () => {
 		const alarms = await databaseService.getAllAlarms();
 		const alarm = alarms.find((a) => a.id === alarmId);
 		if (alarm) {
-			setLabel(alarm.label);
+			setLabel(alarm.label || '');
 			setMode(alarm.mode);
 			setActiveDays(alarm.activeDays);
 			if (alarm.fixedTime) setFixedTime(alarm.fixedTime);
