@@ -1,8 +1,6 @@
 import { databaseService } from './DatabaseService';
 import { invoke } from '@tauri-apps/api/core';
 import {
-	isPermissionGranted,
-	requestPermission,
 	sendNotification,
 } from '@tauri-apps/plugin-notification';
 import { platform } from '@tauri-apps/plugin-os';
@@ -10,14 +8,7 @@ import { Alarm, AlarmMode, DayOfWeek } from '@window-alarm/core/types';
 import { calculateNextTrigger as calcTrigger } from '@window-alarm/core/scheduler';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
-interface ScheduleRequest {
-	id: number;
-	triggerAt: number;
-}
 
-interface CancelRequest {
-	id: number;
-}
 
 interface ImportedAlarm {
 	id: number;
@@ -147,38 +138,63 @@ export class AlarmManagerService {
 			// Desktop Notification Logic
 			// We use the OS plugin to check if we are on a desktop platform.
 			// Android/iOS handle notifications natively via the alarm-manager plugin.
-			await this.sendNotificationHelper(timestamp);
+			await this.sendNotificationHelper(id, timestamp);
 		} catch (e) {
 			console.error('Failed to schedule native alarm', e);
 		}
 	}
 
-	private async sendNotificationHelper(timestamp: number) {
+	private async sendNotificationHelper(id: number, timestamp: number) {
 		try {
 			const currentPlatform = platform();
 			if (currentPlatform === 'android' || currentPlatform === 'ios') {
 				return;
 			}
 
-			let permission = await isPermissionGranted();
-			if (!permission) {
-				const permissionState = await requestPermission();
-				permission = permissionState === 'granted';
-			}
+			// Calculate delay until the alarm
+			const delay = timestamp - Date.now();
+			if (delay > 0) {
+				console.log(`Setting desktop timer for ${delay}ms`);
+				setTimeout(async () => {
+					// 1. Send Notification
+					sendNotification({
+						title: 'Window Alarm',
+						body: 'Your alarm is ringing!',
+					});
 
-			if (permission) {
-				// Calculate delay until the alarm
-				const delay = timestamp - Date.now();
-				if (delay > 0) {
-					// NOTE: setTimeout for long durations is not reliable if app suspend/sleeps.
-					// But for this "Mock" desktop implementation it suffices.
-					setTimeout(() => {
-						sendNotification({
-							title: 'Window Alarm',
-							body: 'Your alarm is ringing!',
+					// 2. Open Floating Window
+					try {
+						// Dynamically import to avoid issues on mobile if pure JS bundle
+						const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+						const label = `alarm-ring-${timestamp}`;
+						
+						// Check if window exists? (Tauri throws if duplicate label, so use unique)
+						const webview = new WebviewWindow(label, {
+							url: `/ringing/${id}`, 
+							title: 'Alarm',
+							width: 400,
+							height: 600,
+							resizable: false,
+							alwaysOnTop: true,
+							center: true,
+							skipTaskbar: false,
+							decorations: true,
+							focus: true,
 						});
-					}, delay);
-				}
+
+						webview.once('tauri://created', function () {
+							console.log('Alarm window created');
+						});
+						
+						webview.once('tauri://error', function (e) {
+							console.error('Alarm window creation error', e);
+						});
+
+					} catch (err) {
+						console.error('Failed to open alarm window', err);
+					}
+
+				}, delay);
 			}
 		} catch (err) {
 			console.warn('Notification helper failed:', err);
