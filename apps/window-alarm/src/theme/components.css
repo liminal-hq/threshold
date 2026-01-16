@@ -134,3 +134,15 @@ ion-segment.custom-pill ion-segment-button {
 	margin: 8px 16px;
 }
 
+/* Desktop Footer */
+.desktop-footer {
+	background: var(--ion-background-color);
+	border-top: 1px solid var(--ion-border-color);
+	padding: 16px 24px;
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	z-index: 10;
+}
+
+

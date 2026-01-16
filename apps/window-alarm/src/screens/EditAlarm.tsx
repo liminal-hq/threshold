@@ -109,28 +109,16 @@ const EditAlarm: React.FC = () => {
 			)}
 			<IonContent style={{ paddingTop: isMobile ? '0' : '8px' }}>
 				{!isMobile && (
-					<div
-						style={{
-							background: 'var(--ion-background-color)',
-							zIndex: 10,
-							padding: '8px 16px',
-							display: 'flex',
-							justifyContent: 'space-between',
-							alignItems: 'center',
-							borderBottom: '1px solid var(--ion-border-color)',
-						}}
-					>
-						<IonButton fill="clear" onClick={() => history.goBack()}>Cancel</IonButton>
-						<h3 style={{ margin: 0, fontSize: '18px' }}>{isNew ? 'New Alarm' : 'Edit Alarm'}</h3>
-						<IonButton strong color="secondary" onClick={handleSave}>Save</IonButton>
+					<div style={{ padding: '24px 16px 0 16px' }}>
+						<h2 style={{ margin: 0, fontSize: '24px', fontWeight: 600 }}>{isNew ? 'New Alarm' : 'Edit Alarm'}</h2>
 					</div>
 				)}
-				<IonList inset>
+				<IonList inset={!isMobile} lines={isMobile ? 'full' : 'none'} style={!isMobile ? { marginTop: '24px', background: 'transparent' } : {}}>
 					<IonSegment
 						value={mode}
 						onIonChange={(e) => setMode(e.detail.value as any)}
-						className="custom-pill"
-						mode="ios"
+						className={!isMobile ? "custom-pill" : ""}
+						mode={!isMobile ? undefined : "ios"}
 					>
 						<IonSegmentButton value="FIXED">
 							<IonLabel>Fixed Time</IonLabel>
@@ -140,73 +128,74 @@ const EditAlarm: React.FC = () => {
 						</IonSegmentButton>
 					</IonSegment>
 
-					<IonItem>
-						<IonLabel position={isMobile ? 'stacked' : undefined} style={!isMobile ? { display: 'none' } : {}}>
-							Time
-						</IonLabel>
-						{!isMobile ? (
-							<div style={{ width: '100%', padding: '16px 0' }}>
-								<TimePicker value={fixedTime} onChange={setFixedTime} is24h={is24h} />
-							</div>
-						) : (
-							<IonDatetime
-								presentation="time"
-								hourCycle={is24h ? 'h23' : 'h12'}
-								value={fixedTime}
-								onIonChange={(e) =>
-									setFixedTime(Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!)
-								}
-							/>
-						)}
-					</IonItem>
+					{mode === 'FIXED' ? (
+						<IonItem>
+							<IonLabel position={isMobile ? 'stacked' : undefined} style={!isMobile ? { display: 'none' } : {}}>
+								Time
+							</IonLabel>
+							{!isMobile ? (
+								<div style={{ width: '100%', padding: '16px 0' }}>
+									<TimePicker value={fixedTime} onChange={setFixedTime} is24h={is24h} />
+								</div>
+							) : (
+								<IonDatetime
+									presentation="time"
+									hourCycle={is24h ? 'h23' : 'h12'}
+									value={fixedTime}
+									onIonChange={(e) =>
+										setFixedTime(Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!)
+									}
+								/>
+							)}
+						</IonItem>
 					) : (
-					<>
-						<IonItem>
-							<IonLabel position={isMobile ? 'stacked' : undefined} style={!isMobile ? { width: '100%', textAlign: 'center', marginBottom: '8px' } : {}}>
-								Start Window
-							</IonLabel>
-							{!isMobile ? (
-								<div style={{ width: '100%', paddingBottom: '16px' }}>
-									<TimePicker value={windowStart} onChange={setWindowStart} is24h={is24h} />
-								</div>
-							) : (
-								<IonDatetime
-									presentation="time"
-									hourCycle={is24h ? 'h23' : 'h12'}
-									value={windowStart}
-									onIonChange={(e) =>
-										setWindowStart(
-											Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!,
-										)
-									}
-								/>
-							)}
-						</IonItem>
-						<IonItem>
-							<IonLabel position={isMobile ? 'stacked' : undefined} style={!isMobile ? { width: '100%', textAlign: 'center', marginBottom: '8px' } : {}}>
-								End Window
-							</IonLabel>
-							{!isMobile ? (
-								<div style={{ width: '100%', paddingBottom: '16px' }}>
-									<TimePicker value={windowEnd} onChange={setWindowEnd} is24h={is24h} />
-								</div>
-							) : (
-								<IonDatetime
-									presentation="time"
-									hourCycle={is24h ? 'h23' : 'h12'}
-									value={windowEnd}
-									onIonChange={(e) =>
-										setWindowEnd(
-											Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!,
-										)
-									}
-								/>
-							)}
-						</IonItem>
-						<IonItem lines="none">
-							<IonNote>Alarm will ring once randomly between these times.</IonNote>
-						</IonItem>
-					</>
+						<>
+							<IonItem>
+								<IonLabel position={isMobile ? 'stacked' : undefined} style={!isMobile ? { width: '100%', textAlign: 'center', marginBottom: '8px' } : {}}>
+									Start Window
+								</IonLabel>
+								{!isMobile ? (
+									<div style={{ width: '100%', paddingBottom: '16px' }}>
+										<TimePicker value={windowStart} onChange={setWindowStart} is24h={is24h} />
+									</div>
+								) : (
+									<IonDatetime
+										presentation="time"
+										hourCycle={is24h ? 'h23' : 'h12'}
+										value={windowStart}
+										onIonChange={(e) =>
+											setWindowStart(
+												Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!,
+											)
+										}
+									/>
+								)}
+							</IonItem>
+							<IonItem>
+								<IonLabel position={isMobile ? 'stacked' : undefined} style={!isMobile ? { width: '100%', textAlign: 'center', marginBottom: '8px' } : {}}>
+									End Window
+								</IonLabel>
+								{!isMobile ? (
+									<div style={{ width: '100%', paddingBottom: '16px' }}>
+										<TimePicker value={windowEnd} onChange={setWindowEnd} is24h={is24h} />
+									</div>
+								) : (
+									<IonDatetime
+										presentation="time"
+										hourCycle={is24h ? 'h23' : 'h12'}
+										value={windowEnd}
+										onIonChange={(e) =>
+											setWindowEnd(
+												Array.isArray(e.detail.value) ? e.detail.value[0] : e.detail.value!,
+											)
+										}
+									/>
+								)}
+							</IonItem>
+							<IonItem lines="none">
+								<IonNote>Alarm will ring once randomly between these times.</IonNote>
+							</IonItem>
+						</>
 					)}
 
 					<IonItem>
@@ -224,6 +213,17 @@ const EditAlarm: React.FC = () => {
 					</IonItem>
 				</IonList>
 			</IonContent>
+
+			{!isMobile && (
+				<div className="desktop-footer">
+					<IonButton fill="clear" onClick={() => history.goBack()}>
+						Cancel
+					</IonButton>
+					<IonButton strong color="secondary" onClick={handleSave}>
+						Save Alarm
+					</IonButton>
+				</div>
+			)}
 		</IonPage>
 	);
 };
