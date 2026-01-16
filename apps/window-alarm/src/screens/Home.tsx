@@ -15,10 +15,10 @@ import {
 	IonButtons,
 	IonButton,
 } from '@ionic/react';
-import { add, ellipsisVertical } from 'ionicons/icons';
+import { add, ellipsisVertical, settingsOutline } from 'ionicons/icons';
 import { platform } from '@tauri-apps/plugin-os';
 import { useHistory } from 'react-router-dom';
-import { Alarm, databaseService } from '../services/DatabaseService';
+import { Alarm } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { AlarmItem } from '../components/AlarmItem';
 import { SettingsService } from '../services/SettingsService';
@@ -74,6 +74,20 @@ const Home: React.FC = () => {
 				<IonRefresher slot="fixed" onIonRefresh={(e) => loadData().then(() => e.detail.complete())}>
 					<IonRefresherContent />
 				</IonRefresher>
+
+				{/* Desktop settings button */}
+				{!isMobile && (
+					<div style={{
+						position: 'absolute',
+						top: '8px',
+						right: '16px',
+						zIndex: 10
+					}}>
+						<IonButton fill="clear" onClick={() => history.push('/settings')}>
+							<IonIcon icon={settingsOutline} style={{ fontSize: '1.5rem' }} />
+						</IonButton>
+					</div>
+				)}
 
 				<IonList>
 					{alarms.map((alarm) => (
