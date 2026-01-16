@@ -16,15 +16,15 @@ export const TitleBar: React.FC = () => {
 
             const updateState = async () => {
                 try {
-                   setIsMaximized(await win.isMaximized());
+                    setIsMaximized(await win.isMaximized());
                 } catch (e) {
                     console.error("Failed to check window state", e);
                 }
-           };
+            };
 
-           updateState();
-           const unlistenPromise = win.listen('tauri://resize', updateState);
-           return () => { unlistenPromise.then(unlisten => unlisten()); };
+            updateState();
+            const unlistenPromise = win.listen('tauri://resize', updateState);
+            return () => { unlistenPromise.then(unlisten => unlisten()); };
 
         } catch (e) {
             console.warn("Not running in Tauri context");
@@ -80,7 +80,7 @@ export const TitleBar: React.FC = () => {
                 <WindowMinimizeIcon />
             </button>
             <button onClick={toggleMaximize} className="control-button win-maximize" title={isMaximized ? "Restore" : "Maximize"}>
-                 {isMaximized ? <WindowRestoreIcon /> : <WindowMaximizeIcon />}
+                {isMaximized ? <WindowRestoreIcon /> : <WindowMaximizeIcon />}
             </button>
             <button onClick={close} className="control-button win-close" title="Close">
                 <WindowCloseIcon />
@@ -89,7 +89,7 @@ export const TitleBar: React.FC = () => {
     );
 
     return (
-        <div className={\`title-bar is-\${platform}\`}>
+        <div className={`title-bar is-${platform}`}>
             {platform === 'mac' && (
                 <>
                     <MacControls />
@@ -102,17 +102,17 @@ export const TitleBar: React.FC = () => {
 
             {platform === 'linux' && (
                 <>
-                     <div className="app-title left" data-tauri-drag-region>Window Alarm</div>
-                     <div className="title-drag-region" data-tauri-drag-region />
-                     <LinuxControls />
+                    <div className="app-title left" data-tauri-drag-region>Window Alarm</div>
+                    <div className="title-drag-region" data-tauri-drag-region />
+                    <LinuxControls />
                 </>
             )}
 
             {platform === 'win' && (
                 <>
-                     <div className="app-title left" data-tauri-drag-region>Window Alarm</div>
-                     <div className="title-drag-region" data-tauri-drag-region />
-                     <WinControls />
+                    <div className="app-title left" data-tauri-drag-region>Window Alarm</div>
+                    <div className="title-drag-region" data-tauri-drag-region />
+                    <WinControls />
                 </>
             )}
         </div>

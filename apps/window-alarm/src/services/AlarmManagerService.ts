@@ -1,5 +1,7 @@
 import { databaseService, Alarm } from './DatabaseService';
 import { invoke } from '@tauri-apps/api/core';
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
+import { platform } from '@tauri-apps/plugin-os';
 import { AlarmMode, DayOfWeek } from '@window-alarm/core/types';
 import { calculateNextTrigger as calcTrigger } from '@window-alarm/core/scheduler';
 
@@ -46,7 +48,7 @@ export class AlarmManagerService {
 
                 // For this iteration, we'll check if an alarm with the exact same Time and Label exists.
                 const allAlarms = await databaseService.getAllAlarms();
-                const timeStr = \`\${imp.hour.toString().padStart(2, '0')}:\${imp.minute.toString().padStart(2, '0')}\`;
+                const timeStr = `${imp.hour.toString().padStart(2, '0')}:${imp.minute.toString().padStart(2, '0')}`;
 
                 const duplicate = allAlarms.find(a =>
                     a.mode === 'FIXED' &&
@@ -140,10 +142,50 @@ export class AlarmManagerService {
         await invoke('plugin:alarm-manager|schedule', {
             payload: { id, triggerAt: timestamp }
         });
+
+        // Desktop Notification Logic
+        // We use the OS plugin to check if we are on a desktop platform.
+        // Android/iOS handle notifications natively via the alarm-manager plugin.
+        await this.sendNotificationHelper(timestamp);
+
     } catch (e) {
         console.error("Failed to schedule native alarm", e);
     }
   }
+
+  private async sendNotificationHelper(timestamp: number) {
+        try {
+            const currentPlatform = platform();
+            if (currentPlatform === 'android' || currentPlatform === 'ios') {
+                return;
+            }
+
+            let permission = await isPermissionGranted();
+            if (!permission) {
+                const permissionState = await requestPermission();
+                permission = permissionState === 'granted';
+            }
+
+            if (permission) {
+                // Calculate delay until the alarm
+                const delay = timestamp - Date.now();
+                if (delay > 0) {
+                     // NOTE: setTimeout for long durations is not reliable if app suspend/sleeps.
+                    // But for this "Mock" desktop implementation it suffices.
+                    setTimeout(() => {
+                         sendNotification({
+                            title: 'Window Alarm',
+                            body: 'Your alarm is ringing!',
+                        });
+                    }, delay);
+                }
+            }
+        } catch (err) {
+            console.warn("Notification helper failed:", err);
+        }
+  }
+
+
 
   private async cancelNativeAlarm(id: number) {
     try {

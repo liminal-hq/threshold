@@ -10,7 +10,7 @@ export const SettingsService = {
 
   setTheme: (theme: Theme) => {
     localStorage.setItem(KEY_THEME, theme);
-    document.body.className = \`theme-\${theme}\`;
+    document.body.className = `theme-${theme}`;
   },
 
   getIs24h: (): boolean => {
@@ -24,6 +24,6 @@ export const SettingsService = {
   // Apply on startup
   applyTheme: () => {
     const theme = SettingsService.getTheme();
-    document.body.className = \`theme-\${theme}\`;
+    document.body.className = `theme-${theme}`;
   }
 };
