@@ -10,7 +10,7 @@ ion-segment.custom-pill {
 
 ion-segment.custom-pill ion-segment-button {
 	--indicator-color: var(--ion-color-primary);
-	--color: var(--ion-text-color, #333); /* Ensure high contrast */
+	--color: #333; /* Hardcode dark gray for unselected state visibility in light mode */
 	--color-checked: var(--ion-color-primary-contrast, #fff);
 	--border-radius: 50px;
 	min-width: 100px;
