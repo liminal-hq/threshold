@@ -50,3 +50,19 @@ To run the application in desktop mode (Linux/macOS/Windows):
 cd apps/window-alarm
 pnpm tauri dev
 ```
+
+## Debugging
+
+### Console Logging
+
+By default, Tauri filters frontend logs. To ensure `console.log`, `console.info`, etc. are visible in the terminal:
+
+1. Open `src-tauri/src/lib.rs`.
+2. Locate the `tauri_plugin_log` configuration in the setup hook.
+3. Ensure the level is set to `log::LevelFilter::Trace` (or `Debug`).
+
+```rust
+tauri_plugin_log::Builder::default()
+    .level(log::LevelFilter::Trace) // Use Trace or Debug for full visibility
+    .build(),
+```

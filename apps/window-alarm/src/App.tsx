@@ -52,6 +52,7 @@ const App: React.FC = () => {
 
 				// Log paths for debugging
 				try {
+					console.log('Attempting to resolve paths...');
 					const { appConfigDir, appDataDir } = await import('@tauri-apps/api/path');
 					const configPath = await appConfigDir();
 					const dataPath = await appDataDir();
