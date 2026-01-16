@@ -128,16 +128,6 @@ const Home: React.FC = () => {
 					</div>
 				)}
 			</IonContent>
-			color="secondary"
-			style={{ width: '100%', maxWidth: '400px', margin: '0 auto', height: '48px' }}
-			onClick={() => history.push('/edit/new')}
-						>
-			<IonIcon slot="start" icon={add} />
-			Add Alarm
-		</IonButton>
-					</IonToolbar >
-				</IonFooter >
-			)}
 		</IonPage >
 	);
 };
