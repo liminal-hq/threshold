@@ -18,18 +18,18 @@ import {
 } from '@ionic/react';
 import { add, ellipsisVertical, settingsOutline } from 'ionicons/icons';
 import { platform } from '@tauri-apps/plugin-os';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { Alarm } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { AlarmItem } from '../components/AlarmItem';
 import { SettingsService } from '../services/SettingsService';
 
 const Home: React.FC = () => {
+	const history = useHistory();
+	const location = useLocation();
 	const [alarms, setAlarms] = useState<Alarm[]>([]);
 	const [isMobile, setIsMobile] = useState(false);
 	const is24h = SettingsService.getIs24h();
-
-	const history = useHistory();
 
 	useEffect(() => {
 		// Detect platform (synchronous in Tauri v2)
@@ -76,8 +76,8 @@ const Home: React.FC = () => {
 					<IonRefresherContent />
 				</IonRefresher>
 
-				{/* Desktop settings button */}
-				{!isMobile && (
+				{/* Desktop settings button - Only show if on home and not transitioning away (approximated by route check) */}
+				{!isMobile && location.pathname === '/home' && (
 					<div style={{
 						position: 'fixed',
 						top: '48px', /* 32px titlebar + 16px margin */
@@ -99,36 +99,46 @@ const Home: React.FC = () => {
 							isMobile={isMobile}
 							onToggle={(enabled) => handleToggle(alarm, enabled)}
 							onDelete={() => handleDelete(alarm.id)}
-							onClick={() => history.push(`/edit/${alarm.id}`)}
+							onClick={() => handleEdit(alarm.id)}
 						/>
 					))}
 				</IonList>
 
-				{isMobile && (
-					<IonFab vertical="bottom" horizontal="end" slot="fixed">
-						<IonFabButton color="secondary" onClick={() => history.push('/edit/new')}>
-							<IonIcon icon={add} />
-						</IonFabButton>
-					</IonFab>
+				{/* Floating Add Button for Mobile/Desktop - Only show on Home */}
+				{location.pathname === '/home' && (
+					<div className={!isMobile ? "desktop-footer" : "mobile-fab-container"} style={!isMobile ? {
+						position: 'fixed',
+						bottom: 0,
+						left: 0,
+						right: 0,
+						zIndex: 1000 /* Ensure above content */
+					} : {}}>
+						{!isMobile ? (
+							<IonButton expand="block" color="secondary" onClick={handleAdd} style={{ width: '100%', maxWidth: '400px', margin: '0 auto', height: '48px' }}>
+								<IonIcon icon={add} slot="start" />
+								Add Alarm
+							</IonButton>
+						) : (
+							<IonFab vertical="bottom" horizontal="end" slot="fixed">
+								<IonFabButton color="secondary" onClick={handleAdd}>
+									<IonIcon icon={add} />
+								</IonFabButton>
+							</IonFab>
+						)}
+					</div>
 				)}
 			</IonContent>
-
-			{!isMobile && (
-				<IonFooter className="ion-no-border" style={{ background: 'transparent' }}>
-					<IonToolbar style={{ '--background': 'transparent', padding: '0 16px 16px 16px' }}>
-						<IonButton
-							expand="block"
-							color="secondary"
-							style={{ width: '100%', maxWidth: '400px', margin: '0 auto', height: '48px' }}
-							onClick={() => history.push('/edit/new')}
+			color="secondary"
+			style={{ width: '100%', maxWidth: '400px', margin: '0 auto', height: '48px' }}
+			onClick={() => history.push('/edit/new')}
 						>
-							<IonIcon slot="start" icon={add} />
-							Add Alarm
-						</IonButton>
-					</IonToolbar>
-				</IonFooter>
+			<IonIcon slot="start" icon={add} />
+			Add Alarm
+		</IonButton>
+					</IonToolbar >
+				</IonFooter >
 			)}
-		</IonPage>
+		</IonPage >
 	);
 };
 
