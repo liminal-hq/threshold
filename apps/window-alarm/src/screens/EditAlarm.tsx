@@ -17,6 +17,7 @@ import {
 	IonNote,
 } from '@ionic/react';
 import { useHistory, useParams } from 'react-router-dom';
+import { platform } from '@tauri-apps/plugin-os';
 import { databaseService } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { DaySelector } from '../components/DaySelector';
@@ -27,6 +28,7 @@ const EditAlarm: React.FC = () => {
 	const history = useHistory();
 	const isNew = id === 'new';
 	const is24h = SettingsService.getIs24h();
+	const [isMobile, setIsMobile] = useState(false);
 
 	const [label, setLabel] = useState('');
 	const [mode, setMode] = useState<'FIXED' | 'WINDOW'>('FIXED');
@@ -34,6 +36,11 @@ const EditAlarm: React.FC = () => {
 	const [fixedTime, setFixedTime] = useState('07:00');
 	const [windowStart, setWindowStart] = useState('07:00');
 	const [windowEnd, setWindowEnd] = useState('07:30');
+
+	useEffect(() => {
+		const os = platform();
+		setIsMobile(os === 'ios' || os === 'android');
+	}, []);
 
 	useEffect(() => {
 		if (!isNew) {
@@ -84,20 +91,39 @@ const EditAlarm: React.FC = () => {
 
 	return (
 		<IonPage>
-			<IonHeader>
-				<IonToolbar>
-					<IonButtons slot="start">
-						<IonButton onClick={() => history.goBack()}>Cancel</IonButton>
-					</IonButtons>
-					<IonTitle>{isNew ? 'New Alarm' : 'Edit Alarm'}</IonTitle>
-					<IonButtons slot="end">
-						<IonButton strong color="secondary" onClick={handleSave}>
-							Save
-						</IonButton>
-					</IonButtons>
-				</IonToolbar>
-			</IonHeader>
+			{isMobile && (
+				<IonHeader>
+					<IonToolbar>
+						<IonButtons slot="start">
+							<IonButton onClick={() => history.goBack()}>Cancel</IonButton>
+						</IonButtons>
+						<IonTitle>{isNew ? 'New Alarm' : 'Edit Alarm'}</IonTitle>
+						<IonButtons slot="end">
+							<IonButton strong color="secondary" onClick={handleSave}>
+								Save
+							</IonButton>
+						</IonButtons>
+					</IonToolbar>
+				</IonHeader>
+			)}
 			<IonContent>
+				{!isMobile && (
+					<div style={{
+						position: 'sticky',
+						top: 0,
+						background: 'var(--ion-background-color)',
+						zIndex: 10,
+						padding: '8px 16px',
+						display: 'flex',
+						justifyContent: 'space-between',
+						alignItems: 'center',
+						borderBottom: '1px solid var(--ion-border-color)'
+					}}>
+						<IonButton fill="clear" onClick={() => history.goBack()}>Cancel</IonButton>
+						<h3 style={{ margin: 0, fontSize: '18px' }}>{isNew ? 'New Alarm' : 'Edit Alarm'}</h3>
+						<IonButton strong color="secondary" onClick={handleSave}>Save</IonButton>
+					</div>
+				)}
 				<IonList inset>
 					<IonSegment value={mode} onIonChange={(e) => setMode(e.detail.value as any)}>
 						<IonSegmentButton value="FIXED">

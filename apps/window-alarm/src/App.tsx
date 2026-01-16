@@ -7,7 +7,7 @@ import Ringing from './screens/Ringing';
 import Settings from './screens/Settings';
 import TitleBar from './components/TitleBar';
 import { SettingsService } from './services/SettingsService';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -29,11 +29,18 @@ import '@ionic/react/css/display.css';
 import './theme/variables.css';
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { platform } from '@tauri-apps/plugin-os';
 
 setupIonicReact();
 
 const App: React.FC = () => {
+	const [isMobile, setIsMobile] = React.useState(false);
+
 	useEffect(() => {
+		// Detect platform (synchronous in Tauri v2)
+		const os = platform();
+		setIsMobile(os === 'ios' || os === 'android');
+
 		SettingsService.applyTheme();
 
 		const showWindow = async () => {
@@ -53,8 +60,8 @@ const App: React.FC = () => {
 
 	return (
 		<IonApp>
-			<TitleBar />
-			<div style={{ marginTop: '30px', height: 'calc(100% - 30px)' }}>
+			{!isMobile && <TitleBar />}
+			<div style={{ marginTop: isMobile ? '0px' : '32px', height: isMobile ? '100%' : 'calc(100% - 32px)' }}>
 				<IonReactRouter>
 					<IonRouterOutlet>
 						<Route exact path="/home">

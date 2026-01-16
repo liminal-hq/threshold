@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
 	IonContent,
 	IonHeader,
@@ -17,12 +17,19 @@ import {
 } from '@ionic/react';
 import { arrowBack } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
+import { platform } from '@tauri-apps/plugin-os';
 import { SettingsService, Theme } from '../services/SettingsService';
 
 const Settings: React.FC = () => {
 	const history = useHistory();
 	const [theme, setTheme] = useState<Theme>(SettingsService.getTheme());
 	const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
+	const [isMobile, setIsMobile] = useState(false);
+
+	useEffect(() => {
+		const os = platform();
+		setIsMobile(os === 'ios' || os === 'android');
+	}, []);
 
 	const handleThemeChange = (newTheme: Theme) => {
 		setTheme(newTheme);
@@ -36,16 +43,18 @@ const Settings: React.FC = () => {
 
 	return (
 		<IonPage>
-			<IonHeader>
-				<IonToolbar>
-					<IonButtons slot="start">
-						<IonButton onClick={() => history.goBack()}>
-							<IonIcon icon={arrowBack} />
-						</IonButton>
-					</IonButtons>
-					<IonTitle>Settings</IonTitle>
-				</IonToolbar>
-			</IonHeader>
+			{isMobile && (
+				<IonHeader>
+					<IonToolbar>
+						<IonButtons slot="start">
+							<IonButton onClick={() => history.goBack()}>
+								<IonIcon icon={arrowBack} />
+							</IonButton>
+						</IonButtons>
+						<IonTitle>Settings</IonTitle>
+					</IonToolbar>
+				</IonHeader>
+			)}
 			<IonContent>
 				<IonList inset>
 					<IonItem>

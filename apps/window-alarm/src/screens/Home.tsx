@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
 	IonContent,
 	IonHeader,
@@ -16,6 +16,7 @@ import {
 	IonButton,
 } from '@ionic/react';
 import { add, ellipsisVertical } from 'ionicons/icons';
+import { platform } from '@tauri-apps/plugin-os';
 import { useHistory } from 'react-router-dom';
 import { Alarm, databaseService } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
@@ -24,12 +25,16 @@ import { SettingsService } from '../services/SettingsService';
 
 const Home: React.FC = () => {
 	const [alarms, setAlarms] = useState<Alarm[]>([]);
-	// Store preference locally in component to force re-render on enter if needed,
-	// though typically SettingsService is global.
-	// For now we just read it during render or map.
+	const [isMobile, setIsMobile] = useState(false);
 	const is24h = SettingsService.getIs24h();
 
 	const history = useHistory();
+
+	useEffect(() => {
+		// Detect platform (synchronous in Tauri v2)
+		const os = platform();
+		setIsMobile(os === 'ios' || os === 'android');
+	}, []);
 
 	const loadData = async () => {
 		await alarmManagerService.init();
@@ -53,16 +58,18 @@ const Home: React.FC = () => {
 
 	return (
 		<IonPage>
-			<IonHeader>
-				<IonToolbar>
-					<IonTitle>Window Alarm</IonTitle>
-					<IonButtons slot="end">
-						<IonButton onClick={() => history.push('/settings')}>
-							<IonIcon icon={ellipsisVertical} />
-						</IonButton>
-					</IonButtons>
-				</IonToolbar>
-			</IonHeader>
+			{isMobile && (
+				<IonHeader>
+					<IonToolbar>
+						<IonTitle>Window Alarm</IonTitle>
+						<IonButtons slot="end">
+							<IonButton onClick={() => history.push('/settings')}>
+								<IonIcon icon={ellipsisVertical} />
+							</IonButton>
+						</IonButtons>
+					</IonToolbar>
+				</IonHeader>
+			)}
 			<IonContent fullscreen>
 				<IonRefresher slot="fixed" onIonRefresh={(e) => loadData().then(() => e.detail.complete())}>
 					<IonRefresherContent />
