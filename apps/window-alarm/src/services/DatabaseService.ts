@@ -1,4 +1,4 @@
-import Database from 'tauri-plugin-sql';
+import Database from '@tauri-apps/plugin-sql';
 
 const DB_NAME = 'alarms.db';
 

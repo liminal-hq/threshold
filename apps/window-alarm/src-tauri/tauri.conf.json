@@ -15,7 +15,8 @@
         "title": "window-alarm",
         "width": 400,
         "height": 800,
-        "decorations": false
+        "decorations": false,
+        "visible": false
       }
     ],
     "security": {
