@@ -29,16 +29,18 @@ pnpm install
 
 ### Running
 
-**Desktop Dev:**
+#### Desktop Dev
+
+You can run the desktop development server from the root:
 ```bash
-cd apps/window-alarm
-pnpm tauri dev
+pnpm dev:desktop
 ```
 
-**Android Dev:**
+#### Android Dev
+
+You can run the android development server from the root:
 ```bash
-cd apps/window-alarm
-pnpm tauri android dev
+pnpm dev:android
 ```
 
 ## Documentation

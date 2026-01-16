@@ -11,6 +11,10 @@ Examples:
 - `cancelled` instead of `canceled`
 - `licence` (noun) vs `license` (verb) - though in UI context usually "Licence"
 
+## Commit Messages
+
+- Use Conventional Commits format (e.g., `feat: ...`, `fix: ...`, `docs: ...`).
+
 ## Code Organization
 
 - This is a `pnpm` workspace monorepo.
