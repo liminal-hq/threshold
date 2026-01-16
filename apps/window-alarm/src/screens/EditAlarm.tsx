@@ -63,6 +63,7 @@ const EditAlarm: React.FC = () => {
 	};
 
 	const handleSave = async () => {
+		console.log('[EditAlarm] handleSave called. Mode:', mode, 'Fixed:', fixedTime);
 		if (activeDays.length === 0) {
 			alert('Please select at least one day for the alarm to repeat.');
 			return;
@@ -87,11 +88,14 @@ const EditAlarm: React.FC = () => {
 		}
 
 		try {
+			console.log('[EditAlarm] Calling saveAndSchedule with:', alarmData);
 			await alarmManagerService.saveAndSchedule(alarmData);
+			console.log('[EditAlarm] Save successful');
 			history.goBack();
 		} catch (e) {
-			console.error('Failed to save alarm:', e);
-			alert('Failed to save alarm: ' + (e instanceof Error ? e.message : String(e)));
+			console.error('[EditAlarm] SAVE ERROR:', e);
+			const msg = e instanceof Error ? e.message : JSON.stringify(e);
+			alert(`CRITICAL SAVE ERROR: ${msg}`);
 		}
 	};
 
