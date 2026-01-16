@@ -42,7 +42,8 @@ const Settings: React.FC = () => {
 	};
 
 	return (
-		<IonPage>
+
+		<IonPage style={{ paddingTop: isMobile ? '0' : '32px' }}>
 			{isMobile && (
 				<IonHeader>
 					<IonToolbar>
@@ -55,31 +56,82 @@ const Settings: React.FC = () => {
 					</IonToolbar>
 				</IonHeader>
 			)}
-			<IonContent>
-				<IonList inset>
-					<IonItem>
-						<IonLabel>Theme</IonLabel>
-						<IonSelect
-							value={theme}
-							onIonChange={(e) => handleThemeChange(e.detail.value)}
-							interface="popover"
-						>
-							<IonSelectOption value="deep-night">Deep Night (Default)</IonSelectOption>
-							<IonSelectOption value="canadian-cottage">Canadian Cottage Winter</IonSelectOption>
-							<IonSelectOption value="georgian-bay-plunge">Georgian Bay Plunge</IonSelectOption>
-							<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
-							<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
-						</IonSelect>
-					</IonItem>
+			<IonContent style={{ '--background': isMobile ? undefined : 'transparent' }}>
+				{isMobile ? (
+					<IonList inset>
+						<IonItem>
+							<IonLabel>Theme</IonLabel>
+							<IonSelect
+								value={theme}
+								onIonChange={(e) => handleThemeChange(e.detail.value)}
+								interface="popover"
+							>
+								<IonSelectOption value="deep-night">Deep Night (Default)</IonSelectOption>
+								<IonSelectOption value="canadian-cottage">Canadian Cottage Winter</IonSelectOption>
+								<IonSelectOption value="georgian-bay-plunge">Georgian Bay Plunge</IonSelectOption>
+								<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
+								<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
+							</IonSelect>
+						</IonItem>
 
-					<IonItem>
-						<IonLabel>Use 24-Hour Time</IonLabel>
-						<IonToggle
-							checked={is24h}
-							onIonChange={(e) => handleTimeFormatChange(e.detail.checked)}
-						/>
-					</IonItem>
-				</IonList>
+						<IonItem>
+							<IonLabel>Use 24-Hour Time</IonLabel>
+							<IonToggle
+								checked={is24h}
+								onIonChange={(e) => handleTimeFormatChange(e.detail.checked)}
+							/>
+						</IonItem>
+					</IonList>
+				) : (
+					<div className="settings-container">
+						<div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+							<IonButton fill="clear" onClick={() => history.goBack()} color="medium" style={{ margin: 0 }}>
+								<IonIcon icon={arrowBack} slot="icon-only" />
+							</IonButton>
+							<h1 style={{ margin: 0, fontSize: '28px', fontWeight: 700 }}>Settings</h1>
+						</div>
+
+						<div className="settings-section-title">Appearance</div>
+						<div className="settings-card">
+							<IonList lines="full">
+								<IonItem lines="none">
+									<IonLabel>
+										<h2>Theme</h2>
+										<p>Customize the look and feel</p>
+									</IonLabel>
+									<IonSelect
+										value={theme}
+										onIonChange={(e) => handleThemeChange(e.detail.value)}
+										interface="popover"
+									>
+										<IonSelectOption value="deep-night">Deep Night (Default)</IonSelectOption>
+										<IonSelectOption value="canadian-cottage">Canadian Cottage Winter</IonSelectOption>
+										<IonSelectOption value="georgian-bay-plunge">Georgian Bay Plunge</IonSelectOption>
+										<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
+										<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
+									</IonSelect>
+								</IonItem>
+							</IonList>
+						</div>
+
+						<div className="settings-section-title">General</div>
+						<div className="settings-card">
+							<IonList lines="full">
+								<IonItem lines="none">
+									<IonLabel>
+										<h2>24-Hour Time</h2>
+										<p>Use 24-hour format for time display</p>
+									</IonLabel>
+									<IonToggle
+										slot="end"
+										checked={is24h}
+										onIonChange={(e) => handleTimeFormatChange(e.detail.checked)}
+									/>
+								</IonItem>
+							</IonList>
+						</div>
+					</div>
+				)}
 			</IonContent>
 		</IonPage>
 	);
