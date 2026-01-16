@@ -1,49 +1,46 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
-  "productName": "window-alarm",
-  "version": "0.1.0",
-  "identifier": "ca.liminalhq.window-alarm",
-  "build": {
-    "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist"
-  },
-  "app": {
-    "windows": [
-      {
-        "title": "window-alarm",
-        "width": 400,
-        "height": 800,
-        "decorations": false,
-        "visible": false
-      }
-    ],
-    "security": {
-      "csp": null
-    }
-  },
-  "bundle": {
-  },
-  "plugins": {
-    "deep-link": {
-      "protocols": [
-        {
-          "name": "Window Alarm",
-          "schemes": [
-            "window-alarm"
-          ]
-        }
-      ]
-    },
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
-  }
+	"$schema": "https://schema.tauri.app/config/2",
+	"productName": "window-alarm",
+	"version": "0.1.0",
+	"identifier": "ca.liminalhq.window-alarm",
+	"build": {
+		"beforeDevCommand": "pnpm dev",
+		"devUrl": "http://localhost:1420",
+		"beforeBuildCommand": "pnpm build",
+		"frontendDist": "../dist"
+	},
+	"app": {
+		"windows": [
+			{
+				"title": "window-alarm",
+				"width": 400,
+				"height": 800,
+				"decorations": false,
+				"visible": false
+			}
+		],
+		"security": {
+			"csp": null
+		}
+	},
+	"bundle": {},
+	"plugins": {
+		"deep-link": {
+			"protocols": [
+				{
+					"name": "Window Alarm",
+					"schemes": ["window-alarm"]
+				}
+			]
+		},
+		"active": true,
+		"targets": "all",
+		"icon": [
+			"icons/32x32.png",
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		]
+	}
 }

@@ -1,40 +1,41 @@
 {
-  "name": "window-alarm",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "tauri": "tauri"
-  },
-  "dependencies": {
-    "@ionic/react": "^8.7.17",
-    "@ionic/react-router": "^8.7.17",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-log": "^2.8.0",
-    "@tauri-apps/plugin-notification": "^2.3.3",
-    "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-os": "^2.3.2",
-    "@tauri-apps/plugin-sql": "^2.3.1",
-    "@window-alarm/core": "workspace:*",
-    "date-fns": "^3.6.0",
-    "history": "^4.10.1",
-    "ionicons": "^8.0.13",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router": "5.3.4",
-    "react-router-dom": "^5.3.4"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "^2",
-    "@types/node": "^25.0.9",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "@types/react-router-dom": "^5.3.3",
-    "@vitejs/plugin-react": "^4.6.0",
-    "typescript": "~5.8.3",
-    "vite": "^7.0.4"
-  }
+	"name": "window-alarm",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc && vite build",
+		"preview": "vite preview",
+		"tauri": "tauri"
+	},
+	"dependencies": {
+		"@ionic/react": "^8.7.17",
+		"@ionic/react-router": "^8.7.17",
+		"@tauri-apps/api": "^2",
+		"@tauri-apps/plugin-log": "^2.8.0",
+		"@tauri-apps/plugin-notification": "^2.3.3",
+		"@tauri-apps/plugin-opener": "^2",
+		"@tauri-apps/plugin-os": "^2.3.2",
+		"@tauri-apps/plugin-sql": "^2.3.1",
+		"@tauri-apps/plugin-window-state": "~2.4.1",
+		"@window-alarm/core": "workspace:*",
+		"date-fns": "^3.6.0",
+		"history": "^4.10.1",
+		"ionicons": "^8.0.13",
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0",
+		"react-router": "5.3.4",
+		"react-router-dom": "^5.3.4"
+	},
+	"devDependencies": {
+		"@tauri-apps/cli": "^2",
+		"@types/node": "^25.0.9",
+		"@types/react": "^19.1.8",
+		"@types/react-dom": "^19.1.6",
+		"@types/react-router-dom": "^5.3.3",
+		"@vitejs/plugin-react": "^4.6.0",
+		"typescript": "~5.8.3",
+		"vite": "^7.0.4"
+	}
 }
