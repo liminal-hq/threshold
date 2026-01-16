@@ -62,7 +62,7 @@ const Settings: React.FC = () => {
 					</IonToolbar>
 				</IonHeader>
 			)}
-			<IonContent style={{ '--background': isMobile ? undefined : 'transparent' }}>
+			<IonContent style={{ '--background': 'var(--ion-background-color)' }}>
 				{isMobile ? (
 					<IonList inset>
 						<IonItem>
