@@ -1,20 +1,29 @@
 /* Ringing Screen Styles */
 .ringing-page {
-	--ion-background-color: var(--ion-color-primary);
-	--ion-text-color: var(--ion-color-primary-contrast);
+	/* Make the page background transparent so the window transparency shines through */
+	--ion-background-color: transparent;
+	background: transparent;
 }
 
 .ringing-container {
-	height: 100%;
+	height: 100vh; /* Use viewport height */
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	padding: 32px;
 	text-align: center;
+	
+	/* The actual visual card */
 	background: radial-gradient(circle at center, var(--ion-color-primary-tint), var(--ion-color-primary));
 	color: #fff;
 	animation: pulse-bg 4s infinite alternate;
+	
+	/* Rounded corners for the "Floating Card" look */
+	/* Note: This works because we set the window to transparent: true */
+	border-radius: 24px;
+	box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 20px 50px rgba(0,0,0,0.5);
+	margin: 2px; /* Slight margin to prevent clipping of anti-aliased corners/shadow */
 }
 
 @keyframes pulse-bg {
