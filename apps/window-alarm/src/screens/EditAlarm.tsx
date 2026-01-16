@@ -129,7 +129,7 @@ const EditAlarm: React.FC = () => {
 							<IonLabel>Fixed Time</IonLabel>
 						</IonSegmentButton>
 						<IonSegmentButton value="WINDOW">
-							<IonLabel>Random Window</IonLabel>
+							<IonLabel>Window</IonLabel>
 						</IonSegmentButton>
 					</IonSegment>
 

@@ -18,7 +18,8 @@ ion-segment.custom-pill ion-segment-button {
 	/* Layout fixes */
 	min-height: 36px;
 	--border-radius: 8px; /* Match container generally */
-	min-width: 120px;
+	min-width: auto; /* Allow auto width */
+	padding: 0 16px; /* Add horizontal padding */
 	font-weight: 600;
 	letter-spacing: 0.5px;
 	
