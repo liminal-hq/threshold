@@ -12,9 +12,10 @@
 	"app": {
 		"windows": [
 			{
-				"title": "window-alarm",
-				"width": 400,
+				"title": "Window Alarm",
+				"width": 450,
 				"height": 800,
+				"resizable": false,
 				"decorations": false,
 				"visible": false
 			}
