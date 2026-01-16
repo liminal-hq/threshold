@@ -8,6 +8,9 @@
     "opener:default",
     "sql:default",
     "notification:default",
-    "deep-link:default"
+    "deep-link:default",
+    "core:app:default",
+    "core:window:default",
+    "log:default"
   ]
 }
