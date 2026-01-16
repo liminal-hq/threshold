@@ -91,7 +91,7 @@ const EditAlarm: React.FC = () => {
 			history.goBack();
 		} catch (e) {
 			console.error('Failed to save alarm:', e);
-			alert('Failed to save alarm. Please try again.');
+			alert('Failed to save alarm: ' + (e instanceof Error ? e.message : String(e)));
 		}
 	};
 
@@ -217,6 +217,7 @@ const EditAlarm: React.FC = () => {
 								value={label}
 								onIonChange={(e) => setLabel(e.detail.value!)}
 								clearInput
+								style={{ '--background': 'transparent', '--color': 'var(--ion-text-color)' }}
 							/>
 						</div>
 					</IonItem>

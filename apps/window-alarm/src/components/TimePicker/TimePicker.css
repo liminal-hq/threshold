@@ -35,6 +35,12 @@
 }
 
 .time-value-input:focus {
+	background: var(--ion-color-step-200, #e0e0e0); /* Slightly lighter on focus, but still dark in dark mode */
+	border-color: var(--ion-color-primary);
+	color: var(--ion-text-color);
+}
+
+.time-value-input:focus {
 	border-color: var(--ion-color-primary, #3880ff);
 	background: var(--ion-background-color-step-200, #eef);
 }
