@@ -35,6 +35,11 @@ impl<R: Runtime, T: Manager<R>> AlarmManagerExt<R> for T {
 /// Initializes the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
   Builder::new("alarm-manager")
+    .invoke_handler(tauri::generate_handler![
+      commands::schedule,
+      commands::cancel,
+      commands::get_launch_args
+    ])
     .setup(|app, api| {
       #[cfg(mobile)]
       let alarm_manager = mobile::init(app, api)?;

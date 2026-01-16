@@ -6,7 +6,11 @@
   "scripts": {
     "test": "pnpm -r test",
     "dev:desktop": "pnpm --filter window-alarm tauri dev",
-    "dev:android": "pnpm --filter window-alarm tauri android dev"
+    "dev:android": "pnpm --filter window-alarm tauri android dev",
+    "format": "prettier --write ."
   },
-  "packageManager": "pnpm@8.0.0"
+  "packageManager": "pnpm@10.28.0",
+  "devDependencies": {
+    "prettier": "^3.8.0"
+  }
 }

@@ -61,7 +61,7 @@ const Home: React.FC = () => {
               is24h={is24h}
               onToggle={(enabled) => handleToggle(alarm, enabled)}
               onDelete={() => handleDelete(alarm.id)}
-              onClick={() => history.push(\`/edit/\${alarm.id}\`)}
+              onClick={() => history.push(`/edit/${alarm.id}`)}
             />
           ))}
         </IonList>

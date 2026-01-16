@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -18,6 +18,7 @@ impl Serialize for Error {
   }
 }
 
+#[cfg(mobile)]
 impl From<tauri::plugin::mobile::PluginInvokeError> for Error {
   fn from(error: tauri::plugin::mobile::PluginInvokeError) -> Self {
     Error::MobilePlugin(error.to_string())

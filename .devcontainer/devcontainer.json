@@ -1,7 +1,7 @@
 {
   "name": "Window Alarm Dev",
   "dockerFile": "Dockerfile",
-  "workspaceFolder": "/workspaces/window-alarm",
+  // "workspaceFolder": "/workspaces/{{PROJECT_NAME}}",
   "forwardPorts": [5173, 1420],
   "runArgs": [
     "--device=/dev/snd",

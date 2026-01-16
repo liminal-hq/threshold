@@ -28,39 +28,55 @@ import '@ionic/react/css/display.css';
 /* Theme variables */
 import './theme/variables.css';
 
+import { getCurrentWindow } from '@tauri-apps/api/window';
+
 setupIonicReact();
 
 const App: React.FC = () => {
-  useEffect(() => {
-    SettingsService.applyTheme();
-  }, []);
+	useEffect(() => {
+		SettingsService.applyTheme();
 
-  return (
-    <IonApp>
-      <TitleBar />
-      <div style={{ marginTop: '30px', height: 'calc(100% - 30px)' }}>
-        <IonReactRouter>
-          <IonRouterOutlet>
-            <Route exact path="/home">
-              <Home />
-            </Route>
-            <Route exact path="/edit/:id">
-              <EditAlarm />
-            </Route>
-            <Route exact path="/ringing/:id">
-              <Ringing />
-            </Route>
-            <Route exact path="/settings">
-              <Settings />
-            </Route>
-            <Route exact path="/">
-              <Redirect to="/home" />
-            </Route>
-          </IonRouterOutlet>
-        </IonReactRouter>
-      </div>
-    </IonApp>
-  );
+		const showWindow = async () => {
+			try {
+				const win = getCurrentWindow();
+				const visible = await win.isVisible();
+				if (!visible) {
+					await win.show();
+					await win.setFocus();
+				}
+			} catch (error: any) {
+				console.warn('Failed to show/focus window:', error);
+			}
+		};
+		showWindow();
+	}, []);
+
+	return (
+		<IonApp>
+			<TitleBar />
+			<div style={{ marginTop: '30px', height: 'calc(100% - 30px)' }}>
+				<IonReactRouter>
+					<IonRouterOutlet>
+						<Route exact path="/home">
+							<Home />
+						</Route>
+						<Route exact path="/edit/:id">
+							<EditAlarm />
+						</Route>
+						<Route exact path="/ringing/:id">
+							<Ringing />
+						</Route>
+						<Route exact path="/settings">
+							<Settings />
+						</Route>
+						<Route exact path="/">
+							<Redirect to="/home" />
+						</Route>
+					</IonRouterOutlet>
+				</IonReactRouter>
+			</div>
+		</IonApp>
+	);
 };
 
 export default App;

@@ -19,6 +19,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     fonts-noto-color-emoji \
     pkg-config \
     unzip \
+    xvfb \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Android build dependencies

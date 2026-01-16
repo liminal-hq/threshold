@@ -1,17 +1,22 @@
 use tauri::{
-  plugin::{PluginHandle, ToPlugin},
+  plugin::PluginApi,
   Runtime,
 };
 use crate::models::*;
 
-pub fn init<R: Runtime, C: ToPlugin<R>>(
-  _app: &tauri::AppHandle<R>,
-  _api: PluginHandle<R, C>,
+pub fn init<R: Runtime>(
+  app: &tauri::AppHandle<R>,
+  _api: PluginApi<R, ()>,
 ) -> crate::Result<AlarmManager<R>> {
-  Ok(AlarmManager)
+  Ok(AlarmManager {
+    app: app.clone(),
+  })
 }
 
-pub struct AlarmManager<R: Runtime>(std::marker::PhantomData<R>);
+pub struct AlarmManager<R: Runtime> {
+  #[allow(dead_code)]
+  app: tauri::AppHandle<R>,
+}
 
 impl<R: Runtime> AlarmManager<R> {
   pub fn schedule(&self, _payload: ScheduleRequest) -> crate::Result<()> {
