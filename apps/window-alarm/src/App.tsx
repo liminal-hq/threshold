@@ -66,11 +66,12 @@ const App: React.FC = () => {
 				// Force Desktop Window Size 
 				if (os !== 'android' && os !== 'ios') {
 					try {
+						await win.setDecorations(false); // Force removal of native title bar
 						await win.unmaximize();
 						await win.setSize(new LogicalSize(450, 800));
 						await win.center();
 					} catch (e) {
-						console.error('Failed to resize window:', e);
+						console.error('Failed to resize/decorate window:', e);
 					}
 				}
 
