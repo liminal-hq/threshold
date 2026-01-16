@@ -1,0 +1,51 @@
+/* Custom Pill Segment */
+ion-segment.custom-pill {
+	background: var(--ion-color-step-100, #f4f5f8);
+	border-radius: 50px;
+	padding: 4px;
+	height: 40px;
+	width: fit-content;
+	margin: 16px auto;
+}
+
+ion-segment.custom-pill ion-segment-button {
+	--indicator-color: var(--ion-color-primary);
+	--color: var(--ion-text-color-step-400, #666);
+	--color-checked: var(--ion-color-primary-contrast, #fff);
+	--border-radius: 50px;
+	min-width: 100px;
+}
+
+/* Day Selector Pills */
+.day-selector {
+	display: flex;
+	justify-content: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.day-pill {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--ion-color-step-100, #f4f5f8);
+	color: var(--ion-text-color-step-400, #666);
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all 0.2s;
+	border: 2px solid transparent;
+}
+
+.day-pill.selected {
+	background: var(--ion-color-primary);
+	color: var(--ion-color-primary-contrast);
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.day-pill:hover:not(.selected) {
+	background: var(--ion-color-step-200, #eef);
+}

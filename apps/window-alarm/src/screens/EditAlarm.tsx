@@ -126,7 +126,12 @@ const EditAlarm: React.FC = () => {
 					</div>
 				)}
 				<IonList inset>
-					<IonSegment value={mode} onIonChange={(e) => setMode(e.detail.value as any)}>
+					<IonSegment
+						value={mode}
+						onIonChange={(e) => setMode(e.detail.value as any)}
+						className="custom-pill"
+						mode="ios"
+					>
 						<IonSegmentButton value="FIXED">
 							<IonLabel>Fixed Time</IonLabel>
 						</IonSegmentButton>

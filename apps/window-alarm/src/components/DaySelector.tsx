@@ -1,5 +1,5 @@
 import React from 'react';
-import { IonButton, IonButtons } from '@ionic/react';
+
 
 interface DaySelectorProps {
 	selectedDays: number[];
@@ -18,20 +18,17 @@ export const DaySelector: React.FC<DaySelectorProps> = ({ selectedDays, onChange
 	};
 
 	return (
-		<div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
+		<div className="day-selector">
 			{DAYS.map((label, index) => {
 				const isSelected = selectedDays.includes(index);
 				return (
-					<IonButton
+					<div
 						key={index}
-						fill={isSelected ? 'solid' : 'outline'}
-						shape="round"
-						size="small"
+						className={`day-pill ${isSelected ? 'selected' : ''}`}
 						onClick={() => toggleDay(index)}
-						color={isSelected ? 'secondary' : 'medium'}
 					>
 						{label}
-					</IonButton>
+					</div>
 				);
 			})}
 		</div>
