@@ -30,7 +30,7 @@ import './theme/variables.css';
 import './theme/ringing.css';
 import './theme/components.css'; /* Import custom component styles globally */
 
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { platform } from '@tauri-apps/plugin-os';
 
 setupIonicReact();
@@ -48,6 +48,31 @@ const App: React.FC = () => {
 		const showWindow = async () => {
 			try {
 				const win = getCurrentWindow();
+
+				// Log paths for debugging
+				try {
+					const { appConfigDir, appDataDir } = await import('@tauri-apps/api/path');
+					const configPath = await appConfigDir();
+					const dataPath = await appDataDir();
+					console.log('----------------------------------------');
+					console.log('📂 Config Directory:', configPath);
+					console.log('📂 Data Directory:  ', dataPath);
+					console.log('----------------------------------------');
+				} catch (e) {
+					console.error('Failed to get paths:', e);
+				}
+
+				// Force Desktop Window Size 
+				if (os !== 'android' && os !== 'ios') {
+					try {
+						await win.unmaximize();
+						await win.setSize(new LogicalSize(450, 800));
+						await win.center();
+					} catch (e) {
+						console.error('Failed to resize window:', e);
+					}
+				}
+
 				const visible = await win.isVisible();
 				if (!visible) {
 					await win.show();
