@@ -90,7 +90,7 @@ const EditAlarm: React.FC = () => {
 	};
 
 	return (
-		<IonPage>
+		<IonPage style={{ paddingTop: isMobile ? '0' : '32px' }}>
 			{isMobile && (
 				<IonHeader>
 					<IonToolbar>
@@ -106,19 +106,19 @@ const EditAlarm: React.FC = () => {
 					</IonToolbar>
 				</IonHeader>
 			)}
-			<IonContent>
+			<IonContent style={{ paddingTop: isMobile ? '0' : '8px' }}>
 				{!isMobile && (
-					<div style={{
-						position: 'sticky',
-						top: 0,
-						background: 'var(--ion-background-color)',
-						zIndex: 10,
-						padding: '8px 16px',
-						display: 'flex',
-						justifyContent: 'space-between',
-						alignItems: 'center',
-						borderBottom: '1px solid var(--ion-border-color)'
-					}}>
+					<div
+						style={{
+							background: 'var(--ion-background-color)',
+							zIndex: 10,
+							padding: '8px 16px',
+							display: 'flex',
+							justifyContent: 'space-between',
+							alignItems: 'center',
+							borderBottom: '1px solid var(--ion-border-color)',
+						}}
+					>
 						<IonButton fill="clear" onClick={() => history.goBack()}>Cancel</IonButton>
 						<h3 style={{ margin: 0, fontSize: '18px' }}>{isNew ? 'New Alarm' : 'Edit Alarm'}</h3>
 						<IonButton strong color="secondary" onClick={handleSave}>Save</IonButton>
