@@ -79,7 +79,7 @@ const Settings: React.FC = () => {
                                         onChange={(e) => setTheme(e.target.value as Theme)}
                                     >
                                         <MenuItem value="deep-night">Deep Night (Default)</MenuItem>
-                                        <MenuItem value="canadian-cottage">Canadian Cottage Winter</MenuItem>
+                                        <MenuItem value="canadian-cottage-winter">Canadian Cottage Winter</MenuItem>
                                         <MenuItem value="georgian-bay-plunge">Georgian Bay Plunge</MenuItem>
                                         <MenuItem value="boring-light">Boring Light</MenuItem>
                                         <MenuItem value="boring-dark">Boring Dark</MenuItem>

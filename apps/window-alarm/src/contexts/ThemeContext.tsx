@@ -14,9 +14,9 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: 'deep-night',
-  setTheme: () => {},
+  setTheme: () => { },
   forceDark: false,
-  setForceDark: () => {},
+  setForceDark: () => { },
   isDarkMode: false,
 });
 
@@ -29,9 +29,9 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Determine if we should be in dark mode
   const isDarkMode = useMemo(() => {
-    if (forceDark) return true;
-    if (theme === 'boring-dark') return true;
     if (theme === 'boring-light') return false;
+    if (theme === 'boring-dark') return true;
+    if (forceDark) return true;
     return systemPrefersDark;
   }, [forceDark, theme, systemPrefersDark]);
 

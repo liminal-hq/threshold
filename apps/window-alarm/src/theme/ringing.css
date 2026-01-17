@@ -10,6 +10,11 @@ html {
 	height: 100% !important;
 }
 
+/* Dark mode support for ringing window */
+body.dark-mode .ringing-page {
+	background: #121212;
+}
+
 .ringing-page {
 	/* Transparent background for window transparency */
 	background: transparent;
@@ -42,12 +47,40 @@ html {
 	
 	/* Visual styling - secondary color gradient */
 	background: radial-gradient(circle at center, var(--ion-color-secondary-tint), var(--ion-color-secondary));
-	color: #fff;
+	color: var(--ion-color-secondary-contrast); /* Use secondary-contrast for proper contrast in all themes */
 	animation: pulse-bg 4s infinite alternate;
 	
 	/* Rounded corners for floating card effect */
 	border-radius: 24px;
 	box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 20px 50px rgba(0,0,0,0.5);
+}
+
+/* Breathing animation overlay - placed above background, below content */
+.ringing-container::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	/* Increased opacity for maximum intensity */
+	background: radial-gradient(circle at center, rgba(var(--ion-color-secondary-contrast-rgb), 0.4), transparent 70%);
+	/* Faster animation for more urgency? No, keep it rhythmic but deep */
+	animation: breathe 4s ease-in-out infinite;
+	pointer-events: none;
+	border-radius: 24px;
+	z-index: 0; /* Ensure it stays behind content if content is z-indexed */
+}
+
+@keyframes breathe {
+	0%, 100% {
+		opacity: 0.2;
+		transform: scale(0.95);
+	}
+	50% {
+		opacity: 0.7; /* Balanced visibility */
+		transform: scale(1.1);
+	}
 }
 
 @keyframes pulse-bg {
@@ -62,6 +95,9 @@ html {
 	text-shadow: 0 4px 12px rgba(0,0,0,0.2);
 	font-variant-numeric: tabular-nums;
 	line-height: 1;
+	/* Inherit color from parent instead of hardcoding */
+	position: relative;
+	z-index: 2; /* Ensure text sits above the intense breathing animation */
 }
 
 .ringing-label {
@@ -69,6 +105,9 @@ html {
 	font-weight: 500;
 	margin-bottom: 48px;
 	opacity: 0.9;
+	/* Inherit color from parent instead of hardcoding */
+	position: relative;
+	z-index: 2;
 }
 
 .ringing-actions {
@@ -77,5 +116,7 @@ html {
 	gap: 16px;
 	width: 100%;
 	max-width: 320px;
+	position: relative;
+	z-index: 2;
 }
 

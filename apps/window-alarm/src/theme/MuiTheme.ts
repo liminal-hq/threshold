@@ -28,6 +28,7 @@ export const getMuiTheme = (themeName: AppTheme, mode: 'light' | 'dark') => {
         },
         secondary: {
           main: '#2563eb',
+          contrastText: mode === 'dark' ? '#1a1a1a' : '#ffffff', // Inverse pattern: Dark text in dark mode
         },
         background: {
           default: mode === 'dark' ? '#121212' : '#f4f5f8',
@@ -38,7 +39,8 @@ export const getMuiTheme = (themeName: AppTheme, mode: 'light' | 'dark') => {
         }
       },
     };
-  } else if (themeName === 'canadian-cottage') {
+
+  } else if (themeName === 'canadian-cottage-winter') {
     themeOptions = {
       ...themeOptions,
       palette: {
@@ -48,6 +50,7 @@ export const getMuiTheme = (themeName: AppTheme, mode: 'light' | 'dark') => {
         },
         secondary: {
           main: 'hsl(355, 65%, 45%)',
+          contrastText: mode === 'dark' ? 'hsl(210, 20%, 20%)' : '#ffffff',
         },
         background: {
           default: mode === 'dark' ? 'hsl(30, 15%, 15%)' : 'hsl(35, 30%, 94%)',
@@ -69,6 +72,7 @@ export const getMuiTheme = (themeName: AppTheme, mode: 'light' | 'dark') => {
         },
         secondary: {
           main: 'hsl(190, 50%, 35%)',
+          contrastText: mode === 'dark' ? 'hsl(210, 15%, 20%)' : '#ffffff', // Inverse pattern: Dark text in dark mode
         },
         background: {
           default: mode === 'dark' ? 'hsl(200, 20%, 12%)' : 'hsl(210, 15%, 96%)',
@@ -91,6 +95,7 @@ export const getMuiTheme = (themeName: AppTheme, mode: 'light' | 'dark') => {
         },
         secondary: {
           main: 'hsl(0, 0%, 50%)',
+          contrastText: mode === 'dark' ? 'hsl(0, 0%, 10%)' : '#ffffff', // White in light mode, dark in dark mode
         },
         background: {
           default: mode === 'dark' ? 'hsl(0, 0%, 12%)' : 'hsl(0, 0%, 100%)',
@@ -112,6 +117,7 @@ export const getMuiTheme = (themeName: AppTheme, mode: 'light' | 'dark') => {
         },
         secondary: {
           main: 'hsl(0, 0%, 50%)',
+          contrastText: 'hsl(0, 0%, 10%)', // Dark text on gray background
         },
         background: {
           default: 'hsl(0, 0%, 12%)',
