@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct ScheduleRequest {
   pub id: i32,
   pub trigger_at: i64,
+  pub sound_uri: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,4 +21,21 @@ pub struct ImportedAlarm {
   pub hour: i32,
   pub minute: i32,
   pub label: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PickAlarmSoundOptions {
+  pub existing_uri: Option<String>,
+  pub title: Option<String>,
+  pub show_silent: Option<bool>,
+  pub show_default: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PickedAlarmSound {
+  pub uri: Option<String>,
+  pub is_silent: bool,
+  pub title: Option<String>,
 }

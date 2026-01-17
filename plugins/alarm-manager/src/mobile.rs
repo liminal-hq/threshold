@@ -38,4 +38,10 @@ impl<R: Runtime> AlarmManager<R> {
       .run_mobile_plugin("get_launch_args", ())
       .map_err(Into::into)
   }
+
+  pub fn pick_alarm_sound(&self, options: PickAlarmSoundOptions) -> crate::Result<PickedAlarmSound> {
+    self.0
+      .run_mobile_plugin("pickAlarmSound", options)
+      .map_err(Into::into)
+  }
 }

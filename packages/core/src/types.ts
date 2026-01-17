@@ -21,6 +21,10 @@ export interface Alarm {
 	// Recurrence: Array of days (0-6) where the alarm is active
 	activeDays: DayOfWeek[];
 
+	// Sound
+	soundUri?: string | null;
+	soundTitle?: string | null;
+
 	// Persistence
 	nextTrigger?: number; // Epoch millis
 }

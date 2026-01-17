@@ -4,6 +4,8 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.webkit.WebView
 import app.tauri.annotation.Command
@@ -17,6 +19,7 @@ import android.util.Log
 class ScheduleRequest {
     var id: Int = 0
     var triggerAt: Long = 0
+    var soundUri: String? = null
 }
 
 @InvokeArg
@@ -32,16 +35,24 @@ class ImportedAlarm {
     var label: String = ""
 }
 
+@InvokeArg
+class PickAlarmSoundOptions {
+    var existingUri: String? = null
+    var title: String? = null
+    var showSilent: Boolean = true
+    var showDefault: Boolean = true
+}
+
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
 
     @Command
     fun schedule(invoke: Invoke) {
         val args = invoke.parseArgs(ScheduleRequest::class.java)
-        Log.d("AlarmManagerPlugin", "Scheduling alarm ${args.id} at ${args.triggerAt}")
+        Log.d("AlarmManagerPlugin", "Scheduling alarm ${args.id} at ${args.triggerAt} with sound ${args.soundUri}")
 
-        AlarmUtils.scheduleAlarm(activity, args.id, args.triggerAt)
-        AlarmUtils.saveAlarmToPrefs(activity, args.id, args.triggerAt)
+        AlarmUtils.scheduleAlarm(activity, args.id, args.triggerAt, args.soundUri)
+        AlarmUtils.saveAlarmToPrefs(activity, args.id, args.triggerAt, args.soundUri)
 
         invoke.resolve()
     }
@@ -54,6 +65,59 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         AlarmUtils.removeAlarmFromPrefs(activity, args.id)
 
         invoke.resolve()
+    }
+
+    @Command
+    fun pickAlarmSound(invoke: Invoke) {
+        val args = invoke.parseArgs(PickAlarmSoundOptions::class.java)
+
+        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, args.showSilent)
+            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, args.showDefault)
+            if (args.title != null) {
+                putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, args.title)
+            }
+            if (args.existingUri != null) {
+                putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(args.existingUri))
+            }
+        }
+
+        startActivityForResult(invoke, intent, "pickAlarmSoundResult")
+    }
+
+    @app.tauri.annotation.ActivityCallback
+    fun pickAlarmSoundResult(invoke: Invoke, result: app.tauri.plugin.ActivityResult) {
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val data = result.data
+            val uri: Uri? = if (data != null) {
+                if (Build.VERSION.SDK_INT >= 33) {
+                    data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+                }
+            } else null
+
+            val ret = app.tauri.plugin.JSObject()
+
+            if (uri != null) {
+                ret.put("uri", uri.toString())
+                ret.put("isSilent", false)
+                // Best effort title
+                val ringtone = RingtoneManager.getRingtone(activity, uri)
+                val title = ringtone?.getTitle(activity) ?: "Unknown"
+                ret.put("title", title)
+            } else {
+                ret.put("uri", null)
+                ret.put("isSilent", true)
+                ret.put("title", "Silent")
+            }
+
+            invoke.resolve(ret)
+        } else {
+            invoke.reject("cancelled")
+        }
     }
 
     @Command
@@ -89,10 +153,6 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
                 }
             }
         }
-
-        // Serialize and return using JS Object/JSON
-        // Tauri 2 Android Plugin bridge handles object serialization automatically if using Invoke
-        // But we need to return a proper object.
 
         val ret = app.tauri.plugin.JSObject()
         val array = app.tauri.plugin.JSArray()

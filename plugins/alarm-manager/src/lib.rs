@@ -38,7 +38,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     .invoke_handler(tauri::generate_handler![
       commands::schedule,
       commands::cancel,
-      commands::get_launch_args
+      commands::get_launch_args,
+      commands::pick_alarm_sound
     ])
     .setup(|app, api| {
       #[cfg(mobile)]

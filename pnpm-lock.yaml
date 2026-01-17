@@ -96,6 +96,9 @@ importers:
       vite:
         specifier: ^7.0.4
         version: 7.3.1(@types/node@25.0.9)
+      vitest:
+        specifier: ^1.6.1
+        version: 1.6.1(@types/node@25.0.9)
 
   packages/core:
     dependencies:

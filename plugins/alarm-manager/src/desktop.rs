@@ -83,4 +83,8 @@ impl<R: Runtime> AlarmManager<R> {
     // Desktop doesn't support launch args / intent imports like Android
     Ok(vec![])
   }
+
+  pub fn pick_alarm_sound(&self, _options: PickAlarmSoundOptions) -> crate::Result<PickedAlarmSound> {
+    Err(crate::Error::Runtime("Unsupported platform".into()))
+  }
 }

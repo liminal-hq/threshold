@@ -159,7 +159,7 @@ export class AlarmManagerService {
 
 		// 3. Schedule Native
 		if (alarm.enabled && nextTrigger) {
-			await this.scheduleNativeAlarm(id, nextTrigger);
+			await this.scheduleNativeAlarm(id, nextTrigger, alarm.soundUri);
 		} else {
 			await this.cancelNativeAlarm(id);
 		}
@@ -174,11 +174,11 @@ export class AlarmManagerService {
 		this.notifyGlobalListeners();
 	}
 
-	private async scheduleNativeAlarm(id: number, timestamp: number) {
+	private async scheduleNativeAlarm(id: number, timestamp: number, soundUri?: string | null) {
 		console.log(`Scheduling alarm ${id} for ${new Date(timestamp).toLocaleString()}`);
 		try {
 			await invoke('plugin:alarm-manager|schedule', {
-				payload: { id, triggerAt: timestamp },
+				payload: { id, triggerAt: timestamp, soundUri },
 			});
 		} catch (e: any) {
 			console.error('Failed to schedule native alarm', e.message || e.toString());

@@ -6,8 +6,15 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application>
+        <service android:name=".AlarmRingingService"
+                 android:exported="false"
+                 android:foregroundServiceType="mediaPlayback" />
+
         <receiver android:name=".AlarmReceiver" android:exported="false">
              <intent-filter>
                 <action android:name="com.windowalarm.ALARM_TRIGGER" />
