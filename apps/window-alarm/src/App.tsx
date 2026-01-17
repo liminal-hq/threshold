@@ -7,7 +7,7 @@ import Ringing from './screens/Ringing';
 import Settings from './screens/Settings';
 import TitleBar from './components/TitleBar';
 import { SettingsService } from './services/SettingsService';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -27,18 +27,55 @@ import '@ionic/react/css/display.css';
 
 /* Theme variables */
 import './theme/variables.css';
+import './theme/ringing.css';
+import './theme/components.css'; /* Import custom component styles globally */
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
+import { platform } from '@tauri-apps/plugin-os';
 
 setupIonicReact();
 
 const App: React.FC = () => {
+	const [isMobile, setIsMobile] = React.useState(false);
+
 	useEffect(() => {
+		// Detect platform (synchronous in Tauri v2)
+		const os = platform();
+		setIsMobile(os === 'ios' || os === 'android');
+
 		SettingsService.applyTheme();
 
 		const showWindow = async () => {
 			try {
 				const win = getCurrentWindow();
+
+				// Log paths for debugging
+				try {
+					console.log('Attempting to resolve paths...');
+					const { appConfigDir, appDataDir } = await import('@tauri-apps/api/path');
+					const configPath = await appConfigDir();
+					const dataPath = await appDataDir();
+					console.log('----------------------------------------');
+					console.log('📂 Config Directory:', configPath);
+					console.log('📂 Data Directory:  ', dataPath);
+					console.log('----------------------------------------');
+				} catch (e) {
+					console.error('Failed to get paths:', e);
+				}
+
+				// Force Desktop Window Size 
+				if (os !== 'android' && os !== 'ios') {
+					try {
+						await win.setDecorations(false); // Force removal of native title bar
+						await win.unmaximize();
+						await win.setSize(new LogicalSize(450, 800));
+						await win.center();
+					} catch (e) {
+						console.error('Failed to resize/decorate window:', e);
+					}
+				}
+
 				const visible = await win.isVisible();
 				if (!visible) {
 					await win.show();
@@ -53,8 +90,8 @@ const App: React.FC = () => {
 
 	return (
 		<IonApp>
-			<TitleBar />
-			<div style={{ marginTop: '30px', height: 'calc(100% - 30px)' }}>
+			{!isMobile && <TitleBar />}
+			<div style={{ marginTop: isMobile ? '0px' : '32px', height: isMobile ? '100%' : 'calc(100% - 32px)' }}>
 				<IonReactRouter>
 					<IonRouterOutlet>
 						<Route exact path="/home">

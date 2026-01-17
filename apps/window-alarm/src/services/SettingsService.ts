@@ -1,4 +1,4 @@
-export type Theme = 'deep-night' | 'canadian-cottage';
+export type Theme = 'deep-night' | 'canadian-cottage' | 'georgian-bay-plunge' | 'boring-light' | 'boring-dark';
 
 const KEY_THEME = 'window_alarm_theme';
 const KEY_24H = 'window_alarm_24h';
@@ -10,7 +10,7 @@ export const SettingsService = {
 
 	setTheme: (theme: Theme) => {
 		localStorage.setItem(KEY_THEME, theme);
-		document.body.className = `theme-${theme}`;
+		SettingsService.applyTheme();
 	},
 
 	getIs24h: (): boolean => {
@@ -21,9 +21,19 @@ export const SettingsService = {
 		localStorage.setItem(KEY_24H, String(is24h));
 	},
 
+	getForceDark: (): boolean => {
+		return localStorage.getItem('window_alarm_force_dark') === 'true';
+	},
+
+	setForceDark: (enabled: boolean) => {
+		localStorage.setItem('window_alarm_force_dark', String(enabled));
+		SettingsService.applyTheme();
+	},
+
 	// Apply on startup
 	applyTheme: () => {
 		const theme = SettingsService.getTheme();
-		document.body.className = `theme-${theme}`;
+		const forceDark = SettingsService.getForceDark();
+		document.body.className = `theme-${theme} ${forceDark ? 'force-dark' : ''}`;
 	},
 };
