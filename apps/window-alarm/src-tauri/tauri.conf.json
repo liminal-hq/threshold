@@ -15,10 +15,10 @@
 				"title": "Window Alarm",
 				"width": 450,
 				"height": 800,
-				"resizable": false,
+				"resizable": true,
 				"maximizable": false,
 				"decorations": false,
-				"visible": false
+				"visible": true
 			}
 		],
 		"security": {

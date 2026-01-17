@@ -50,8 +50,15 @@ pub fn run() {
     #[cfg(target_os = "linux")]
     configure_linux_env();
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_window_state::Builder::new().build())
+    #[allow(unused_mut)]
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        builder = builder.plugin(tauri_plugin_window_state::Builder::new().build());
+    }
+
+    builder
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_alarm_manager::init())
         .plugin(tauri_plugin_deep_link::init())
