@@ -123,6 +123,12 @@ const Settings: React.FC = () => {
                                 <IconButton
                                     edge="end"
                                     onClick={async () => {
+                                        if (isMobile) {
+                                            // Mobile doesn't support multiple windows, navigate in-app
+                                            navigate({ to: '/ringing/$id', params: { id: '999' } });
+                                            return;
+                                        }
+
                                         try {
                                             // Dynamically import to avoid issues on mobile
                                             const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
