@@ -155,10 +155,10 @@ const Settings: React.FC = () => {
                                         }
                                     }}
                                     sx={{
-                                        bgcolor: 'var(--ion-color-secondary)',
-                                        color: '#fff',
+                                        bgcolor: 'primary.main',
+                                        color: 'primary.contrastText',
                                         '&:hover': {
-                                            bgcolor: 'var(--ion-color-secondary-shade)',
+                                            bgcolor: 'primary.dark',
                                         }
                                     }}
                                 >

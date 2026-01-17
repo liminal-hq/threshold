@@ -18,6 +18,8 @@ body.theme-deep-night {
 
 	--ion-background-color: #f4f5f8;
 	--ion-text-color: #1a1a1a;
+	--ion-card-background: #ffffff;
+	--ion-border-color: rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -71,6 +73,8 @@ body.theme-canadian-cottage {
 	/* Background: Warm Beige/Paper */
 	--ion-background-color: hsl(35, 30%, 94%);
 	--ion-text-color: hsl(210, 20%, 20%);
+	--ion-card-background: #ffffff;
+	--ion-border-color: rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -146,6 +150,8 @@ body.theme-georgian-bay-plunge {
 	/* Background: Light gray with subtle blue tint */
 	--ion-background-color: hsl(210, 15%, 96%);
 	--ion-text-color: hsl(210, 15%, 20%);
+	--ion-card-background: #ffffff;
+	--ion-border-color: rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -189,6 +195,8 @@ body.theme-boring-light {
 
 	--ion-background-color: hsl(0, 0%, 100%);
 	--ion-text-color: hsl(0, 0%, 0%);
+	--ion-card-background: #ffffff;
+	--ion-border-color: rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
