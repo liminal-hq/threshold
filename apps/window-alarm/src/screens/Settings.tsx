@@ -156,7 +156,7 @@ const Settings: React.FC = () => {
                                         } catch (err) {
                                             console.error('Failed to open test alarm window:', err);
                                             console.error('Error type:', typeof err);
-                                            console.error('Error details:', err);
+                                            console.error('Error details:', (err as Error).stack);
                                         }
                                     }}
                                     sx={{

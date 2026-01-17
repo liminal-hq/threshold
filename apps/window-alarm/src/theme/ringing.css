@@ -14,8 +14,8 @@
 	padding: 32px;
 	text-align: center;
 	
-	/* The actual visual card */
-	background: radial-gradient(circle at center, var(--ion-color-primary-tint), var(--ion-color-primary));
+	/* The actual visual card - using secondary color to match Add Alarm button */
+	background: radial-gradient(circle at center, var(--ion-color-secondary-tint), var(--ion-color-secondary));
 	color: #fff;
 	animation: pulse-bg 4s infinite alternate;
 	
