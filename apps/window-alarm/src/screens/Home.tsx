@@ -1,142 +1,174 @@
 import React, { useState, useEffect } from 'react';
 import {
-	IonContent,
-	IonHeader,
-	IonPage,
-	IonTitle,
-	IonToolbar,
-	IonFab,
-	IonFabButton,
-	IonIcon,
-	IonList,
-	useIonViewWillEnter,
-	IonRefresher,
-	IonRefresherContent,
-	IonButtons,
-	IonButton,
-} from '@ionic/react';
-import { add, ellipsisVertical, settingsOutline } from 'ionicons/icons';
+    AppBar,
+    Toolbar,
+    Typography,
+    IconButton,
+    Fab,
+    List,
+    Box,
+    Button,
+    Container
+} from '@mui/material';
+import {
+    Add as AddIcon,
+    MoreVert as MoreVertIcon,
+    SettingsOutlined as SettingsOutlinedIcon,
+    Refresh as RefreshIcon
+} from '@mui/icons-material';
+import { SwipeableList } from 'react-swipeable-list';
 import { platform } from '@tauri-apps/plugin-os';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useNavigate } from '@tanstack/react-router';
 import { Alarm } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { AlarmItem } from '../components/AlarmItem';
 import { SettingsService } from '../services/SettingsService';
 
 const Home: React.FC = () => {
-	const history = useHistory();
-	const location = useLocation();
-	const [alarms, setAlarms] = useState<Alarm[]>([]);
-	const [isMobile, setIsMobile] = useState(false);
-	const is24h = SettingsService.getIs24h();
+    const navigate = useNavigate();
+    const [alarms, setAlarms] = useState<Alarm[]>([]);
+    const [isMobile, setIsMobile] = useState(false);
+    const is24h = SettingsService.getIs24h();
 
-	useEffect(() => {
-		// Detect platform (synchronous in Tauri v2)
-		const os = platform();
-		setIsMobile(os === 'ios' || os === 'android');
-	}, []);
+    useEffect(() => {
+        const os = platform();
+        setIsMobile(os === 'ios' || os === 'android');
+    }, []);
 
-	const loadData = async () => {
-		await alarmManagerService.init();
-		const data = await alarmManagerService.loadAlarms();
-		setAlarms(data);
-	};
+    const loadData = async () => {
+        await alarmManagerService.init();
+        const data = await alarmManagerService.loadAlarms();
+        setAlarms(data);
+    };
 
-	useIonViewWillEnter(() => {
-		loadData();
-	});
+    // Use effect instead of useIonViewWillEnter
+    useEffect(() => {
+        loadData();
+    }, []);
 
-	const handleToggle = async (alarm: Alarm, enabled: boolean) => {
-		await alarmManagerService.toggleAlarm(alarm, enabled);
-		loadData();
-	};
+    const handleToggle = async (alarm: Alarm, enabled: boolean) => {
+        await alarmManagerService.toggleAlarm(alarm, enabled);
+        loadData();
+    };
 
-	const handleDelete = async (id: number) => {
-		await alarmManagerService.deleteAlarm(id);
-		loadData();
-	};
+    const handleDelete = async (id: number) => {
+        await alarmManagerService.deleteAlarm(id);
+        loadData();
+    };
 
-	const handleEdit = (id: number) => {
-		history.push(`/edit/${id}`);
-	};
+    const handleEdit = (id: number) => {
+        navigate({ to: '/edit/$id', params: { id: id.toString() } });
+    };
 
-	const handleAdd = () => {
-		history.push('/edit/new');
-	};
+    const handleAdd = () => {
+        navigate({ to: '/edit/$id', params: { id: 'new' } });
+    };
 
-	return (
-		<IonPage>
-			{isMobile && (
-				<IonHeader>
-					<IonToolbar>
-						<IonTitle>Window Alarm</IonTitle>
-						<IonButtons slot="end">
-							<IonButton onClick={() => history.push('/settings')}>
-								<IonIcon icon={ellipsisVertical} />
-							</IonButton>
-						</IonButtons>
-					</IonToolbar>
-				</IonHeader>
-			)}
-			<IonContent fullscreen>
-				<IonRefresher slot="fixed" onIonRefresh={(e) => loadData().then(() => e.detail.complete())}>
-					<IonRefresherContent />
-				</IonRefresher>
+    return (
+        <Box sx={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            {isMobile && (
+                <AppBar position="sticky" elevation={0} sx={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                    <Toolbar>
+                        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                            Window Alarm
+                        </Typography>
+                        <IconButton color="inherit" onClick={() => loadData()}>
+                            <RefreshIcon />
+                        </IconButton>
+                        <IconButton color="inherit" onClick={() => navigate({ to: '/settings' })}>
+                            <MoreVertIcon />
+                        </IconButton>
+                    </Toolbar>
+                </AppBar>
+            )}
 
-				{/* Desktop settings button - Only show if on home and not transitioning away (approximated by route check) */}
-				{!isMobile && location.pathname === '/home' && (
-					<div style={{
-						position: 'fixed',
-						top: '48px', /* 32px titlebar + 16px margin */
-						right: '16px',
-						zIndex: 1000
-					}}>
-						<IonButton fill="clear" onClick={() => history.push('/settings')}>
-							<IonIcon icon={settingsOutline} style={{ fontSize: '1.5rem', color: 'var(--ion-text-color)' }} />
-						</IonButton>
-					</div>
-				)}
+            {/* Desktop settings button */}
+            {!isMobile && (
+                <Box sx={{
+                    position: 'fixed',
+                    top: '48px',
+                    right: '16px',
+                    zIndex: 1000
+                }}>
+                    <IconButton onClick={() => navigate({ to: '/settings' })} size="large">
+                        <SettingsOutlinedIcon />
+                    </IconButton>
+                </Box>
+            )}
 
-				<IonList style={!isMobile ? { marginTop: '88px', paddingBottom: '80px', paddingLeft: '16px', paddingRight: '16px', background: 'transparent' } : {}}>
-					{alarms.map((alarm) => (
-						<AlarmItem
-							key={alarm.id}
-							alarm={alarm}
-							is24h={is24h}
-							isMobile={isMobile}
-							onToggle={(enabled) => handleToggle(alarm, enabled)}
-							onDelete={() => handleDelete(alarm.id)}
-							onClick={() => handleEdit(alarm.id)}
-						/>
-					))}
-				</IonList>
+            <Container maxWidth={false} sx={{
+                mt: !isMobile ? 8 : 0,
+                pb: 10,
+                px: !isMobile ? 2 : 0,
+                flexGrow: 1
+            }}>
+                {isMobile ? (
+                    <SwipeableList>
+                        {alarms.map((alarm) => (
+                            <AlarmItem
+                                key={alarm.id}
+                                alarm={alarm}
+                                is24h={is24h}
+                                isMobile={isMobile}
+                                onToggle={(enabled) => handleToggle(alarm, enabled)}
+                                onDelete={() => handleDelete(alarm.id)}
+                                onClick={() => handleEdit(alarm.id)}
+                            />
+                        ))}
+                    </SwipeableList>
+                ) : (
+                    <List>
+                        {alarms.map((alarm) => (
+                            <AlarmItem
+                                key={alarm.id}
+                                alarm={alarm}
+                                is24h={is24h}
+                                isMobile={isMobile}
+                                onToggle={(enabled) => handleToggle(alarm, enabled)}
+                                onDelete={() => handleDelete(alarm.id)}
+                                onClick={() => handleEdit(alarm.id)}
+                            />
+                        ))}
+                    </List>
+                )}
+            </Container>
 
-				{/* Floating Add Button for Mobile/Desktop - Only show on Home */}
-				{location.pathname === '/home' && (
-					<div className={!isMobile ? "desktop-footer" : "mobile-fab-container"} style={!isMobile ? {
-						position: 'fixed',
-						bottom: 0,
-						left: 0,
-						right: 0,
-						zIndex: 1000 /* Ensure above content */
-					} : {}}>
-						{!isMobile ? (
-							<IonButton expand="block" color="secondary" onClick={handleAdd} style={{ width: '100%', maxWidth: '400px', margin: '0 auto', height: '48px' }}>
-								<IonIcon icon={add} slot="start" />
-								Add Alarm
-							</IonButton>
-						) : (
-							<IonFab vertical="bottom" horizontal="end" slot="fixed">
-								<IonFabButton color="secondary" onClick={handleAdd}>
-									<IonIcon icon={add} />
-								</IonFabButton>
-							</IonFab>
-						)}
-					</div>
-				)}
-			</IonContent>
-		</IonPage >
-	);
+            {/* Floating Add Button */}
+            <Box sx={!isMobile ? {
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 1000,
+                p: 2,
+                bgcolor: 'background.paper', // Ensure it has background on desktop footer
+                borderTop: '1px solid',
+                borderColor: 'divider'
+            } : {
+                position: 'fixed',
+                bottom: 16,
+                right: 16,
+                zIndex: 1000
+            }}>
+                {!isMobile ? (
+                    <Button
+                        variant="contained"
+                        color="secondary"
+                        fullWidth
+                        startIcon={<AddIcon />}
+                        onClick={handleAdd}
+                        sx={{ maxWidth: 400, mx: 'auto', display: 'flex' }}
+                    >
+                        Add Alarm
+                    </Button>
+                ) : (
+                    <Fab color="secondary" aria-label="add" onClick={handleAdd}>
+                        <AddIcon />
+                    </Fab>
+                )}
+            </Box>
+        </Box>
+    );
 };
 
 export default Home;

@@ -3,9 +3,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { platform } from '@tauri-apps/plugin-os';
 import {
 	WindowMinimizeIcon,
-	// WindowMaximizeIcon,
 	WindowCloseIcon,
-	// WindowRestoreIcon,
 } from './Icons';
 import { ContextMenu, MenuModel } from './ContextMenu';
 import './TitleBar.css';
@@ -220,5 +218,3 @@ export const TitleBar: React.FC = () => {
 		</>
 	);
 };
-
-export default TitleBar;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { IonContent, IonPage, IonButton } from '@ionic/react';
-import { useParams, useHistory } from 'react-router-dom';
+import { Button, Typography, Box } from '@mui/material';
+import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { Alarm } from '../services/DatabaseService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -9,10 +9,10 @@ import '../theme/ringing.css';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 
 const Ringing: React.FC = () => {
-	const { id } = useParams<{ id: string }>();
+	const { id } = useParams({ from: '/ringing/$id' });
 	const [alarm, setAlarm] = useState<Alarm | null>(null);
 	const [timeStr, setTimeStr] = useState<string>('');
-	const history = useHistory();
+	const navigate = useNavigate();
 
 	useEffect(() => {
 		const loadAlarm = async () => {
@@ -46,10 +46,10 @@ const Ringing: React.FC = () => {
 				await getCurrentWindow().close();
 			} catch (e) {
 				console.error('Failed to close window', e);
-				history.replace('/home');
+				navigate({ to: '/home' });
 			}
 		} else {
-			history.replace('/home');
+			navigate({ to: '/home' });
 		}
 	};
 
@@ -60,23 +60,53 @@ const Ringing: React.FC = () => {
 	};
 
 	return (
-		<IonPage className="ringing-page">
-			<IonContent>
+		<Box className="ringing-page" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+			<Box sx={{ flexGrow: 1 }}>
 				<div className="ringing-container" data-tauri-drag-region="true">
-					<div className="ringing-time">{timeStr}</div>
-					<div className="ringing-label">{alarm?.label || 'Wake Up!'}</div>
+					<Typography variant="h1" className="ringing-time" sx={{ fontSize: '5rem', fontWeight: 800 }}>{timeStr}</Typography>
+					<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>{alarm?.label || 'Wake Up!'}</Typography>
 
 					<div className="ringing-actions">
-						<IonButton className="dismiss-btn" onClick={handleDismiss}>
+						<Button
+                            variant="contained"
+                            fullWidth
+                            size="large"
+                            sx={{
+                                bgcolor: 'white',
+                                color: 'primary.main',
+                                borderRadius: '50px',
+                                fontWeight: 'bold',
+                                height: '56px',
+                                '&:hover': { bgcolor: '#f0f0f0' },
+                                textTransform: 'none',
+                                fontSize: '1.2rem',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+                            }}
+                            onClick={handleDismiss}
+                        >
 							Stop Alarm
-						</IonButton>
-						<IonButton fill="outline" className="snooze-btn" onClick={handleSnooze}>
+						</Button>
+						<Button
+                            variant="outlined"
+                            fullWidth
+                            size="large"
+                            sx={{
+                                color: 'white',
+                                borderColor: 'rgba(255,255,255,0.5)',
+                                borderRadius: '50px',
+                                fontWeight: '600',
+                                mt: 1,
+                                '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+                                textTransform: 'none'
+                            }}
+                            onClick={handleSnooze}
+                        >
 							Snooze (10m)
-						</IonButton>
+						</Button>
 					</div>
 				</div>
-			</IonContent>
-		</IonPage>
+			</Box>
+		</Box>
 	);
 };
 

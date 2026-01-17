@@ -1,70 +1,29 @@
-import { Redirect, Route } from 'react-router-dom';
-import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
-import Home from './screens/Home';
-import EditAlarm from './screens/EditAlarm';
-import Ringing from './screens/Ringing';
-import Settings from './screens/Settings';
-import TitleBar from './components/TitleBar';
-import { SettingsService } from './services/SettingsService';
 import React, { useEffect } from 'react';
-
-/* Core CSS required for Ionic components to work properly */
-import '@ionic/react/css/core.css';
-
-/* Basic CSS for apps built with Ionic */
-import '@ionic/react/css/normalize.css';
-import '@ionic/react/css/structure.css';
-import '@ionic/react/css/typography.css';
-
-/* Optional CSS utils */
-import '@ionic/react/css/padding.css';
-import '@ionic/react/css/float-elements.css';
-import '@ionic/react/css/text-alignment.css';
-import '@ionic/react/css/text-transformation.css';
-import '@ionic/react/css/flex-utils.css';
-import '@ionic/react/css/display.css';
-
-/* Theme variables */
-import './theme/variables.css';
-import './theme/ringing.css';
-import './theme/components.css'; /* Import custom component styles globally */
+import { RouterProvider } from '@tanstack/react-router';
+import { router } from './router';
+import { ThemeContextProvider } from './contexts/ThemeContext';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { platform } from '@tauri-apps/plugin-os';
 
-setupIonicReact();
+/* Theme variables */
+import './theme/variables.css';
+import './theme/ringing.css';
+import './theme/components.css';
 
 const App: React.FC = () => {
 	console.log('🚀 [window-alarm] App component rendering');
-	const [isMobile, setIsMobile] = React.useState(false);
 
 	useEffect(() => {
 		// Detect platform (synchronous in Tauri v2)
 		const os = platform();
-		setIsMobile(os === 'ios' || os === 'android');
-
-		SettingsService.applyTheme();
+		const win = getCurrentWindow();
 
 		const showWindow = async () => {
 			try {
-				const win = getCurrentWindow();
-
-				// Log paths for debugging
-				try {
-					console.log('Attempting to resolve paths...');
-					const { appConfigDir, appDataDir } = await import('@tauri-apps/api/path');
-					const configPath = await appConfigDir();
-					const dataPath = await appDataDir();
-					console.log('----------------------------------------');
-					console.log('📂 Config Directory:', configPath);
-					console.log('📂 Data Directory:  ', dataPath);
-					console.log('----------------------------------------');
-				} catch (e) {
-					console.error('Failed to get paths:', e);
-				}
-
 				// Force Desktop Window Size 
 				if (os !== 'android' && os !== 'ios') {
 					try {
@@ -87,33 +46,40 @@ const App: React.FC = () => {
 			}
 		};
 		showWindow();
+
+		// Initialize deep link handling
+		import('./services/DeepLinkService').then(({ initDeepLinks }) => {
+			initDeepLinks(router).catch((e) => {
+				console.error('Failed to initialize deep links:', e);
+			});
+		});
+
+		// Handle Back Button on Android
+		// If router can go back, prevent close and go back.
+		// Otherwise, allow close (minimize app).
+		const unlistenPromise = win.onCloseRequested(async (event) => {
+			// Check if we can go back in history.
+			// Note: window.history.length isn't perfect but typical proxy in SPAs.
+			// TanStack router doesn't expose a simple "canGoBack" boolean easily on the router instance without hook context,
+			// but we can try just going back and if it's the root, it might exit.
+			// However, usually window.history.length > 1 implies we can go back.
+			if (window.history.length > 1) {
+				event.preventDefault();
+				router.history.back();
+			}
+		});
+
+		return () => {
+			unlistenPromise.then(unlisten => unlisten());
+		};
 	}, []);
 
 	return (
-		<IonApp>
-			{!isMobile && <TitleBar />}
-			<div style={{ marginTop: isMobile ? '0px' : '32px', height: isMobile ? '100%' : 'calc(100% - 32px)' }}>
-				<IonReactRouter>
-					<IonRouterOutlet>
-						<Route exact path="/home">
-							<Home />
-						</Route>
-						<Route exact path="/edit/:id">
-							<EditAlarm />
-						</Route>
-						<Route exact path="/ringing/:id">
-							<Ringing />
-						</Route>
-						<Route exact path="/settings">
-							<Settings />
-						</Route>
-						<Route exact path="/">
-							<Redirect to="/home" />
-						</Route>
-					</IonRouterOutlet>
-				</IonReactRouter>
-			</div>
-		</IonApp>
+		<ThemeContextProvider>
+			<LocalizationProvider dateAdapter={AdapterDateFns}>
+				<RouterProvider router={router} />
+			</LocalizationProvider>
+		</ThemeContextProvider>
 	);
 };
 

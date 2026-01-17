@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { IonIcon } from '@ionic/react';
-import { add, remove } from 'ionicons/icons';
+import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import './TimePicker.css';
 
 interface TimePickerProps {
@@ -72,7 +71,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, is24h }
             {/* Hours Column */}
             <div className="time-column">
                 <button className="time-control-btn" onClick={() => adjustHour(1)}>
-                    <IonIcon icon={add} />
+                    <AddIcon />
                 </button>
                 <input
                     type="text"
@@ -81,12 +80,6 @@ export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, is24h }
                     onChange={(e) => {
                         const val = parseInt(e.target.value);
                         if (!isNaN(val)) {
-                            // Basic clamp/wrap logic can be checking onBlur, 
-                            // but for typing we usually allow wide range then normalize.
-                            // For simplicity, we just update if it's a number.
-                            // But we need to handle the isPm offset logic if !is24h.
-                            // Actually, direct edit is tricky with 12h format.
-                            // Let's assume user types visual hour.
                             let newH = val;
                             if (!is24h) {
                                 if (isPm && newH !== 12) newH += 12;
@@ -96,12 +89,11 @@ export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, is24h }
                         }
                     }}
                     onBlur={() => {
-                        // Ensure valid range
                         updateTime(hour, minute);
                     }}
                 />
                 <button className="time-control-btn" onClick={() => adjustHour(-1)}>
-                    <IonIcon icon={remove} />
+                    <RemoveIcon />
                 </button>
             </div>
 
@@ -110,7 +102,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, is24h }
             {/* Minutes Column */}
             <div className="time-column">
                 <button className="time-control-btn" onClick={() => adjustMinute(1)}>
-                    <IonIcon icon={add} />
+                    <AddIcon />
                 </button>
                 <input
                     type="text"
@@ -127,7 +119,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, is24h }
                     }}
                 />
                 <button className="time-control-btn" onClick={() => adjustMinute(-1)}>
-                    <IonIcon icon={remove} />
+                    <RemoveIcon />
                 </button>
             </div>
 

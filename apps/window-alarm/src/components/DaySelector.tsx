@@ -1,36 +1,49 @@
 import React from 'react';
-
+import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
 interface DaySelectorProps {
 	selectedDays: number[];
 	onChange: (days: number[]) => void;
 }
 
-const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // Sun=0
+const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export const DaySelector: React.FC<DaySelectorProps> = ({ selectedDays, onChange }) => {
-	const toggleDay = (index: number) => {
-		if (selectedDays.includes(index)) {
-			onChange(selectedDays.filter((d) => d !== index));
-		} else {
-			onChange([...selectedDays, index].sort());
-		}
+	const handleFormat = (
+		_event: React.MouseEvent<HTMLElement>,
+		newFormats: number[],
+	) => {
+		onChange(newFormats.sort((a, b) => a - b));
 	};
 
 	return (
-		<div className="day-selector">
-			{DAYS.map((label, index) => {
-				const isSelected = selectedDays.includes(index);
-				return (
-					<div
-						key={index}
-						className={`day-pill ${isSelected ? 'selected' : ''}`}
-						onClick={() => toggleDay(index)}
-					>
-						{label}
-					</div>
-				);
-			})}
-		</div>
+		<ToggleButtonGroup
+			value={selectedDays}
+			onChange={handleFormat}
+			aria-label="active days"
+			fullWidth
+			size="small"
+			sx={{ mt: 1, mb: 1 }}
+		>
+			{DAYS.map((label, index) => (
+				<ToggleButton
+                    value={index}
+                    key={index}
+                    aria-label={label}
+                    sx={{
+                        border: '1px solid rgba(0, 0, 0, 0.12)',
+                        '&.Mui-selected': {
+                            backgroundColor: 'primary.main',
+                            color: 'primary.contrastText',
+                            '&:hover': {
+                                backgroundColor: 'primary.dark',
+                            }
+                        }
+                    }}
+                >
+					{label}
+				</ToggleButton>
+			))}
+		</ToggleButtonGroup>
 	);
 };
