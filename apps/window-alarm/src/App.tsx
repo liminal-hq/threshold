@@ -55,23 +55,33 @@ const App: React.FC = () => {
 		});
 
 		// Handle Back Button on Android
-		// If router can go back, prevent close and go back.
-		// Otherwise, allow close (minimize app).
-		const unlistenPromise = win.onCloseRequested(async (event) => {
-			// Check if we can go back in history.
-			// Note: window.history.length isn't perfect but typical proxy in SPAs.
-			// TanStack router doesn't expose a simple "canGoBack" boolean easily on the router instance without hook context,
-			// but we can try just going back and if it's the root, it might exit.
-			// However, usually window.history.length > 1 implies we can go back.
-			if (window.history.length > 1) {
-				event.preventDefault();
-				router.history.back();
-			}
-		});
+		const initBackButton = async () => {
+			if (os === 'android') {
+				try {
+					// Dynamic import to be safe, though @tauri-apps/api/app is isomorphic safe usually
+					const { onBackButtonPress } = await import('@tauri-apps/api/app');
 
-		return () => {
-			unlistenPromise.then(unlisten => unlisten());
+					await onBackButtonPress(() => {
+						// Check if we can go back.
+						// window.history.length > 1 is the standard browser way to check history depth.
+						if (window.history.length > 1) {
+							router.history.back();
+						} else {
+							// If we can't go back, minimize the app (standard Android behavior)
+							win.minimize();
+						}
+					});
+				} catch (e) {
+					console.error('Failed to initialize back button listener', e);
+				}
+			}
 		};
+		initBackButton();
+
+		// Cleanup is handled by Tauri's plugin system generally, or we just let it persist for the app life.
+		// onBackButtonPress returns a Promise<Subject/Unlisten function> if we want to unlisten, 
+		// but since this is the root App component, we usually keep it.
+
 	}, []);
 
 	return (
