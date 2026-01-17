@@ -1,4 +1,4 @@
-import { createRootRoute, createRoute, createRouter, Outlet, redirect } from '@tanstack/react-router';
+import { createRootRoute, createRoute, createRouter, Outlet, redirect, useLocation } from '@tanstack/react-router';
 import { TitleBar } from './components/TitleBar';
 import { NotFound } from './components/NotFound';
 import { platform } from '@tauri-apps/plugin-os';
@@ -11,16 +11,21 @@ import Settings from './screens/Settings';
 // Root layout component
 const RootLayout = () => {
     const [isMobile, setIsMobile] = useState(false);
+    const location = useLocation();
 
     useEffect(() => {
         const os = platform();
         setIsMobile(os === 'ios' || os === 'android');
     }, []);
 
+    // Don't show TitleBar for ringing window (it's a separate floating window)
+    const isRingingWindow = location.pathname.startsWith('/ringing');
+    const showTitleBar = !isMobile && !isRingingWindow;
+
     return (
         <>
-            {!isMobile && <TitleBar />}
-            <div style={{ marginTop: isMobile ? '0px' : '32px', height: isMobile ? '100%' : 'calc(100% - 32px)' }}>
+            {showTitleBar && <TitleBar />}
+            <div style={{ marginTop: showTitleBar ? '32px' : '0px', height: showTitleBar ? 'calc(100% - 32px)' : '100%' }}>
                 <Outlet />
             </div>
         </>

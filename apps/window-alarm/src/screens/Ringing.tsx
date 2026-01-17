@@ -68,39 +68,39 @@ const Ringing: React.FC = () => {
 
 					<div className="ringing-actions">
 						<Button
-                            variant="contained"
-                            fullWidth
-                            size="large"
-                            sx={{
-                                bgcolor: 'white',
-                                color: 'primary.main',
-                                borderRadius: '50px',
-                                fontWeight: 'bold',
-                                height: '56px',
-                                '&:hover': { bgcolor: '#f0f0f0' },
-                                textTransform: 'none',
-                                fontSize: '1.2rem',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
-                            }}
-                            onClick={handleDismiss}
-                        >
+							variant="contained"
+							fullWidth
+							size="large"
+							sx={{
+								bgcolor: 'white',
+								color: 'primary.main',
+								borderRadius: '50px',
+								fontWeight: 'bold',
+								height: '56px',
+								'&:hover': { bgcolor: '#f0f0f0' },
+								textTransform: 'none',
+								fontSize: '1.2rem',
+								boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+							}}
+							onClick={handleDismiss}
+						>
 							Stop Alarm
 						</Button>
 						<Button
-                            variant="outlined"
-                            fullWidth
-                            size="large"
-                            sx={{
-                                color: 'white',
-                                borderColor: 'rgba(255,255,255,0.5)',
-                                borderRadius: '50px',
-                                fontWeight: '600',
-                                mt: 1,
-                                '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
-                                textTransform: 'none'
-                            }}
-                            onClick={handleSnooze}
-                        >
+							variant="outlined"
+							fullWidth
+							size="large"
+							sx={{
+								color: 'white',
+								borderColor: 'rgba(255,255,255,0.5)',
+								borderRadius: '50px',
+								fontWeight: '600',
+								mt: 1,
+								'&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+								textTransform: 'none'
+							}}
+							onClick={handleSnooze}
+						>
 							Snooze (10m)
 						</Button>
 					</div>

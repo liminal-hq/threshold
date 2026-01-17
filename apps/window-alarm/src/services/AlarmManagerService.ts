@@ -173,7 +173,7 @@ export class AlarmManagerService {
 							url: `/ringing/${id}`, 
 							title: 'Alarm',
 							width: 400,
-							height: 600,
+							height: 500,
 							resizable: false,
 							alwaysOnTop: true,
 							center: true,
