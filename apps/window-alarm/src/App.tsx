@@ -37,6 +37,7 @@ import { platform } from '@tauri-apps/plugin-os';
 setupIonicReact();
 
 const App: React.FC = () => {
+	console.log('🚀 [window-alarm] App component rendering');
 	const [isMobile, setIsMobile] = React.useState(false);
 
 	useEffect(() => {

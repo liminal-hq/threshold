@@ -22,11 +22,12 @@ export default defineConfig(async () => ({
 	server: {
 		port: 1420,
 		strictPort: true,
-		host: host || false,
+		host: '0.0.0.0', // Listen on all interfaces
+        // This 'origin' enforces where the browser believes the request came from, which can help with CORS/host checks.
+        // But importantly, we need 'clientPort' in HMR.
 		hmr: host
 			? {
 					protocol: 'ws',
-					host,
 					port: 1421,
 				}
 			: undefined,

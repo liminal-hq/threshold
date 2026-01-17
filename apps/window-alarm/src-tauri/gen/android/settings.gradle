@@ -1,0 +1,6 @@
+include ':app'
+
+apply from: 'tauri.settings.gradle'
+
+include ':tauri-plugin-alarm-manager'
+project(':tauri-plugin-alarm-manager').projectDir = new File('../../../../../plugins/alarm-manager/android')

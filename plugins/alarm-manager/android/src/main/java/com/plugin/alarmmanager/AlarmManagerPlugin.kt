@@ -97,11 +97,16 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         val ret = app.tauri.plugin.JSObject()
         val array = app.tauri.plugin.JSArray()
 
-        // Wait, manual JSObject construction is messy in Kotlin without proper bindings.
-        // It's easier to return a JSON string or rely on the InvokeArg serialization mechanism if `resolve` accepts a POJO.
-        // Tauri v2 Kotlin bridge supports resolving POJOs.
-
-        // Let's assume we can return the list directly.
-        invoke.resolve(importsList)
+        for (alarm in importsList) {
+            val alarmObj = app.tauri.plugin.JSObject()
+            alarmObj.put("id", alarm.id)
+            alarmObj.put("hour", alarm.hour)
+            alarmObj.put("minute", alarm.minute)
+            alarmObj.put("label", alarm.label)
+            array.put(alarmObj)
+        }
+        
+        ret.put("imports", array)
+        invoke.resolve(ret)
     }
 }

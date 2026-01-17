@@ -1,15 +1,20 @@
 use tauri::{
-  plugin::{PluginHandle, ToPlugin},
+  plugin::{PluginApi, PluginHandle},
   Runtime,
 };
 use crate::models::*;
 
 // Initialize the plugin
-pub fn init<R: Runtime, C: ToPlugin<R>>(
+pub fn init<R: Runtime>(
   _app: &tauri::AppHandle<R>,
-  api: PluginHandle<R, C>,
+  api: PluginApi<R, ()>,
 ) -> crate::Result<AlarmManager<R>> {
-  Ok(AlarmManager(api))
+  #[cfg(target_os = "android")]
+  let handle = api.register_android_plugin("com.plugin.alarmmanager", "AlarmManagerPlugin")?;
+  #[cfg(not(target_os = "android"))]
+  let handle = api.handle().clone();
+  
+  Ok(AlarmManager(handle))
 }
 
 /// Access to the alarm-manager APIs.
