@@ -113,6 +113,59 @@ const Settings: React.FC = () => {
                                 />
                             </ListItem>
                         </List>
+
+                        <List subheader={<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Developer</ListSubheader>}>
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="Test Alarm Ring"
+                                    secondary="Trigger a sample alarm to test the ringing window"
+                                />
+                                <IconButton
+                                    edge="end"
+                                    onClick={async () => {
+                                        try {
+                                            // Dynamically import to avoid issues on mobile
+                                            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+                                            const timestamp = Date.now();
+                                            const label = `test-alarm-${timestamp}`;
+
+                                            const webview = new WebviewWindow(label, {
+                                                url: '/ringing/999',
+                                                title: 'Test Alarm',
+                                                width: 400,
+                                                height: 600,
+                                                resizable: false,
+                                                alwaysOnTop: true,
+                                                center: true,
+                                                skipTaskbar: false,
+                                                decorations: false,
+                                                transparent: true,
+                                                focus: true,
+                                            });
+
+                                            webview.once('tauri://created', () => {
+                                                console.log('Test alarm window created');
+                                            });
+
+                                            webview.once('tauri://error', (e) => {
+                                                console.error('Test alarm window error:', e);
+                                            });
+                                        } catch (err) {
+                                            console.error('Failed to open test alarm window:', err);
+                                        }
+                                    }}
+                                    sx={{
+                                        bgcolor: 'var(--ion-color-secondary)',
+                                        color: '#fff',
+                                        '&:hover': {
+                                            bgcolor: 'var(--ion-color-secondary-shade)',
+                                        }
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.2rem' }}>🔔</span>
+                                </IconButton>
+                            </ListItem>
+                        </List>
                     </Paper>
                 </Container>
             </Box>
