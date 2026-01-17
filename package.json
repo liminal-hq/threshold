@@ -5,6 +5,9 @@
 	"license": "UNLICENSED",
 	"scripts": {
 		"test": "pnpm -r test",
+		"tauri": "pnpm --filter window-alarm tauri",
+		"build:desktop": "pnpm --filter window-alarm tauri build",
+		"build:android": "pnpm --filter window-alarm tauri android build",
 		"dev:desktop": "pnpm --filter window-alarm tauri dev",
 		"dev:android": "pnpm --filter window-alarm tauri android dev",
 		"format": "prettier --write ."
