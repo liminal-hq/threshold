@@ -129,6 +129,8 @@ const Settings: React.FC = () => {
                                             const timestamp = Date.now();
                                             const label = `test-alarm-${timestamp}`;
 
+                                            console.log('Creating test alarm window with URL: /ringing/999');
+
                                             const webview = new WebviewWindow(label, {
                                                 url: '/ringing/999',
                                                 title: 'Test Alarm',
@@ -144,14 +146,17 @@ const Settings: React.FC = () => {
                                             });
 
                                             webview.once('tauri://created', () => {
-                                                console.log('Test alarm window created');
+                                                console.log('Test alarm window created successfully');
                                             });
 
                                             webview.once('tauri://error', (e) => {
                                                 console.error('Test alarm window error:', e);
+                                                console.error('Error details:', JSON.stringify(e, null, 2));
                                             });
                                         } catch (err) {
                                             console.error('Failed to open test alarm window:', err);
+                                            console.error('Error type:', typeof err);
+                                            console.error('Error details:', err);
                                         }
                                     }}
                                     sx={{
