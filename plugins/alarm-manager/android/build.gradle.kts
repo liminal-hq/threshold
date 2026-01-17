@@ -9,6 +9,7 @@ android {
 
     defaultConfig {
         minSdk = 24
+        consumerProguardFiles("proguard-rules.pro")
     }
 
     buildTypes {
@@ -27,7 +28,7 @@ android {
 }
 
 dependencies {
-    implementation("app.tauri:tauri-android:2.0.0-rc.0") // Or appropriate version
+    compileOnly(project(":tauri-android"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
     implementation("androidx.core:core-ktx:1.12.0")
 }
