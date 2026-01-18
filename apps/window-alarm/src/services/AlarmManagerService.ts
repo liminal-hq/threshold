@@ -182,8 +182,8 @@ export class AlarmManagerService {
             if (existing) {
                 console.log('Ringing window already exists, focusing...');
                 await existing.setFocus();
-                // Optional: Update the URL if we want to switch which alarm is "active"
-                // await existing.navigate(`/ringing/${id}`);
+                // Navigate to the new alarm's page to update the UI (Label, etc.)
+                await existing.navigate(`/ringing/${id}`);
                 return;
             }
 
