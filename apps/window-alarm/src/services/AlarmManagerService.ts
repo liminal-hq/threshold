@@ -97,6 +97,11 @@ export class AlarmManagerService {
 		return this.saveAndSchedule(alarm);
 	}
 
+// Helper to emit change event
+	private notifyListeners() {
+		document.dispatchEvent(new CustomEvent('alarms-changed'));
+	}
+
 	async saveAndSchedule(alarm: Omit<Alarm, 'id'> & { id?: number }) {
 		// 1. Calculate next trigger
 		// Map UI Alarm type to Core Alarm type if needed, or ensure they match
@@ -128,11 +133,15 @@ export class AlarmManagerService {
 		} else {
 			await this.cancelNativeAlarm(id);
 		}
+		
+		this.notifyListeners();
+		return id;
 	}
 
 	async deleteAlarm(id: number) {
 		await this.cancelNativeAlarm(id);
 		await databaseService.deleteAlarm(id);
+		this.notifyListeners();
 	}
 
 	private async scheduleNativeAlarm(id: number, timestamp: number) {
@@ -200,6 +209,16 @@ export class AlarmManagerService {
 
 					} catch (err) {
 						console.error('Failed to open alarm window', err);
+					}
+
+					// 3. Auto-Reschedule (Calculate next trigger)
+					console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
+					const alarms = await databaseService.getAllAlarms();
+					const alarm = alarms.find(a => a.id === id);
+					if (alarm) {
+						// Re-save/schedule to calculate next trigger from "now"
+						// We don't change anything, just re-run the logic
+						await this.saveAndSchedule(alarm);
 					}
 
 				}, delay);
