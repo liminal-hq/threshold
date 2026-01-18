@@ -25,10 +25,16 @@ export class AlarmManagerService {
 
 		await databaseService.init();
 		
-		// Listen for alarms ringing from the Rust Backend
+		// Listen for alarms ringing from the Rust Backend (Desktop)
 		await listen<number>('alarm-ring', (event) => {
 			console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload}`);
 			this.handleAlarmRing(event.payload);
+		});
+
+		// Listen for alarms ringing from the Android Plugin (emitted via trigger())
+		await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
+			console.log(`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`);
+			this.handleAlarmRing(event.payload.id);
 		});
 
 		// Listen for global alarm changes (from other windows)
