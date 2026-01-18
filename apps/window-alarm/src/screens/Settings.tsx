@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useNavigate } from '@tanstack/react-router';
-import { platform } from '@tauri-apps/plugin-os';
+import { PlatformUtils } from '../utils/PlatformUtils';
 import { SettingsService, Theme } from '../services/SettingsService';
 import { useThemeContext } from '../contexts/ThemeContext';
 
@@ -30,8 +30,7 @@ const Settings: React.FC = () => {
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
-        const os = platform();
-        setIsMobile(os === 'ios' || os === 'android');
+        setIsMobile(PlatformUtils.isMobile());
     }, []);
 
     const handleTimeFormatChange = (enabled: boolean) => {

@@ -17,7 +17,7 @@ import {
     Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { SwipeableList } from 'react-swipeable-list';
-import { platform } from '@tauri-apps/plugin-os';
+import { PlatformUtils } from '../utils/PlatformUtils';
 import { useNavigate } from '@tanstack/react-router';
 import { Alarm } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
@@ -31,8 +31,7 @@ const Home: React.FC = () => {
     const is24h = SettingsService.getIs24h();
 
     useEffect(() => {
-        const os = platform();
-        setIsMobile(os === 'ios' || os === 'android');
+        setIsMobile(PlatformUtils.isMobile());
     }, []);
 
     const loadData = async () => {
@@ -119,7 +118,6 @@ const Home: React.FC = () => {
                                 key={alarm.id}
                                 alarm={alarm}
                                 is24h={is24h}
-                                isMobile={isMobile}
                                 onToggle={(enabled) => handleToggle(alarm, enabled)}
                                 onDelete={() => handleDelete(alarm.id)}
                                 onClick={() => handleEdit(alarm.id)}
@@ -133,7 +131,6 @@ const Home: React.FC = () => {
                                 key={alarm.id}
                                 alarm={alarm}
                                 is24h={is24h}
-                                isMobile={isMobile}
                                 onToggle={(enabled) => handleToggle(alarm, enabled)}
                                 onDelete={() => handleDelete(alarm.id)}
                                 onClick={() => handleEdit(alarm.id)}

@@ -1,6 +1,7 @@
 import { databaseService } from './DatabaseService';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
+import { PlatformUtils } from '../utils/PlatformUtils';
 import {
 	sendNotification,
 } from '@tauri-apps/plugin-notification';
@@ -226,9 +227,7 @@ export class AlarmManagerService {
         // 2. Open Floating Window (Singleton)
         try {
             const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-            const { platform } = await import('@tauri-apps/plugin-os');
-            const os = platform();
-            const isMobile = os === 'android' || os === 'ios';
+            const isMobile = PlatformUtils.isMobile();
 
             if (isMobile) {
                 console.log('[AlarmManager] Mobile detected. Navigating current window to ringing screen.');

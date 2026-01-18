@@ -17,8 +17,8 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material';
 import { TimePicker as MuiTimePicker } from '@mui/x-date-pickers/TimePicker';
 import { TimePicker as DesktopCustomTimePicker } from '../components/TimePicker';
-import { useParams, useNavigate } from '@tanstack/react-router';
-import { platform } from '@tauri-apps/plugin-os';
+import { useNavigate, useParams } from '@tanstack/react-router';
+import { PlatformUtils } from '../utils/PlatformUtils';
 import { databaseService } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { DaySelector } from '../components/DaySelector';
@@ -50,8 +50,7 @@ const EditAlarm: React.FC = () => {
     const [windowEnd, setWindowEnd] = useState(defaultEndStr);
 
     useEffect(() => {
-        const os = platform();
-        setIsMobile(os === 'ios' || os === 'android');
+        setIsMobile(PlatformUtils.isMobile());
     }, []);
 
     useEffect(() => {
