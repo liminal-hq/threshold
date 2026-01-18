@@ -57,10 +57,10 @@ export function calculateNextTrigger(alarm: Alarm, now: Date = new Date()): numb
 			// Check if this specific date can support a trigger in the future
 			const trigger = getTriggerForDate(alarm, candidateDate, now);
 			if (trigger !== null) {
-                console.log(`[Scheduler] Found trigger: ${new Date(trigger).toLocaleString()}`);
+                // console.log(`[Scheduler] Found trigger: ${new Date(trigger).toLocaleString()}`);
 				return trigger;
 			} else {
-                console.log(`[Scheduler] Date matches active days, but time is in past.`);
+                // console.log(`[Scheduler] Date matches active days, but time is in past.`);
             }
 		}
 	}
