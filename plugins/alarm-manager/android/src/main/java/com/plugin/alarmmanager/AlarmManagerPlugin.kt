@@ -50,6 +50,16 @@ class PickAlarmSoundOptions {
 
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        val isAlarm = intent.getBooleanExtra("isAlarmTriggered", false)
+        val alarmId = intent.getIntExtra("ALARM_ID", -1)
+
+        if (isAlarm && alarmId != -1) {
+            Log.d("AlarmManagerPlugin", "Alarm triggered while app in foreground/background: $alarmId. Emitting event.")
+            triggerEvent("alarm-ring", alarmId)
+        }
+    }
 
     @Command
     fun schedule(invoke: Invoke) {
