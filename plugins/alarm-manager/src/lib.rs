@@ -40,7 +40,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::cancel,
             commands::get_launch_args,
             commands::pick_alarm_sound,
-            commands::check_active_alarm
+            commands::check_active_alarm,
+            commands::stop_ringing
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

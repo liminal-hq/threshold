@@ -53,4 +53,10 @@ impl<R: Runtime> AlarmManager<R> {
             .run_mobile_plugin("check_active_alarm", ())
             .map_err(Into::into)
     }
+
+    pub fn stop_ringing(&self) -> crate::Result<()> {
+        self.0
+            .run_mobile_plugin("stop_ringing", ())
+            .map_err(Into::into)
+    }
 }

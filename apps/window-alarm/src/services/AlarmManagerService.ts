@@ -28,36 +28,58 @@ export class AlarmManagerService {
 				await databaseService.init();
 				console.log('[AlarmManager] Database service ready.');
 				
-				// Listen for alarms ringing from the Rust Backend (Desktop)
-				await listen<number>('alarm-ring', (event) => {
-					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload}`);
-					this.handleAlarmRing(event.payload);
+				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
+				// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
+				await listen<{ id: number }>('alarm-ring', (event) => {
+					console.log(`========== FRONTEND EVENT RECEIVED: alarm-ring ==========`);
+					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
+					console.log(`[AlarmManager] Event details:`, event);
+					this.handleAlarmRing(event.payload.id);
+					console.log(`========== FRONTEND EVENT HANDLER CALLED ==========`);
 				});
+				console.log('[AlarmManager] Event listener 1/3 registered.');
 
 				// Listen for alarms ringing from the Android Plugin (emitted via trigger())
-				await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
-					console.log(`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`);
-					this.handleAlarmRing(event.payload.id);
-				});
+				try {
+					await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
+						console.log(`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`);
+						this.handleAlarmRing(event.payload.id);
+					});
+					console.log('[AlarmManager] Event listener 2/3 registered.');
+				} catch (e) {
+					console.warn('[AlarmManager] Failed to register plugin event listener (may not be available on this platform):', e);
+				}
 
+				console.log('[AlarmManager] Setting up event listener 3/3: global-alarms-changed...');
 				// Listen for global alarm changes (from other windows)
 				await listen('global-alarms-changed', () => {
 					console.log('[AlarmManager] Received global-alarms-changed event');
 					this.notifyListeners();
 				});
+				console.log('[AlarmManager] Event listener 3/3 registered.');
 
 				console.log('[AlarmManager] Checking for native imports...');
 				await this.checkImports();
+				console.log('[AlarmManager] Native imports check complete.');
 				
-				console.log('[AlarmManager] Checking for active alarm...');
-				await this.checkActiveAlarm();
-
 				console.log('[AlarmManager] Rescheduling all alarms...');
 				await this.rescheduleAll();
+				console.log('[AlarmManager] Reschedule complete.');
+
+
 
 				console.log('[AlarmManager] Service initialization complete.');
+				
+				// Check if app was launched by an alarm notification (do this AFTER init completes)
+				console.log('[AlarmManager] Checking for active alarm...');
+				await this.checkActiveAlarm();
 			} catch (e) {
 				console.error('[AlarmManager] CRITICAL: Initialization failed', e);
+				console.error('[AlarmManager] Error details:', {
+					message: e instanceof Error ? e.message : String(e),
+					stack: e instanceof Error ? e.stack : undefined,
+					raw: e
+				});
 				throw e;
 			}
 		})();
@@ -65,6 +87,8 @@ export class AlarmManagerService {
 		return this.initPromise;
 	}
 
+	// Check if the app was launched by an alarm notification
+	// This is called AFTER init() completes to avoid interrupting alarm loading
 	private async checkActiveAlarm() {
 		try {
 			if (window.location.pathname.includes('/ringing')) return; // Already there
@@ -75,17 +99,8 @@ export class AlarmManagerService {
 			if (result && result.isAlarm && result.alarmId) {
 				console.log(`[AlarmManager] Active alarm detected: ${result.alarmId}. Redirecting...`);
 				
-				// Import router dynamically or use window.location if router not ready (but here it should be)
-				// We can't import router here easily because of circular dep risk if Service is imported in Router
-				// BUT we can use window.dispatchEvent to tell App to navigate, or just use window.location hash if hash router
-				// Since we use TanStack router, let's emit an event that App.tsx or a global listener handles,
-				// OR just use a simple CustomEvent that the View listens to.
-				
-				// Actually, simpler: redirect using the 'alarm-ring' event logic which opens the window on Desktop
-				// On Mobile, we just want to Navigate.
-				
 				const { router } = await import('../router');
-				router.navigate({ to: '/ringing/$id', params: { id: result.alarmId.toString() } }); // Use correct param name 'id' from router definition
+				router.navigate({ to: '/ringing/$id', params: { id: result.alarmId.toString() } });
 			}
 		} catch (e) {
 			console.error('Failed to check active alarm', e);
@@ -302,6 +317,15 @@ export class AlarmManagerService {
             await this.saveAndSchedule(alarm);
         }
     }
+
+	async stopRinging() {
+		try {
+			console.log('[AlarmManager] Stopping ringing...');
+			await invoke('plugin:alarm-manager|stop_ringing');
+		} catch (e) {
+			console.error('Failed to stop ringing', e);
+		}
+	}
 
 	private async cancelNativeAlarm(id: number) {
 		try {

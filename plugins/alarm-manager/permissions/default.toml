@@ -5,6 +5,7 @@ permissions = [
     "allow-cancel",
     "allow-get-launch-args",
     "allow-pick-alarm-sound",
+    "allow-stop-ringing",
 ]
 
 # Allow commands
@@ -27,3 +28,8 @@ commands.allow = ["get_launch_args"]
 identifier = "allow-pick-alarm-sound"
 description = "Enables the pick_alarm_sound command"
 commands.allow = ["pick_alarm_sound"]
+
+[[permission]]
+identifier = "allow-stop-ringing"
+description = "Enables the stop_ringing command"
+commands.allow = ["stop_ringing"]

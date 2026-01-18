@@ -107,20 +107,19 @@ class AlarmRingingService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Launch App Intent (Full Screen Intent equivalent logic if needed, but here simple content intent)
-        val packageName = applicationContext.packageName
-        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+        // Launch App Intent with Deep Link
+        val deepLinkUri = "window-alarm://ringing/$currentAlarmId"
+        val launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLinkUri)).apply {
+            setPackage(packageName)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("isAlarmTriggered", true)
-            putExtra("ALARM_ID", currentAlarmId)
         }
 
-        val contentPendingIntent = if (launchIntent != null) {
-             PendingIntent.getActivity(
-                this, 0, launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        } else null
+        val contentPendingIntent = PendingIntent.getActivity(
+            this,
+            currentAlarmId,
+            launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)

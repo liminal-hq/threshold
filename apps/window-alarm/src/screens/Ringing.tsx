@@ -96,7 +96,8 @@ const Ringing: React.FC = () => {
 	}, [id]);
 
 	const handleDismiss = async () => {
-
+		// Stop the ringing sound/vibration
+		await alarmManagerService.stopRinging();
 
 		// Check platform and close window if desktop
 		const os = platform();

@@ -52,43 +52,13 @@ class PickAlarmSoundOptions {
 
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
-    private val alarmReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val isAlarm = intent.action == "com.windowalarm.ALARM_TRIGGER"
-            val alarmId = intent.getIntExtra("ALARM_ID", -1)
-
-            if (isAlarm && alarmId != -1) {
-                Log.d("AlarmManagerPlugin", "Broadcast received for alarm triggered: $alarmId. Emitting event.")
-                val eventData = JSObject()
-                eventData.put("id", alarmId)
-                trigger("alarm-ring", eventData)
-            }
-        }
-    }
-
+    
     override fun load(webview: WebView) {
         super.load(webview)
-        val filter = IntentFilter("com.windowalarm.ALARM_TRIGGER")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            activity.registerReceiver(alarmReceiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            activity.registerReceiver(alarmReceiver, filter)
-        }
-        Log.d("AlarmManagerPlugin", "Plugin loaded and BroadcastReceiver registered.")
+        Log.d("AlarmManagerPlugin", "Plugin loaded.")
     }
 
-    override fun onNewIntent(intent: android.content.Intent) {
-        super.onNewIntent(intent)
-        val isAlarm = intent.getBooleanExtra("isAlarmTriggered", false)
-        val alarmId = intent.getIntExtra("ALARM_ID", -1)
 
-        if (isAlarm && alarmId != -1) {
-            Log.d("AlarmManagerPlugin", "Alarm triggered while app in foreground/background: $alarmId. Emitting event.")
-            val eventData = JSObject()
-            eventData.put("id", alarmId)
-            trigger("alarm-ring", eventData)
-        }
-    }
 
     @Command
     fun schedule(invoke: Invoke) {
@@ -128,6 +98,16 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         }
 
         startActivityForResult(invoke, intent, "pickAlarmSoundResult")
+    }
+
+    @Command
+    fun stop_ringing(invoke: Invoke) {
+        Log.d("AlarmManagerPlugin", "Stopping ringing service via Intent")
+        val intent = Intent(activity, AlarmRingingService::class.java).apply {
+            action = AlarmRingingService.ACTION_DISMISS
+        }
+        activity.startService(intent)
+        invoke.resolve()
     }
 
     @app.tauri.annotation.ActivityCallback
