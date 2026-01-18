@@ -17,13 +17,13 @@ interface ImportedAlarm {
 }
 
 export class AlarmManagerService {
-	private initialized = false;
+	private initPromise: Promise<void> | null = null;
 
 	async init() {
-		if (this.initialized) return;
-		this.initialized = true;
+		if (this.initPromise) return this.initPromise;
 
-		await databaseService.init();
+		this.initPromise = (async () => {
+			await databaseService.init();
 		
 		// Listen for alarms ringing from the Rust Backend (Desktop)
 		await listen<number>('alarm-ring', (event) => {
@@ -49,6 +49,9 @@ export class AlarmManagerService {
 		await this.checkActiveAlarm();
 
 		await this.rescheduleAll();
+		})();
+
+		return this.initPromise;
 	}
 
 	private async checkActiveAlarm() {

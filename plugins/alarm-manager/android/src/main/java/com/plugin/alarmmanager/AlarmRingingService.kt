@@ -24,6 +24,7 @@ class AlarmRingingService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var currentAlarmId: Int = -1
 
     companion object {
         const val CHANNEL_ID = "alarm_ringing_service"
@@ -58,9 +59,9 @@ class AlarmRingingService : Service() {
         }
 
         val soundUriStr = intent.getStringExtra("ALARM_SOUND_URI")
-        val alarmId = intent.getIntExtra("ALARM_ID", -1)
+        currentAlarmId = intent.getIntExtra("ALARM_ID", -1)
 
-        Log.d(TAG, "Starting service for alarm $alarmId with sound $soundUriStr")
+        Log.d(TAG, "Starting service for alarm $currentAlarmId with sound $soundUriStr")
 
         startForegroundNotification()
         playAudio(soundUriStr)
@@ -111,8 +112,7 @@ class AlarmRingingService : Service() {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("isAlarmTriggered", true)
-            // We can retrieve the alarm ID from the service intent if we store it in a member variable,
-            // but effectively valid since we are in the service.
+            putExtra("ALARM_ID", currentAlarmId)
         }
 
         val contentPendingIntent = if (launchIntent != null) {
