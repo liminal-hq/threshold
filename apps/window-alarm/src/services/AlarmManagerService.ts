@@ -16,7 +16,12 @@ interface ImportedAlarm {
 }
 
 export class AlarmManagerService {
+	private initialized = false;
+
 	async init() {
+		if (this.initialized) return;
+		this.initialized = true;
+
 		await databaseService.init();
 		
         // Listen for alarms ringing from the Rust Backend
