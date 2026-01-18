@@ -23,32 +23,43 @@ export class AlarmManagerService {
 		if (this.initPromise) return this.initPromise;
 
 		this.initPromise = (async () => {
-			await databaseService.init();
-		
-		// Listen for alarms ringing from the Rust Backend (Desktop)
-		await listen<number>('alarm-ring', (event) => {
-			console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload}`);
-			this.handleAlarmRing(event.payload);
-		});
+			try {
+				console.log('[AlarmManager] Starting service initialization...');
+				await databaseService.init();
+				console.log('[AlarmManager] Database service ready.');
+				
+				// Listen for alarms ringing from the Rust Backend (Desktop)
+				await listen<number>('alarm-ring', (event) => {
+					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload}`);
+					this.handleAlarmRing(event.payload);
+				});
 
-		// Listen for alarms ringing from the Android Plugin (emitted via trigger())
-		await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
-			console.log(`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`);
-			this.handleAlarmRing(event.payload.id);
-		});
+				// Listen for alarms ringing from the Android Plugin (emitted via trigger())
+				await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
+					console.log(`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`);
+					this.handleAlarmRing(event.payload.id);
+				});
 
-		// Listen for global alarm changes (from other windows)
-		await listen('global-alarms-changed', () => {
-			console.log('[AlarmManager] Received global-alarms-changed event');
-			this.notifyListeners();
-		});
+				// Listen for global alarm changes (from other windows)
+				await listen('global-alarms-changed', () => {
+					console.log('[AlarmManager] Received global-alarms-changed event');
+					this.notifyListeners();
+				});
 
-		await this.checkImports();
-		
-		// Check if launched from alarm
-		await this.checkActiveAlarm();
+				console.log('[AlarmManager] Checking for native imports...');
+				await this.checkImports();
+				
+				console.log('[AlarmManager] Checking for active alarm...');
+				await this.checkActiveAlarm();
 
-		await this.rescheduleAll();
+				console.log('[AlarmManager] Rescheduling all alarms...');
+				await this.rescheduleAll();
+
+				console.log('[AlarmManager] Service initialization complete.');
+			} catch (e) {
+				console.error('[AlarmManager] CRITICAL: Initialization failed', e);
+				throw e;
+			}
 		})();
 
 		return this.initPromise;
@@ -106,9 +117,10 @@ export class AlarmManagerService {
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
 	private async checkImports() {
 		try {
-			const imports = await invoke<ImportedAlarm[]>('plugin:alarm-manager|get_launch_args');
-			if (imports && imports.length > 0) {
-				console.log('Importing native alarms:', imports);
+			const res = await invoke<{ imports: ImportedAlarm[] }>('plugin:alarm-manager|get_launch_args');
+			const imports = res?.imports || [];
+			if (imports.length > 0) {
+				console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
 				for (const imp of imports) {
 					// Deduplication Check
 					const allAlarms = await databaseService.getAllAlarms();

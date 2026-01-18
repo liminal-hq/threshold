@@ -35,9 +35,16 @@ const Home: React.FC = () => {
     }, []);
 
     const loadData = async () => {
-        await alarmManagerService.init();
-        const data = await alarmManagerService.loadAlarms();
-        setAlarms(data);
+        try {
+            console.log('[Home] Loading data...');
+            await alarmManagerService.init();
+            console.log('[Home] AlarmManager initialized, loading alarms...');
+            const data = await alarmManagerService.loadAlarms();
+            console.log(`[Home] Loaded ${data.length} alarms`);
+            setAlarms(data);
+        } catch (e) {
+            console.error('[Home] Failed to load alarms', e);
+        }
     };
 
     // Use effect instead of useIonViewWillEnter
