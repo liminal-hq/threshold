@@ -179,10 +179,13 @@ export class AlarmManagerService {
             const label = 'ringing-window'; // Fixed label to ensure singleton
             
             const existing = await WebviewWindow.getByLabel(label);
+import { emit } from '@tauri-apps/api/event';
+
             if (existing) {
-                console.log('Ringing window already exists. Closing and reopening to update...');
-                await existing.close();
-                // Fall through to create new window
+                console.log('Ringing window already exists. Updating content and focusing...');
+                await emit('alarm-update', { id });
+                await existing.setFocus();
+                return;
             }
 
             const webview = new WebviewWindow(label, {
