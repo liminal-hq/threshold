@@ -21,7 +21,7 @@ pub fn init<R: Runtime>(
 
 pub struct AlarmManager<R: Runtime> {
   app: tauri::AppHandle<R>,
-  tasks: Arc<Mutex<HashMap<u32, JoinHandle<()>>>>,
+  tasks: Arc<Mutex<HashMap<i32, JoinHandle<()>>>>,
 }
 
 impl<R: Runtime> AlarmManager<R> {
