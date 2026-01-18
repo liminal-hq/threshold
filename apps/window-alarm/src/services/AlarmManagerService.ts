@@ -141,14 +141,14 @@ export class AlarmManagerService {
 			await invoke('plugin:alarm-manager|schedule', {
 				payload: { id, triggerAt: timestamp },
 			});
-
-			// Desktop Notification Logic
-			// We use the OS plugin to check if we are on a desktop platform.
-			// Android/iOS handle notifications natively via the alarm-manager plugin.
-			await this.sendNotificationHelper(id, timestamp);
 		} catch (e) {
 			console.error('Failed to schedule native alarm', e);
 		}
+
+        // Desktop Notification Logic (Runs independently of native plugin success)
+        // We use the OS plugin to check if we are on a desktop platform.
+        // Android/iOS handle notifications natively via the alarm-manager plugin.
+        await this.sendNotificationHelper(id, timestamp);
 	}
 
 	private async sendNotificationHelper(id: number, timestamp: number) {
