@@ -57,7 +57,9 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         if (isAlarm && alarmId != -1) {
             Log.d("AlarmManagerPlugin", "Alarm triggered while app in foreground/background: $alarmId. Emitting event.")
-            triggerEvent("alarm-ring", alarmId)
+            val eventData = JSObject()
+            eventData.put("id", alarmId)
+            trigger("alarm-ring", eventData)
         }
     }
 
