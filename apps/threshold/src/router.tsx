@@ -85,7 +85,7 @@ const routeTree = rootRoute.addChildren([indexRoute, homeRoute, editAlarmRoute, 
 export const router = createRouter({
     routeTree,
     defaultNotFoundComponent: NotFound,
-    defaultViewTransition: ({ location }) => {
+    defaultViewTransition: (({ location }: { location: any }) => {
         // 1. Check if allowed
         if (!routeTransitions.shouldAnimate()) {
              return false;
@@ -109,7 +109,7 @@ export const router = createRouter({
         return {
             types: ['wa-slide', `wa-${direction}`]
         };
-    }
+    }) as any
 });
 
 declare module '@tanstack/react-router' {
