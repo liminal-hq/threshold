@@ -51,12 +51,17 @@ export function calculateNextTrigger(alarm: Alarm, now: Date = new Date()): numb
 		const candidateDate = addDays(now, i);
 		const candidateDayOfWeek = getDay(candidateDate) as DayOfWeek;
 
+		// console.log(`[Scheduler] Checking date ${candidateDate.toDateString()} (Day: ${candidateDayOfWeek}). ActiveDays: [${sortedDays}]`);
+
 		if (sortedDays.includes(candidateDayOfWeek)) {
 			// Check if this specific date can support a trigger in the future
 			const trigger = getTriggerForDate(alarm, candidateDate, now);
 			if (trigger !== null) {
+                console.log(`[Scheduler] Found trigger: ${new Date(trigger).toLocaleString()}`);
 				return trigger;
-			}
+			} else {
+                console.log(`[Scheduler] Date matches active days, but time is in past.`);
+            }
 		}
 	}
 
@@ -80,6 +85,7 @@ function getFixedTrigger(alarm: Alarm, date: Date, now: Date): number | null {
 	// If the calculated trigger time is in the past (strictly), it's not valid for *this* date
 	// unless we are looking at a future date (which is handled by the loop in calculateNextTrigger)
 	if (isBefore(triggerTime, now) || triggerTime.getTime() === now.getTime()) {
+        // console.log(`[Scheduler] FixedTrigger ${triggerTime.toLocaleString()} is before Now ${now.toLocaleString()}`);
 		return null;
 	}
 
