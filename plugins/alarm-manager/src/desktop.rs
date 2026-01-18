@@ -94,4 +94,9 @@ impl<R: Runtime> AlarmManager<R> {
       alarm_id: None,
     })
   }
+
+  pub fn stop_ringing(&self) -> crate::Result<()> {
+    // No-op on desktop
+    Ok(())
+  }
 }

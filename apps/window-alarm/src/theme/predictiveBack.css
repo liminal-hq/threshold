@@ -1,0 +1,51 @@
+.wa-route-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.wa-route-top {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: var(--background-default); /* Ensure opaque background */
+    will-change: transform;
+    z-index: 2;
+}
+
+.wa-route-underlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--background-default);
+    z-index: 1;
+    overflow: hidden;
+    transform-origin: center;
+    will-change: transform, opacity;
+}
+
+.wa-route-underlay-content {
+    width: 100%;
+    height: 100%;
+    /* Prevent interaction with underlay while peeking */
+    pointer-events: none;
+}
+
+.wa-route-underlay-scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3); /* Dark scrim */
+    pointer-events: none;
+    will-change: opacity;
+}
+
+.wa-route-underlay.tier-1 {
+    /* Fallback generic background */
+    background-color: #f0f0f0; /* Or var(--background-paper) */
+}

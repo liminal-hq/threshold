@@ -1,0 +1,16 @@
+[package]
+name = "tauri-plugin-predictive-back"
+version = "0.1.0"
+authors = ["Liminal"]
+edition = "2021"
+description = "Android Predictive Back support for Tauri v2"
+license = "MIT"
+
+[dependencies]
+tauri = { version = "2.0.0", features = ["mobile-plugin"] }
+serde = "1.0"
+serde_json = "1.0"
+thiserror = "1.0"
+
+[build-dependencies]
+tauri-plugin = "2.0.0"

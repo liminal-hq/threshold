@@ -85,7 +85,9 @@ const routeTree = rootRoute.addChildren([indexRoute, homeRoute, editAlarmRoute, 
 export const router = createRouter({
     routeTree,
     defaultNotFoundComponent: NotFound,
-    defaultViewTransition: ({ location }) => {
+    // View transition API configuration
+    // @ts-ignore - The types for view transitions in tanstack router seem slightly off or strict in this version
+    defaultViewTransition: ({ location }: any) => {
         // 1. Check if allowed
         if (!routeTransitions.shouldAnimate()) {
              return false;
