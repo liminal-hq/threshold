@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
@@ -137,10 +138,31 @@ class AlarmRingingService : Service() {
     }
 
     private fun playAudio(uriStr: String?) {
-        if (uriStr == null) return // Silent
+        var uri: Uri? = null
+        if (uriStr != null) {
+            try {
+                uri = Uri.parse(uriStr)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse sound URI: $uriStr", e)
+            }
+        }
+
+        if (uri == null) {
+            Log.d(TAG, "Using default alarm sound")
+            uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        }
+
+        if (uri == null) {
+            // Fallback to notification sound if alarm sound is not available
+             uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        }
+        
+        if (uri == null) {
+             Log.e(TAG, "No sound URI available to play")
+             return
+        }
 
         try {
-            val uri = Uri.parse(uriStr)
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(applicationContext, uri)
                 setAudioAttributes(
@@ -155,8 +177,6 @@ class AlarmRingingService : Service() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to play audio", e)
-            // Fallback to default alarm sound if specific one fails?
-            // For now, silent on error.
         }
     }
 

@@ -4,6 +4,8 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
@@ -13,7 +15,10 @@ import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Plugin
 import app.tauri.plugin.Invoke
+import app.tauri.plugin.JSObject
+import app.tauri.plugin.JSArray
 import android.util.Log
+import androidx.activity.result.ActivityResult
 
 @InvokeArg
 class ScheduleRequest {
@@ -87,7 +92,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     }
 
     @app.tauri.annotation.ActivityCallback
-    fun pickAlarmSoundResult(invoke: Invoke, result: app.tauri.plugin.ActivityResult) {
+    fun pickAlarmSoundResult(invoke: Invoke, result: ActivityResult) {
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             val data = result.data
             val uri: Uri? = if (data != null) {
@@ -99,7 +104,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
                 }
             } else null
 
-            val ret = app.tauri.plugin.JSObject()
+            val ret = JSObject()
 
             if (uri != null) {
                 ret.put("uri", uri.toString())
@@ -118,6 +123,26 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         } else {
             invoke.reject("cancelled")
         }
+    }
+
+    @Command
+    fun check_active_alarm(invoke: Invoke) {
+        val intent = activity.intent
+        val isAlarm = intent?.getBooleanExtra("isAlarmTriggered", false) ?: false
+        val alarmId = intent?.getIntExtra("ALARM_ID", -1) ?: -1
+        
+        val ret = JSObject()
+        ret.put("isAlarm", isAlarm)
+        if (isAlarm && alarmId != -1) {
+            ret.put("alarmId", alarmId)
+        } else {
+             ret.put("alarmId", null)
+        }
+        
+        // Optional: clear the intent flag so it doesn't trigger again on reload? 
+        // For now, keep it simple.
+        
+        invoke.resolve(ret)
     }
 
     @Command
@@ -154,11 +179,11 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             }
         }
 
-        val ret = app.tauri.plugin.JSObject()
-        val array = app.tauri.plugin.JSArray()
+        val ret = JSObject()
+        val array = JSArray()
 
         for (alarm in importsList) {
-            val alarmObj = app.tauri.plugin.JSObject()
+            val alarmObj = JSObject()
             alarmObj.put("id", alarm.id)
             alarmObj.put("hour", alarm.hour)
             alarmObj.put("minute", alarm.minute)

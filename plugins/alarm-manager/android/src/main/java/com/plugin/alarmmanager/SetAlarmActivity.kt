@@ -50,8 +50,8 @@ class SetAlarmActivity : Activity() {
         val id = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
 
         // 4. Schedule Native
-        AlarmUtils.scheduleAlarm(this, id, triggerAt)
-        AlarmUtils.saveAlarmToPrefs(this, id, triggerAt)
+        AlarmUtils.scheduleAlarm(this, id, triggerAt, null)
+        AlarmUtils.saveAlarmToPrefs(this, id, triggerAt, null)
 
         // 5. Store "Launch Payload" for React to import later
         // We persist this payload in SharedPrefs distinct from the alarm schedule
