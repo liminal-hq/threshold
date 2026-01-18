@@ -156,8 +156,8 @@ export class AlarmManagerService {
 			await invoke('plugin:alarm-manager|schedule', {
 				payload: { id, triggerAt: timestamp },
 			});
-		} catch (e) {
-			console.error('Failed to schedule native alarm', JSON.stringify(e));
+		} catch (e: any) {
+			console.error('Failed to schedule native alarm', e.message || e.toString());
 		}
 	}
 
