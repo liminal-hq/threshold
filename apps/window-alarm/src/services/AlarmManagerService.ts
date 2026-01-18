@@ -101,6 +101,8 @@ export class AlarmManagerService {
 		// 1. Calculate next trigger
 		// Map UI Alarm type to Core Alarm type if needed, or ensure they match
 		// Cast activeDays to DayOfWeek[]
+		console.log(`[AlarmManager] Configuring alarm: Label="${alarm.label}", Enabled=${alarm.enabled}, Days=[${alarm.activeDays}]`);
+		
 		const coreAlarm = {
 			...alarm,
 			id: alarm.id || 0, // Temp ID for calc
@@ -108,6 +110,11 @@ export class AlarmManagerService {
 		};
 
 		const nextTrigger = calcTrigger(coreAlarm);
+		if (nextTrigger) {
+			console.log(`[AlarmManager] Next trigger calculated: ${new Date(nextTrigger).toLocaleString()} (${nextTrigger})`);
+		} else {
+			console.log('[AlarmManager] No next trigger calculated (disabled or no active days?)');
+		}
 
 		// 2. Save to DB
 		const id = await databaseService.saveAlarm({
