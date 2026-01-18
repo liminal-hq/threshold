@@ -13,6 +13,8 @@ import { platform } from '@tauri-apps/plugin-os';
 import './theme/variables.css';
 import './theme/ringing.css';
 import './theme/components.css';
+import './theme/transitions.css';
+import { routeTransitions } from './utils/RouteTransitions';
 
 const App: React.FC = () => {
 	console.log('📦 [window-alarm] App rendering, pathname:', window.location.pathname);
@@ -88,6 +90,8 @@ const App: React.FC = () => {
 						// Check if we can go back.
 						// window.history.length > 1 is the standard browser way to check history depth.
 						if (window.history.length > 1) {
+							// Signal that this is a backward navigation
+							routeTransitions.setNextDirection('backwards');
 							router.history.back();
 						} else {
 							// If we can't go back, minimize the app (standard Android behavior)
