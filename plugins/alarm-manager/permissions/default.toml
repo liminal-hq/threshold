@@ -1,6 +1,12 @@
 [default]
 description = "Default permissions for the alarm-manager plugin"
-permissions = ["allow-schedule", "allow-cancel", "allow-get-launch-args"]
+permissions = [
+    "allow-schedule",
+    "allow-cancel",
+    "allow-get-launch-args",
+    "allow-pick-alarm-sound",
+    "allow-stop-ringing",
+]
 
 # Allow commands
 [[permission]]
@@ -17,3 +23,13 @@ commands.allow = ["cancel"]
 identifier = "allow-get-launch-args"
 description = "Enables the get_launch_args command"
 commands.allow = ["get_launch_args"]
+
+[[permission]]
+identifier = "allow-pick-alarm-sound"
+description = "Enables the pick_alarm_sound command"
+commands.allow = ["pick_alarm_sound"]
+
+[[permission]]
+identifier = "allow-stop-ringing"
+description = "Enables the stop_ringing command"
+commands.allow = ["stop_ringing"]

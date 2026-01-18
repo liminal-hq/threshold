@@ -6,11 +6,20 @@ const DB_NAME = 'alarms.db';
 
 export class DatabaseService {
 	private db: Database | null = null;
+	private initPromise: Promise<void> | null = null;
 
 	async init() {
-		if (this.db) return;
-		this.db = await Database.load('sqlite:' + DB_NAME);
-		await this.createTables();
+		if (this.initPromise) return this.initPromise;
+
+		this.initPromise = (async () => {
+			console.log('[DatabaseService] Loading database...');
+			this.db = await Database.load('sqlite:' + DB_NAME);
+			await this.createTables();
+			await this.migrate();
+			console.log('[DatabaseService] Database ready.');
+		})();
+
+		return this.initPromise;
 	}
 
 	private async createTables() {
@@ -24,9 +33,27 @@ export class DatabaseService {
         window_start TEXT,
         window_end TEXT,
         active_days TEXT,
-        next_trigger INTEGER
+        next_trigger INTEGER,
+        sound_uri TEXT,
+        sound_title TEXT
       )
     `);
+	}
+
+	private async migrate() {
+		try {
+			// Check if sound_uri column exists
+			const columns = await this.db!.select<any[]>('PRAGMA table_info(alarms)');
+			const hasSoundUri = columns.some((c) => c.name === 'sound_uri');
+
+			if (!hasSoundUri) {
+				console.log('Migrating database: adding sound columns');
+				await this.db!.execute('ALTER TABLE alarms ADD COLUMN sound_uri TEXT');
+				await this.db!.execute('ALTER TABLE alarms ADD COLUMN sound_title TEXT');
+			}
+		} catch (e) {
+			console.error('Migration failed', e);
+		}
 	}
 
 	async getAllAlarms(): Promise<Alarm[]> {
@@ -41,7 +68,7 @@ export class DatabaseService {
 
 		if (alarm.id) {
 			await this.db!.execute(
-				`UPDATE alarms SET label=?, enabled=?, mode=?, fixed_time=?, window_start=?, window_end=?, active_days=?, next_trigger=? WHERE id=?`,
+				`UPDATE alarms SET label=?, enabled=?, mode=?, fixed_time=?, window_start=?, window_end=?, active_days=?, next_trigger=?, sound_uri=?, sound_title=? WHERE id=?`,
 				[
 					alarm.label,
 					alarm.enabled,
@@ -51,13 +78,15 @@ export class DatabaseService {
 					alarm.windowEnd,
 					daysJson,
 					alarm.nextTrigger,
+					alarm.soundUri ?? null,
+					alarm.soundTitle ?? null,
 					alarm.id,
 				],
 			);
 			return alarm.id;
 		} else {
 			const result = await this.db!.execute(
-				`INSERT INTO alarms (label, enabled, mode, fixed_time, window_start, window_end, active_days, next_trigger) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO alarms (label, enabled, mode, fixed_time, window_start, window_end, active_days, next_trigger, sound_uri, sound_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					alarm.label,
 					alarm.enabled,
@@ -67,6 +96,8 @@ export class DatabaseService {
 					alarm.windowEnd,
 					daysJson,
 					alarm.nextTrigger,
+					alarm.soundUri ?? null,
+					alarm.soundTitle ?? null,
 				],
 			);
 			return result.lastInsertId as number;
@@ -89,6 +120,8 @@ export class DatabaseService {
 			windowEnd: row.window_end,
 			activeDays: JSON.parse(row.active_days || '[]') as DayOfWeek[],
 			nextTrigger: row.next_trigger,
+			soundUri: row.sound_uri,
+			soundTitle: row.sound_title,
 		};
 	}
 }

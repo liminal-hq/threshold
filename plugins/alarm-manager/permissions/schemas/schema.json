@@ -307,10 +307,10 @@
           "markdownDescription": "Denies the android command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-schedule`\n- `allow-cancel`\n- `allow-get-launch-args`",
+          "description": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-schedule`\n- `allow-cancel`\n- `allow-get-launch-args`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-schedule`\n- `allow-cancel`\n- `allow-get-launch-args`"
+          "markdownDescription": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-schedule`\n- `allow-cancel`\n- `allow-get-launch-args`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`"
         },
         {
           "description": "Enables the schedule command",
@@ -329,6 +329,18 @@
           "type": "string",
           "const": "allow-get-launch-args",
           "markdownDescription": "Enables the get_launch_args command"
+        },
+        {
+          "description": "Enables the pick_alarm_sound command",
+          "type": "string",
+          "const": "allow-pick-alarm-sound",
+          "markdownDescription": "Enables the pick_alarm_sound command"
+        },
+        {
+          "description": "Enables the stop_ringing command",
+          "type": "string",
+          "const": "allow-stop-ringing",
+          "markdownDescription": "Enables the stop_ringing command"
         }
       ]
     }

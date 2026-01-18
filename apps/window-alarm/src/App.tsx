@@ -15,9 +15,10 @@ import './theme/ringing.css';
 import './theme/components.css';
 
 const App: React.FC = () => {
-	console.log('🚀 [window-alarm] App component rendering');
+	console.log('📦 [window-alarm] App rendering, pathname:', window.location.pathname);
 
 	useEffect(() => {
+		console.log('🚀 [window-alarm] App useEffect running');
 		// Detect platform (synchronous in Tauri v2)
 		const os = platform();
 		const win = getCurrentWindow();
@@ -46,6 +47,28 @@ const App: React.FC = () => {
 			}
 		};
 		showWindow();
+
+		// Request notification permission on Android (required for alarm notifications)
+		const requestNotificationPermission = async () => {
+			if (os === 'android') {
+				try {
+					const { isPermissionGranted, requestPermission } = await import('@tauri-apps/plugin-notification');
+					let permissionGranted = await isPermissionGranted();
+
+					if (!permissionGranted) {
+						console.log('[App] Requesting notification permission...');
+						const permission = await requestPermission();
+						permissionGranted = permission === 'granted';
+						console.log('[App] Notification permission:', permissionGranted ? 'granted' : 'denied');
+					} else {
+						console.log('[App] Notification permission already granted');
+					}
+				} catch (e) {
+					console.error('[App] Failed to request notification permission:', e);
+				}
+			}
+		};
+		requestNotificationPermission();
 
 		// Initialize deep link handling
 		import('./services/DeepLinkService').then(({ initDeepLinks }) => {

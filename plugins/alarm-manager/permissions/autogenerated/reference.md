@@ -7,6 +7,8 @@ Default permissions for the alarm-manager plugin
 - `allow-schedule`
 - `allow-cancel`
 - `allow-get-launch-args`
+- `allow-pick-alarm-sound`
+- `allow-stop-ringing`
 
 ## Permission Table
 
@@ -78,6 +80,32 @@ Enables the cancel command
 <td>
 
 Enables the get_launch_args command
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:allow-pick-alarm-sound`
+
+</td>
+<td>
+
+Enables the pick_alarm_sound command
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:allow-stop-ringing`
+
+</td>
+<td>
+
+Enables the stop_ringing command
 
 </td>
 </tr>

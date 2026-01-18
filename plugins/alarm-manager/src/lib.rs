@@ -1,6 +1,6 @@
 use tauri::{
-  plugin::{Builder, TauriPlugin},
-  Manager, Runtime,
+    plugin::{Builder, TauriPlugin},
+    Manager, Runtime,
 };
 
 pub use models::*;
@@ -10,9 +10,9 @@ mod desktop;
 #[cfg(mobile)]
 mod mobile;
 
-mod models;
-mod error;
 mod commands;
+mod error;
+mod models;
 
 pub use error::{Error, Result};
 
@@ -23,30 +23,33 @@ use mobile::AlarmManager;
 
 /// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the alarm-manager APIs.
 pub trait AlarmManagerExt<R: Runtime> {
-  fn alarm_manager(&self) -> &AlarmManager<R>;
+    fn alarm_manager(&self) -> &AlarmManager<R>;
 }
 
 impl<R: Runtime, T: Manager<R>> AlarmManagerExt<R> for T {
-  fn alarm_manager(&self) -> &AlarmManager<R> {
-    self.state::<AlarmManager<R>>().inner()
-  }
+    fn alarm_manager(&self) -> &AlarmManager<R> {
+        self.state::<AlarmManager<R>>().inner()
+    }
 }
 
 /// Initializes the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
-  Builder::new("alarm-manager")
-    .invoke_handler(tauri::generate_handler![
-      commands::schedule,
-      commands::cancel,
-      commands::get_launch_args
-    ])
-    .setup(|app, api| {
-      #[cfg(mobile)]
-      let alarm_manager = mobile::init(app, api)?;
-      #[cfg(desktop)]
-      let alarm_manager = desktop::init(app, api)?;
-      app.manage(alarm_manager);
-      Ok(())
-    })
-    .build()
+    Builder::new("alarm-manager")
+        .invoke_handler(tauri::generate_handler![
+            commands::schedule,
+            commands::cancel,
+            commands::get_launch_args,
+            commands::pick_alarm_sound,
+            commands::check_active_alarm,
+            commands::stop_ringing
+        ])
+        .setup(|app, api| {
+            #[cfg(mobile)]
+            let alarm_manager = mobile::init(app, api)?;
+            #[cfg(desktop)]
+            let alarm_manager = desktop::init(app, api)?;
+            app.manage(alarm_manager);
+            Ok(())
+        })
+        .build()
 }

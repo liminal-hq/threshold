@@ -1,6 +1,7 @@
 import { databaseService } from './DatabaseService';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
+import { PlatformUtils } from '../utils/PlatformUtils';
 import {
 	sendNotification,
 } from '@tauri-apps/plugin-notification';
@@ -16,28 +17,94 @@ interface ImportedAlarm {
 }
 
 export class AlarmManagerService {
-	private initialized = false;
+	private initPromise: Promise<void> | null = null;
 
 	async init() {
-		if (this.initialized) return;
-		this.initialized = true;
+		if (this.initPromise) return this.initPromise;
 
-		await databaseService.init();
-		
-		// Listen for alarms ringing from the Rust Backend
-		await listen<number>('alarm-ring', (event) => {
-			console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload}`);
-			this.handleAlarmRing(event.payload);
-		});
+		this.initPromise = (async () => {
+			try {
+				console.log('[AlarmManager] Starting service initialization...');
+				await databaseService.init();
+				console.log('[AlarmManager] Database service ready.');
+				
+				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
+				// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
+				await listen<{ id: number }>('alarm-ring', (event) => {
+					console.log(`========== FRONTEND EVENT RECEIVED: alarm-ring ==========`);
+					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
+					console.log(`[AlarmManager] Event details:`, event);
+					this.handleAlarmRing(event.payload.id);
+					console.log(`========== FRONTEND EVENT HANDLER CALLED ==========`);
+				});
+				console.log('[AlarmManager] Event listener 1/3 registered.');
 
-		// Listen for global alarm changes (from other windows)
-		await listen('global-alarms-changed', () => {
-			console.log('[AlarmManager] Received global-alarms-changed event');
-			this.notifyListeners();
-		});
+				// Listen for alarms ringing from the Android Plugin (emitted via trigger())
+				try {
+					await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
+						console.log(`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`);
+						this.handleAlarmRing(event.payload.id);
+					});
+					console.log('[AlarmManager] Event listener 2/3 registered.');
+				} catch (e) {
+					console.warn('[AlarmManager] Failed to register plugin event listener (may not be available on this platform):', e);
+				}
 
-		await this.checkImports();
-		await this.rescheduleAll();
+				console.log('[AlarmManager] Setting up event listener 3/3: global-alarms-changed...');
+				// Listen for global alarm changes (from other windows)
+				await listen('global-alarms-changed', () => {
+					console.log('[AlarmManager] Received global-alarms-changed event');
+					this.notifyListeners();
+				});
+				console.log('[AlarmManager] Event listener 3/3 registered.');
+
+				console.log('[AlarmManager] Checking for native imports...');
+				await this.checkImports();
+				console.log('[AlarmManager] Native imports check complete.');
+				
+				console.log('[AlarmManager] Rescheduling all alarms...');
+				await this.rescheduleAll();
+				console.log('[AlarmManager] Reschedule complete.');
+
+
+
+				console.log('[AlarmManager] Service initialization complete.');
+				
+				// Check if app was launched by an alarm notification (do this AFTER init completes)
+				console.log('[AlarmManager] Checking for active alarm...');
+				await this.checkActiveAlarm();
+			} catch (e) {
+				console.error('[AlarmManager] CRITICAL: Initialization failed', e);
+				console.error('[AlarmManager] Error details:', {
+					message: e instanceof Error ? e.message : String(e),
+					stack: e instanceof Error ? e.stack : undefined,
+					raw: e
+				});
+				throw e;
+			}
+		})();
+
+		return this.initPromise;
+	}
+
+	// Check if the app was launched by an alarm notification
+	// This is called AFTER init() completes to avoid interrupting alarm loading
+	private async checkActiveAlarm() {
+		try {
+			if (window.location.pathname.includes('/ringing')) return; // Already there
+
+			const result = await invoke<{ isAlarm: boolean; alarmId: number | null }>('plugin:alarm-manager|check_active_alarm')
+				.catch(() => null); // Mobile fetch might fail on desktop, ignore
+
+			if (result && result.isAlarm && result.alarmId) {
+				console.log(`[AlarmManager] Active alarm detected: ${result.alarmId}. Redirecting...`);
+				
+				const { router } = await import('../router');
+				router.navigate({ to: '/ringing/$id', params: { id: result.alarmId.toString() } });
+			}
+		} catch (e) {
+			console.error('Failed to check active alarm', e);
+		}
 	}
 
     // Re-hydrate all alarms on startup (send to Rust scheduler)
@@ -65,9 +132,10 @@ export class AlarmManagerService {
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
 	private async checkImports() {
 		try {
-			const imports = await invoke<ImportedAlarm[]>('plugin:alarm-manager|get_launch_args');
-			if (imports && imports.length > 0) {
-				console.log('Importing native alarms:', imports);
+			const res = await invoke<{ imports: ImportedAlarm[] }>('plugin:alarm-manager|get_launch_args');
+			const imports = res?.imports || [];
+			if (imports.length > 0) {
+				console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
 				for (const imp of imports) {
 					// Deduplication Check
 					const allAlarms = await databaseService.getAllAlarms();
@@ -159,7 +227,7 @@ export class AlarmManagerService {
 
 		// 3. Schedule Native
 		if (alarm.enabled && nextTrigger) {
-			await this.scheduleNativeAlarm(id, nextTrigger);
+			await this.scheduleNativeAlarm(id, nextTrigger, alarm.soundUri);
 		} else {
 			await this.cancelNativeAlarm(id);
 		}
@@ -174,11 +242,11 @@ export class AlarmManagerService {
 		this.notifyGlobalListeners();
 	}
 
-	private async scheduleNativeAlarm(id: number, timestamp: number) {
+	private async scheduleNativeAlarm(id: number, timestamp: number, soundUri?: string | null) {
 		console.log(`Scheduling alarm ${id} for ${new Date(timestamp).toLocaleString()}`);
 		try {
 			await invoke('plugin:alarm-manager|schedule', {
-				payload: { id, triggerAt: timestamp },
+				payload: { id, triggerAt: timestamp, soundUri },
 			});
 		} catch (e: any) {
 			console.error('Failed to schedule native alarm', e.message || e.toString());
@@ -195,6 +263,15 @@ export class AlarmManagerService {
         // 2. Open Floating Window (Singleton)
         try {
             const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+            const isMobile = PlatformUtils.isMobile();
+
+            if (isMobile) {
+                console.log('[AlarmManager] Mobile detected. Navigating current window to ringing screen.');
+                const { router } = await import('../router');
+                router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
+                return;
+            }
+
             const label = 'ringing-window'; // Fixed label to ensure singleton
             
             const existing = await WebviewWindow.getByLabel(label);
@@ -240,6 +317,15 @@ export class AlarmManagerService {
             await this.saveAndSchedule(alarm);
         }
     }
+
+	async stopRinging() {
+		try {
+			console.log('[AlarmManager] Stopping ringing...');
+			await invoke('plugin:alarm-manager|stop_ringing');
+		} catch (e) {
+			console.error('Failed to stop ringing', e);
+		}
+	}
 
 	private async cancelNativeAlarm(id: number) {
 		try {

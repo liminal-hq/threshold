@@ -1,41 +1,62 @@
-use tauri::{
-  plugin::{PluginApi, PluginHandle},
-  Runtime,
-};
 use crate::models::*;
+use tauri::{
+    plugin::{PluginApi, PluginHandle},
+    Runtime,
+};
 
 // Initialize the plugin
 pub fn init<R: Runtime>(
-  _app: &tauri::AppHandle<R>,
-  api: PluginApi<R, ()>,
+    _app: &tauri::AppHandle<R>,
+    api: PluginApi<R, ()>,
 ) -> crate::Result<AlarmManager<R>> {
-  #[cfg(target_os = "android")]
-  let handle = api.register_android_plugin("com.plugin.alarmmanager", "AlarmManagerPlugin")?;
-  #[cfg(not(target_os = "android"))]
-  let handle = api.handle().clone();
-  
-  Ok(AlarmManager(handle))
+    #[cfg(target_os = "android")]
+    let handle = api.register_android_plugin("com.plugin.alarmmanager", "AlarmManagerPlugin")?;
+    #[cfg(not(target_os = "android"))]
+    let handle = api.handle().clone();
+
+    Ok(AlarmManager(handle))
 }
 
 /// Access to the alarm-manager APIs.
 pub struct AlarmManager<R: Runtime>(PluginHandle<R>);
 
 impl<R: Runtime> AlarmManager<R> {
-  pub fn schedule(&self, payload: ScheduleRequest) -> crate::Result<()> {
-    self.0
-      .run_mobile_plugin("schedule", payload)
-      .map_err(Into::into)
-  }
+    pub fn schedule(&self, payload: ScheduleRequest) -> crate::Result<()> {
+        self.0
+            .run_mobile_plugin("schedule", payload)
+            .map_err(Into::into)
+    }
 
-  pub fn cancel(&self, payload: CancelRequest) -> crate::Result<()> {
-    self.0
-      .run_mobile_plugin("cancel", payload)
-      .map_err(Into::into)
-  }
+    pub fn cancel(&self, payload: CancelRequest) -> crate::Result<()> {
+        self.0
+            .run_mobile_plugin("cancel", payload)
+            .map_err(Into::into)
+    }
 
-  pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
-    self.0
-      .run_mobile_plugin("get_launch_args", ())
-      .map_err(Into::into)
-  }
+    pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
+        self.0
+            .run_mobile_plugin("get_launch_args", ())
+            .map_err(Into::into)
+    }
+
+    pub fn pick_alarm_sound(
+        &self,
+        options: PickAlarmSoundOptions,
+    ) -> crate::Result<PickedAlarmSound> {
+        self.0
+            .run_mobile_plugin("pickAlarmSound", options)
+            .map_err(Into::into)
+    }
+
+    pub fn check_active_alarm(&self) -> crate::Result<ActiveAlarmResponse> {
+        self.0
+            .run_mobile_plugin("check_active_alarm", ())
+            .map_err(Into::into)
+    }
+
+    pub fn stop_ringing(&self) -> crate::Result<()> {
+        self.0
+            .run_mobile_plugin("stop_ringing", ())
+            .map_err(Into::into)
+    }
 }

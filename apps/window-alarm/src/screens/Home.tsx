@@ -17,7 +17,7 @@ import {
     Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { SwipeableList } from 'react-swipeable-list';
-import { platform } from '@tauri-apps/plugin-os';
+import { PlatformUtils } from '../utils/PlatformUtils';
 import { useNavigate } from '@tanstack/react-router';
 import { Alarm } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
@@ -31,14 +31,20 @@ const Home: React.FC = () => {
     const is24h = SettingsService.getIs24h();
 
     useEffect(() => {
-        const os = platform();
-        setIsMobile(os === 'ios' || os === 'android');
+        setIsMobile(PlatformUtils.isMobile());
     }, []);
 
     const loadData = async () => {
-        await alarmManagerService.init();
-        const data = await alarmManagerService.loadAlarms();
-        setAlarms(data);
+        try {
+            console.log('[Home] Loading data...');
+            await alarmManagerService.init();
+            console.log('[Home] AlarmManager initialized, loading alarms...');
+            const data = await alarmManagerService.loadAlarms();
+            console.log(`[Home] Loaded ${data.length} alarms`);
+            setAlarms(data);
+        } catch (e) {
+            console.error('[Home] Failed to load alarms', e);
+        }
     };
 
     // Use effect instead of useIonViewWillEnter
@@ -75,7 +81,7 @@ const Home: React.FC = () => {
     };
 
     return (
-        <Box sx={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ minHeight: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {isMobile && (
                 <AppBar position="sticky" elevation={0} sx={{ paddingTop: 'env(safe-area-inset-top)' }}>
                     <Toolbar>
@@ -119,7 +125,6 @@ const Home: React.FC = () => {
                                 key={alarm.id}
                                 alarm={alarm}
                                 is24h={is24h}
-                                isMobile={isMobile}
                                 onToggle={(enabled) => handleToggle(alarm, enabled)}
                                 onDelete={() => handleDelete(alarm.id)}
                                 onClick={() => handleEdit(alarm.id)}
@@ -133,7 +138,6 @@ const Home: React.FC = () => {
                                 key={alarm.id}
                                 alarm={alarm}
                                 is24h={is24h}
-                                isMobile={isMobile}
                                 onToggle={(enabled) => handleToggle(alarm, enabled)}
                                 onDelete={() => handleDelete(alarm.id)}
                                 onClick={() => handleEdit(alarm.id)}

@@ -6,6 +6,7 @@ import 'react-swipeable-list/dist/styles.css';
 import { Alarm } from '../services/DatabaseService';
 import { format } from 'date-fns';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
+import { PlatformUtils } from '../utils/PlatformUtils';
 
 interface AlarmItemProps {
 	alarm: Alarm;
@@ -13,7 +14,6 @@ interface AlarmItemProps {
 	onToggle: (enabled: boolean) => void;
 	onDelete: () => void;
 	onClick: () => void;
-	isMobile?: boolean;
 }
 
 export const AlarmItem: React.FC<AlarmItemProps> = ({
@@ -22,8 +22,8 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 	onToggle,
 	onDelete,
 	onClick,
-	isMobile = false,
 }) => {
+	const isMobile = PlatformUtils.isMobile();
 	const formatTime = (timeStr?: string) => {
 		if (!timeStr) return '--:--';
 		return TimeFormatHelper.formatTimeString(timeStr, is24h);
