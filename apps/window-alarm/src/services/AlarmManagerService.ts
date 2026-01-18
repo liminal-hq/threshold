@@ -37,7 +37,38 @@ export class AlarmManagerService {
 		});
 
 		await this.checkImports();
+		
+		// Check if launched from alarm
+		await this.checkActiveAlarm();
+
 		await this.rescheduleAll();
+	}
+
+	private async checkActiveAlarm() {
+		try {
+			if (window.location.pathname.includes('/ringing')) return; // Already there
+
+			const result = await invoke<{ isAlarm: boolean; alarmId: number | null }>('plugin:alarm-manager|check_active_alarm')
+				.catch(() => null); // Mobile fetch might fail on desktop, ignore
+
+			if (result && result.isAlarm && result.alarmId) {
+				console.log(`[AlarmManager] Active alarm detected: ${result.alarmId}. Redirecting...`);
+				
+				// Import router dynamically or use window.location if router not ready (but here it should be)
+				// We can't import router here easily because of circular dep risk if Service is imported in Router
+				// BUT we can use window.dispatchEvent to tell App to navigate, or just use window.location hash if hash router
+				// Since we use TanStack router, let's emit an event that App.tsx or a global listener handles,
+				// OR just use a simple CustomEvent that the View listens to.
+				
+				// Actually, simpler: redirect using the 'alarm-ring' event logic which opens the window on Desktop
+				// On Mobile, we just want to Navigate.
+				
+				const { router } = await import('../router');
+				router.navigate({ to: '/ringing/$id', params: { id: result.alarmId.toString() } }); // Use correct param name 'id' from router definition
+			}
+		} catch (e) {
+			console.error('Failed to check active alarm', e);
+		}
 	}
 
     // Re-hydrate all alarms on startup (send to Rust scheduler)
