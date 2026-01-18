@@ -1,31 +1,16 @@
 {
-	"$schema": "../gen/schemas/desktop-schema.json",
-	"identifier": "default",
-	"description": "Capability for all windows including dynamically created alarm windows",
-	"windows": ["*", "alarm-ring-*", "test-alarm-*"],
-	"permissions": [
-		"core:default",
-		"opener:default",
-		"sql:default",
-		"sql:allow-execute",
-		"sql:allow-select",
-		"sql:allow-load",
-		"notification:default",
-		"deep-link:default",
-		"core:app:default",
-		"core:window:default",
-		"core:window:allow-start-dragging",
-		"log:default",
-		"core:window:allow-show",
-		"core:window:allow-set-focus",
-		"core:window:allow-maximize",
-		"core:window:allow-toggle-maximize",
-		"core:window:allow-minimize",
-		"core:window:allow-close",
-		"core:window:allow-hide",
-		"core:window:allow-set-always-on-top",
-		"core:window:allow-is-always-on-top",
-		"core:window:allow-set-decorations",
-		"alarm-manager:default"
-	]
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "notification:default",
+    "os:default",
+    "alarm-manager:default",
+    "deep-link:default",
+    "predictive-back:default",
+    "sql:default"
+  ]
 }

@@ -1,4 +1,4 @@
-import { createRootRoute, createRoute, createRouter, Outlet, redirect, useLocation } from '@tanstack/react-router';
+import { createRootRoute, createRoute, createRouter, redirect, useLocation } from '@tanstack/react-router';
 import { TitleBar } from './components/TitleBar';
 import { NotFound } from './components/NotFound';
 import { PlatformUtils } from './utils/PlatformUtils';
@@ -8,6 +8,8 @@ import EditAlarm from './screens/EditAlarm';
 import Ringing from './screens/Ringing';
 import Settings from './screens/Settings';
 import { routeTransitions } from './utils/RouteTransitions';
+import RouteStage from './components/RouteStage';
+import { predictiveBackController } from './utils/PredictiveBackController';
 
 // Root layout component
 const RootLayout = () => {
@@ -18,6 +20,24 @@ const RootLayout = () => {
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
     }, []);
+
+    // Update predictive back capability based on location
+    useEffect(() => {
+        const checkCanGoBack = async () => {
+             const path = location.pathname;
+             const isRinging = path.startsWith('/ringing');
+             // Tier 2A: We only enable it if we are NOT on root (home) and NOT ringing.
+             // We can use a simpler check: if path is NOT /home, we can go back to home.
+             // If we are deep, we can go back.
+             // Exceptions: Ringing.
+
+             const isHome = path === '/home' || path === '/';
+             const canGoBack = !isHome && !isRinging;
+
+             await predictiveBackController.setCanGoBack(canGoBack);
+        };
+        checkCanGoBack();
+    }, [location.pathname]);
 
     // Don't show TitleBar for ringing window (it's a separate floating window)
     const isRingingWindow = location.pathname.startsWith('/ringing');
@@ -35,7 +55,7 @@ const RootLayout = () => {
                     viewTransitionName: 'wa-route-slot'
                 }}
             >
-                <Outlet />
+                <RouteStage />
             </div>
         </>
     );
@@ -85,7 +105,9 @@ const routeTree = rootRoute.addChildren([indexRoute, homeRoute, editAlarmRoute, 
 export const router = createRouter({
     routeTree,
     defaultNotFoundComponent: NotFound,
-    defaultViewTransition: ({ location }) => {
+    // View transition API configuration
+    // @ts-ignore - The types for view transitions in tanstack router seem slightly off or strict in this version
+    defaultViewTransition: ({ location }: any) => {
         // 1. Check if allowed
         if (!routeTransitions.shouldAnimate()) {
              return false;

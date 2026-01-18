@@ -1,0 +1,10 @@
+"$schema" = "https://schema.tauri.app/schema.json"
+
+[default]
+description = "Automatically configure permissions for predictive back"
+permissions = ["allow-set-can-go-back"]
+
+[[permission]]
+identifier = "allow-set-can-go-back"
+description = "Enables the set_can_go_back command"
+commands.allow = ["set_can_go_back"]
