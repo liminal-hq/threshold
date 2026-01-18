@@ -173,12 +173,20 @@ export class AlarmManagerService {
             body: 'Your alarm is ringing!',
         });
 
-        // 2. Open Floating Window
+        // 2. Open Floating Window (Singleton)
         try {
             const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-            const timestamp = Date.now();
-            const label = `alarm-ring-${timestamp}`;
+            const label = 'ringing-window'; // Fixed label to ensure singleton
             
+            const existing = await WebviewWindow.getByLabel(label);
+            if (existing) {
+                console.log('Ringing window already exists, focusing...');
+                await existing.setFocus();
+                // Optional: Update the URL if we want to switch which alarm is "active"
+                // await existing.navigate(`/ringing/${id}`);
+                return;
+            }
+
             const webview = new WebviewWindow(label, {
                 url: `/ringing/${id}`, 
                 title: 'Alarm',
