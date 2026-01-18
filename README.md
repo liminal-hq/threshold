@@ -45,6 +45,14 @@ You can run the android development server from the root:
 pnpm dev:android
 ```
 
+## Debugging
+
+To capture logs from the Android device, use the following `adb` command. This filters specifically for the app's tags and saves the output to a file:
+
+```bash
+adb logcat -s window-alarm:* AlarmManager:* AlarmManagerPlugin:* DatabaseService:* chromium:I Tauri/Console:* *:E > logcat.log
+```
+
 ## Documentation
 
 - [UI Task Description](docs/UI_TASK.md)
