@@ -22,7 +22,7 @@
   - Prevents type mismatches between native event emitters and TypeScript listeners
   - Consider JSON Schema or TypeScript types with JSDoc for Kotlin/Swift reference
 
-## Features / Data Model**
+## Features / Data Model
   - [ ] Enhance SQLite schema with `native_id` column to support robust deduplication of alarms imported from Android Intents (currently deduplicated by label + time).
   - [ ] Implement `AlarmManagerService` logic to check `native_id` during import.
 
