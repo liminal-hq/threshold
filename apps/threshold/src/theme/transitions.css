@@ -1,0 +1,80 @@
+/*
+  Native-like Android Transitions
+  Targeting view-transition-name: wa-route-slot
+*/
+
+/* Disable default root transition to prevent full page crossfade */
+::view-transition-group(root) {
+  animation-duration: 0s;
+}
+
+/* Common settings for our named slot */
+::view-transition-group(wa-route-slot) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+::view-transition-old(wa-route-slot),
+::view-transition-new(wa-route-slot) {
+  mix-blend-mode: normal;
+  height: 100%;
+  width: 100%;
+}
+
+/*
+  FORWARD (PUSH)
+  Enter: Slide in from right (on top)
+  Exit: Slide slightly left + fade (at back)
+*/
+@keyframes wa-slide-in-from-right {
+  from { transform: translateX(100%); box-shadow: -5px 0 25px rgba(0,0,0,0.1); }
+  to { transform: translateX(0); box-shadow: none; }
+}
+
+@keyframes wa-slide-out-to-left {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-30%); opacity: 0; }
+}
+
+:active-view-transition-type(wa-forwards)::view-transition-new(wa-route-slot) {
+  animation-name: wa-slide-in-from-right;
+}
+
+:active-view-transition-type(wa-forwards)::view-transition-old(wa-route-slot) {
+  animation-name: wa-slide-out-to-left;
+}
+
+
+/*
+  BACKWARD (POP)
+  Enter: Slide in from left + fade in (at back)
+  Exit: Slide out to right (on top)
+*/
+@keyframes wa-slide-out-to-right {
+  from { transform: translateX(0); box-shadow: none; }
+  to { transform: translateX(100%); box-shadow: -5px 0 25px rgba(0,0,0,0.1); }
+}
+
+@keyframes wa-slide-in-from-left {
+  from { transform: translateX(-30%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+:active-view-transition-type(wa-backwards)::view-transition-old(wa-route-slot) {
+  animation-name: wa-slide-out-to-right;
+  z-index: 2;
+}
+
+:active-view-transition-type(wa-backwards)::view-transition-new(wa-route-slot) {
+  animation-name: wa-slide-in-from-left;
+  z-index: 1;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

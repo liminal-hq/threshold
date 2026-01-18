@@ -7,6 +7,7 @@ import Home from './screens/Home';
 import EditAlarm from './screens/EditAlarm';
 import Ringing from './screens/Ringing';
 import Settings from './screens/Settings';
+import { routeTransitions } from './utils/RouteTransitions';
 
 // Root layout component
 const RootLayout = () => {
@@ -25,7 +26,15 @@ const RootLayout = () => {
     return (
         <>
             {showTitleBar && <TitleBar />}
-            <div style={{ marginTop: showTitleBar ? '32px' : '0px', height: showTitleBar ? 'calc(100% - 32px)' : '100%' }}>
+            <div
+                className="wa-route-slot"
+                style={{
+                    marginTop: showTitleBar ? '32px' : '0px',
+                    height: showTitleBar ? 'calc(100% - 32px)' : '100%',
+                    // @ts-ignore - viewTransitionName is not yet in standard React types
+                    viewTransitionName: 'wa-route-slot'
+                }}
+            >
                 <Outlet />
             </div>
         </>
@@ -75,7 +84,32 @@ const routeTree = rootRoute.addChildren([indexRoute, homeRoute, editAlarmRoute, 
 
 export const router = createRouter({
     routeTree,
-    defaultNotFoundComponent: NotFound
+    defaultNotFoundComponent: NotFound,
+    defaultViewTransition: ({ location }) => {
+        // 1. Check if allowed
+        if (!routeTransitions.shouldAnimate()) {
+             return false;
+        }
+
+        const toPath = location.pathname;
+
+        // 2. Skip ringing
+        if (toPath.startsWith('/ringing')) {
+             return false;
+        }
+
+        // 3. Determine direction
+        const direction = routeTransitions.getDirection(toPath);
+
+        if (direction === 'none') {
+             return false;
+        }
+
+        // 4. Return types
+        return {
+            types: ['wa-slide', `wa-${direction}`]
+        };
+    }
 });
 
 declare module '@tanstack/react-router' {
