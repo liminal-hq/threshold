@@ -1,0 +1,19 @@
+[default]
+description = "Default permissions for the alarm-manager plugin"
+permissions = ["allow-schedule", "allow-cancel", "allow-get-launch-args"]
+
+# Allow commands
+[[permission]]
+identifier = "allow-schedule"
+description = "Enables the schedule command"
+commands.allow = ["schedule"]
+
+[[permission]]
+identifier = "allow-cancel"
+description = "Enables the cancel command"
+commands.allow = ["cancel"]
+
+[[permission]]
+identifier = "allow-get-launch-args"
+description = "Enables the get_launch_args command"
+commands.allow = ["get_launch_args"]
