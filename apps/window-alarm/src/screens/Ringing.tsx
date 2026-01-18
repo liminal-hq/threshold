@@ -120,7 +120,7 @@ const Ringing: React.FC = () => {
 				<Box sx={{ flexGrow: 1 }}>
 					<div className="ringing-container" data-tauri-drag-region="true">
 						<Typography variant="h1" className="ringing-time" sx={{ fontSize: '5rem', fontWeight: 800 }}>{timeStr}</Typography>
-						<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>{alarm?.label || 'Wake Up!'}</Typography>
+						<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>{alarm?.label}</Typography>
 
 						<div className="ringing-actions">
 							<Button

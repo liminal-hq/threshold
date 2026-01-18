@@ -180,11 +180,9 @@ export class AlarmManagerService {
             
             const existing = await WebviewWindow.getByLabel(label);
             if (existing) {
-                console.log('Ringing window already exists, focusing...');
-                await existing.setFocus();
-                // Navigate to the new alarm's page to update the UI (Label, etc.)
-                await existing.navigate(`/ringing/${id}`);
-                return;
+                console.log('Ringing window already exists. Closing and reopening to update...');
+                await existing.close();
+                // Fall through to create new window
             }
 
             const webview = new WebviewWindow(label, {
