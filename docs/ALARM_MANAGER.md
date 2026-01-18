@@ -34,6 +34,20 @@ export interface PickedAlarmSound {
 }
 ```
 
+### Frontend Services
+
+#### `AlarmSoundPickerService` (`apps/window-alarm/src/services/AlarmSoundPickerService.ts`)
+
+Wrapper around the plugin's `pickAlarmSound` command.
+
+*   `pickSound(currentUri?: string, title?: string)`: Invokes the native picker.
+*   Returns `Promise<PickedAlarmSound>`.
+
+#### `AlarmSoundPicker` Component
+
+UI component that uses `AlarmSoundPickerService` to display the current sound and allow users to change it.
+
+
 ### Rust Models (`plugins/alarm-manager/src/models.rs`)
 
 The `ScheduleRequest` struct is extended:
@@ -136,6 +150,7 @@ To support boot rescheduling and independent ringing, the native plugin stores a
 
 - [ ] **Pick Sound**: Calling `pickAlarmSound` opens system picker. Selection returns correct URI. "Silent" returns null.
 - [ ] **Schedule**: Saving an alarm with a sound persists URI to DB and native SharedPreferences.
+- [ ] **Database Migration**: Verify `sound_uri` and `sound_title` columns are added to `alarms` table on update.
 - [ ] **Ring**: When alarm triggers:
     - [ ] Foreground notification appears.
     - [ ] Sound plays (if set).
