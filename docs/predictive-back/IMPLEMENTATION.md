@@ -8,6 +8,43 @@ The implementation bridges Android's `OnBackAnimationCallback` (API 34+) to the 
 
 ## Architecture
 
+```mermaid
+sequenceDiagram
+    participant User
+    participant Android as Android System (API 34+)
+    participant Plugin as Tauri Plugin (Kotlin/Rust)
+    participant Controller as Frontend Controller
+    participant UI as RouteStage (React)
+
+    User->>Android: Swipes Back (Start)
+    Android->>Plugin: onBackStarted
+    Plugin->>Controller: emit 'started'
+    Controller->>UI: update state (active=true)
+    UI->>UI: Mount Underlay (Tier 2A)
+
+    loop Dragging
+        User->>Android: Drag Progress
+        Android->>Plugin: onBackProgressed
+        Plugin->>Controller: emit 'progress' (0..1)
+        Controller->>UI: update progress
+        UI->>UI: Translate Top / Scale Underlay
+    end
+
+    alt Cancel
+        User->>Android: Releases (Cancel)
+        Android->>Plugin: onBackCancelled
+        Plugin->>Controller: emit 'cancelled'
+        Controller->>UI: update state (active=false)
+        UI->>UI: Animate Snap Back
+    else Commit
+        User->>Android: Releases (Invoke)
+        Android->>Plugin: onBackInvoked
+        Plugin->>Controller: emit 'invoked'
+        Controller->>UI: update state (progress=1)
+        UI->>UI: router.history.back()
+    end
+```
+
 ### 1. Native Plugin (`plugins/predictive-back`)
 
 - **Location**: `plugins/predictive-back` (Rust), `plugins/predictive-back/android` (Kotlin).
