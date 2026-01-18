@@ -21,18 +21,24 @@ const Ringing: React.FC = () => {
 	const [theme, setTheme] = useState<Theme>(SettingsService.getTheme());
 	const [forceDark, setForceDark] = useState<boolean>(SettingsService.getForceDark());
 
-	// Listen for theme changes from other windows
+	// Listen for theme changes and Alarm Updates (Singleton pattern)
 	useEffect(() => {
-		const unlisten = listen<{ theme: Theme; forceDark: boolean }>('theme-changed', (event) => {
+		const unlistenTheme = listen<{ theme: Theme; forceDark: boolean }>('theme-changed', (event) => {
 			console.log('Ringing window received theme-changed event:', event.payload);
 			setTheme(event.payload.theme);
 			setForceDark(event.payload.forceDark);
 		});
 
+		const unlistenUpdate = listen<{ id: number }>('alarm-update', (event) => {
+			console.log('Ringing window received update:', event.payload);
+			navigate({ to: '/ringing/$id', params: { id: event.payload.id.toString() } });
+		});
+
 		return () => {
-			unlisten.then((fn) => fn());
+			unlistenTheme.then((fn) => fn());
+			unlistenUpdate.then((fn) => fn());
 		};
-	}, []);
+	}, [navigate]);
 
 	// Apply theme whenever it changes
 	useEffect(() => {
@@ -90,9 +96,7 @@ const Ringing: React.FC = () => {
 	}, [id]);
 
 	const handleDismiss = async () => {
-		if (alarm) {
-			await alarmManagerService.saveAndSchedule(alarm);
-		}
+
 
 		// Check platform and close window if desktop
 		const os = platform();
@@ -120,7 +124,7 @@ const Ringing: React.FC = () => {
 				<Box sx={{ flexGrow: 1 }}>
 					<div className="ringing-container" data-tauri-drag-region="true">
 						<Typography variant="h1" className="ringing-time" sx={{ fontSize: '5rem', fontWeight: 800 }}>{timeStr}</Typography>
-						<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>{alarm?.label || 'Wake Up!'}</Typography>
+						<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>{alarm?.label}</Typography>
 
 						<div className="ringing-actions">
 							<Button

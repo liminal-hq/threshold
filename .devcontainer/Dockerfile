@@ -1,5 +1,9 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
+# Set Timezone to America/Toronto
+ENV TZ="America/Toronto"
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # Install Tauri system dependencies and build tools
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \

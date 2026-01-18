@@ -44,6 +44,16 @@ const Home: React.FC = () => {
     // Use effect instead of useIonViewWillEnter
     useEffect(() => {
         loadData();
+
+        const handleAlarmsChanged = () => {
+            console.log('[Home] Alarms changed, reloading...');
+            loadData();
+        };
+
+        document.addEventListener('alarms-changed', handleAlarmsChanged);
+        return () => {
+            document.removeEventListener('alarms-changed', handleAlarmsChanged);
+        };
     }, []);
 
     const handleToggle = async (alarm: Alarm, enabled: boolean) => {

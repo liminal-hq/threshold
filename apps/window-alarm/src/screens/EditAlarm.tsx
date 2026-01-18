@@ -34,10 +34,20 @@ const EditAlarm: React.FC = () => {
 
     const [label, setLabel] = useState('');
     const [mode, setMode] = useState<'FIXED' | 'WINDOW'>('FIXED');
-    const [activeDays, setActiveDays] = useState<number[]>([1, 2, 3, 4, 5]); // Mon-Fri default
-    const [fixedTime, setFixedTime] = useState('07:00');
-    const [windowStart, setWindowStart] = useState('07:00');
-    const [windowEnd, setWindowEnd] = useState('07:30');
+    const [activeDays, setActiveDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]); // Every day default
+
+    // Default to next hour ceiling
+    // e.g. if 10:15, default to 11:00
+    // if 10:00, default to 11:00
+    const nextHour = new Date();
+    nextHour.setHours(nextHour.getHours() + 1);
+    nextHour.setMinutes(0);
+    const defaultTimeStr = format(nextHour, 'HH:mm');
+    const defaultEndStr = format(new Date(nextHour.getTime() + 30 * 60000), 'HH:mm');
+
+    const [fixedTime, setFixedTime] = useState(defaultTimeStr);
+    const [windowStart, setWindowStart] = useState(defaultTimeStr);
+    const [windowEnd, setWindowEnd] = useState(defaultEndStr);
 
     useEffect(() => {
         const os = platform();

@@ -1,15 +1,13 @@
 import { databaseService } from './DatabaseService';
 import { invoke } from '@tauri-apps/api/core';
+import { listen, emit } from '@tauri-apps/api/event';
 import {
 	sendNotification,
 } from '@tauri-apps/plugin-notification';
-import { platform } from '@tauri-apps/plugin-os';
 import { Alarm, AlarmMode, DayOfWeek } from '@window-alarm/core/types';
 import { calculateNextTrigger as calcTrigger } from '@window-alarm/core/scheduler';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
-
-
 interface ImportedAlarm {
 	id: number;
 	hour: number;
@@ -18,10 +16,47 @@ interface ImportedAlarm {
 }
 
 export class AlarmManagerService {
+	private initialized = false;
+
 	async init() {
+		if (this.initialized) return;
+		this.initialized = true;
+
 		await databaseService.init();
+		
+		// Listen for alarms ringing from the Rust Backend
+		await listen<number>('alarm-ring', (event) => {
+			console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload}`);
+			this.handleAlarmRing(event.payload);
+		});
+
+		// Listen for global alarm changes (from other windows)
+		await listen('global-alarms-changed', () => {
+			console.log('[AlarmManager] Received global-alarms-changed event');
+			this.notifyListeners();
+		});
+
 		await this.checkImports();
+		await this.rescheduleAll();
 	}
+
+    // Re-hydrate all alarms on startup (send to Rust scheduler)
+    async rescheduleAll() {
+        console.log('[AlarmManager] Rescheduling all alarms...');
+        const alarms = await databaseService.getAllAlarms();
+        for (const alarm of alarms) {
+            if (alarm.enabled && alarm.nextTrigger) {
+                // If trigger is in the future, schedule it
+                if (alarm.nextTrigger > Date.now()) {
+                    await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger);
+                } else {
+                    // Missed alarm? For now, maybe just calc next trigger
+                    console.log(`[AlarmManager] Alarm ${alarm.id} missed trigger at ${new Date(alarm.nextTrigger).toLocaleString()}. Rescheduling next.`);
+                     this.saveAndSchedule(alarm);
+                }
+            }
+        }
+    }
 
 	async loadAlarms(): Promise<Alarm[]> {
 		return await databaseService.getAllAlarms();
@@ -34,13 +69,7 @@ export class AlarmManagerService {
 			if (imports && imports.length > 0) {
 				console.log('Importing native alarms:', imports);
 				for (const imp of imports) {
-					// Deduplication Check:
-					// We check if an alarm with this native ID already exists in our DB.
-					// NOTE: This assumes we persist the native ID.
-					// Currently, our SQLite schema uses auto-increment ID.
-					// To support true dedupe, we should probably add `native_id` to schema or check approximate match.
-
-					// For this iteration, we'll check if an alarm with the exact same Time and Label exists.
+					// Deduplication Check
 					const allAlarms = await databaseService.getAllAlarms();
 					const timeStr = `${imp.hour.toString().padStart(2, '0')}:${imp.minute.toString().padStart(2, '0')}`;
 
@@ -53,21 +82,10 @@ export class AlarmManagerService {
 						continue;
 					}
 
-					// Use the native ID for the new DB record to keep them in sync if possible,
-					// or just to have a reference.
-					// However, saveAndSchedule will re-schedule the native alarm.
-					// To avoid double scheduling (one from Intent, one from here),
-					// we should cancel the native one first OR just update our DB.
-					// Since our scheduler logic might differ slightly (e.g. active days),
-					// it is safer to let our app "take over" the alarm management.
-
-					// 1. Cancel the 'temporary' native alarm created by the Intent
-					// (It will be immediately replaced by saveAndSchedule)
+					// Cancel the 'temporary' native alarm created by the Intent
 					await this.cancelNativeAlarm(imp.id);
 
 					const newAlarm: Omit<Alarm, 'id'> & { id?: number } = {
-						// We don't force imp.id as the DB ID because of autoincrement,
-						// but we could store it if we had a column. For now, a new ID is fine.
 						label: imp.label,
 						mode: AlarmMode.Fixed,
 						fixedTime: timeStr,
@@ -90,6 +108,7 @@ export class AlarmManagerService {
 		} else {
 			await this.cancelNativeAlarm(alarm.id);
 			await databaseService.saveAlarm({ ...updatedAlarm, nextTrigger: undefined });
+            this.notifyGlobalListeners();
 		}
 	}
 
@@ -97,10 +116,28 @@ export class AlarmManagerService {
 		return this.saveAndSchedule(alarm);
 	}
 
+	// Helper to emit change event locally
+	private notifyListeners() {
+		document.dispatchEvent(new CustomEvent('alarms-changed'));
+	}
+
+	// Helper to emit change event globally (cross-window)
+	private async notifyGlobalListeners() {
+		try {
+			await emit('global-alarms-changed');
+			// Also notify locally for the window that initiated the change
+			this.notifyListeners();
+		} catch (e) {
+			console.error('Failed to emit global-alarms-changed', e);
+			// Fallback to local
+			this.notifyListeners();
+		}
+	}
+
 	async saveAndSchedule(alarm: Omit<Alarm, 'id'> & { id?: number }) {
 		// 1. Calculate next trigger
-		// Map UI Alarm type to Core Alarm type if needed, or ensure they match
-		// Cast activeDays to DayOfWeek[]
+		console.log(`[AlarmManager] Configuring alarm: Label="${alarm.label}", Enabled=${alarm.enabled}, Days=[${alarm.activeDays}]`);
+		
 		const coreAlarm = {
 			...alarm,
 			id: alarm.id || 0, // Temp ID for calc
@@ -108,6 +145,11 @@ export class AlarmManagerService {
 		};
 
 		const nextTrigger = calcTrigger(coreAlarm);
+		if (nextTrigger) {
+			console.log(`[AlarmManager] Next trigger calculated: ${new Date(nextTrigger).toLocaleString()} (${nextTrigger})`);
+		} else {
+			console.log('[AlarmManager] No next trigger calculated (disabled or no active days?)');
+		}
 
 		// 2. Save to DB
 		const id = await databaseService.saveAlarm({
@@ -121,11 +163,15 @@ export class AlarmManagerService {
 		} else {
 			await this.cancelNativeAlarm(id);
 		}
+		
+		this.notifyGlobalListeners();
+		return id;
 	}
 
 	async deleteAlarm(id: number) {
 		await this.cancelNativeAlarm(id);
 		await databaseService.deleteAlarm(id);
+		this.notifyGlobalListeners();
 	}
 
 	private async scheduleNativeAlarm(id: number, timestamp: number) {
@@ -134,73 +180,66 @@ export class AlarmManagerService {
 			await invoke('plugin:alarm-manager|schedule', {
 				payload: { id, triggerAt: timestamp },
 			});
-
-			// Desktop Notification Logic
-			// We use the OS plugin to check if we are on a desktop platform.
-			// Android/iOS handle notifications natively via the alarm-manager plugin.
-			await this.sendNotificationHelper(id, timestamp);
-		} catch (e) {
-			console.error('Failed to schedule native alarm', e);
+		} catch (e: any) {
+			console.error('Failed to schedule native alarm', e.message || e.toString());
 		}
 	}
 
-	private async sendNotificationHelper(id: number, timestamp: number) {
-		try {
-			const currentPlatform = platform();
-			if (currentPlatform === 'android' || currentPlatform === 'ios') {
-				return;
-			}
+    private async handleAlarmRing(id: number) {
+        // 1. Send Notification
+        sendNotification({
+            title: 'Window Alarm',
+            body: 'Your alarm is ringing!',
+        });
 
-			// Calculate delay until the alarm
-			const delay = timestamp - Date.now();
-			if (delay > 0) {
-				console.log(`Setting desktop timer for ${delay}ms`);
-				setTimeout(async () => {
-					// 1. Send Notification
-					sendNotification({
-						title: 'Window Alarm',
-						body: 'Your alarm is ringing!',
-					});
+        // 2. Open Floating Window (Singleton)
+        try {
+            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+            const label = 'ringing-window'; // Fixed label to ensure singleton
+            
+            const existing = await WebviewWindow.getByLabel(label);
 
-					// 2. Open Floating Window
-					try {
-						// Dynamically import to avoid issues on mobile if pure JS bundle
-						const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-						const label = `alarm-ring-${timestamp}`;
-						
-						// Check if window exists? (Tauri throws if duplicate label, so use unique)
-						const webview = new WebviewWindow(label, {
-							url: `/ringing/${id}`, 
-							title: 'Alarm',
-							width: 400,
-							height: 500,
-							resizable: false,
-							alwaysOnTop: true,
-							center: true,
-							skipTaskbar: false,
-							decorations: false,
-							transparent: true,
-							focus: true,
-						});
+            if (existing) {
+                console.log('Ringing window already exists. Updating content and focusing...');
+                await emit('alarm-update', { id });
+                await existing.setFocus();
+                return;
+            }
 
-						webview.once('tauri://created', function () {
-							console.log('Alarm window created');
-						});
-						
-						webview.once('tauri://error', function (e) {
-							console.error('Alarm window creation error', e);
-						});
+            const webview = new WebviewWindow(label, {
+                url: `/ringing/${id}`, 
+                title: 'Alarm',
+                width: 400,
+                height: 500,
+                resizable: false,
+                alwaysOnTop: true,
+                center: true,
+                skipTaskbar: false,
+                decorations: false,
+                transparent: true,
+                focus: true,
+            });
 
-					} catch (err) {
-						console.error('Failed to open alarm window', err);
-					}
+            webview.once('tauri://created', function () {
+                console.log('Alarm window created');
+            });
+            
+            webview.once('tauri://error', function (e) {
+                console.error('Alarm window creation error', e);
+            });
 
-				}, delay);
-			}
-		} catch (err) {
-			console.warn('Notification helper failed:', err);
-		}
-	}
+        } catch (err) {
+            console.error('Failed to open alarm window', err);
+        }
+
+        // 3. Auto-Reschedule (Calculate next trigger)
+        console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
+        const alarms = await databaseService.getAllAlarms();
+        const alarm = alarms.find(a => a.id === id);
+        if (alarm) {
+            await this.saveAndSchedule(alarm);
+        }
+    }
 
 	private async cancelNativeAlarm(id: number) {
 		try {
