@@ -10,6 +10,7 @@ import Settings from './screens/Settings';
 
 // Root layout component
 const RootLayout = () => {
+    console.log('🚀 [window-alarm] RootLayout rendering, path:', window.location.pathname);
     const [isMobile, setIsMobile] = useState(false);
     const location = useLocation();
 

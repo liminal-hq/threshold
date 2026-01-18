@@ -6,12 +6,20 @@ const DB_NAME = 'alarms.db';
 
 export class DatabaseService {
 	private db: Database | null = null;
+	private initPromise: Promise<void> | null = null;
 
 	async init() {
-		if (this.db) return;
-		this.db = await Database.load('sqlite:' + DB_NAME);
-		await this.createTables();
-		await this.migrate();
+		if (this.initPromise) return this.initPromise;
+
+		this.initPromise = (async () => {
+			console.log('[DatabaseService] Loading database...');
+			this.db = await Database.load('sqlite:' + DB_NAME);
+			await this.createTables();
+			await this.migrate();
+			console.log('[DatabaseService] Database ready.');
+		})();
+
+		return this.initPromise;
 	}
 
 	private async createTables() {

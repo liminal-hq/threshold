@@ -19,6 +19,8 @@ import app.tauri.plugin.JSObject
 import app.tauri.plugin.JSArray
 import android.util.Log
 import androidx.activity.result.ActivityResult
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 
 @InvokeArg
 class ScheduleRequest {
@@ -50,6 +52,31 @@ class PickAlarmSoundOptions {
 
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
+    private val alarmReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val isAlarm = intent.action == "com.windowalarm.ALARM_TRIGGER"
+            val alarmId = intent.getIntExtra("ALARM_ID", -1)
+
+            if (isAlarm && alarmId != -1) {
+                Log.d("AlarmManagerPlugin", "Broadcast received for alarm triggered: $alarmId. Emitting event.")
+                val eventData = JSObject()
+                eventData.put("id", alarmId)
+                trigger("alarm-ring", eventData)
+            }
+        }
+    }
+
+    override fun load(webview: WebView) {
+        super.load(webview)
+        val filter = IntentFilter("com.windowalarm.ALARM_TRIGGER")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activity.registerReceiver(alarmReceiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            activity.registerReceiver(alarmReceiver, filter)
+        }
+        Log.d("AlarmManagerPlugin", "Plugin loaded and BroadcastReceiver registered.")
+    }
+
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         val isAlarm = intent.getBooleanExtra("isAlarmTriggered", false)
