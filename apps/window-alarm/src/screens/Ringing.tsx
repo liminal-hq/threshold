@@ -101,10 +101,10 @@ const Ringing: React.FC = () => {
 				await getCurrentWindow().close();
 			} catch (e) {
 				console.error('Failed to close window', e);
-				navigate({ to: '/home' });
+				navigate({ to: '/home', replace: true });
 			}
 		} else {
-			navigate({ to: '/home' });
+			navigate({ to: '/home', replace: true });
 		}
 	};
 
