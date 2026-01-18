@@ -1,6 +1,6 @@
 import { databaseService } from './DatabaseService';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import {
 	sendNotification,
 } from '@tauri-apps/plugin-notification';
@@ -179,7 +179,6 @@ export class AlarmManagerService {
             const label = 'ringing-window'; // Fixed label to ensure singleton
             
             const existing = await WebviewWindow.getByLabel(label);
-import { emit } from '@tauri-apps/api/event';
 
             if (existing) {
                 console.log('Ringing window already exists. Updating content and focusing...');
