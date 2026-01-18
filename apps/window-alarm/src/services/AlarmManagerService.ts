@@ -24,14 +24,20 @@ export class AlarmManagerService {
 
 		await databaseService.init();
 		
-        // Listen for alarms ringing from the Rust Backend
-        await listen<number>('alarm-ring', (event) => {
-            console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload}`);
-            this.handleAlarmRing(event.payload);
-        });
+		// Listen for alarms ringing from the Rust Backend
+		await listen<number>('alarm-ring', (event) => {
+			console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload}`);
+			this.handleAlarmRing(event.payload);
+		});
 
-        await this.checkImports();
-        await this.rescheduleAll();
+		// Listen for global alarm changes (from other windows)
+		await listen('global-alarms-changed', () => {
+			console.log('[AlarmManager] Received global-alarms-changed event');
+			this.notifyListeners();
+		});
+
+		await this.checkImports();
+		await this.rescheduleAll();
 	}
 
     // Re-hydrate all alarms on startup (send to Rust scheduler)
@@ -102,7 +108,7 @@ export class AlarmManagerService {
 		} else {
 			await this.cancelNativeAlarm(alarm.id);
 			await databaseService.saveAlarm({ ...updatedAlarm, nextTrigger: undefined });
-            this.notifyListeners();
+            this.notifyGlobalListeners();
 		}
 	}
 
@@ -110,9 +116,22 @@ export class AlarmManagerService {
 		return this.saveAndSchedule(alarm);
 	}
 
-    // Helper to emit change event
+	// Helper to emit change event locally
 	private notifyListeners() {
 		document.dispatchEvent(new CustomEvent('alarms-changed'));
+	}
+
+	// Helper to emit change event globally (cross-window)
+	private async notifyGlobalListeners() {
+		try {
+			await emit('global-alarms-changed');
+			// Also notify locally for the window that initiated the change
+			this.notifyListeners();
+		} catch (e) {
+			console.error('Failed to emit global-alarms-changed', e);
+			// Fallback to local
+			this.notifyListeners();
+		}
 	}
 
 	async saveAndSchedule(alarm: Omit<Alarm, 'id'> & { id?: number }) {
@@ -145,14 +164,14 @@ export class AlarmManagerService {
 			await this.cancelNativeAlarm(id);
 		}
 		
-		this.notifyListeners();
+		this.notifyGlobalListeners();
 		return id;
 	}
 
 	async deleteAlarm(id: number) {
 		await this.cancelNativeAlarm(id);
 		await databaseService.deleteAlarm(id);
-		this.notifyListeners();
+		this.notifyGlobalListeners();
 	}
 
 	private async scheduleNativeAlarm(id: number, timestamp: number) {

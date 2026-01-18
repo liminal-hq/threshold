@@ -96,9 +96,7 @@ const Ringing: React.FC = () => {
 	}, [id]);
 
 	const handleDismiss = async () => {
-		if (alarm) {
-			await alarmManagerService.saveAndSchedule(alarm);
-		}
+
 
 		// Check platform and close window if desktop
 		const os = platform();
