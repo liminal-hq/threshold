@@ -226,6 +226,17 @@ export class AlarmManagerService {
         // 2. Open Floating Window (Singleton)
         try {
             const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+            const { platform } = await import('@tauri-apps/plugin-os');
+            const os = platform();
+            const isMobile = os === 'android' || os === 'ios';
+
+            if (isMobile) {
+                console.log('[AlarmManager] Mobile detected. Navigating current window to ringing screen.');
+                const { router } = await import('../router');
+                router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
+                return;
+            }
+
             const label = 'ringing-window'; // Fixed label to ensure singleton
             
             const existing = await WebviewWindow.getByLabel(label);
