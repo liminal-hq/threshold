@@ -1,13 +1,8 @@
 import React from 'react';
-import {
-	IonItem,
-	IonToggle,
-	IonItemSliding,
-	IonItemOptions,
-	IonItemOption,
-	IonIcon,
-} from '@ionic/react';
-import { trash, shuffle, time } from 'ionicons/icons';
+import { Card, Typography, Switch, IconButton, Box, Stack } from '@mui/material';
+import { Delete as DeleteIcon, Shuffle as ShuffleIcon, AccessTime as AccessTimeIcon } from '@mui/icons-material';
+import { SwipeableListItem, SwipeAction, TrailingActions } from 'react-swipeable-list';
+import 'react-swipeable-list/dist/styles.css';
 import { Alarm } from '../services/DatabaseService';
 import { format } from 'date-fns';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
@@ -18,9 +13,10 @@ interface AlarmItemProps {
 	onToggle: (enabled: boolean) => void;
 	onDelete: () => void;
 	onClick: () => void;
+	isMobile?: boolean;
 }
 
-export const AlarmItem: React.FC<AlarmItemProps & { isMobile?: boolean }> = ({
+export const AlarmItem: React.FC<AlarmItemProps> = ({
 	alarm,
 	is24h,
 	onToggle,
@@ -43,58 +39,91 @@ export const AlarmItem: React.FC<AlarmItemProps & { isMobile?: boolean }> = ({
 			? `${format(new Date(alarm.nextTrigger), 'EEE')} ${TimeFormatHelper.format(alarm.nextTrigger, is24h)}`
 			: 'Disabled';
 
-	const CardContent = () => (
-		<>
-			<div className="alarm-info">
-				<div className="alarm-time">{timeDisplay}</div>
-				<div className="alarm-label">{alarm.label || 'Alarm'}</div>
-				<div className="alarm-next">
-					{alarm.enabled && <IonIcon icon={alarm.mode === 'WINDOW' ? shuffle : time} style={{ fontSize: '12px' }} />}
-					{nextTriggerDetailed}
-				</div>
-			</div>
-			<div className="alarm-actions" onClick={(e) => e.stopPropagation()}>
+	// Helper for the destructive action background
+	const DestructiveAction = () => (
+		<Box
+			sx={{
+				display: 'flex',
+				alignItems: 'center',
+				justifyContent: 'flex-end',
+				width: '100%',
+				height: '100%',
+				bgcolor: 'error.main',
+				color: 'error.contrastText',
+				pr: 2,
+			}}
+		>
+			<DeleteIcon />
+		</Box>
+	);
+
+	const InnerContent = (
+		<Card
+			onClick={onClick}
+			sx={{
+				width: '100%',
+				mb: isMobile ? 0 : 2,
+				display: 'flex',
+				justifyContent: 'space-between',
+				alignItems: 'center',
+				p: 2,
+				cursor: 'pointer',
+				borderRadius: isMobile ? 0 : undefined, // Square corners for list look on mobile? Or keep card look?
+				// Ionic items are usually list items.
+				// Let's keep card look but maybe reduced elevation or spacing on mobile
+				boxShadow: isMobile ? 'none' : undefined,
+				borderBottom: isMobile ? '1px solid rgba(0,0,0,0.12)' : undefined,
+			}}
+		>
+			<Box sx={{ display: 'flex', flexDirection: 'column' }}>
+				<Typography variant="h5" component="div" sx={{ fontWeight: 'bold' }}>
+					{timeDisplay}
+				</Typography>
+				<Typography variant="body2" color="text.secondary">
+					{alarm.label || 'Alarm'}
+				</Typography>
+				<Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5 }}>
+					{alarm.enabled && (
+						alarm.mode === 'WINDOW' ? <ShuffleIcon fontSize="inherit" color="action" /> : <AccessTimeIcon fontSize="inherit" color="action" />
+					)}
+					<Typography variant="caption" color="text.secondary">
+						{nextTriggerDetailed}
+					</Typography>
+				</Stack>
+			</Box>
+			<Box onClick={(e) => e.stopPropagation()} sx={{ display: 'flex', alignItems: 'center' }}>
 				{!isMobile && (
-					<button className="delete-btn" onClick={onDelete} title="Delete Alarm">
-						<IonIcon icon={trash} size="large" />
-					</button>
+					<IconButton onClick={onDelete} aria-label="delete" size="large" sx={{ mr: 1 }}>
+						<DeleteIcon />
+					</IconButton>
 				)}
-				<IonToggle
+				<Switch
 					checked={alarm.enabled}
-					onIonChange={(e) => onToggle(e.detail.checked)}
+					onChange={(e) => onToggle(e.target.checked)}
+					inputProps={{ 'aria-label': 'controlled' }}
 				/>
-			</div>
-		</>
+			</Box>
+		</Card>
 	);
 
 	if (isMobile) {
 		return (
-			<IonItemSliding className="mobile-alarm-wrapper">
-				<IonItem
-					button
-					onClick={onClick}
-					detail={false}
-					lines="none"
-					className="alarm-card mobile-alarm-card"
-					style={{ '--padding-start': '0', '--inner-padding-end': '0', background: 'transparent' }}
-				>
-					<div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0' }}>
-						<CardContent />
-					</div>
-				</IonItem>
-
-				<IonItemOptions side="end">
-					<IonItemOption color="danger" onClick={onDelete}>
-						<IonIcon slot="icon-only" icon={trash} />
-					</IonItemOption>
-				</IonItemOptions>
-			</IonItemSliding>
+			<SwipeableListItem
+				trailingActions={
+					<TrailingActions>
+						<SwipeAction
+							onClick={onDelete}
+							destructive={true}
+						>
+							<DestructiveAction />
+						</SwipeAction>
+					</TrailingActions>
+				}
+			>
+				{InnerContent}
+			</SwipeableListItem>
 		);
 	}
 
-	return (
-		<div className="alarm-card" onClick={onClick}>
-			<CardContent />
-		</div>
-	);
+	return InnerContent;
 };

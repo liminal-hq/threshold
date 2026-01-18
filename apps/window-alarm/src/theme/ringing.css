@@ -1,12 +1,43 @@
-/* Ringing Screen Styles */
+/* Ringing Screen Styles - Clean rebuild without 100vh issues */
+
+/* Aggressive reset for body/html - use * selector to ensure it applies */
+body,
+html {
+	margin: 0 !important;
+	padding: 0 !important;
+	overflow: hidden !important;
+	width: 100% !important;
+	height: 100% !important;
+}
+
+/* Dark mode support for ringing window */
+body.dark-mode .ringing-page {
+	background: #121212;
+}
+
 .ringing-page {
-	/* Make the page background transparent so the window transparency shines through */
-	--ion-background-color: transparent;
+	/* Transparent background for window transparency */
 	background: transparent;
+	overflow: hidden;
+	/* Fill the entire available space */
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: 100%;
+	height: 100%;
 }
 
 .ringing-container {
-	height: 100vh; /* Use viewport height */
+	/* Fill the entire page with small margin for rounded corners */
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	right: 2px;
+	bottom: 2px;
+	
+	/* Flexbox layout for centering content */
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -14,16 +45,42 @@
 	padding: 32px;
 	text-align: center;
 	
-	/* The actual visual card */
-	background: radial-gradient(circle at center, var(--ion-color-primary-tint), var(--ion-color-primary));
-	color: #fff;
+	/* Visual styling - secondary color gradient */
+	background: radial-gradient(circle at center, var(--ion-color-secondary-tint), var(--ion-color-secondary));
+	color: var(--ion-color-secondary-contrast); /* Use secondary-contrast for proper contrast in all themes */
 	animation: pulse-bg 4s infinite alternate;
 	
-	/* Rounded corners for the "Floating Card" look */
-	/* Note: This works because we set the window to transparent: true */
+	/* Rounded corners for floating card effect */
 	border-radius: 24px;
 	box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 20px 50px rgba(0,0,0,0.5);
-	margin: 2px; /* Slight margin to prevent clipping of anti-aliased corners/shadow */
+}
+
+/* Breathing animation overlay - placed above background, below content */
+.ringing-container::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	/* Increased opacity for maximum intensity */
+	background: radial-gradient(circle at center, rgba(var(--ion-color-secondary-contrast-rgb), 0.4), transparent 70%);
+	/* Faster animation for more urgency? No, keep it rhythmic but deep */
+	animation: breathe 4s ease-in-out infinite;
+	pointer-events: none;
+	border-radius: 24px;
+	z-index: 0; /* Ensure it stays behind content if content is z-indexed */
+}
+
+@keyframes breathe {
+	0%, 100% {
+		opacity: 0.2;
+		transform: scale(0.95);
+	}
+	50% {
+		opacity: 0.7; /* Balanced visibility */
+		transform: scale(1.1);
+	}
 }
 
 @keyframes pulse-bg {
@@ -38,6 +95,9 @@
 	text-shadow: 0 4px 12px rgba(0,0,0,0.2);
 	font-variant-numeric: tabular-nums;
 	line-height: 1;
+	/* Inherit color from parent instead of hardcoding */
+	position: relative;
+	z-index: 2; /* Ensure text sits above the intense breathing animation */
 }
 
 .ringing-label {
@@ -45,6 +105,9 @@
 	font-weight: 500;
 	margin-bottom: 48px;
 	opacity: 0.9;
+	/* Inherit color from parent instead of hardcoding */
+	position: relative;
+	z-index: 2;
 }
 
 .ringing-actions {
@@ -53,22 +116,7 @@
 	gap: 16px;
 	width: 100%;
 	max-width: 320px;
+	position: relative;
+	z-index: 2;
 }
 
-.dismiss-btn {
-	--background: #fff;
-	--color: var(--ion-color-primary);
-	--border-radius: 50px;
-	font-weight: 700;
-	font-size: 1.2rem;
-	height: 56px;
-	box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-}
-
-.snooze-btn {
-	--color: #fff;
-	--border-color: rgba(255,255,255,0.5);
-	--border-radius: 50px;
-	font-weight: 600;
-	margin-top: 8px;
-}

@@ -20,6 +20,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     pkg-config \
     unzip \
     xvfb \
+    vim\
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Android build dependencies
@@ -36,6 +37,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Switch to non-root user 'vscode' (provided by base image)
 USER vscode
 ENV HOME=/home/vscode
+ENV EDITOR=vim
 
 # Configure pnpm global bin path
 ENV PNPM_HOME=$HOME/.local/share/pnpm

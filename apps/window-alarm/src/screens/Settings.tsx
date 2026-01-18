@@ -1,165 +1,187 @@
 import React, { useState, useEffect } from 'react';
 import {
-	IonContent,
-	IonHeader,
-	IonPage,
-	IonTitle,
-	IonToolbar,
-	IonList,
-	IonItem,
-	IonLabel,
-	IonSelect,
-	IonSelectOption,
-	IonToggle,
-	IonButtons,
-	IonButton,
-	IonIcon,
-} from '@ionic/react';
-import { arrowBack } from 'ionicons/icons';
-import { useHistory } from 'react-router-dom';
+    AppBar,
+    Toolbar,
+    Typography,
+    IconButton,
+    List,
+    ListItem,
+    ListItemText,
+    Switch,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Box,
+    Container,
+    ListSubheader,
+    Paper
+} from '@mui/material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { useNavigate } from '@tanstack/react-router';
 import { platform } from '@tauri-apps/plugin-os';
 import { SettingsService, Theme } from '../services/SettingsService';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const Settings: React.FC = () => {
-	const history = useHistory();
-	const [theme, setTheme] = useState<Theme>(SettingsService.getTheme());
-	const [forceDark, setForceDark] = useState<boolean>(SettingsService.getForceDark());
-	const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
-	const [isMobile, setIsMobile] = useState(false);
+    const navigate = useNavigate();
+    const { theme, setTheme, forceDark, setForceDark } = useThemeContext();
+    const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
+    const [isMobile, setIsMobile] = useState(false);
 
-	useEffect(() => {
-		const os = platform();
-		setIsMobile(os === 'ios' || os === 'android');
-	}, []);
+    useEffect(() => {
+        const os = platform();
+        setIsMobile(os === 'ios' || os === 'android');
+    }, []);
 
-	const handleThemeChange = (newTheme: Theme) => {
-		setTheme(newTheme);
-		SettingsService.setTheme(newTheme);
-	};
+    const handleTimeFormatChange = (enabled: boolean) => {
+        setIs24h(enabled);
+        SettingsService.setIs24h(enabled);
+    };
 
-	const handleForceDarkChange = (enabled: boolean) => {
-		setForceDark(enabled);
-		SettingsService.setForceDark(enabled);
-	};
+    return (
 
-	const handleTimeFormatChange = (enabled: boolean) => {
-		setIs24h(enabled);
-		SettingsService.setIs24h(enabled);
-	};
+        <Box sx={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            {/* Mobile Header: Placed OUTSIDE IonContent to avoid scrolling issues and overlay */}
+            {isMobile && (
+                <AppBar position="sticky" elevation={0} sx={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                    <Toolbar>
+                        <IconButton edge="start" color="inherit" onClick={() => navigate({ to: '/home' })}>
+                            <ArrowBackIcon />
+                        </IconButton>
+                        <Typography variant="h6" sx={{ flexGrow: 1, ml: 2 }}>
+                            Settings
+                        </Typography>
+                    </Toolbar>
+                </AppBar>
+            )}
+            <Box sx={{ flexGrow: 1 }}>
+                {/* Desktop Spacing Fix: Adjusted mt to 2 to work with RootLayout spacing */}
+                <Container maxWidth="sm" sx={{ py: 3, mt: !isMobile ? 2 : 0 }}>
+                    {!isMobile && (
+                        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
+                            <IconButton onClick={() => navigate({ to: '/home' })} sx={{ mr: 2 }}>
+                                <ArrowBackIcon />
+                            </IconButton>
+                            <Typography variant="h4">Settings</Typography>
+                        </Box>
+                    )}
 
-	return (
+                    <Paper elevation={0} sx={{ bgcolor: 'transparent' }}>
+                        <List subheader={<ListSubheader sx={{ bgcolor: 'transparent' }}>Appearance</ListSubheader>}>
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="theme-select-label">Theme</InputLabel>
+                                    <Select
+                                        labelId="theme-select-label"
+                                        value={theme}
+                                        label="Theme"
+                                        onChange={(e) => setTheme(e.target.value as Theme)}
+                                    >
+                                        <MenuItem value="deep-night">Deep Night (Default)</MenuItem>
+                                        <MenuItem value="canadian-cottage-winter">Canadian Cottage Winter</MenuItem>
+                                        <MenuItem value="georgian-bay-plunge">Georgian Bay Plunge</MenuItem>
+                                        <MenuItem value="boring-light">Boring Light</MenuItem>
+                                        <MenuItem value="boring-dark">Boring Dark</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </ListItem>
 
-		<IonPage style={{ paddingTop: isMobile ? '0' : '32px' }}>
-			{isMobile && (
-				<IonHeader>
-					<IonToolbar>
-						<IonButtons slot="start">
-							<IonButton onClick={() => history.goBack()}>
-								<IonIcon icon={arrowBack} />
-							</IonButton>
-						</IonButtons>
-						<IonTitle>Settings</IonTitle>
-					</IonToolbar>
-				</IonHeader>
-			)}
-			<IonContent style={{ '--background': 'var(--ion-background-color)' }}>
-				{isMobile ? (
-					<IonList inset>
-						<IonItem>
-							<IonLabel>Theme</IonLabel>
-							<IonSelect
-								value={theme}
-								onIonChange={(e) => handleThemeChange(e.detail.value)}
-								interface="popover"
-							>
-								<IonSelectOption value="deep-night">Deep Night (Default)</IonSelectOption>
-								<IonSelectOption value="canadian-cottage">Canadian Cottage Winter</IonSelectOption>
-								<IonSelectOption value="georgian-bay-plunge">Georgian Bay Plunge</IonSelectOption>
-								<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
-								<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
-							</IonSelect>
-						</IonItem>
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="Force Dark Mode"
+                                    secondary="Override system color scheme"
+                                />
+                                <Switch
+                                    edge="end"
+                                    checked={forceDark}
+                                    onChange={(e) => setForceDark(e.target.checked)}
+                                />
+                            </ListItem>
+                        </List>
 
-						<IonItem>
-							<IonLabel>Use 24-Hour Time</IonLabel>
-							<IonToggle
-								checked={is24h}
-								onIonChange={(e) => handleTimeFormatChange(e.detail.checked)}
-							/>
-						</IonItem>
-					</IonList>
-				) : (
-					<div className="settings-container" style={{
-						minHeight: '100%',
-						background: 'var(--ion-background-color)',
-						position: 'relative',
-						zIndex: 10,
-						margin: '0 auto', /* Override CSS margin */
-						padding: '32px 16px' /* Use padding for spacing */
-					}}>
-						<div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-							<IonButton fill="clear" onClick={() => history.goBack()} color="medium" style={{ margin: 0 }}>
-								<IonIcon icon={arrowBack} slot="icon-only" />
-							</IonButton>
-							<h1 style={{ margin: 0, fontSize: '28px', fontWeight: 700 }}>Settings</h1>
-						</div>
+                        <List subheader={<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>General</ListSubheader>}>
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="24-Hour Time"
+                                    secondary="Use 24-hour format for time display"
+                                />
+                                <Switch
+                                    edge="end"
+                                    checked={is24h}
+                                    onChange={(e) => handleTimeFormatChange(e.target.checked)}
+                                />
+                            </ListItem>
+                        </List>
 
-						<div className="settings-section-title">Appearance</div>
-						<div className="settings-card">
-							<IonList lines="full">
-								<IonItem lines="none">
-									<IonLabel>
-										<h2>Theme</h2>
-										<p>Customize the look and feel</p>
-									</IonLabel>
-									<IonSelect
-										value={theme}
-										onIonChange={(e) => handleThemeChange(e.detail.value)}
-										interface="popover"
-									>
-										<IonSelectOption value="deep-night">Deep Night (Default)</IonSelectOption>
-										<IonSelectOption value="canadian-cottage">Canadian Cottage Winter</IonSelectOption>
-										<IonSelectOption value="georgian-bay-plunge">Georgian Bay Plunge</IonSelectOption>
-										<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
-										<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
-									</IonSelect>
-								</IonItem>
+                        <List subheader={<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Developer</ListSubheader>}>
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="Test Alarm Ring"
+                                    secondary="Trigger a sample alarm to test the ringing window"
+                                />
+                                <IconButton
+                                    edge="end"
+                                    onClick={async () => {
+                                        if (isMobile) {
+                                            // Mobile doesn't support multiple windows, navigate in-app
+                                            navigate({ to: '/ringing/$id', params: { id: '999' } });
+                                            return;
+                                        }
 
-								<IonItem lines="none">
-									<IonLabel>
-										<h2>Force Dark Mode</h2>
-										<p>Override system color scheme</p>
-									</IonLabel>
-									<IonToggle
-										slot="end"
-										checked={forceDark}
-										onIonChange={(e) => handleForceDarkChange(e.detail.checked)}
-									/>
-								</IonItem>
-							</IonList>
-						</div>
+                                        try {
+                                            // Dynamically import to avoid issues on mobile
+                                            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+                                            const timestamp = Date.now();
+                                            const label = `test-alarm-${timestamp}`;
 
-						<div className="settings-section-title">General</div>
-						<div className="settings-card">
-							<IonList lines="full">
-								<IonItem lines="none">
-									<IonLabel>
-										<h2>24-Hour Time</h2>
-										<p>Use 24-hour format for time display</p>
-									</IonLabel>
-									<IonToggle
-										slot="end"
-										checked={is24h}
-										onIonChange={(e) => handleTimeFormatChange(e.detail.checked)}
-									/>
-								</IonItem>
-							</IonList>
-						</div>
-					</div>
-				)}
-			</IonContent>
-		</IonPage>
-	);
+                                            console.log('Creating test alarm window with URL: /ringing/999');
+
+                                            const webview = new WebviewWindow(label, {
+                                                url: '/ringing/999',
+                                                title: 'Test Alarm',
+                                                width: 400,
+                                                height: 500,
+                                                resizable: false,
+                                                alwaysOnTop: true,
+                                                center: true,
+                                                skipTaskbar: false,
+                                                decorations: false,
+                                                transparent: true,
+                                                focus: true,
+                                            });
+
+                                            webview.once('tauri://created', () => {
+                                                console.log('Test alarm window created successfully');
+                                            });
+
+                                            webview.once('tauri://error', (e) => {
+                                                console.error('Test alarm window error:', e);
+                                                console.error('Error details:', JSON.stringify(e, null, 2));
+                                            });
+                                        } catch (err) {
+                                            console.error('Failed to open test alarm window:', err);
+                                            console.error('Error type:', typeof err);
+                                            console.error('Error details:', (err as Error).stack);
+                                        }
+                                    }}
+                                    sx={{
+                                        bgcolor: 'primary.main',
+                                        color: 'primary.contrastText',
+                                        '&:hover': {
+                                            bgcolor: 'primary.dark',
+                                        }
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.2rem' }}>🔔</span>
+                                </IconButton>
+                            </ListItem>
+                        </List>
+                    </Paper>
+                </Container>
+            </Box>
+        </Box>
+    );
 };
 
 export default Settings;

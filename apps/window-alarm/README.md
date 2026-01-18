@@ -9,6 +9,10 @@ This directory contains the main Tauri v2 application.
 - **State/Logic:** Custom Hooks + SQLite (`tauri-plugin-sql`)
 - **Native Integration:** `tauri-plugin-alarm-manager` (Local plugin)
 
+## Theming
+
+The application features a comprehensive theming system with multiple presets and dynamic Light/Dark mode support. For detailed information on the theme system, including the **inverse contrast pattern** used for the Ringing Window, please see [THEMING.md](./THEMING.md).
+
 ## Directory Structure
 
 - `src/`: React Source Code

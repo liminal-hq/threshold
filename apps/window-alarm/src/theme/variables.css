@@ -18,6 +18,8 @@ body.theme-deep-night {
 
 	--ion-background-color: #f4f5f8;
 	--ion-text-color: #1a1a1a;
+	--ion-card-background: #ffffff;
+	--ion-border-color: rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -33,6 +35,10 @@ body.theme-deep-night {
 		/* Ensure primary is distinguishable */
 		--ion-color-primary: #4c8dff;
 		--ion-color-primary-contrast: #ffffff;
+
+		/* Secondary contrast should be DARK in Dark Mode (Inverse pattern) */
+		--ion-color-secondary-contrast: #1a1a1a;
+		--ion-color-secondary-contrast-rgb: 26, 26, 26;
 	}
 }
 
@@ -46,10 +52,14 @@ body.force-dark.theme-deep-night {
 	
 	--ion-color-primary: #4c8dff;
 	--ion-color-primary-contrast: #ffffff;
+
+	/* Secondary contrast should be DARK in Dark Mode (Inverse pattern) */
+	--ion-color-secondary-contrast: #1a1a1a;
+	--ion-color-secondary-contrast-rgb: 26, 26, 26;
 }
 
 /* Canadian Cottage Winter (HSL) */
-body.theme-canadian-cottage {
+body.theme-canadian-cottage-winter {
 	/* Warm Beige / Red / Blue-Grey */
 
 	/* Primary: Bluish Grey (Winter Sky/Lake) */
@@ -71,10 +81,12 @@ body.theme-canadian-cottage {
 	/* Background: Warm Beige/Paper */
 	--ion-background-color: hsl(35, 30%, 94%);
 	--ion-text-color: hsl(210, 20%, 20%);
+	--ion-card-background: #ffffff;
+	--ion-border-color: rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
-	body.theme-canadian-cottage {
+	body.theme-canadian-cottage-winter {
 		/* Darker Cabin Wood feeling */
 		--ion-background-color: hsl(30, 15%, 15%);
 		--ion-text-color: hsl(35, 20%, 90%);
@@ -92,16 +104,20 @@ body.theme-canadian-cottage {
 		--ion-color-primary-contrast-rgb: 0, 0, 0;
 		--ion-color-primary-shade: hsl(210, 20%, 62%);
 		--ion-color-primary-tint: hsl(210, 20%, 78%);
+
+		/* Dark text on red secondary background for ringing screen */
+		--ion-color-secondary-contrast: hsl(210, 20%, 20%);
+		--ion-color-secondary-contrast-rgb: 43, 50, 56;
 	}
 	
 	/* Special override for Canadian Cottage Segments to be RED */
-	body.theme-canadian-cottage ion-segment.custom-pill ion-segment-button {
+	body.theme-canadian-cottage-winter ion-segment.custom-pill ion-segment-button {
 		--indicator-color: var(--ion-color-secondary) !important;
 		--color-checked: #ffffff !important;
 	}
 }
 
-body.force-dark.theme-canadian-cottage {
+body.force-dark.theme-canadian-cottage-winter {
 	--ion-background-color: hsl(30, 15%, 15%);
 	--ion-text-color: hsl(35, 20%, 90%);
 	--ion-border-color: rgba(255, 255, 255, 0.08);
@@ -117,10 +133,14 @@ body.force-dark.theme-canadian-cottage {
 	--ion-color-primary-contrast-rgb: 0, 0, 0;
 	--ion-color-primary-shade: hsl(210, 20%, 62%);
 	--ion-color-primary-tint: hsl(210, 20%, 78%);
+
+	/* Dark text on red secondary background for ringing screen */
+	--ion-color-secondary-contrast: hsl(210, 20%, 20%);
+	--ion-color-secondary-contrast-rgb: 43, 50, 56;
 }
 
 /* Force Red Segment for Force Dark Canadian Cottage too */
-body.force-dark.theme-canadian-cottage ion-segment.custom-pill ion-segment-button {
+body.force-dark.theme-canadian-cottage-winter ion-segment.custom-pill ion-segment-button {
 	--indicator-color: var(--ion-color-secondary) !important;
 	--color-checked: #ffffff !important;
 }
@@ -146,6 +166,8 @@ body.theme-georgian-bay-plunge {
 	/* Background: Light gray with subtle blue tint */
 	--ion-background-color: hsl(210, 15%, 96%);
 	--ion-text-color: hsl(210, 15%, 20%);
+	--ion-card-background: #ffffff;
+	--ion-border-color: rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -157,6 +179,10 @@ body.theme-georgian-bay-plunge {
 		--ion-card-background: hsl(200, 20%, 16%);
 		--ion-color-step-100: hsl(200, 20%, 20%);
 		--ion-color-step-200: hsl(200, 20%, 25%);
+
+		/* Secondary contrast should be DARK in Dark Mode (Inverse pattern) */
+		--ion-color-secondary-contrast: hsl(210, 15%, 20%);
+		--ion-color-secondary-contrast-rgb: 43, 50, 56;
 	}
 }
 
@@ -167,6 +193,10 @@ body.force-dark.theme-georgian-bay-plunge {
 	--ion-card-background: hsl(200, 20%, 16%);
 	--ion-color-step-100: hsl(200, 20%, 20%);
 	--ion-color-step-200: hsl(200, 20%, 25%);
+
+	/* Secondary contrast should be DARK in Dark Mode (Inverse pattern) */
+	--ion-color-secondary-contrast: hsl(210, 15%, 20%);
+	--ion-color-secondary-contrast-rgb: 43, 50, 56;
 }
 
 /* Boring Light - Standard, accessible, unremarkable */
@@ -182,13 +212,15 @@ body.theme-boring-light {
 	/* Secondary: Standard Gray */
 	--ion-color-secondary: hsl(0, 0%, 50%);
 	--ion-color-secondary-rgb: 128, 128, 128;
-	--ion-color-secondary-contrast: #ffffff;
+	--ion-color-secondary-contrast: #ffffff; /* White text on gray in light mode */
 	--ion-color-secondary-contrast-rgb: 255, 255, 255;
 	--ion-color-secondary-shade: hsl(0, 0%, 40%);
 	--ion-color-secondary-tint: hsl(0, 0%, 60%);
 
 	--ion-background-color: hsl(0, 0%, 100%);
 	--ion-text-color: hsl(0, 0%, 0%);
+	--ion-card-background: #ffffff;
+	--ion-border-color: rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -199,15 +231,7 @@ body.theme-boring-light {
 	}
 }
 
-body.force-dark.theme-boring-light {
-	/* Force dark even on boring light? Sure, why not. */
-	/* Wait, boring-light is specifically light. */
-	/* But if forced dark, maybe we create an inverted boring light? */
-	/* Or just alias to Boring Dark styles? */
-	/* Let's alias to boring-dark styles for consistent dark mode enforcement */
-	--ion-background-color: hsl(0, 0%, 12%);
-	--ion-text-color: hsl(0, 0%, 90%);
-}
+
 
 /* Boring Dark - Standard, accessible, unremarkable */
 body.theme-boring-dark {
@@ -222,8 +246,8 @@ body.theme-boring-dark {
 	/* Secondary: Standard Gray */
 	--ion-color-secondary: hsl(0, 0%, 50%);
 	--ion-color-secondary-rgb: 128, 128, 128;
-	--ion-color-secondary-contrast: #ffffff;
-	--ion-color-secondary-contrast-rgb: 255, 255, 255;
+	--ion-color-secondary-contrast: hsl(0, 0%, 10%); /* Dark text on gray background */
+	--ion-color-secondary-contrast-rgb: 26, 26, 26;
 	--ion-color-secondary-shade: hsl(0, 0%, 40%);
 	--ion-color-secondary-tint: hsl(0, 0%, 60%);
 
@@ -249,4 +273,8 @@ body.force-dark.theme-boring-dark {
 	--ion-card-background: hsl(0, 0%, 16%);
 	--ion-color-step-100: hsl(0, 0%, 18%);
 	--ion-color-step-200: hsl(0, 0%, 22%);
+
+	/* Dark text on gray secondary background */
+	--ion-color-secondary-contrast: hsl(0, 0%, 10%);
+	--ion-color-secondary-contrast-rgb: 26, 26, 26;
 }

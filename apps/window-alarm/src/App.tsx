@@ -1,70 +1,29 @@
-import { Redirect, Route } from 'react-router-dom';
-import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
-import Home from './screens/Home';
-import EditAlarm from './screens/EditAlarm';
-import Ringing from './screens/Ringing';
-import Settings from './screens/Settings';
-import TitleBar from './components/TitleBar';
-import { SettingsService } from './services/SettingsService';
 import React, { useEffect } from 'react';
-
-/* Core CSS required for Ionic components to work properly */
-import '@ionic/react/css/core.css';
-
-/* Basic CSS for apps built with Ionic */
-import '@ionic/react/css/normalize.css';
-import '@ionic/react/css/structure.css';
-import '@ionic/react/css/typography.css';
-
-/* Optional CSS utils */
-import '@ionic/react/css/padding.css';
-import '@ionic/react/css/float-elements.css';
-import '@ionic/react/css/text-alignment.css';
-import '@ionic/react/css/text-transformation.css';
-import '@ionic/react/css/flex-utils.css';
-import '@ionic/react/css/display.css';
-
-/* Theme variables */
-import './theme/variables.css';
-import './theme/ringing.css';
-import './theme/components.css'; /* Import custom component styles globally */
+import { RouterProvider } from '@tanstack/react-router';
+import { router } from './router';
+import { ThemeContextProvider } from './contexts/ThemeContext';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { platform } from '@tauri-apps/plugin-os';
 
-setupIonicReact();
+/* Theme variables */
+import './theme/variables.css';
+import './theme/ringing.css';
+import './theme/components.css';
 
 const App: React.FC = () => {
 	console.log('🚀 [window-alarm] App component rendering');
-	const [isMobile, setIsMobile] = React.useState(false);
 
 	useEffect(() => {
 		// Detect platform (synchronous in Tauri v2)
 		const os = platform();
-		setIsMobile(os === 'ios' || os === 'android');
-
-		SettingsService.applyTheme();
+		const win = getCurrentWindow();
 
 		const showWindow = async () => {
 			try {
-				const win = getCurrentWindow();
-
-				// Log paths for debugging
-				try {
-					console.log('Attempting to resolve paths...');
-					const { appConfigDir, appDataDir } = await import('@tauri-apps/api/path');
-					const configPath = await appConfigDir();
-					const dataPath = await appDataDir();
-					console.log('----------------------------------------');
-					console.log('📂 Config Directory:', configPath);
-					console.log('📂 Data Directory:  ', dataPath);
-					console.log('----------------------------------------');
-				} catch (e) {
-					console.error('Failed to get paths:', e);
-				}
-
 				// Force Desktop Window Size 
 				if (os !== 'android' && os !== 'ios') {
 					try {
@@ -87,33 +46,50 @@ const App: React.FC = () => {
 			}
 		};
 		showWindow();
+
+		// Initialize deep link handling
+		import('./services/DeepLinkService').then(({ initDeepLinks }) => {
+			initDeepLinks(router).catch((e) => {
+				console.error('Failed to initialize deep links:', e);
+			});
+		});
+
+		// Handle Back Button on Android
+		const initBackButton = async () => {
+			if (os === 'android') {
+				try {
+					// Dynamic import to be safe, though @tauri-apps/api/app is isomorphic safe usually
+					const { onBackButtonPress } = await import('@tauri-apps/api/app');
+
+					await onBackButtonPress(() => {
+						// Check if we can go back.
+						// window.history.length > 1 is the standard browser way to check history depth.
+						if (window.history.length > 1) {
+							router.history.back();
+						} else {
+							// If we can't go back, minimize the app (standard Android behavior)
+							win.minimize();
+						}
+					});
+				} catch (e) {
+					console.error('Failed to initialize back button listener', e);
+				}
+			}
+		};
+		initBackButton();
+
+		// Cleanup is handled by Tauri's plugin system generally, or we just let it persist for the app life.
+		// onBackButtonPress returns a Promise<Subject/Unlisten function> if we want to unlisten, 
+		// but since this is the root App component, we usually keep it.
+
 	}, []);
 
 	return (
-		<IonApp>
-			{!isMobile && <TitleBar />}
-			<div style={{ marginTop: isMobile ? '0px' : '32px', height: isMobile ? '100%' : 'calc(100% - 32px)' }}>
-				<IonReactRouter>
-					<IonRouterOutlet>
-						<Route exact path="/home">
-							<Home />
-						</Route>
-						<Route exact path="/edit/:id">
-							<EditAlarm />
-						</Route>
-						<Route exact path="/ringing/:id">
-							<Ringing />
-						</Route>
-						<Route exact path="/settings">
-							<Settings />
-						</Route>
-						<Route exact path="/">
-							<Redirect to="/home" />
-						</Route>
-					</IonRouterOutlet>
-				</IonReactRouter>
-			</div>
-		</IonApp>
+		<ThemeContextProvider>
+			<LocalizationProvider dateAdapter={AdapterDateFns}>
+				<RouterProvider router={router} />
+			</LocalizationProvider>
+		</ThemeContextProvider>
 	);
 };
 

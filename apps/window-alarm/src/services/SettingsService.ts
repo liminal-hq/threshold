@@ -1,16 +1,22 @@
-export type Theme = 'deep-night' | 'canadian-cottage' | 'georgian-bay-plunge' | 'boring-light' | 'boring-dark';
+import { emit } from '@tauri-apps/api/event';
+
+export type Theme = 'deep-night' | 'canadian-cottage-winter' | 'georgian-bay-plunge' | 'boring-light' | 'boring-dark';
 
 const KEY_THEME = 'window_alarm_theme';
 const KEY_24H = 'window_alarm_24h';
 
 export const SettingsService = {
 	getTheme: (): Theme => {
-		return (localStorage.getItem(KEY_THEME) as Theme) || 'deep-night';
+		const theme = localStorage.getItem(KEY_THEME) as string;
+		if (theme === 'canadian-cottage') return 'canadian-cottage-winter';
+		return (theme as Theme) || 'deep-night';
 	},
 
 	setTheme: (theme: Theme) => {
 		localStorage.setItem(KEY_THEME, theme);
 		SettingsService.applyTheme();
+		// Emit event for other windows
+		emit('theme-changed', { theme, forceDark: SettingsService.getForceDark() });
 	},
 
 	getIs24h: (): boolean => {
@@ -28,6 +34,8 @@ export const SettingsService = {
 	setForceDark: (enabled: boolean) => {
 		localStorage.setItem('window_alarm_force_dark', String(enabled));
 		SettingsService.applyTheme();
+		// Emit event for other windows
+		emit('theme-changed', { theme: SettingsService.getTheme(), forceDark: enabled });
 	},
 
 	// Apply on startup
