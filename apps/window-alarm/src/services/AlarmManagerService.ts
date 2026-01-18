@@ -157,7 +157,7 @@ export class AlarmManagerService {
 				payload: { id, triggerAt: timestamp },
 			});
 		} catch (e) {
-			console.error('Failed to schedule native alarm', e);
+			console.error('Failed to schedule native alarm', JSON.stringify(e));
 		}
 	}
 
