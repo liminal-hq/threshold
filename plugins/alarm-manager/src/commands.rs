@@ -33,3 +33,10 @@ pub async fn pick_alarm_sound<R: Runtime>(
 ) -> Result<PickedAlarmSound> {
   app.alarm_manager().pick_alarm_sound(options)
 }
+
+#[command]
+pub async fn check_active_alarm<R: Runtime>(
+  app: AppHandle<R>,
+) -> Result<ActiveAlarmResponse> {
+  app.alarm_manager().check_active_alarm()
+}

@@ -87,4 +87,11 @@ impl<R: Runtime> AlarmManager<R> {
   pub fn pick_alarm_sound(&self, _options: PickAlarmSoundOptions) -> crate::Result<PickedAlarmSound> {
     Err(crate::Error::Runtime("Unsupported platform".into()))
   }
+
+  pub fn check_active_alarm(&self) -> crate::Result<ActiveAlarmResponse> {
+    Ok(ActiveAlarmResponse {
+      is_alarm: false,
+      alarm_id: None,
+    })
+  }
 }
