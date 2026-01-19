@@ -29,3 +29,4 @@
 - **UI / UX**
   - [ ] Implement Sound Picker (requires native plugin to list system ringtones).
   - [ ] Add Floating Window support for Desktop ringing experience.
+  - [ ] Add "Undo" snackbar after deletion to mitigate accidental swipes.
