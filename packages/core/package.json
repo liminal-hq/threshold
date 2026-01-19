@@ -1,5 +1,5 @@
 {
-	"name": "@window-alarm/core",
+	"name": "@threshold/core",
 	"version": "0.0.1",
 	"type": "module",
 	"private": true,

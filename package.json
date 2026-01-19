@@ -1,15 +1,15 @@
 {
-	"name": "window-alarm-monorepo",
+	"name": "threshold-monorepo",
 	"version": "1.0.0",
 	"private": true,
 	"license": "UNLICENSED",
 	"scripts": {
 		"test": "pnpm -r test",
-		"tauri": "pnpm --filter window-alarm tauri",
-		"build:desktop": "pnpm --filter window-alarm tauri build",
-		"build:android": "pnpm --filter window-alarm tauri android build",
-		"dev:desktop": "pnpm --filter window-alarm tauri dev",
-		"dev:android": "pnpm --filter window-alarm tauri android dev",
+		"tauri": "pnpm --filter threshold tauri",
+		"build:desktop": "pnpm --filter threshold tauri build",
+		"build:android": "pnpm --filter threshold tauri android build",
+		"dev:desktop": "pnpm --filter threshold tauri dev",
+		"dev:android": "pnpm --filter threshold tauri android dev",
 		"format": "prettier --write ."
 	},
 	"packageManager": "pnpm@10.28.0",

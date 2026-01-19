@@ -56,7 +56,7 @@ importers:
       '@tauri-apps/plugin-window-state':
         specifier: ~2.4.1
         version: 2.4.1
-      '@window-alarm/core':
+      '@threshold/core':
         specifier: workspace:*
         version: link:../../packages/core
       date-fns:

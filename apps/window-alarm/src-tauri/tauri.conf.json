@@ -1,8 +1,8 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
-	"productName": "window-alarm",
+	"productName": "Threshold",
 	"version": "0.1.0",
-	"identifier": "ca.liminalhq.window-alarm",
+	"identifier": "ca.liminalhq.threshold",
 	"build": {
 		"beforeDevCommand": "pnpm dev",
 		"devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
 	"app": {
 		"windows": [
 			{
-				"title": "Window Alarm",
+				"title": "Threshold",
 				"width": 450,
 				"height": 800,
 				"resizable": true,
@@ -30,8 +30,8 @@
 		"deep-link": {
 			"protocols": [
 				{
-					"name": "Window Alarm",
-					"schemes": ["window-alarm"]
+					"name": "Threshold",
+					"schemes": ["threshold"]
 				}
 			]
 		},
