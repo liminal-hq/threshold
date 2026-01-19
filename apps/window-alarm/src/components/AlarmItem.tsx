@@ -1,12 +1,11 @@
 import React from 'react';
 import { Card, Typography, Switch, IconButton, Box, Stack } from '@mui/material';
 import { Delete as DeleteIcon, Shuffle as ShuffleIcon, AccessTime as AccessTimeIcon } from '@mui/icons-material';
-import { SwipeableListItem, SwipeAction, TrailingActions } from 'react-swipeable-list';
-import 'react-swipeable-list/dist/styles.css';
 import { Alarm } from '../services/DatabaseService';
 import { format } from 'date-fns';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { PlatformUtils } from '../utils/PlatformUtils';
+import { SwipeToDeleteRow } from './SwipeToDeleteRow';
 
 interface AlarmItemProps {
 	alarm: Alarm;
@@ -39,32 +38,19 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 			? `${format(new Date(alarm.nextTrigger), 'EEE')} ${TimeFormatHelper.format(alarm.nextTrigger, is24h)}`
 			: 'Disabled';
 
-	// Helper for the destructive action background
-	const DestructiveAction = () => (
-		<Box
-			sx={{
-				display: 'flex',
-				alignItems: 'center',
-				justifyContent: 'flex-end',
-				width: '100%',
-				height: '100%',
-				bgcolor: 'error.main',
-				color: 'error.contrastText',
-				pr: 2,
-				// removed my: 2 to align top/bottom exactly with card
-				borderRadius: '16px', // Match the card border radius
-			}}
-		>
-			<DeleteIcon />
-		</Box>
-	);
+	// Prevent Switch toggle from triggering swipe or click
+	const handleSwitchClick = (e: React.MouseEvent) => {
+		e.stopPropagation();
+	};
 
 	const InnerContent = (
 		<Card
-			onClick={onClick}
+			// On Desktop, verify click here. On Mobile, SwipeToDeleteRow handles tap.
+			onClick={!isMobile ? onClick : undefined}
 			sx={{
 				width: '100%',
-				mb: 0, // Removed margin from card, handled by wrapper
+				// Mobile "bubble" styling is handled by the wrapper now
+				mb: isMobile ? 0 : undefined,
 				display: 'flex',
 				justifyContent: 'space-between',
 				alignItems: 'center',
@@ -73,7 +59,8 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 				borderRadius: isMobile ? '16px' : undefined, // Bubble look on mobile, default on desktop
 				// Ionic items are usually list items.
 				// Let's keep card look but maybe reduced elevation or spacing on mobile
-				boxShadow: isMobile ? undefined : undefined, // Use default shadow for both to ensure "bubble" pop
+				boxShadow: isMobile ? 'none' : undefined, // Remove shadow inside the swipe row
+				bgcolor: 'background.paper',
 				borderBottom: isMobile ? 'none' : undefined, // Remove list separator look
 			}}
 		>
@@ -93,9 +80,9 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 					</Typography>
 				</Stack>
 			</Box>
-			<Box onClick={(e) => e.stopPropagation()} sx={{ display: 'flex', alignItems: 'center' }}>
+			<Box onClick={handleSwitchClick} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} sx={{ display: 'flex', alignItems: 'center' }}>
 				{!isMobile && (
-					<IconButton onClick={onDelete} aria-label="delete" size="large" sx={{ mr: 1 }}>
+					<IconButton onClick={(e) => { e.stopPropagation(); onDelete(); }} aria-label="delete" size="large" sx={{ mr: 1 }}>
 						<DeleteIcon />
 					</IconButton>
 				)}
@@ -110,22 +97,9 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 
 	if (isMobile) {
 		return (
-			<Box sx={{ mb: 2 }}>
-				<SwipeableListItem
-					trailingActions={
-						<TrailingActions>
-							<SwipeAction
-								destructive={true}
-								onClick={onDelete}
-							>
-								<DestructiveAction />
-							</SwipeAction>
-						</TrailingActions>
-					}
-				>
-					{InnerContent}
-				</SwipeableListItem>
-			</Box>
+			<SwipeToDeleteRow onDelete={onDelete} onClick={onClick}>
+				{InnerContent}
+			</SwipeToDeleteRow>
 		);
 	}
 

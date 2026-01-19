@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'motion/react';
-import { Box, IconButton, useTheme } from '@mui/material';
+import { Box } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 interface SwipeToDeleteRowProps {
@@ -16,14 +16,10 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
     onClick,
     deleteThreshold = 0.35
 }) => {
-    const theme = useTheme();
     const x = useMotionValue(0);
     const controls = useAnimation();
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Constraints: can drag left (negative x), but not right (positive x)
-    // We add a little resistance on the right by using constraints
-    const dragConstraints = useRef(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Track drag to distinguish tap vs swipe
@@ -46,16 +42,17 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
         const width = containerRef.current?.offsetWidth || 0;
 
         // Conditions to trigger delete:
-        // 1. Dragged past threshold (>35% of width)
-        // 2. High velocity fling to the left
-        const isPastThreshold = offset < -(width * deleteThreshold);
-        const isFastFling = velocity < -500;
+        // 1. Dragged past threshold (>35% of width) in EITHER direction
+        // 2. High velocity fling (>500) in EITHER direction
+        const isPastThreshold = Math.abs(offset) > (width * deleteThreshold);
+        const isFastFling = Math.abs(velocity) > 500;
 
         if ((isPastThreshold || isFastFling) && !isDeleting) {
             setIsDeleting(true);
-            // Animate off screen to the left
+            // Animate off screen in the direction of the swipe
+            const direction = offset > 0 ? 1 : -1;
             await controls.start({
-                x: -width * 1.5,
+                x: direction * width * 1.5,
                 transition: { duration: 0.2 }
             });
             // Trigger delete callback
@@ -72,10 +69,13 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
         }
     };
 
-    // Transform opacity of delete icon based on drag distance
-    // Fully visible when swiped 50px
-    const iconOpacity = useTransform(x, [0, -50], [0, 1]);
-    const iconScale = useTransform(x, [0, -50], [0.5, 1]);
+    // Right icon (revealed when swiping Left): Visible when x < 0
+    const rightIconOpacity = useTransform(x, [0, -50], [0, 1]);
+    const rightIconScale = useTransform(x, [0, -50], [0.5, 1]);
+
+    // Left icon (revealed when swiping Right): Visible when x > 0
+    const leftIconOpacity = useTransform(x, [0, 50], [0, 1]);
+    const leftIconScale = useTransform(x, [0, 50], [0.5, 1]);
 
     return (
         <Box
@@ -86,8 +86,6 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
                 borderRadius: '16px', // Matches the "bubble" look
                 mb: 2, // Space between bubbles
                 width: '100%',
-                // Prevent vertical scroll lock while swiping horizontally implies touch-action logic
-                // But motion handles much of this. Pan-y allows vertical scroll.
                 touchAction: 'pan-y'
             }}
         >
@@ -103,22 +101,29 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
                     borderRadius: '16px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    pr: 3,
+                    justifyContent: 'space-between', // Space icons to edges
+                    px: 3, // Padding for icons on both sides
                     color: 'error.contrastText'
                 }}
             >
-                <motion.div style={{ opacity: iconOpacity, scale: iconScale }}>
+                {/* Left Icon (appears when dragging Right) */}
+                <motion.div style={{ opacity: leftIconOpacity, scale: leftIconScale }}>
+                    <DeleteIcon />
+                </motion.div>
+
+                {/* Right Icon (appears when dragging Left) */}
+                <motion.div style={{ opacity: rightIconOpacity, scale: rightIconScale }}>
                     <DeleteIcon />
                 </motion.div>
             </Box>
 
             {/* Foreground Layer (Swipeable Content) */}
             <motion.div
-                ref={dragConstraints}
                 drag="x"
-                dragConstraints={{ left: -1000, right: 0 }}
-                dragElastic={{ right: 0.1, left: 0.5 }} // Bouncy on left, rigid on right
+                // Allow drag in both directions. 
+                // Setting constraints to 0 with `dragElastic` creates the resistance effect.
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.5} // Symmetric resistance
                 onDragStart={handleDragStart}
                 onDrag={handleDrag}
                 onDragEnd={handleDragEnd}

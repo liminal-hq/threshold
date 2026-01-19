@@ -16,7 +16,7 @@ import {
     SettingsOutlined as SettingsOutlinedIcon,
     Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { SwipeableList } from 'react-swipeable-list';
+
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { useNavigate } from '@tanstack/react-router';
 import { Alarm } from '../services/DatabaseService';
@@ -141,21 +141,16 @@ const Home: React.FC = () => {
                 flexGrow: 1
             }}>
                 {isMobile ? (
-                    <SwipeableList
-                        threshold={0.25}
-                        fullSwipe={true}
-                    >
-                        {alarms.map((alarm) => (
-                            <AlarmItem
-                                key={alarm.id}
-                                alarm={alarm}
-                                is24h={is24h}
-                                onToggle={(enabled) => handleToggle(alarm, enabled)}
-                                onDelete={() => handleDelete(alarm.id)}
-                                onClick={() => handleEdit(alarm.id)}
-                            />
-                        ))}
-                    </SwipeableList>
+                    alarms.map((alarm) => (
+                        <AlarmItem
+                            key={alarm.id}
+                            alarm={alarm}
+                            is24h={is24h}
+                            onToggle={(enabled) => handleToggle(alarm, enabled)}
+                            onDelete={() => handleDelete(alarm.id)}
+                            onClick={() => handleEdit(alarm.id)}
+                        />
+                    ))
                 ) : (
                     <List>
                         {alarms.map((alarm) => (
