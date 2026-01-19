@@ -4,6 +4,7 @@
 
 - [ ] Create Website at threshold.liminalhq.ca
 - [ ] Create Play Store Feature Graphics
+- [ ] Add force light mode setting and get a light mode screenshot for the site
 - [ ] Write Privacy Policy
 - [ ] Investigate Material You Dynamic Theming Integration
 
