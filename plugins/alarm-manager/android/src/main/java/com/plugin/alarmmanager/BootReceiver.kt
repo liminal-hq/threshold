@@ -14,7 +14,7 @@ class BootReceiver : BroadcastReceiver() {
     }
 
     private fun rescheduleAlarms(context: Context) {
-        val prefs = context.getSharedPreferences("WindowAlarmNative", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("ThresholdNative", Context.MODE_PRIVATE)
         val allPrefs = prefs.all
         val now = System.currentTimeMillis()
 

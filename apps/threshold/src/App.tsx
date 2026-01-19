@@ -15,10 +15,10 @@ import './theme/ringing.css';
 import './theme/components.css';
 
 const App: React.FC = () => {
-	console.log('📦 [window-alarm] App rendering, pathname:', window.location.pathname);
+	console.log('📦 [threshold] App rendering, pathname:', window.location.pathname);
 
 	useEffect(() => {
-		console.log('🚀 [window-alarm] App useEffect running');
+		console.log('🚀 [threshold] App useEffect running');
 		// Detect platform (synchronous in Tauri v2)
 		const os = platform();
 		const win = getCurrentWindow();

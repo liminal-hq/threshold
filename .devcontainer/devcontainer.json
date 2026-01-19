@@ -1,8 +1,11 @@
 {
-	"name": "Window Alarm Dev",
+	"name": "Threshold Dev",
 	"dockerFile": "Dockerfile",
 	// "workspaceFolder": "/workspaces/{{PROJECT_NAME}}",
-	"forwardPorts": [5173, 1420],
+	"forwardPorts": [
+		5173,
+		1420
+	],
 	"runArgs": [
 		"--device=/dev/snd",
 		"--group-add=audio",

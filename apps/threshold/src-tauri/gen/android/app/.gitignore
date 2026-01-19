@@ -1,4 +1,4 @@
-/src/main/java/ca/liminalhq/window_alarm/generated
+/src/main/java/ca/liminalhq/threshold/generated
 /src/main/jniLibs/**/*.so
 /src/main/assets/tauri.conf.json
 /tauri.build.gradle.kts

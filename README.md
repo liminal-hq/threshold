@@ -1,12 +1,12 @@
-# Window Alarm Monorepo
+# Threshold Monorepo
 
-Welcome to the Window Alarm project! This is a minimalist alarm clock application designed for Android and Desktop (Tauri).
+Welcome to the Threshold project! This is a minimalist alarm clock application designed for Android and Desktop (Tauri).
 
 ## Architecture
 
 This is a **monorepo** managed by `pnpm workspaces`.
 
-- `apps/window-alarm`: The main Tauri v2 application (React + Ionic).
+- `apps/threshold`: The main Tauri v2 application (React + Ionic).
 - `packages/core`: Shared Typescript logic (Scheduler, Recurrence rules).
 - `plugins/alarm-manager`: Custom Tauri Plugin for native Android AlarmManager integration.
 - `plugins/alarm-manager/android`: The native Android library code.
@@ -50,7 +50,7 @@ pnpm dev:android
 To capture logs from the Android device, use the following `adb` command. This filters specifically for the app's tags and saves the output to a file:
 
 ```bash
-adb logcat -s window-alarm:* AlarmManager:* AlarmManagerPlugin:* DatabaseService:* chromium:I Tauri/Console:* *:E > logcat.log
+adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* DatabaseService:* chromium:I Tauri/Console:* *:E > logcat.log
 ```
 
 ## Documentation

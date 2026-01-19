@@ -53,7 +53,7 @@ pnpm tauri android dev
 To run the application in desktop mode (Linux/macOS/Windows):
 
 ```bash
-cd apps/window-alarm
+cd apps/threshold
 pnpm tauri dev
 ```
 

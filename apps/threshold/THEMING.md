@@ -1,4 +1,4 @@
-# Window Alarm Theming System
+# Threshold Theming System
 
 The application uses a robust theming system built on CSS Variables and Material UI (MUI). It supports multiple themes, each with Light and Dark variants, and features real-time dynamic updates.
 
