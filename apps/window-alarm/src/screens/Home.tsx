@@ -115,7 +115,7 @@ const Home: React.FC = () => {
             <Container maxWidth={false} sx={{
                 mt: !isMobile ? 8 : 0,
                 pb: 10,
-                px: !isMobile ? 2 : 0,
+                px: 2, // Always add padding for "inset" bubble look
                 flexGrow: 1
             }}>
                 {isMobile ? (

@@ -116,6 +116,7 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 						<SwipeAction
 							destructive={true}
 							onClick={onDelete}
+							threshold={0.25}
 						>
 							<DestructiveAction />
 						</SwipeAction>
