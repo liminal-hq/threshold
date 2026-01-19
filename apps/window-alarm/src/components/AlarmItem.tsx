@@ -111,11 +111,16 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 	if (isMobile) {
 		return (
 			<SwipeableListItem
-				destructive={true}
-				swipeLeft={{
-					content: <DestructiveAction />,
-					action: onDelete
-				}}
+				trailingActions={
+					<TrailingActions>
+						<SwipeAction
+							destructive={true}
+							onClick={onDelete}
+						>
+							<DestructiveAction />
+						</SwipeAction>
+					</TrailingActions>
+				}
 			>
 				{InnerContent}
 			</SwipeableListItem>

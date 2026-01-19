@@ -176,7 +176,12 @@ const Home: React.FC = () => {
                         Add Alarm
                     </Button>
                 ) : (
-                    <Fab color="secondary" aria-label="add" onClick={handleAdd}>
+                    <Fab
+                        color="secondary"
+                        aria-label="add"
+                        onClick={handleAdd}
+                        sx={{ borderRadius: '16px' }}
+                    >
                         <AddIcon />
                     </Fab>
                 )}
