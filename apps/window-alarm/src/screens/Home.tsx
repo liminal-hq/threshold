@@ -124,7 +124,10 @@ const Home: React.FC = () => {
                 flexGrow: 1
             }}>
                 {isMobile ? (
-                    <SwipeableList>
+                    <SwipeableList
+                        threshold={0.25}
+                        fullSwipe={true}
+                    >
                         {alarms.map((alarm) => (
                             <AlarmItem
                                 key={alarm.id}
