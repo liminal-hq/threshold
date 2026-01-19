@@ -51,6 +51,8 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 				bgcolor: 'error.main',
 				color: 'error.contrastText',
 				pr: 2,
+				my: 2, // Match the card margin
+				borderRadius: '16px', // Match the card border radius
 			}}
 		>
 			<DeleteIcon />
@@ -62,17 +64,17 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 			onClick={onClick}
 			sx={{
 				width: '100%',
-				mb: isMobile ? 0 : 2,
+				mb: isMobile ? 2 : 2, // Consistent spacing for both
 				display: 'flex',
 				justifyContent: 'space-between',
 				alignItems: 'center',
 				p: 2,
 				cursor: 'pointer',
-				borderRadius: isMobile ? 0 : undefined, // Square corners for list look on mobile? Or keep card look?
+				borderRadius: isMobile ? '16px' : undefined, // Bubble look on mobile, default on desktop
 				// Ionic items are usually list items.
 				// Let's keep card look but maybe reduced elevation or spacing on mobile
-				boxShadow: isMobile ? 'none' : undefined,
-				borderBottom: isMobile ? '1px solid rgba(0,0,0,0.12)' : undefined,
+				boxShadow: isMobile ? undefined : undefined, // Use default shadow for both to ensure "bubble" pop
+				borderBottom: isMobile ? 'none' : undefined, // Remove list separator look
 			}}
 		>
 			<Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -109,16 +111,11 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 	if (isMobile) {
 		return (
 			<SwipeableListItem
-				trailingActions={
-					<TrailingActions>
-						<SwipeAction
-							onClick={onDelete}
-							destructive={true}
-						>
-							<DestructiveAction />
-						</SwipeAction>
-					</TrailingActions>
-				}
+				destructive={true}
+				swipeLeft={{
+					content: <DestructiveAction />,
+					action: onDelete
+				}}
 			>
 				{InnerContent}
 			</SwipeableListItem>
