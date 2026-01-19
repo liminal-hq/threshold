@@ -1,13 +1,13 @@
 # Desktop Deep Links
 
-The application registers the custom protocol `window-alarm://`.
+The application registers the custom protocol `threshold://`.
 
 ## Usage
 
 You can trigger the app from external scripts or browsers using:
 
 ```
-window-alarm://set?time=07:30&label=WakeUp
+threshold://set?time=07:30&label=WakeUp
 ```
 
 ## Configuration

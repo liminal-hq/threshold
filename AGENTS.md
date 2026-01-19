@@ -18,7 +18,7 @@ Examples:
 
 ## Application Protocol
 
-- The application registers the `window-alarm://` protocol.
+- The application registers the `threshold://` protocol.
 - **IMPORTANT:** If the app name or identifier changes, ensure this protocol registration is updated in `tauri.conf.json` and relevant documentation.
 
 ## Code Organization

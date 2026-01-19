@@ -1,8 +1,8 @@
-# Window Alarm — Task & Specification Document
+# Threshold — Task & Specification Document
 
 ## 1. Overview
 
-**Window Alarm** is a minimalist alarm clock application for Android and Desktop.
+**Threshold** is a minimalist alarm clock application for Android and Desktop.
 **Core Feature:** It offers a "Random Window" mode where the user selects a time range (e.g., 7:00 AM - 7:30 AM), and the alarm rings _once_ at a randomly selected time within that window.
 
 ## 2. Technical Architecture
@@ -18,7 +18,7 @@ The project is a **Tauri v2 Monorepo** managed with `pnpm`.
 
 ### Structure (`pnpm-workspace.yaml`)
 
-- `apps/window-alarm`: The main Tauri application.
+- `apps/threshold`: The main Tauri application.
 - `packages/core`: Shared pure TypeScript logic (Recurrence rules, Random sampling).
 - `plugins/alarm-manager`: Custom Tauri plugin wrapping Android's `AlarmManager`.
 

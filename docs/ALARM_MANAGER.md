@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Window Alarm application requires a robust alarm management system on Android that supports per-alarm sound selection and reliable ringing behaviour. This specification details the implementation of the "native-like" alarm system, which includes:
+The Threshold application requires a robust alarm management system on Android that supports per-alarm sound selection and reliable ringing behaviour. This specification details the implementation of the "native-like" alarm system, which includes:
 
 1.  **Android Alarm Sound Picker**: Allowing users to select system alarm tones.
 2.  **Per-Alarm Sound Persistence**: Storing the selected sound URI with the alarm.
@@ -36,7 +36,7 @@ export interface PickedAlarmSound {
 
 ### Frontend Services
 
-#### `AlarmSoundPickerService` (`apps/window-alarm/src/services/AlarmSoundPickerService.ts`)
+#### `AlarmSoundPickerService` (`apps/threshold/src/services/AlarmSoundPickerService.ts`)
 
 Wrapper around the plugin's `pickAlarmSound` command.
 
@@ -86,7 +86,7 @@ On app init, `DatabaseService` checks for the existence of these columns and exe
 
 ### SharedPreferences (Android Native)
 
-To support boot rescheduling and independent ringing, the native plugin stores alarm metadata in `SharedPreferences` ("WindowAlarmNative"):
+To support boot rescheduling and independent ringing, the native plugin stores alarm metadata in `SharedPreferences` ("ThresholdNative"):
 
 *   Key: `alarm_{id}` -> Value: `triggerAt` (Long)
 *   Key: `alarm_sound_{id}` -> Value: `soundUri` (String) [NEW]

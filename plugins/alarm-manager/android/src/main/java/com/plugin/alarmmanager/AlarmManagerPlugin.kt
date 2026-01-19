@@ -167,7 +167,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     @Command
     fun get_launch_args(invoke: Invoke) {
         // Check for imported alarms from SetAlarmActivity
-        val prefs = activity.getSharedPreferences("WindowAlarmImports", Context.MODE_PRIVATE)
+        val prefs = activity.getSharedPreferences("ThresholdImports", Context.MODE_PRIVATE)
         val allImports = prefs.all
         val importsList = mutableListOf<ImportedAlarm>()
 

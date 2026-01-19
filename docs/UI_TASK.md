@@ -1,4 +1,4 @@
-# UI Implementation Task: Window Alarm
+# UI Implementation Task: Threshold
 
 ## Overview
 
@@ -33,7 +33,7 @@ The goal is to build a minimalist, mobile-first UI using **React** and **Ionic F
 
 **Layout:**
 
-- **Header:** Title "Window Alarm".
+- **Header:** Title "Threshold".
 - **Content:** List of alarm cards.
 - **Footer/FAB:** Floating Action Button (+) to add a new alarm.
 

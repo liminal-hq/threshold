@@ -72,7 +72,7 @@ class SetAlarmActivity : Activity() {
     }
 
     private fun saveImportPayload(id: Int, hour: Int, minutes: Int, label: String) {
-        val prefs = getSharedPreferences("WindowAlarmImports", MODE_PRIVATE)
+        val prefs = getSharedPreferences("ThresholdImports", MODE_PRIVATE)
         val importString = "$hour:$minutes|$label"
         prefs.edit().putString("import_$id", importString).apply()
     }

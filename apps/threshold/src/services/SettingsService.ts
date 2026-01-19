@@ -2,8 +2,8 @@ import { emit } from '@tauri-apps/api/event';
 
 export type Theme = 'deep-night' | 'canadian-cottage-winter' | 'georgian-bay-plunge' | 'boring-light' | 'boring-dark';
 
-const KEY_THEME = 'window_alarm_theme';
-const KEY_24H = 'window_alarm_24h';
+const KEY_THEME = 'threshold_theme';
+const KEY_24H = 'threshold_24h';
 
 export const SettingsService = {
 	getTheme: (): Theme => {
@@ -28,11 +28,11 @@ export const SettingsService = {
 	},
 
 	getForceDark: (): boolean => {
-		return localStorage.getItem('window_alarm_force_dark') === 'true';
+		return localStorage.getItem('threshold_force_dark') === 'true';
 	},
 
 	setForceDark: (enabled: boolean) => {
-		localStorage.setItem('window_alarm_force_dark', String(enabled));
+		localStorage.setItem('threshold_force_dark', String(enabled));
 		SettingsService.applyTheme();
 		// Emit event for other windows
 		emit('theme-changed', { theme: SettingsService.getTheme(), forceDark: enabled });
