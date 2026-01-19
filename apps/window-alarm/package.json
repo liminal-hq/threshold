@@ -27,9 +27,9 @@
 		"@window-alarm/core": "workspace:*",
 		"date-fns": "^3.6.0",
 		"history": "^4.10.1",
+		"motion": "^12.27.0",
 		"react": "^19.1.0",
-		"react-dom": "^19.1.0",
-		"react-swipeable-list": "^1.10.0"
+		"react-dom": "^19.1.0"
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "^2",

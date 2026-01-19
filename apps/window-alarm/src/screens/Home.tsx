@@ -16,7 +16,7 @@ import {
     SettingsOutlined as SettingsOutlinedIcon,
     Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { SwipeableList } from 'react-swipeable-list';
+
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { useNavigate } from '@tanstack/react-router';
 import { Alarm } from '../services/DatabaseService';
@@ -68,8 +68,29 @@ const Home: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
-        await alarmManagerService.deleteAlarm(id);
-        loadData();
+        console.log(`[DELETE_DEBUG] handleDelete called for id: ${id}`);
+        try {
+            // Optimistic update: Remove immediately from UI
+            console.log(`[DELETE_DEBUG] performing optimistic update for id: ${id}`);
+            setAlarms(prev => {
+                const filtered = prev.filter(a => a.id !== id);
+                console.log(`[DELETE_DEBUG] filtered alarms count: ${filtered.length} (prev: ${prev.length})`);
+                return filtered;
+            });
+
+            // Then call backend
+            console.log(`[DELETE_DEBUG] calling alarmManagerService.deleteAlarm(${id})`);
+            await alarmManagerService.deleteAlarm(id);
+            console.log(`[DELETE_DEBUG] deleteAlarm returned, reloading data...`);
+
+            // Reload to ensure sync (optional if optimistic is trusted, but good safety)
+            await loadData();
+            console.log(`[DELETE_DEBUG] data reloaded successfully`);
+        } catch (e) {
+            console.error(`[DELETE_DEBUG] ERROR in handleDelete:`, e);
+            // Revert optimistic update if needed or just reload
+            loadData();
+        }
     };
 
     const handleEdit = (id: number) => {
@@ -114,23 +135,22 @@ const Home: React.FC = () => {
 
             <Container maxWidth={false} sx={{
                 mt: !isMobile ? 8 : 0,
+                pt: isMobile ? 2 : 0, // Add top padding on mobile to clear header/prevent blend
                 pb: 10,
-                px: !isMobile ? 2 : 0,
+                px: 2, // Always add padding for "inset" bubble look
                 flexGrow: 1
             }}>
                 {isMobile ? (
-                    <SwipeableList>
-                        {alarms.map((alarm) => (
-                            <AlarmItem
-                                key={alarm.id}
-                                alarm={alarm}
-                                is24h={is24h}
-                                onToggle={(enabled) => handleToggle(alarm, enabled)}
-                                onDelete={() => handleDelete(alarm.id)}
-                                onClick={() => handleEdit(alarm.id)}
-                            />
-                        ))}
-                    </SwipeableList>
+                    alarms.map((alarm) => (
+                        <AlarmItem
+                            key={alarm.id}
+                            alarm={alarm}
+                            is24h={is24h}
+                            onToggle={(enabled) => handleToggle(alarm, enabled)}
+                            onDelete={() => handleDelete(alarm.id)}
+                            onClick={() => handleEdit(alarm.id)}
+                        />
+                    ))
                 ) : (
                     <List>
                         {alarms.map((alarm) => (
@@ -160,8 +180,8 @@ const Home: React.FC = () => {
                 borderColor: 'divider'
             } : {
                 position: 'fixed',
-                bottom: 16,
-                right: 16,
+                bottom: 32, // More breathing room from bottom
+                right: 32,  // More breathing room from right
                 zIndex: 1000
             }}>
                 {!isMobile ? (
@@ -176,7 +196,13 @@ const Home: React.FC = () => {
                         Add Alarm
                     </Button>
                 ) : (
-                    <Fab color="secondary" aria-label="add" onClick={handleAdd}>
+                    <Fab
+                        color="secondary"
+                        aria-label="add"
+                        onClick={handleAdd}
+                        size="large" // Larger button for better ergonomics
+                        sx={{ borderRadius: '16px' }}
+                    >
                         <AddIcon />
                     </Fab>
                 )}
