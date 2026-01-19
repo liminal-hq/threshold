@@ -28,7 +28,7 @@ class AlarmRingingService : Service() {
 
     companion object {
         const val CHANNEL_ID = "alarm_ringing_service"
-        const val ACTION_DISMISS = "com.windowalarm.ACTION_DISMISS"
+        const val ACTION_DISMISS = "com.threshold.ACTION_DISMISS"
         const val NOTIFICATION_ID = 999
         private const val TAG = "AlarmRingingService"
     }
@@ -43,7 +43,7 @@ class AlarmRingingService : Service() {
 
         // Acquire WakeLock
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "WindowAlarm::RingingService")
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Threshold::RingingService")
         wakeLock?.acquire(10 * 60 * 1000L /*10 minutes*/)
     }
 
@@ -108,7 +108,7 @@ class AlarmRingingService : Service() {
         )
 
         // Launch App Intent with Deep Link
-        val deepLinkUri = "window-alarm://ringing/$currentAlarmId"
+        val deepLinkUri = "threshold://ringing/$currentAlarmId"
         val launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLinkUri)).apply {
             setPackage(packageName)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

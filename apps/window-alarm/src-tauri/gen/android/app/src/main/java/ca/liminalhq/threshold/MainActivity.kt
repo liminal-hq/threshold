@@ -1,4 +1,4 @@
-package ca.liminalhq.window_alarm
+package ca.liminalhq.threshold
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
