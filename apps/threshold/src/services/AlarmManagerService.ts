@@ -5,6 +5,8 @@ import { listen, emit } from '@tauri-apps/api/event';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import {
 	sendNotification,
+	registerActionTypes,
+	onAction
 } from '@tauri-apps/plugin-notification';
 import { Alarm, AlarmMode, DayOfWeek } from '@threshold/core/types';
 import { calculateNextTrigger as calcTrigger } from '@threshold/core/scheduler';
@@ -74,6 +76,55 @@ export class AlarmManagerService {
 				// Check if app was launched by an alarm notification (do this AFTER init completes)
 				console.log('[AlarmManager] Checking for active alarm...');
 				await this.checkActiveAlarm();
+
+				// Register Notification Actions (Mobile Only)
+				if (PlatformUtils.isMobile()) {
+					console.log('[AlarmManager] Registering notification actions...');
+					try {
+						await registerActionTypes([
+							{
+								id: 'alarm_trigger',
+								actions: [
+									{
+										id: 'snooze',
+										title: 'Snooze',
+										input: false,
+									},
+									{
+										id: 'dismiss',
+										title: 'Dismiss',
+										destructive: true,
+										foreground: false, // Don't bring app to foreground for dismiss
+									},
+								],
+							},
+						]);
+
+						await onAction((notification) => {
+							console.log('[AlarmManager] Action performed:', notification);
+							
+							const actionTypeId = (notification as any).actionTypeId;
+							if (actionTypeId !== 'alarm_trigger') {
+								console.log('[AlarmManager] Ignoring action from different category:', actionTypeId);
+								return;
+							}
+
+							const actionId = (notification as any).actionId;
+							
+							if (actionId === 'dismiss') {
+								console.log('[AlarmManager] Action: Dismiss');
+								this.stopRinging();
+							} else if (actionId === 'snooze') {
+								console.log('[AlarmManager] Action: Snooze');
+								// Placeholder: Treat snooze as cancel for now until full snooze logic is reviewed
+								this.stopRinging();
+							}
+						});
+						console.log('[AlarmManager] Notification actions registered.');
+					} catch (e) {
+						console.error('[AlarmManager] Failed to register notification actions:', e);
+					}
+				}
 			} catch (e) {
 				console.error('[AlarmManager] CRITICAL: Initialization failed', e);
 				console.error('[AlarmManager] Error details:', {
@@ -260,9 +311,11 @@ export class AlarmManagerService {
 
     private async handleAlarmRing(id: number) {
         // 1. Send Notification
+		const isMobile = PlatformUtils.isMobile();
         sendNotification({
             title: APP_NAME,
             body: 'Your alarm is ringing!',
+			actionTypeId: isMobile ? 'alarm_trigger' : undefined,
         });
 
         // 2. Open Floating Window (Singleton)
