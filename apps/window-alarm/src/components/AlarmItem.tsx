@@ -51,7 +51,7 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 				bgcolor: 'error.main',
 				color: 'error.contrastText',
 				pr: 2,
-				my: 2, // Match the card margin
+				// removed my: 2 to align top/bottom exactly with card
 				borderRadius: '16px', // Match the card border radius
 			}}
 		>
@@ -64,7 +64,7 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 			onClick={onClick}
 			sx={{
 				width: '100%',
-				mb: isMobile ? 2 : 2, // Consistent spacing for both
+				mb: 0, // Removed margin from card, handled by wrapper
 				display: 'flex',
 				justifyContent: 'space-between',
 				alignItems: 'center',
@@ -110,23 +110,28 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 
 	if (isMobile) {
 		return (
-			<SwipeableListItem
-				trailingActions={
-					<TrailingActions>
-						<SwipeAction
-							destructive={true}
-							onClick={onDelete}
-							threshold={0.25}
-						>
-							<DestructiveAction />
-						</SwipeAction>
-					</TrailingActions>
-				}
-			>
-				{InnerContent}
-			</SwipeableListItem>
+			<Box sx={{ mb: 2 }}>
+				<SwipeableListItem
+					trailingActions={
+						<TrailingActions>
+							<SwipeAction
+								destructive={true}
+								onClick={onDelete}
+							>
+								<DestructiveAction />
+							</SwipeAction>
+						</TrailingActions>
+					}
+				>
+					{InnerContent}
+				</SwipeableListItem>
+			</Box>
 		);
 	}
 
-	return InnerContent;
+	return (
+		<Box sx={{ mb: 2 }}>
+			{InnerContent}
+		</Box>
+	);
 };
