@@ -237,9 +237,13 @@ export class AlarmManagerService {
 	}
 
 	async deleteAlarm(id: number) {
+        console.log(`[DELETE_DEBUG] AlarmManagerService.deleteAlarm(${id}) called`);
 		await this.cancelNativeAlarm(id);
+        console.log(`[DELETE_DEBUG] cancelled native alarm ${id}, now deleting from DB...`);
 		await databaseService.deleteAlarm(id);
+        console.log(`[DELETE_DEBUG] DB delete complete for ${id}, notifying listeners...`);
 		this.notifyGlobalListeners();
+        console.log(`[DELETE_DEBUG] listeners notified for ${id}`);
 	}
 
 	private async scheduleNativeAlarm(id: number, timestamp: number, soundUri?: string | null) {
