@@ -7,6 +7,7 @@ import {
 } from './Icons';
 import { ContextMenu, MenuModel } from './ContextMenu';
 import './TitleBar.css';
+import { APP_NAME } from '../constants';
 
 export const TitleBar: React.FC = () => {
 	const [platformType, setPlatformType] = useState<'mac' | 'linux' | 'win'>('linux');
@@ -177,7 +178,7 @@ export const TitleBar: React.FC = () => {
 						<MacControls />
 						<div className="title-drag-region" data-tauri-drag-region />
 						<div className="app-title" data-tauri-drag-region>
-							Window Alarm
+							{APP_NAME}
 						</div>
 						<div className="title-drag-region" data-tauri-drag-region />
 						<div className="window-controls-placeholder" />
@@ -189,7 +190,7 @@ export const TitleBar: React.FC = () => {
 						<div className="window-controls-placeholder" />
 						<div className="title-drag-region" data-tauri-drag-region />
 						<div className="app-title" data-tauri-drag-region>
-							Window Alarm
+							{APP_NAME}
 						</div>
 						<div className="title-drag-region" data-tauri-drag-region />
 						<LinuxControls />
@@ -199,7 +200,7 @@ export const TitleBar: React.FC = () => {
 				{platformType === 'win' && (
 					<>
 						<div className="app-title left" data-tauri-drag-region>
-							Window Alarm
+							{APP_NAME}
 						</div>
 						<div className="title-drag-region" data-tauri-drag-region />
 						<WinControls />

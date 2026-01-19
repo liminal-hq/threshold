@@ -11,7 +11,7 @@ object AlarmUtils {
     fun scheduleAlarm(context: Context, id: Int, triggerAt: Long, soundUri: String?) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = "com.windowalarm.ALARM_TRIGGER"
+            action = "com.threshold.ALARM_TRIGGER"
             putExtra("ALARM_ID", id)
             if (soundUri != null) {
                 putExtra("ALARM_SOUND_URI", soundUri)
@@ -32,7 +32,7 @@ object AlarmUtils {
     fun cancelAlarm(context: Context, id: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = "com.windowalarm.ALARM_TRIGGER"
+            action = "com.threshold.ALARM_TRIGGER"
             putExtra("ALARM_ID", id)
         }
         val pendingIntent = PendingIntent.getBroadcast(
@@ -45,7 +45,7 @@ object AlarmUtils {
     }
 
     fun saveAlarmToPrefs(context: Context, id: Int, triggerAt: Long, soundUri: String?) {
-        val prefs = context.getSharedPreferences("WindowAlarmNative", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("ThresholdNative", Context.MODE_PRIVATE)
         val editor = prefs.edit()
         editor.putLong("alarm_$id", triggerAt)
         if (soundUri != null) {
@@ -57,7 +57,7 @@ object AlarmUtils {
     }
 
     fun removeAlarmFromPrefs(context: Context, id: Int) {
-        val prefs = context.getSharedPreferences("WindowAlarmNative", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("ThresholdNative", Context.MODE_PRIVATE)
         prefs.edit()
             .remove("alarm_$id")
             .remove("alarm_sound_$id")

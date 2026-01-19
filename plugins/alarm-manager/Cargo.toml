@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Jules"]
 edition = "2021"
 links = "tauri-plugin-alarm-manager"
-description = "Native Alarm Manager for Window Alarm"
+description = "Native Alarm Manager for Threshold"
 
 [lib]
 crate-type = ["staticlib", "cdylib", "rlib"]

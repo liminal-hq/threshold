@@ -1,12 +1,13 @@
 import { databaseService } from './DatabaseService';
+import { APP_NAME } from '../constants';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import {
 	sendNotification,
 } from '@tauri-apps/plugin-notification';
-import { Alarm, AlarmMode, DayOfWeek } from '@window-alarm/core/types';
-import { calculateNextTrigger as calcTrigger } from '@window-alarm/core/scheduler';
+import { Alarm, AlarmMode, DayOfWeek } from '@threshold/core/types';
+import { calculateNextTrigger as calcTrigger } from '@threshold/core/scheduler';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
 interface ImportedAlarm {
@@ -260,7 +261,7 @@ export class AlarmManagerService {
     private async handleAlarmRing(id: number) {
         // 1. Send Notification
         sendNotification({
-            title: 'Window Alarm',
+            title: APP_NAME,
             body: 'Your alarm is ringing!',
         });
 

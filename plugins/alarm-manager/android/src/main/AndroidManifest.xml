@@ -19,7 +19,7 @@
 
         <receiver android:name=".AlarmReceiver" android:exported="false">
              <intent-filter>
-                <action android:name="com.windowalarm.ALARM_TRIGGER" />
+                <action android:name="com.threshold.ALARM_TRIGGER" />
             </intent-filter>
         </receiver>
 
@@ -32,7 +32,7 @@
         <activity android:name=".SetAlarmActivity"
             android:exported="true"
             android:theme="@android:style/Theme.NoDisplay"
-            android:label="Window Alarm">
+            android:label="Threshold">
             <intent-filter>
                 <action android:name="android.intent.action.SET_ALARM" />
                 <category android:name="android.intent.category.DEFAULT" />

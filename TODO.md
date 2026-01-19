@@ -1,5 +1,12 @@
 # TODO
 
+## Brand
+
+- [ ] Create Website at threshold.liminalhq.ca
+- [ ] Create Play Store Feature Graphics
+- [ ] Write Privacy Policy
+- [ ] Investigate Material You Dynamic Theming Integration
+
 ## Technical Debt
 
 - [ ] Migrate SQLite database to use explicit `appDataDir()` path instead of default path

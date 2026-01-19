@@ -1,5 +1,5 @@
 {
-	"name": "window-alarm",
+	"name": "threshold",
 	"private": true,
 	"version": "0.1.0",
 	"type": "module",
@@ -24,7 +24,7 @@
 		"@tauri-apps/plugin-os": "^2.3.2",
 		"@tauri-apps/plugin-sql": "^2.3.1",
 		"@tauri-apps/plugin-window-state": "~2.4.1",
-		"@window-alarm/core": "workspace:*",
+		"@threshold/core": "workspace:*",
 		"date-fns": "^3.6.0",
 		"history": "^4.10.1",
 		"motion": "^12.27.0",
