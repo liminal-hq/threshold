@@ -1,0 +1,55 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Liminal HQ mark (Between with subtle background)">
+  <defs>
+    <!-- Very subtle container depth -->
+    <linearGradient id="inkBase" x1="40" y1="32" x2="216" y2="224" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0E0D12"/>
+      <stop offset="0.55" stop-color="#0A0A0D"/>
+      <stop offset="1" stop-color="#08080B"/>
+    </linearGradient>
+
+    <!-- Dialled-back ambient lift -->
+    <radialGradient id="inkBloom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
+      gradientTransform="translate(96 80) rotate(90) scale(210 210)">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.018"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.006"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Mark stroke gradient -->
+    <linearGradient id="liminalStroke" x1="64" y1="64" x2="192" y2="192" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5D3147"/>
+      <stop offset="0.55" stop-color="#CF5D22"/>
+      <stop offset="1" stop-color="#F19B18"/>
+    </linearGradient>
+
+    <!-- Portal glow behind gap -->
+    <radialGradient id="portalGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
+      gradientTransform="translate(128 132) rotate(90) scale(72 52)">
+      <stop offset="0" stop-color="#F7E2BA" stop-opacity="0.34"/>
+      <stop offset="0.55" stop-color="#F19B18" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#F19B18" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+
+  <!-- Container -->
+  <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#inkBase)"/>
+  <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#inkBloom)"/>
+
+  <!-- Glow behind the opening -->
+  <g filter="url(#softGlow)">
+    <ellipse cx="128" cy="140" rx="46" ry="62" fill="url(#portalGlow)"/>
+  </g>
+
+  <!-- Brackets -->
+  <path d="M110 84H96C83.85 84 74 93.85 74 106V150C74 162.15 83.85 172 96 172H110"
+        stroke="url(#liminalStroke)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M146 84H160C172.15 84 182 93.85 182 106V150C182 162.15 172.15 172 160 172H146"
+        stroke="url(#liminalStroke)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Centre gap -->
+  <path d="M128 102V154" stroke="#F7E2BA" stroke-opacity="0.85" stroke-width="10" stroke-linecap="round"/>
+</svg>
