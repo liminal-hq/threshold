@@ -23,6 +23,7 @@ import { Alarm } from '../services/DatabaseService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { AlarmItem } from '../components/AlarmItem';
 import { SettingsService } from '../services/SettingsService';
+import { APP_NAME } from '../constants';
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
@@ -107,7 +108,7 @@ const Home: React.FC = () => {
                 <AppBar position="sticky" elevation={0} sx={{ paddingTop: 'env(safe-area-inset-top)' }}>
                     <Toolbar>
                         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                            Window Alarm
+                            {APP_NAME}
                         </Typography>
                         <IconButton color="inherit" onClick={() => loadData()}>
                             <RefreshIcon />

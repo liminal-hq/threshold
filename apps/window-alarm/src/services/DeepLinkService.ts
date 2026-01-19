@@ -1,5 +1,6 @@
 import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import type { router as routerType } from '../router';
+import { DEEP_LINK_SCHEME } from '../constants';
 
 let initialized = false;
 let routerInstance: typeof routerType | null = null;
@@ -50,23 +51,29 @@ export async function initDeepLinks(router: typeof routerType) {
 
 /**
  * Parse and handle a deep link URL.
- * Converts window-alarm:// URLs to internal routes.
+ * Converts ${DEEP_LINK_SCHEME}:// URLs to internal routes.
  * 
  * Examples:
- * - window-alarm://home → /home
- * - window-alarm://ringing/123 → /ringing/123
- * - window-alarm://settings → /settings
+ * - ${DEEP_LINK_SCHEME}://home → /home
+ * - ${DEEP_LINK_SCHEME}://ringing/123 → /ringing/123
+ * - ${DEEP_LINK_SCHEME}://settings → /settings
  */
 function handleDeepLink(url: string) {
     try {
         const parsed = new URL(url);
+
+        // Optional: Validate scheme
+        if (parsed.protocol !== `${DEEP_LINK_SCHEME}:`) {
+            console.warn(`[DeepLink] Unknown protocol: ${parsed.protocol}, expected ${DEEP_LINK_SCHEME}:`);
+            // We might still try to handle it if it's just a path, but usually strict is better
+        }
         
         // Extract path from deep link
-        // For window-alarm://ringing/123, pathname will be empty and host is 'ringing'
+        // For ${DEEP_LINK_SCHEME}://ringing/123, pathname will be empty and host is 'ringing'
         // We need to reconstruct the path
         let path = parsed.pathname || '/';
         
-        // Handle the case where the route is in the host (e.g., window-alarm://home)
+        // Handle the case where the route is in the host (e.g., ${DEEP_LINK_SCHEME}://home)
         if (parsed.host && parsed.host !== 'localhost') {
             path = '/' + parsed.host + path;
         }

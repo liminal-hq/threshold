@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql';
-import { Alarm, AlarmMode, DayOfWeek } from '@window-alarm/core/types';
+import { Alarm, AlarmMode, DayOfWeek } from '@threshold/core/types';
 export type { Alarm, AlarmMode, DayOfWeek };
 
 const DB_NAME = 'alarms.db';
