@@ -68,7 +68,11 @@ const Home: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
+        // Optimistic update: Remove immediately from UI
+        setAlarms(prev => prev.filter(a => a.id !== id));
+        // Then call backend
         await alarmManagerService.deleteAlarm(id);
+        // Reload to ensure sync (optional if optimistic is trusted, but good safety)
         loadData();
     };
 
@@ -114,6 +118,7 @@ const Home: React.FC = () => {
 
             <Container maxWidth={false} sx={{
                 mt: !isMobile ? 8 : 0,
+                pt: isMobile ? 2 : 0, // Add top padding on mobile to clear header/prevent blend
                 pb: 10,
                 px: 2, // Always add padding for "inset" bubble look
                 flexGrow: 1
@@ -160,8 +165,8 @@ const Home: React.FC = () => {
                 borderColor: 'divider'
             } : {
                 position: 'fixed',
-                bottom: 16,
-                right: 16,
+                bottom: 32, // More breathing room from bottom
+                right: 32,  // More breathing room from right
                 zIndex: 1000
             }}>
                 {!isMobile ? (
@@ -180,6 +185,7 @@ const Home: React.FC = () => {
                         color="secondary"
                         aria-label="add"
                         onClick={handleAdd}
+                        size="large" // Larger button for better ergonomics
                         sx={{ borderRadius: '16px' }}
                     >
                         <AddIcon />
