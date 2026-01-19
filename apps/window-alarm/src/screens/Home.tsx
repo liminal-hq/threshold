@@ -68,12 +68,29 @@ const Home: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
-        // Optimistic update: Remove immediately from UI
-        setAlarms(prev => prev.filter(a => a.id !== id));
-        // Then call backend
-        await alarmManagerService.deleteAlarm(id);
-        // Reload to ensure sync (optional if optimistic is trusted, but good safety)
-        loadData();
+        console.log(`[DELETE_DEBUG] handleDelete called for id: ${id}`);
+        try {
+            // Optimistic update: Remove immediately from UI
+            console.log(`[DELETE_DEBUG] performing optimistic update for id: ${id}`);
+            setAlarms(prev => {
+                const filtered = prev.filter(a => a.id !== id);
+                console.log(`[DELETE_DEBUG] filtered alarms count: ${filtered.length} (prev: ${prev.length})`);
+                return filtered;
+            });
+
+            // Then call backend
+            console.log(`[DELETE_DEBUG] calling alarmManagerService.deleteAlarm(${id})`);
+            await alarmManagerService.deleteAlarm(id);
+            console.log(`[DELETE_DEBUG] deleteAlarm returned, reloading data...`);
+
+            // Reload to ensure sync (optional if optimistic is trusted, but good safety)
+            await loadData();
+            console.log(`[DELETE_DEBUG] data reloaded successfully`);
+        } catch (e) {
+            console.error(`[DELETE_DEBUG] ERROR in handleDelete:`, e);
+            // Revert optimistic update if needed or just reload
+            loadData();
+        }
     };
 
     const handleEdit = (id: number) => {
