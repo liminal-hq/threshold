@@ -1,4 +1,6 @@
-# Window Alarm App
+# Threshold
+
+Flexible alarms and timers that respect your time without rigid schedules.
 
 This directory contains the main Tauri v2 application.
 
@@ -7,7 +9,7 @@ This directory contains the main Tauri v2 application.
 - **Framework:** Tauri v2
 - **Frontend:** React + TypeScript + Ionic Framework
 - **State/Logic:** Custom Hooks + SQLite (`tauri-plugin-sql`)
-- **Native Integration:** `tauri-plugin-alarm-manager` (Local plugin)
+- **Native Integration:** `tauri-plugin-alarm-manager` (Local plugin for Threshold)
 
 ## Theming
 
