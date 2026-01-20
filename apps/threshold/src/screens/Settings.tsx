@@ -21,6 +21,7 @@ import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useNavigate } from '@tanstack/react-router';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SettingsService, Theme } from '../services/SettingsService';
+import { alarmManagerService } from '../services/AlarmManagerService';
 import { useThemeContext } from '../contexts/ThemeContext';
 
 const Settings: React.FC = () => {
@@ -173,6 +174,26 @@ const Settings: React.FC = () => {
                                     }}
                                 >
                                     <span style={{ fontSize: '1.2rem' }}>🔔</span>
+                                </IconButton>
+                            </ListItem>
+
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="Test Notification"
+                                    secondary="Send a test notification with actions"
+                                />
+                                <IconButton
+                                    edge="end"
+                                    onClick={() => alarmManagerService.sendTestNotification()}
+                                    sx={{
+                                        bgcolor: 'secondary.main',
+                                        color: 'secondary.contrastText',
+                                        '&:hover': {
+                                            bgcolor: 'secondary.dark',
+                                        }
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.2rem' }}>📩</span>
                                 </IconButton>
                             </ListItem>
                         </List>
