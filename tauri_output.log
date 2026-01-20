@@ -1,0 +1,29 @@
+
+> window-alarm@0.1.0 tauri /app/apps/window-alarm
+> tauri dev
+
+     Running BeforeDevCommand (`pnpm dev`)
+
+> window-alarm@0.1.0 dev /app/apps/window-alarm
+> vite
+
+        Warn Waiting for your frontend dev server to start on http://localhost:1420/...
+
+  VITE v7.3.1  ready in 683 ms
+
+  ➜  Local:   http://localhost:1420/
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching /app/apps/window-alarm/src-tauri for changes...
+[1m[92m   Compiling[0m tauri-plugin-theme-utils v0.1.0 (/app/plugins/theme-utils)
+[1m[96m    Building[0m [=======================> ] 617/622: tauri-plugin-theme-utils(...[K[1m[92m   Compiling[0m window-alarm v0.0.0 (/app/apps/window-alarm/src-tauri)
+[1m[96m    Building[0m [=======================> ] 618/622: tauri-plugin-theme-utils,...[1m[96m    Building[0m [=======================> ] 619/622: tauri-plugin-theme-utils    [1m[96m    Building[0m [=======================> ] 619/622: tauri-plugin-theme-utils,...[1m[96m    Building[0m [=======================> ] 620/622: window-alarm                [1m[96m    Building[0m [=======================> ] 621/622: window-alarm(bin)           [K[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 35.39s
+[1m[92m     Running[0m `target/debug/window-alarm`
+[window-alarm bootstrap] session_type="" inferred_x11=false in_container=false DISPLAY=None WAYLAND_DISPLAY=None NO_AT_BRIDGE=Some("1") WEBKIT_DISABLE_COMPOSITING_MODE=None WEBKIT_DISABLE_DMABUF_RENDERER=None WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=None GDK_DISABLE_SHM=None LIBGL_ALWAYS_SOFTWARE=None
+
+thread 'main' (24333) panicked at /home/jules/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tao-0.34.5/src/platform_impl/linux/event_loop.rs:218:53:
+Failed to initialize gtk backend!: BoolError { message: "Failed to initialize GTK", filename: "/home/jules/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gtk-0.18.2/src/rt.rs", function: "gtk::rt::init", line: 141 }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+ ELIFECYCLE  Command failed.
+/app/apps/window-alarm:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  window-alarm@0.1.0 tauri: `tauri dev`
+Exit status 101

@@ -4711,6 +4711,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-theme-utils"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "tauri-plugin-window-state"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5669,6 +5679,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-os",
  "tauri-plugin-sql",
+ "tauri-plugin-theme-utils",
  "tauri-plugin-window-state",
 ]
 

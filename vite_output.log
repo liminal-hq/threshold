@@ -1,0 +1,14 @@
+Using Tauri Mocks
+
+  VITE v7.3.1  ready in 585 ms
+
+  ➜  Local:   http://localhost:1420/
+  ➜  Network: http://192.168.0.2:1420/
+4:57:18 PM [vite] (client) hmr update /src/App.tsx, /src/screens/Home.tsx, /src/screens/EditAlarm.tsx, /src/screens/Settings.tsx, /src/screens/Ringing.tsx
+4:57:23 PM [vite] (client) hmr update /src/App.tsx
+4:57:28 PM [vite] (client) hmr update /src/App.tsx, /src/components/TitleBar.tsx, /src/screens/Ringing.tsx
+4:57:31 PM [vite] (client) hmr update /src/App.tsx, /src/screens/Home.tsx, /src/screens/EditAlarm.tsx, /src/components/TitleBar.tsx, /src/screens/Settings.tsx, /src/screens/Ringing.tsx
+4:57:35 PM [vite] (client) hmr update /src/screens/EditAlarm.tsx, /src/screens/Home.tsx, /src/screens/Ringing.tsx
+4:58:04 PM [vite] vite.config.ts changed, restarting server...
+4:58:04 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+4:58:04 PM [vite] server restarted.

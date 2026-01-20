@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-get-material-you-colours"
+description = "Enables the get_material_you_colours command without any pre-configured scope."
+commands.allow = ["get_material_you_colours"]
+
+[[permission]]
+identifier = "deny-get-material-you-colours"
+description = "Denies the get_material_you_colours command without any pre-configured scope."
+commands.deny = ["get_material_you_colours"]

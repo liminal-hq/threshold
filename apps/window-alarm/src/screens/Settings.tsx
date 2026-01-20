@@ -25,11 +25,14 @@ const Settings: React.FC = () => {
 	const [theme, setTheme] = useState<Theme>(SettingsService.getTheme());
 	const [forceDark, setForceDark] = useState<boolean>(SettingsService.getForceDark());
 	const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
+	const [useMaterialYou, setUseMaterialYou] = useState<boolean>(SettingsService.getUseMaterialYou());
 	const [isMobile, setIsMobile] = useState(false);
+	const [isAndroid, setIsAndroid] = useState(false);
 
 	useEffect(() => {
 		const os = platform();
 		setIsMobile(os === 'ios' || os === 'android');
+		setIsAndroid(os === 'android');
 	}, []);
 
 	const handleThemeChange = (newTheme: Theme) => {
@@ -46,6 +49,26 @@ const Settings: React.FC = () => {
 		setIs24h(enabled);
 		SettingsService.setIs24h(enabled);
 	};
+
+	const handleMaterialYouChange = (enabled: boolean) => {
+		setUseMaterialYou(enabled);
+		SettingsService.setUseMaterialYou(enabled);
+	};
+
+	const renderThemeSelect = () => (
+		<IonSelect
+			value={theme}
+			onIonChange={(e) => handleThemeChange(e.detail.value)}
+			interface="popover"
+		>
+			<IonSelectOption value="system">System</IonSelectOption>
+			<IonSelectOption value="deep-night">Deep Night (Default)</IonSelectOption>
+			<IonSelectOption value="canadian-cottage">Canadian Cottage Winter</IonSelectOption>
+			<IonSelectOption value="georgian-bay-plunge">Georgian Bay Plunge</IonSelectOption>
+			<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
+			<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
+		</IonSelect>
+	);
 
 	return (
 
@@ -67,17 +90,23 @@ const Settings: React.FC = () => {
 					<IonList inset>
 						<IonItem>
 							<IonLabel>Theme</IonLabel>
-							<IonSelect
-								value={theme}
-								onIonChange={(e) => handleThemeChange(e.detail.value)}
-								interface="popover"
-							>
-								<IonSelectOption value="deep-night">Deep Night (Default)</IonSelectOption>
-								<IonSelectOption value="canadian-cottage">Canadian Cottage Winter</IonSelectOption>
-								<IonSelectOption value="georgian-bay-plunge">Georgian Bay Plunge</IonSelectOption>
-								<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
-								<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
-							</IonSelect>
+							{renderThemeSelect()}
+						</IonItem>
+
+						<IonItem disabled={theme !== 'system' || !isAndroid}>
+							<IonLabel>Use Material You</IonLabel>
+							<IonToggle
+								checked={useMaterialYou}
+								onIonChange={(e) => handleMaterialYouChange(e.detail.checked)}
+							/>
+						</IonItem>
+
+						<IonItem>
+							<IonLabel>Force Dark Mode</IonLabel>
+							<IonToggle
+								checked={forceDark}
+								onIonChange={(e) => handleForceDarkChange(e.detail.checked)}
+							/>
 						</IonItem>
 
 						<IonItem>
@@ -112,23 +141,25 @@ const Settings: React.FC = () => {
 										<h2>Theme</h2>
 										<p>Customize the look and feel</p>
 									</IonLabel>
-									<IonSelect
-										value={theme}
-										onIonChange={(e) => handleThemeChange(e.detail.value)}
-										interface="popover"
-									>
-										<IonSelectOption value="deep-night">Deep Night (Default)</IonSelectOption>
-										<IonSelectOption value="canadian-cottage">Canadian Cottage Winter</IonSelectOption>
-										<IonSelectOption value="georgian-bay-plunge">Georgian Bay Plunge</IonSelectOption>
-										<IonSelectOption value="boring-light">Boring Light</IonSelectOption>
-										<IonSelectOption value="boring-dark">Boring Dark</IonSelectOption>
-									</IonSelect>
+									{renderThemeSelect()}
+								</IonItem>
+
+								<IonItem lines="none" disabled={theme !== 'system' || !isAndroid}>
+									<IonLabel>
+										<h2>Use Material You</h2>
+										<p>Adapt to your system wallpaper</p>
+									</IonLabel>
+									<IonToggle
+										slot="end"
+										checked={useMaterialYou}
+										onIonChange={(e) => handleMaterialYouChange(e.detail.checked)}
+									/>
 								</IonItem>
 
 								<IonItem lines="none">
 									<IonLabel>
 										<h2>Force Dark Mode</h2>
-										<p>Override system color scheme</p>
+										<p>Override system colour scheme</p>
 									</IonLabel>
 									<IonToggle
 										slot="end"

@@ -1,0 +1,4 @@
+[[set]]
+identifier = "default"
+description = "Default permissions for the theme-utils plugin"
+permissions = ["allow-get-material-you-colours"]

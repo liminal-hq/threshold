@@ -1,0 +1,81 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MaterialYouColours {
+    pub system_accent1_0: String,
+    pub system_accent1_10: String,
+    pub system_accent1_50: String,
+    pub system_accent1_100: String,
+    pub system_accent1_200: String,
+    pub system_accent1_300: String,
+    pub system_accent1_400: String,
+    pub system_accent1_500: String,
+    pub system_accent1_600: String,
+    pub system_accent1_700: String,
+    pub system_accent1_800: String,
+    pub system_accent1_900: String,
+    pub system_accent1_1000: String,
+
+    pub system_accent2_0: String,
+    pub system_accent2_10: String,
+    pub system_accent2_50: String,
+    pub system_accent2_100: String,
+    pub system_accent2_200: String,
+    pub system_accent2_300: String,
+    pub system_accent2_400: String,
+    pub system_accent2_500: String,
+    pub system_accent2_600: String,
+    pub system_accent2_700: String,
+    pub system_accent2_800: String,
+    pub system_accent2_900: String,
+    pub system_accent2_1000: String,
+
+    pub system_accent3_0: String,
+    pub system_accent3_10: String,
+    pub system_accent3_50: String,
+    pub system_accent3_100: String,
+    pub system_accent3_200: String,
+    pub system_accent3_300: String,
+    pub system_accent3_400: String,
+    pub system_accent3_500: String,
+    pub system_accent3_600: String,
+    pub system_accent3_700: String,
+    pub system_accent3_800: String,
+    pub system_accent3_900: String,
+    pub system_accent3_1000: String,
+
+    pub system_neutral1_0: String,
+    pub system_neutral1_10: String,
+    pub system_neutral1_50: String,
+    pub system_neutral1_100: String,
+    pub system_neutral1_200: String,
+    pub system_neutral1_300: String,
+    pub system_neutral1_400: String,
+    pub system_neutral1_500: String,
+    pub system_neutral1_600: String,
+    pub system_neutral1_700: String,
+    pub system_neutral1_800: String,
+    pub system_neutral1_900: String,
+    pub system_neutral1_1000: String,
+
+    pub system_neutral2_0: String,
+    pub system_neutral2_10: String,
+    pub system_neutral2_50: String,
+    pub system_neutral2_100: String,
+    pub system_neutral2_200: String,
+    pub system_neutral2_300: String,
+    pub system_neutral2_400: String,
+    pub system_neutral2_500: String,
+    pub system_neutral2_600: String,
+    pub system_neutral2_700: String,
+    pub system_neutral2_800: String,
+    pub system_neutral2_900: String,
+    pub system_neutral2_1000: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetMaterialYouColoursResponse {
+    pub colours: Option<MaterialYouColours>,
+}

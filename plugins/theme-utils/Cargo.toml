@@ -1,0 +1,18 @@
+[package]
+name = "tauri-plugin-theme-utils"
+version = "0.1.0"
+authors = ["Jules"]
+edition = "2021"
+links = "tauri-plugin-theme-utils"
+description = "Tauri plugin for system theme utilities (Material You)"
+
+[dependencies]
+tauri = { version = "2.0.0" }
+serde = "1.0"
+thiserror = "1.0"
+
+[build-dependencies]
+tauri-plugin = "2.0.0"
+
+[features]
+default = []
