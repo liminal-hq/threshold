@@ -75,7 +75,7 @@ RUN yes | sdkmanager --licenses && \
     "platform-tools" \
     "platforms;android-36" \
     "build-tools;36.0.0" \
-    "ndk;27.1.12297006"
+    "ndk;28.0.12674087"
 
 # Install Rust toolchain (stable)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
