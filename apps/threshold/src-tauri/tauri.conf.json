@@ -1,48 +1,52 @@
 {
-	"$schema": "https://schema.tauri.app/config/2",
-	"productName": "Threshold",
-	"version": "0.1.0",
-	"identifier": "ca.liminalhq.threshold",
-	"build": {
-		"beforeDevCommand": "pnpm dev",
-		"devUrl": "http://localhost:1420",
-		"beforeBuildCommand": "pnpm build",
-		"frontendDist": "../dist"
-	},
-	"app": {
-		"windows": [
-			{
-				"title": "Threshold",
-				"width": 450,
-				"height": 800,
-				"resizable": true,
-				"maximizable": false,
-				"decorations": false,
-				"visible": true
-			}
-		],
-		"security": {
-			"csp": null
-		}
-	},
-	"bundle": {},
-	"plugins": {
-		"deep-link": {
-			"protocols": [
-				{
-					"name": "Threshold",
-					"schemes": ["threshold"]
-				}
-			]
-		},
-		"active": true,
-		"targets": "all",
-		"icon": [
-			"icons/32x32.png",
-			"icons/128x128.png",
-			"icons/128x128@2x.png",
-			"icons/icon.icns",
-			"icons/icon.ico"
-		]
-	}
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Threshold",
+  "version": "0.1.0",
+  "identifier": "ca.liminalhq.threshold",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Threshold",
+        "width": 450,
+        "height": 800,
+        "resizable": true,
+        "maximizable": false,
+        "decorations": false,
+        "visible": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["threshold"]
+      },
+      "mobile": [
+        {
+          "scheme": ["threshold"],
+          "appLink": false
+        }
+      ]
+    }
+  }
 }
