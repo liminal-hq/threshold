@@ -13,6 +13,8 @@ import { platform } from '@tauri-apps/plugin-os';
 import './theme/variables.css';
 import './theme/ringing.css';
 import './theme/components.css';
+import './theme/transitions.css';
+import { routeTransitions } from './utils/RouteTransitions';
 
 const App: React.FC = () => {
 	console.log('📦 [threshold] App rendering, pathname:', window.location.pathname);
@@ -78,21 +80,27 @@ const App: React.FC = () => {
 		});
 
 		// Handle Back Button on Android
+		// TODO: When upgrading to Tauri 2.9.0+, switch to official @tauri-apps/api/app:
+		// const { onBackButtonPress } = await import('@tauri-apps/api/app');
+		// const unlisten = await onBackButtonPress(() => { /* same logic */ return false; });
 		const initBackButton = async () => {
 			if (os === 'android') {
 				try {
-					// Dynamic import to be safe, though @tauri-apps/api/app is isomorphic safe usually
-					const { onBackButtonPress } = await import('@tauri-apps/api/app');
+					// Use community plugin (tauri-plugin-app-events) instead of @tauri-apps/api/app
+					const { onBackKeyDown } = await import('tauri-plugin-app-events-api');
 
-					await onBackButtonPress(() => {
+					onBackKeyDown(() => {
 						// Check if we can go back.
 						// window.history.length > 1 is the standard browser way to check history depth.
 						if (window.history.length > 1) {
+							// Signal that this is a backward navigation
+							routeTransitions.setNextDirection('backwards');
 							router.history.back();
 						} else {
-							// If we can't go back, minimize the app (standard Android behavior)
+							// If we can't go back, minimize the app (standard Android behaviour)
 							win.minimize();
 						}
+						return false; // Prevent default
 					});
 				} catch (e) {
 					console.error('Failed to initialize back button listener', e);
@@ -100,10 +108,6 @@ const App: React.FC = () => {
 			}
 		};
 		initBackButton();
-
-		// Cleanup is handled by Tauri's plugin system generally, or we just let it persist for the app life.
-		// onBackButtonPress returns a Promise<Subject/Unlisten function> if we want to unlisten, 
-		// but since this is the root App component, we usually keep it.
 
 	}, []);
 
