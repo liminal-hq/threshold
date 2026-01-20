@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Dark background - full bleed, no rounded corners -->
+  <rect width="512" height="512" fill="#1e293b"/>
+  
+  <!-- Large clock circle - scaled to fit within safe zone with generous padding -->
+  <circle cx="256" cy="256" r="140" fill="#334155"/>
+  
+  <!-- Threshold range arc (6:00 to 8:00) -->
+  <path d="M 256 396 A 140 140 0 0 1 131.15 326.85" 
+        fill="none"
+        stroke="#fbbf24" 
+        stroke-width="39" 
+        stroke-linecap="round"
+        opacity="0.6"/>
+  
+  <!-- 12 o'clock marker -->
+  <rect x="242.53" y="121.78" width="24.94" height="38.89" rx="7.78" fill="#64748b"/>
+  
+  <!-- Hour hand - pointing straight up to 12 -->
+  <line x1="256" y1="256" x2="256" y2="167.78" 
+        stroke="#e2e8f0" 
+        stroke-width="38.89" 
+        stroke-linecap="round"/>
+  
+  <!-- Ghost minute hand 1 - at 6:30 -->
+  <line x1="256" y1="256" x2="221.08" y2="391.47" 
+        stroke="#fbbf24" 
+        stroke-width="31.11" 
+        stroke-linecap="round"
+        opacity="0.3"/>
+  
+  <!-- Ghost minute hand 2 - at 7:30 -->
+  <line x1="256" y1="256" x2="157.08" y2="354.92" 
+        stroke="#fbbf24" 
+        stroke-width="31.11" 
+        stroke-linecap="round"
+        opacity="0.3"/>
+  
+  <!-- Solid minute hand - at 7:00 (the current/actual time) -->
+  <line x1="256" y1="256" x2="186.92" y2="381.56" 
+        stroke="#fbbf24" 
+        stroke-width="34.22" 
+        stroke-linecap="round"/>
+  
+  <!-- Centre dot -->
+  <circle cx="256" cy="256" r="23.33" fill="#fbbf24"/>
+  
+  <!-- Small dots at arc endpoints (6:00 and 8:00) -->
+  <circle cx="256" cy="396" r="14" fill="#fbbf24" opacity="0.4"/>
+  <circle cx="131.15" cy="326.85" r="14" fill="#fbbf24" opacity="0.4"/>
+
+</svg>
