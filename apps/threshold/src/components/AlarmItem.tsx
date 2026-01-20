@@ -80,7 +80,7 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 					</Typography>
 				</Stack>
 			</Box>
-			<Box onClick={handleSwitchClick} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} sx={{ display: 'flex', alignItems: 'center' }}>
+			<Box onClick={handleSwitchClick} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} sx={{ display: 'flex', alignItems: 'center' }}>
 				{!isMobile && (
 					<IconButton onClick={(e) => { e.stopPropagation(); onDelete(); }} aria-label="delete" size="large" sx={{ mr: 1 }}>
 						<DeleteIcon />
