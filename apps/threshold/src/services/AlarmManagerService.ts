@@ -83,6 +83,19 @@ export class AlarmManagerService {
 					try {
 						await registerActionTypes([
 							{
+								id: 'test_trigger',
+								actions: [
+									{
+										id: 'test_action_1',
+										title: 'Test Action 1',
+									},
+									{
+										id: 'test_action_2',
+										title: 'Test Action 2',
+									},
+								],
+							},
+							{
 								id: 'alarm_trigger',
 								actions: [
 									{
@@ -221,6 +234,23 @@ export class AlarmManagerService {
 		}
 	}
 
+
+
+    async sendTestNotification() {
+        console.log('[AlarmManager] Sending test notification...');
+        const isMobile = PlatformUtils.isMobile();
+        try {
+            await sendNotification({
+                title: 'Test Notification',
+                body: 'This is a test notification with actions',
+                actionTypeId: isMobile ? 'test_trigger' : undefined,
+            });
+            console.log('[AlarmManager] Test notification sent');
+        } catch (e) {
+            console.error('[AlarmManager] Failed to send test notification', e);
+        }
+    }
+
 	async toggleAlarm(alarm: Alarm, enabled: boolean) {
 		const updatedAlarm = { ...alarm, enabled };
 		if (enabled) {
@@ -317,6 +347,8 @@ export class AlarmManagerService {
             body: 'Your alarm is ringing!',
 			actionTypeId: isMobile ? 'alarm_trigger' : undefined,
         });
+
+
 
         // 2. Open Floating Window (Singleton)
         try {
