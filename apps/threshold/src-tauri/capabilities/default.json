@@ -5,6 +5,7 @@
 	"windows": ["*", "alarm-ring-*", "test-alarm-*"],
 	"permissions": [
 		"core:default",
+		"core:event:default",
 		"opener:default",
 		"sql:default",
 		"sql:allow-execute",
