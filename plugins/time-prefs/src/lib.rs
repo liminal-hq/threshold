@@ -32,7 +32,7 @@ impl<R: Runtime, T: Manager<R>> TimePrefsExt<R> for T {
   }
 }
 
-/// Initializes the plugin.
+/// Initialises the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
   Builder::new("time-prefs")
     .invoke_handler(tauri::generate_handler![commands::get_time_format])
