@@ -12,3 +12,11 @@ Using Tauri Mocks
 4:58:04 PM [vite] vite.config.ts changed, restarting server...
 4:58:04 PM [vite] (client) Re-optimizing dependencies because vite config has changed
 4:58:04 PM [vite] server restarted.
+5:05:16 PM [vite] vite.config.ts changed, restarting server...
+failed to load config from /app/apps/window-alarm/vite.config.ts
+5:05:16 PM [vite] config must export or return an object.
+5:05:16 PM [vite] server restart failed
+5:05:17 PM [vite] vite.config.ts changed, restarting server...
+Using Tauri Mocks
+5:05:17 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+5:05:17 PM [vite] server restarted.
