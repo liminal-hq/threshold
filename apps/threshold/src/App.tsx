@@ -109,10 +109,6 @@ const App: React.FC = () => {
 		};
 		initBackButton();
 
-		// Cleanup is handled by Tauri's plugin system generally, or we just let it persist for the app life.
-		// onBackButtonPress returns a Promise<Subject/Unlisten function> if we want to unlisten, 
-		// but since this is the root App component, we usually keep it.
-
 	}, []);
 
 	return (

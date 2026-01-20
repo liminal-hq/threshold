@@ -32,7 +32,7 @@ const RootLayout = () => {
                     marginTop: showTitleBar ? '32px' : '0px',
                     height: showTitleBar ? 'calc(100% - 32px)' : '100%',
                     // @ts-ignore - viewTransitionName is not yet in standard React types
-                    viewTransitionName: 'wa-route-slot'
+                    viewTransitionName: isMobile ? 'wa-route-slot' : undefined
                 }}
             >
                 <Outlet />
@@ -82,35 +82,49 @@ const settingsRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([indexRoute, homeRoute, editAlarmRoute, ringingRoute, settingsRoute]);
 
-export const router = createRouter({
+// Create base router options
+const routerOptions: any = {
     routeTree,
     defaultNotFoundComponent: NotFound,
-    defaultViewTransition: (({ location }: { location: any }) => {
+};
+
+// Only enable View Transitions on mobile (Android/iOS)
+// This is critical because enabling it on Linux Desktop (WebKitGTK) causes a hard native crash,
+// even if the function returns false. The key must be completely absent.
+if (PlatformUtils.isMobile()) {
+    routerOptions.defaultViewTransition = ({ location }: { location: any }) => {
+        // 0. Mobile check (redundant but safe)
+        if (!PlatformUtils.isMobile()) {
+            return false;
+        }
+
         // 1. Check if allowed
         if (!routeTransitions.shouldAnimate()) {
-             return false;
+            return false;
         }
 
         const toPath = location.pathname;
 
         // 2. Skip ringing
         if (toPath.startsWith('/ringing')) {
-             return false;
+            return false;
         }
 
         // 3. Determine direction
         const direction = routeTransitions.getDirection(toPath);
 
         if (direction === 'none') {
-             return false;
+            return false;
         }
 
         // 4. Return types
         return {
             types: ['wa-slide', `wa-${direction}`]
         };
-    }) as any
-});
+    };
+}
+
+export const router = createRouter(routerOptions);
 
 declare module '@tanstack/react-router' {
     interface Register {
