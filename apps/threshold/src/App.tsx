@@ -80,13 +80,16 @@ const App: React.FC = () => {
 		});
 
 		// Handle Back Button on Android
+		// TODO: When upgrading to Tauri 2.9.0+, switch to official @tauri-apps/api/app:
+		// const { onBackButtonPress } = await import('@tauri-apps/api/app');
+		// const unlisten = await onBackButtonPress(() => { /* same logic */ return false; });
 		const initBackButton = async () => {
 			if (os === 'android') {
 				try {
-					// Dynamic import to be safe, though @tauri-apps/api/app is isomorphic safe usually
-					const { onBackButtonPress } = await import('@tauri-apps/api/app');
+					// Use community plugin (tauri-plugin-app-events) instead of @tauri-apps/api/app
+					const { onBackKeyDown } = await import('tauri-plugin-app-events-api');
 
-					await onBackButtonPress(() => {
+					onBackKeyDown(() => {
 						// Check if we can go back.
 						// window.history.length > 1 is the standard browser way to check history depth.
 						if (window.history.length > 1) {
@@ -94,9 +97,10 @@ const App: React.FC = () => {
 							routeTransitions.setNextDirection('backwards');
 							router.history.back();
 						} else {
-							// If we can't go back, minimize the app (standard Android behavior)
+							// If we can't go back, minimize the app (standard Android behaviour)
 							win.minimize();
 						}
+						return false; // Prevent default
 					});
 				} catch (e) {
 					console.error('Failed to initialize back button listener', e);

@@ -60,13 +60,15 @@ pub fn run() {
 
     builder
         .plugin(tauri_plugin_sql::Builder::default().build())
-
         .plugin(tauri_plugin_alarm_manager::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            #[cfg(mobile)]
+            app.handle().plugin(tauri_plugin_app_events::init())?;
+
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
