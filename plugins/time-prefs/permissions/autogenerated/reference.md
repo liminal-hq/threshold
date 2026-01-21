@@ -49,6 +49,32 @@ Denies the android command without any pre-configured scope.
 </td>
 <td>
 
+Enables the get_time_format command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`time-prefs:deny-get-time-format`
+
+</td>
+<td>
+
+Denies the get_time_format command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`time-prefs:allow-get-time-format`
+
+</td>
+<td>
+
 Enables the get_time_format command
 
 </td>

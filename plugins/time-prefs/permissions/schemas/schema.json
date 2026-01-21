@@ -307,6 +307,18 @@
           "markdownDescription": "Denies the android command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_time_format command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-time-format",
+          "markdownDescription": "Enables the get_time_format command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_time_format command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-time-format",
+          "markdownDescription": "Denies the get_time_format command without any pre-configured scope."
+        },
+        {
           "description": "Default permissions for the time-prefs plugin\n#### This default permission set includes:\n\n- `allow-get-time-format`",
           "type": "string",
           "const": "default",
