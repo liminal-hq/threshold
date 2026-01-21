@@ -35,6 +35,7 @@ This document defines the **standard pattern** for Android manifest management i
 ### The Problem
 
 Without this pattern:
+
 ```rust
 // ❌ User must manually edit their AndroidManifest.xml
 // ❌ Easy to forget permissions
@@ -45,6 +46,7 @@ Without this pattern:
 ### The Solution
 
 With this pattern:
+
 ```rust
 // ✅ Permissions injected automatically at build time
 // ✅ Plugin owns its requirements
@@ -92,6 +94,7 @@ Running the build multiple times won't duplicate your block—it will replace th
 ### Validation
 
 This pattern is used by official Tauri plugins:
+
 - ✅ `tauri-plugin-deep-link` (injects intent-filters)
 - ✅ `tauri-plugin-nfc` (injects NFC intent-filters)
 - ✅ Validated against `tauri-apps/plugins-workspace@v2` branch
@@ -107,6 +110,7 @@ To maintain consistency across all Threshold plugins, we follow these naming con
 Format: `tauri-plugin-{plugin-name}.{category}`
 
 Examples:
+
 - `tauri-plugin-alarm-manager.permissions`
 - `tauri-plugin-alarm-manager.application`
 - `tauri-plugin-notification-manager.permissions`
@@ -115,25 +119,26 @@ Examples:
 
 ### Parent Tags
 
-| Parent Tag | Use For | Example |
-|------------|---------|---------|
-| `manifest` | `<uses-permission>`, `<uses-feature>`, `<queries>` | Permission declarations |
-| `application` | `<service>`, `<receiver>`, `<provider>`, `<activity>` (secondary) | App components |
-| `activity` | `<intent-filter>`, `<meta-data>` | Main activity configuration |
+| Parent Tag    | Use For                                                           | Example                     |
+| ------------- | ----------------------------------------------------------------- | --------------------------- |
+| `manifest`    | `<uses-permission>`, `<uses-feature>`, `<queries>`                | Permission declarations     |
+| `application` | `<service>`, `<receiver>`, `<provider>`, `<activity>` (secondary) | App components              |
+| `activity`    | `<intent-filter>`, `<meta-data>`                                  | Main activity configuration |
 
 **Rule:** Don't inject components unless you have a specific reason. Use the library manifest for components.
 
 ### What Goes Where
 
-| Item | Location | Reason |
-|------|----------|--------|
-| Permissions | Inject via `build.rs` | Allows feature-gating, explicit documentation |
-| Services | Library manifest | Gradle merger handles them correctly |
-| Receivers | Library manifest | Gradle merger handles them correctly |
-| Activities | Library manifest | Gradle merger handles them correctly |
-| Intent filters (main activity) | Inject via `build.rs` | Only if configuration-driven |
+| Item                           | Location              | Reason                                        |
+| ------------------------------ | --------------------- | --------------------------------------------- |
+| Permissions                    | Inject via `build.rs` | Allows feature-gating, explicit documentation |
+| Services                       | Library manifest      | Gradle merger handles them correctly          |
+| Receivers                      | Library manifest      | Gradle merger handles them correctly          |
+| Activities                     | Library manifest      | Gradle merger handles them correctly          |
+| Intent filters (main activity) | Inject via `build.rs` | Only if configuration-driven                  |
 
 **Recommended Split for Most Plugins:**
+
 - ✅ **Inject:** Permissions
 - ✅ **Library manifest:** Everything else
 
@@ -156,11 +161,13 @@ If the `build` feature is missing, add it.
 ### Step 2: Identify Your Android Requirements
 
 List all permissions your plugin needs. Common sources:
+
 - Android documentation for APIs you use
 - Your native Kotlin/Java code's imports
 - Runtime permission requests in your code
 
 Example for alarm-manager:
+
 ```
 ✅ SCHEDULE_EXACT_ALARM - setAlarmClock() API
 ✅ WAKE_LOCK - Keep device awake
@@ -177,12 +184,14 @@ Example for alarm-manager:
 Some permissions are "policy-sensitive" and users might not want them enabled by default:
 
 **Candidates for feature-gating:**
+
 - `USE_FULL_SCREEN_INTENT` - Aggressive lockscreen takeover
 - `POST_NOTIFICATIONS` - Can be annoying if overused
 - `CAMERA`, `MICROPHONE` - Privacy-sensitive
 - `READ_CONTACTS`, `READ_SMS` - Privacy-sensitive
 
 **Example feature definition:**
+
 ```toml
 # Cargo.toml
 [features]
@@ -190,6 +199,36 @@ default = ["basic-alarms"]
 basic-alarms = []
 full-screen-intents = []  # Opt-in for lockscreen takeover
 ```
+
+### Step 3.5: Register Your Android Module (Critical!)
+
+**Before implementing manifest injection**, you must register your Android module with Tauri:
+
+```rust
+fn main() {
+    tauri_plugin::Builder::new(COMMANDS)
+        .android_path("android")  // ← REQUIRED for Android plugins
+        .build();
+}
+```
+
+**Why this matters:**
+
+Without `.android_path("android")`, Tauri doesn't know your plugin has Android native code. This causes:
+
+- ❌ Plugin not included in `gen/android/settings.gradle`
+- ❌ Plugin dependency missing from `gen/android/app/build.gradle.kts`
+- ❌ App crashes with `ClassNotFoundException` at runtime
+- ❌ Manual gradle edits required (and get overwritten on rebuild)
+
+**What `.android_path()` does:**
+
+1. Tells Tauri: "I have an Android library at `plugins/YOUR-PLUGIN/android/`"
+2. Auto-generates gradle configuration to include your plugin
+3. Copies Tauri API bindings to `android/.tauri/` during builds
+4. Enables seamless integration without manual gradle edits
+
+**This is separate from manifest injection** - `.android_path()` handles gradle integration, while `update_android_manifest()` handles permissions.
 
 ### Step 4: Implement the Injection
 
@@ -206,6 +245,7 @@ const COMMANDS: &[&str] = &[
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)
+        .android_path("android")  // Required: Registers Android module with Tauri
         .build();
 
     inject_android_permissions()
@@ -231,6 +271,7 @@ fn inject_android_permissions() -> std::io::Result<()> {
 ```
 
 **Key Points:**
+
 - ⚠️ Replace `YOUR-PLUGIN` with your plugin name
 - ⚠️ Replace `COMMANDS` with your actual command list
 - ✅ Use raw string literals: `r#"..."#` (no need to escape quotes)
@@ -245,15 +286,15 @@ Edit `android/src/main/AndroidManifest.xml`:
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Permissions are now injected via build.rs - remove them from here -->
-    
+
     <application>
         <!-- Keep your components here - they merge correctly -->
-        <service 
+        <service
             android:name=".YourService"
             android:exported="false" />
 
-        <receiver 
-            android:name=".YourReceiver" 
+        <receiver
+            android:name=".YourReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="your.custom.ACTION" />
@@ -275,10 +316,10 @@ fn inject_android_permissions() -> std::io::Result<()> {
     let mut permissions = vec![
         // Core alarm scheduling - required for exact alarm triggers
         r#"<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />"#,
-        
+
         // Keep device awake during alarm processing
         r#"<uses-permission android:name="android.permission.WAKE_LOCK" />"#,
-        
+
         // Restore alarms after device reboot
         r#"<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />"#,
     ];
@@ -306,6 +347,7 @@ const COMMANDS: &[&str] = &[
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)
+        .android_path("android")  // Required: Registers Android module with Tauri
         .build();
 
     inject_android_permissions()
@@ -317,14 +359,14 @@ fn inject_android_permissions() -> std::io::Result<()> {
         // ========================================
         // Core permissions - always included
         // ========================================
-        
+
         // Example: r#"<uses-permission android:name="android.permission.INTERNET" />"#,
     ];
 
     // ========================================
     // Feature-gated permissions
     // ========================================
-    
+
     #[cfg(feature = "your-feature-name")]
     permissions.extend_from_slice(&[
         // r#"<uses-permission android:name="android.permission.SENSITIVE_PERMISSION" />"#,
@@ -364,20 +406,20 @@ fn inject_android_permissions() -> std::io::Result<()> {
         // Core alarm scheduling permissions
         r#"<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />"#,
         r#"<uses-permission android:name="android.permission.USE_EXACT_ALARM" />"#,
-        
+
         // Power management
         r#"<uses-permission android:name="android.permission.WAKE_LOCK" />"#,
-        
+
         // Boot persistence
         r#"<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />"#,
-        
+
         // Lockscreen experience
         r#"<uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />"#,
-        
+
         // Foreground service for reliable alarm audio
         r#"<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />"#,
         r#"<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />"#,
-        
+
         // User feedback
         r#"<uses-permission android:name="android.permission.VIBRATE" />"#,
         r#"<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />"#,
@@ -400,6 +442,7 @@ fn inject_android_permissions() -> std::io::Result<()> {
 1. **Implement the pattern** in your plugin's `build.rs`
 
 2. **Build the Android project:**
+
    ```bash
    cd apps/threshold  # Or your main app
    pnpm tauri android build
@@ -408,11 +451,13 @@ fn inject_android_permissions() -> std::io::Result<()> {
    ```
 
 3. **Locate the generated manifest:**
+
    ```bash
    cat apps/threshold/src-tauri/gen/android/app/src/main/AndroidManifest.xml
    ```
 
 4. **Verify injection markers:**
+
    ```xml
    <!-- tauri-plugin-YOUR-PLUGIN.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
    <uses-permission android:name="..." />
@@ -433,6 +478,7 @@ fn inject_android_permissions() -> std::io::Result<()> {
 ### Phase 2: Idempotency Test
 
 5. **Rebuild without changes:**
+
    ```bash
    pnpm tauri android build
    ```
@@ -445,6 +491,7 @@ fn inject_android_permissions() -> std::io::Result<()> {
 ### Phase 3: Feature Gate Test (if applicable)
 
 7. **Build with feature enabled:**
+
    ```bash
    cargo build --features your-feature-name
    pnpm tauri android build
@@ -453,6 +500,7 @@ fn inject_android_permissions() -> std::io::Result<()> {
 8. **Verify feature-gated permissions appear**
 
 9. **Build without feature:**
+
    ```bash
    cargo build --no-default-features
    pnpm tauri android build
@@ -463,6 +511,7 @@ fn inject_android_permissions() -> std::io::Result<()> {
 ### Phase 4: Runtime Test
 
 11. **Install on device/emulator:**
+
     ```bash
     pnpm tauri android dev
     ```
@@ -482,6 +531,7 @@ fn inject_android_permissions() -> std::io::Result<()> {
 14. **Remove plugin from app dependencies**
 
 15. **Rebuild:**
+
     ```bash
     pnpm tauri android build
     ```
@@ -661,6 +711,7 @@ fn main() {
 ### Issue: Permissions Not Appearing in Generated Manifest
 
 **Symptoms:**
+
 - Built successfully but no comment markers in generated manifest
 - Plugin permissions missing
 
@@ -672,10 +723,11 @@ fn main() {
    - ❌ Don't run `cargo build` directly
 
 2. **Build feature not enabled**
+
    ```toml
    # ❌ Wrong
    tauri-plugin = "2.0.0"
-   
+
    # ✅ Correct
    tauri-plugin = { version = "2.0.0", features = ["build"] }
    ```
@@ -690,9 +742,54 @@ fn main() {
 
 ---
 
+### Issue: Plugin Not Appearing in Gradle Files
+
+**Symptoms:**
+
+- App crashes with `ClassNotFoundException` for your plugin
+- Plugin not listed in `gen/android/settings.gradle`
+- Plugin dependency missing from `gen/android/app/build.gradle.kts`
+- Manual gradle edits get overwritten on rebuild
+
+**Cause:** Missing `.android_path()` call in `build.rs`
+
+**Solution:**
+
+Without `.android_path("android")`, Tauri doesn't know your plugin has Android native code and won't include it in the generated Gradle configuration.
+
+```rust
+// ❌ Wrong - plugin won't be included
+fn main() {
+    tauri_plugin::Builder::new(COMMANDS).build();
+}
+
+// ✅ Correct - plugin gets auto-registered
+fn main() {
+    tauri_plugin::Builder::new(COMMANDS)
+        .android_path("android")  // Required!
+        .build();
+}
+```
+
+**What `.android_path()` does:**
+
+- Tells Tauri your plugin has an `android/` directory with native code
+- Automatically adds your plugin to `settings.gradle`
+- Automatically adds dependency to `app/build.gradle.kts`
+- Copies Tauri API bindings to `android/.tauri/` during builds
+
+**Verification:**
+After adding `.android_path()` and rebuilding, check that your plugin appears in:
+
+- `gen/android/settings.gradle` - Should have `include ':tauri-plugin-YOUR-NAME'`
+- `gen/android/app/build.gradle.kts` - Should have `implementation(project(":tauri-plugin-YOUR-NAME"))`
+
+---
+
 ### Issue: Build Fails with "failed to rewrite AndroidManifest.xml"
 
 **Symptoms:**
+
 ```
 thread 'main' panicked at 'Failed to inject Android permissions: ...'
 ```
@@ -716,12 +813,14 @@ thread 'main' panicked at 'Failed to inject Android permissions: ...'
 ### Issue: Duplicate Permissions After Multiple Builds
 
 **Symptoms:**
+
 - Same permission appears 2-3 times in manifest
 - Comment markers repeated
 
 **Cause:** You're using different block identifiers across builds.
 
 **Solution:**
+
 ```rust
 // ❌ Wrong - changing block ID
 tauri_plugin::mobile::update_android_manifest(
@@ -743,6 +842,7 @@ tauri_plugin::mobile::update_android_manifest(
 ### Issue: Runtime SecurityException Despite Manifest Injection
 
 **Symptoms:**
+
 - Build succeeds, permissions in manifest
 - App crashes with "Permission denied" at runtime
 
@@ -767,6 +867,7 @@ tauri_plugin::mobile::update_android_manifest(
 ### Issue: Components Not Registered
 
 **Symptoms:**
+
 - Permissions work fine
 - Services/receivers don't respond to intents
 
@@ -774,6 +875,7 @@ tauri_plugin::mobile::update_android_manifest(
 
 **Solution:**
 Keep components in `android/src/main/AndroidManifest.xml`:
+
 ```xml
 <application>
     <service android:name=".YourService" ... />
@@ -788,6 +890,7 @@ The manifest merger will handle these correctly. You usually don't need to injec
 ### Issue: Feature Gates Not Working
 
 **Symptoms:**
+
 - Built with feature enabled but permission missing
 - Built without feature but permission still present
 
@@ -796,41 +899,45 @@ The manifest merger will handle these correctly. You usually don't need to injec
 **Debug steps:**
 
 1. **Verify feature is defined in Cargo.toml:**
+
    ```toml
    [features]
    your-feature = []
    ```
 
 2. **Check syntax:**
+
    ```rust
    // ✅ Correct
    #[cfg(feature = "your-feature")]
    permissions.push(...);
-   
+
    // ❌ Wrong
    #[cfg(feature = "your_feature")]  // Uses underscore
    permissions.push(...);
    ```
 
 3. **Verify build command:**
+
    ```bash
    # Enable feature
    cargo build --features your-feature
    pnpm tauri android build
-   
+
    # Disable feature
    cargo build --no-default-features
    pnpm tauri android build
    ```
 
 4. **Add debug logging:**
+
    ```rust
    #[cfg(feature = "your-feature")]
    {
        println!("cargo:warning=Feature 'your-feature' is ENABLED");
        permissions.push(...);
    }
-   
+
    #[cfg(not(feature = "your-feature"))]
    println!("cargo:warning=Feature 'your-feature' is DISABLED");
    ```
@@ -846,15 +953,15 @@ Some plugins might need to inject into multiple parent tags:
 ```rust
 fn main() {
     tauri_plugin::Builder::new(COMMANDS).build();
-    
+
     // Inject permissions
     inject_permissions()
         .expect("Failed to inject permissions");
-    
+
     // Inject application components (if needed)
     inject_application_components()
         .expect("Failed to inject components");
-    
+
     // Inject activity metadata (if needed)
     inject_activity_metadata()
         .expect("Failed to inject metadata");
@@ -898,13 +1005,13 @@ fn inject_android_permissions() -> std::io::Result<()> {
     let permissions = vec![
         // Android 12+ (API 31+)
         r#"<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />"#,
-        
+
         // Backwards compatibility for older Android versions
         r#"<uses-permission android:name="android.permission.USE_EXACT_ALARM" />"#,
     ];
 
     // Android will ignore permissions it doesn't recognize, so it's safe to include both
-    
+
     tauri_plugin::mobile::update_android_manifest(
         "tauri-plugin-alarm-manager.permissions",
         "manifest",
@@ -919,17 +1026,19 @@ fn inject_android_permissions() -> std::io::Result<()> {
 
 For sensitive permissions, add a README section explaining why they're needed:
 
-```markdown
+````markdown
 ## Android Permissions
 
 This plugin requires the following Android permissions:
 
 ### `CAMERA` (Required)
+
 - **Why:** To scan barcodes using the device camera
 - **When:** Only when `scan()` is called
 - **Privacy:** Camera data is processed locally and never transmitted
 
 ### `VIBRATE` (Optional)
+
 - **Why:** To provide haptic feedback when a barcode is detected
 - **When:** Only if `hapticFeedback: true` in config
 - **Privacy:** No data is collected
@@ -941,6 +1050,8 @@ Enable sensitive permissions with Cargo features:
 ```toml
 tauri-plugin-barcode = { version = "1.0", features = ["haptics"] }
 ```
+````
+
 ```
 
 ---
@@ -1043,3 +1154,4 @@ Study these official plugins for real-world patterns:
 ---
 
 **This pattern is a Threshold standard. All Android plugins should follow it.**
+```
