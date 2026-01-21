@@ -3,11 +3,7 @@ import { APP_NAME } from '../constants';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { PlatformUtils } from '../utils/PlatformUtils';
-import {
-	sendNotification,
-	registerActionTypes,
-	onAction
-} from '@tauri-apps/plugin-notification';
+import { sendNotification, registerActionTypes, onAction } from '@tauri-apps/plugin-notification';
 import { Alarm, AlarmMode, DayOfWeek } from '@threshold/core/types';
 import { calculateNextTrigger as calcTrigger } from '@threshold/core/scheduler';
 
@@ -21,6 +17,11 @@ interface ImportedAlarm {
 
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
+	private router: any = null;
+
+	public setRouter(router: any) {
+		this.router = router;
+	}
 
 	async init() {
 		if (this.initPromise) return this.initPromise;
@@ -30,7 +31,7 @@ export class AlarmManagerService {
 				console.log('[AlarmManager] Starting service initialization...');
 				await databaseService.init();
 				console.log('[AlarmManager] Database service ready.');
-				
+
 				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
 				// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
 				await listen<{ id: number }>('alarm-ring', (event) => {
@@ -45,12 +46,17 @@ export class AlarmManagerService {
 				// Listen for alarms ringing from the Android Plugin (emitted via trigger())
 				try {
 					await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
-						console.log(`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`);
+						console.log(
+							`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`,
+						);
 						this.handleAlarmRing(event.payload.id);
 					});
 					console.log('[AlarmManager] Event listener 2/3 registered.');
 				} catch (e) {
-					console.warn('[AlarmManager] Failed to register plugin event listener (may not be available on this platform):', e);
+					console.warn(
+						'[AlarmManager] Failed to register plugin event listener (may not be available on this platform):',
+						e,
+					);
 				}
 
 				console.log('[AlarmManager] Setting up event listener 3/3: global-alarms-changed...');
@@ -64,15 +70,13 @@ export class AlarmManagerService {
 				console.log('[AlarmManager] Checking for native imports...');
 				await this.checkImports();
 				console.log('[AlarmManager] Native imports check complete.');
-				
+
 				console.log('[AlarmManager] Rescheduling all alarms...');
 				await this.rescheduleAll();
 				console.log('[AlarmManager] Reschedule complete.');
 
-
-
 				console.log('[AlarmManager] Service initialization complete.');
-				
+
 				// Check if app was launched by an alarm notification (do this AFTER init completes)
 				console.log('[AlarmManager] Checking for active alarm...');
 				await this.checkActiveAlarm();
@@ -115,15 +119,18 @@ export class AlarmManagerService {
 
 						await onAction((notification) => {
 							console.log('[AlarmManager] Action performed:', notification);
-							
+
 							const actionTypeId = (notification as any).actionTypeId;
 							if (actionTypeId !== 'alarm_trigger') {
-								console.log('[AlarmManager] Ignoring action from different category:', actionTypeId);
+								console.log(
+									'[AlarmManager] Ignoring action from different category:',
+									actionTypeId,
+								);
 								return;
 							}
 
 							const actionId = (notification as any).actionId;
-							
+
 							if (actionId === 'dismiss') {
 								console.log('[AlarmManager] Action: Dismiss');
 								this.stopRinging();
@@ -143,7 +150,7 @@ export class AlarmManagerService {
 				console.error('[AlarmManager] Error details:', {
 					message: e instanceof Error ? e.message : String(e),
 					stack: e instanceof Error ? e.stack : undefined,
-					raw: e
+					raw: e,
 				});
 				throw e;
 			}
@@ -158,37 +165,43 @@ export class AlarmManagerService {
 		try {
 			if (window.location.pathname.includes('/ringing')) return; // Already there
 
-			const result = await invoke<{ isAlarm: boolean; alarmId: number | null }>('plugin:alarm-manager|check_active_alarm')
-				.catch(() => null); // Mobile fetch might fail on desktop, ignore
+			const result = await invoke<{ isAlarm: boolean; alarmId: number | null }>(
+				'plugin:alarm-manager|check_active_alarm',
+			).catch(() => null); // Mobile fetch might fail on desktop, ignore
 
 			if (result && result.isAlarm && result.alarmId) {
 				console.log(`[AlarmManager] Active alarm detected: ${result.alarmId}. Redirecting...`);
-				
-				const { router } = await import('../router');
-				router.navigate({ to: '/ringing/$id', params: { id: result.alarmId.toString() } });
+
+				if (this.router) {
+					this.router.navigate({ to: '/ringing/$id', params: { id: result.alarmId.toString() } });
+				} else {
+					console.error('[AlarmManager] Router not initialized, cannot navigate to ringing screen');
+				}
 			}
 		} catch (e) {
 			console.error('Failed to check active alarm', e);
 		}
 	}
 
-    // Re-hydrate all alarms on startup (send to Rust scheduler)
-    async rescheduleAll() {
-        console.log('[AlarmManager] Rescheduling all alarms...');
-        const alarms = await databaseService.getAllAlarms();
-        for (const alarm of alarms) {
-            if (alarm.enabled && alarm.nextTrigger) {
-                // If trigger is in the future, schedule it
-                if (alarm.nextTrigger > Date.now()) {
-                    await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger);
-                } else {
-                    // Missed alarm? For now, maybe just calc next trigger
-                    console.log(`[AlarmManager] Alarm ${alarm.id} missed trigger at ${new Date(alarm.nextTrigger).toLocaleString()}. Rescheduling next.`);
-                     this.saveAndSchedule(alarm);
-                }
-            }
-        }
-    }
+	// Re-hydrate all alarms on startup (send to Rust scheduler)
+	async rescheduleAll() {
+		console.log('[AlarmManager] Rescheduling all alarms...');
+		const alarms = await databaseService.getAllAlarms();
+		for (const alarm of alarms) {
+			if (alarm.enabled && alarm.nextTrigger) {
+				// If trigger is in the future, schedule it
+				if (alarm.nextTrigger > Date.now()) {
+					await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger);
+				} else {
+					// Missed alarm? For now, maybe just calc next trigger
+					console.log(
+						`[AlarmManager] Alarm ${alarm.id} missed trigger at ${new Date(alarm.nextTrigger).toLocaleString()}. Rescheduling next.`,
+					);
+					this.saveAndSchedule(alarm);
+				}
+			}
+		}
+	}
 
 	async loadAlarms(): Promise<Alarm[]> {
 		return await databaseService.getAllAlarms();
@@ -197,7 +210,9 @@ export class AlarmManagerService {
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
 	private async checkImports() {
 		try {
-			const res = await invoke<{ imports: ImportedAlarm[] }>('plugin:alarm-manager|get_launch_args');
+			const res = await invoke<{ imports: ImportedAlarm[] }>(
+				'plugin:alarm-manager|get_launch_args',
+			);
 			const imports = res?.imports || [];
 			if (imports.length > 0) {
 				console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
@@ -234,22 +249,20 @@ export class AlarmManagerService {
 		}
 	}
 
-
-
-    async sendTestNotification() {
-        console.log('[AlarmManager] Sending test notification...');
-        const isMobile = PlatformUtils.isMobile();
-        try {
-            await sendNotification({
-                title: 'Test Notification',
-                body: 'This is a test notification with actions',
-                actionTypeId: isMobile ? 'test_trigger' : undefined,
-            });
-            console.log('[AlarmManager] Test notification sent');
-        } catch (e) {
-            console.error('[AlarmManager] Failed to send test notification', e);
-        }
-    }
+	async sendTestNotification() {
+		console.log('[AlarmManager] Sending test notification...');
+		const isMobile = PlatformUtils.isMobile();
+		try {
+			await sendNotification({
+				title: 'Test Notification',
+				body: 'This is a test notification with actions',
+				actionTypeId: isMobile ? 'test_trigger' : undefined,
+			});
+			console.log('[AlarmManager] Test notification sent');
+		} catch (e) {
+			console.error('[AlarmManager] Failed to send test notification', e);
+		}
+	}
 
 	async toggleAlarm(alarm: Alarm, enabled: boolean) {
 		const updatedAlarm = { ...alarm, enabled };
@@ -258,7 +271,7 @@ export class AlarmManagerService {
 		} else {
 			await this.cancelNativeAlarm(alarm.id);
 			await databaseService.saveAlarm({ ...updatedAlarm, nextTrigger: undefined });
-            this.notifyGlobalListeners();
+			this.notifyGlobalListeners();
 		}
 	}
 
@@ -286,8 +299,10 @@ export class AlarmManagerService {
 
 	async saveAndSchedule(alarm: Omit<Alarm, 'id'> & { id?: number }) {
 		// 1. Calculate next trigger
-		console.log(`[AlarmManager] Configuring alarm: Label="${alarm.label}", Enabled=${alarm.enabled}, Days=[${alarm.activeDays}]`);
-		
+		console.log(
+			`[AlarmManager] Configuring alarm: Label="${alarm.label}", Enabled=${alarm.enabled}, Days=[${alarm.activeDays}]`,
+		);
+
 		const coreAlarm = {
 			...alarm,
 			id: alarm.id || 0, // Temp ID for calc
@@ -296,7 +311,9 @@ export class AlarmManagerService {
 
 		const nextTrigger = calcTrigger(coreAlarm);
 		if (nextTrigger) {
-			console.log(`[AlarmManager] Next trigger calculated: ${new Date(nextTrigger).toLocaleString()} (${nextTrigger})`);
+			console.log(
+				`[AlarmManager] Next trigger calculated: ${new Date(nextTrigger).toLocaleString()} (${nextTrigger})`,
+			);
 		} else {
 			console.log('[AlarmManager] No next trigger calculated (disabled or no active days?)');
 		}
@@ -313,19 +330,19 @@ export class AlarmManagerService {
 		} else {
 			await this.cancelNativeAlarm(id);
 		}
-		
+
 		this.notifyGlobalListeners();
 		return id;
 	}
 
 	async deleteAlarm(id: number) {
-        console.log(`[DELETE_DEBUG] AlarmManagerService.deleteAlarm(${id}) called`);
+		console.log(`[DELETE_DEBUG] AlarmManagerService.deleteAlarm(${id}) called`);
 		await this.cancelNativeAlarm(id);
-        console.log(`[DELETE_DEBUG] cancelled native alarm ${id}, now deleting from DB...`);
+		console.log(`[DELETE_DEBUG] cancelled native alarm ${id}, now deleting from DB...`);
 		await databaseService.deleteAlarm(id);
-        console.log(`[DELETE_DEBUG] DB delete complete for ${id}, notifying listeners...`);
+		console.log(`[DELETE_DEBUG] DB delete complete for ${id}, notifying listeners...`);
 		this.notifyGlobalListeners();
-        console.log(`[DELETE_DEBUG] listeners notified for ${id}`);
+		console.log(`[DELETE_DEBUG] listeners notified for ${id}`);
 	}
 
 	private async scheduleNativeAlarm(id: number, timestamp: number, soundUri?: string | null) {
@@ -339,74 +356,74 @@ export class AlarmManagerService {
 		}
 	}
 
-    private async handleAlarmRing(id: number) {
-        // 1. Send Notification
+	private async handleAlarmRing(id: number) {
+		// 1. Send Notification
 		const isMobile = PlatformUtils.isMobile();
-        sendNotification({
-            title: APP_NAME,
-            body: 'Your alarm is ringing!',
+		sendNotification({
+			title: APP_NAME,
+			body: 'Your alarm is ringing!',
 			actionTypeId: isMobile ? 'alarm_trigger' : undefined,
-        });
+		});
 
+		// 2. Open Floating Window (Singleton)
+		try {
+			const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+			const isMobile = PlatformUtils.isMobile();
 
+			if (isMobile) {
+				console.log('[AlarmManager] Mobile detected. Navigating current window to ringing screen.');
+				if (this.router) {
+					this.router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
+				} else {
+					console.error('[AlarmManager] Router not initialized, cannot navigate to ringing screen');
+				}
+				return;
+			}
 
-        // 2. Open Floating Window (Singleton)
-        try {
-            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-            const isMobile = PlatformUtils.isMobile();
+			const label = 'ringing-window'; // Fixed label to ensure singleton
 
-            if (isMobile) {
-                console.log('[AlarmManager] Mobile detected. Navigating current window to ringing screen.');
-                const { router } = await import('../router');
-                router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
-                return;
-            }
+			const existing = await WebviewWindow.getByLabel(label);
 
-            const label = 'ringing-window'; // Fixed label to ensure singleton
-            
-            const existing = await WebviewWindow.getByLabel(label);
+			if (existing) {
+				console.log('Ringing window already exists. Updating content and focusing...');
+				await emit('alarm-update', { id });
+				await existing.setFocus();
+				return;
+			}
 
-            if (existing) {
-                console.log('Ringing window already exists. Updating content and focusing...');
-                await emit('alarm-update', { id });
-                await existing.setFocus();
-                return;
-            }
+			const webview = new WebviewWindow(label, {
+				url: `/ringing/${id}`,
+				title: 'Alarm',
+				width: 400,
+				height: 500,
+				resizable: false,
+				alwaysOnTop: true,
+				center: true,
+				skipTaskbar: false,
+				decorations: false,
+				transparent: true,
+				focus: true,
+			});
 
-            const webview = new WebviewWindow(label, {
-                url: `/ringing/${id}`, 
-                title: 'Alarm',
-                width: 400,
-                height: 500,
-                resizable: false,
-                alwaysOnTop: true,
-                center: true,
-                skipTaskbar: false,
-                decorations: false,
-                transparent: true,
-                focus: true,
-            });
+			webview.once('tauri://created', function () {
+				console.log('Alarm window created');
+			});
 
-            webview.once('tauri://created', function () {
-                console.log('Alarm window created');
-            });
-            
-            webview.once('tauri://error', function (e) {
-                console.error('Alarm window creation error', e);
-            });
+			webview.once('tauri://error', function (e) {
+				console.error('Alarm window creation error', e);
+			});
+		} catch (err) {
+			console.error('Failed to open alarm window', err);
+		}
 
-        } catch (err) {
-            console.error('Failed to open alarm window', err);
-        }
-
-        // 3. Auto-Reschedule (Calculate next trigger)
-        console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
-        const alarms = await databaseService.getAllAlarms();
-        const alarm = alarms.find(a => a.id === id);
-        if (alarm) {
-            await this.saveAndSchedule(alarm);
-        }
-    }
+		// 3. Auto-Reschedule (Calculate next trigger)
+		console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
+		const alarms = await databaseService.getAllAlarms();
+		const alarm = alarms.find((a) => a.id === id);
+		if (alarm) {
+			await this.saveAndSchedule(alarm);
+		}
+	}
 
 	async stopRinging() {
 		try {

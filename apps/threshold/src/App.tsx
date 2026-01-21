@@ -8,6 +8,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { platform } from '@tauri-apps/plugin-os';
+import { isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
 
 /* Theme variables */
 import './theme/variables.css';
@@ -27,7 +28,7 @@ const App: React.FC = () => {
 
 		const showWindow = async () => {
 			try {
-				// Force Desktop Window Size 
+				// Force Desktop Window Size
 				if (os !== 'android' && os !== 'ios') {
 					try {
 						await win.setDecorations(false); // Force removal of native title bar
@@ -54,7 +55,7 @@ const App: React.FC = () => {
 		const requestNotificationPermission = async () => {
 			if (os === 'android') {
 				try {
-					const { isPermissionGranted, requestPermission } = await import('@tauri-apps/plugin-notification');
+					// Use static import
 					let permissionGranted = await isPermissionGranted();
 
 					if (!permissionGranted) {
@@ -108,7 +109,6 @@ const App: React.FC = () => {
 			}
 		};
 		initBackButton();
-
 	}, []);
 
 	return (
