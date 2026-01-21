@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-get-time-format"
+description = "Enables the get_time_format command without any pre-configured scope."
+commands.allow = ["get_time_format"]
+
+[[permission]]
+identifier = "deny-get-time-format"
+description = "Denies the get_time_format command without any pre-configured scope."
+commands.deny = ["get_time_format"]

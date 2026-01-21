@@ -1,4 +1,5 @@
 import { emit } from '@tauri-apps/api/event';
+import { TimePrefs } from '../utils/timePrefs';
 
 export type Theme = 'deep-night' | 'canadian-cottage-winter' | 'georgian-bay-plunge' | 'boring-light' | 'boring-dark';
 
@@ -17,6 +18,10 @@ export const SettingsService = {
 		SettingsService.applyTheme();
 		// Emit event for other windows
 		emit('theme-changed', { theme, forceDark: SettingsService.getForceDark() });
+	},
+
+	getSystemTimeFormat: async () => {
+		return TimePrefs.getSystemTimeFormat();
 	},
 
 	getIs24h: (): boolean => {
