@@ -16,6 +16,7 @@ import './theme/ringing.css';
 import './theme/components.css';
 import './theme/transitions.css';
 import { routeTransitions } from './utils/RouteTransitions';
+import { SettingsService } from './services/SettingsService';
 
 const App: React.FC = () => {
 	console.log('📦 [threshold] App rendering, pathname:', window.location.pathname);
@@ -25,6 +26,18 @@ const App: React.FC = () => {
 		// Detect platform (synchronous in Tauri v2)
 		const os = platform();
 		const win = getCurrentWindow();
+
+		// Initialize Time Preferences
+		const initTimePrefs = async () => {
+			try {
+				const { is24Hour, source } = await SettingsService.getSystemTimeFormat();
+				console.log(`[App] System time format: ${is24Hour ? '24h' : '12h'} (source: ${source})`);
+				SettingsService.setIs24h(is24Hour);
+			} catch (e) {
+				console.error('[App] Failed to get system time format:', e);
+			}
+		};
+		initTimePrefs();
 
 		const showWindow = async () => {
 			try {
