@@ -27,6 +27,6 @@ android {
 }
 
 dependencies {
-    implementation("app.tauri:tauri-android:2.1.2")
+    compileOnly(project(":tauri-android"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
 }
