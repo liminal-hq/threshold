@@ -18,3 +18,10 @@ vault/*
 
 # Codex backup
 codex-backup.tar.gz
+
+# Android
+android-build-results.log
+logcat*.log
+
+# Antigravity Backup
+antigravity-backup.tar.gz   
