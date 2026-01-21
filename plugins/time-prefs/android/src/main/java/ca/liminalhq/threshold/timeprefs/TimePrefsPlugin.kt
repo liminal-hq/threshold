@@ -1,6 +1,7 @@
 package ca.liminalhq.threshold.timeprefs
 
 import android.app.Activity
+import android.util.Log
 import android.text.format.DateFormat
 import app.tauri.annotation.Command
 import app.tauri.annotation.TauriPlugin
@@ -13,6 +14,7 @@ class TimePrefsPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun getTimeFormat(invoke: Invoke) {
+        Log.d("TimePrefsPlugin", "getTimeFormat")
         val is24 = DateFormat.is24HourFormat(activity.applicationContext)
 
         val ret = JSObject()
