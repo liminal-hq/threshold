@@ -36,7 +36,9 @@ const COMMANDS: &[&str] = &[
 ];
 
 fn main() {
-    tauri_plugin::Builder::new(COMMANDS).build();
+    tauri_plugin::Builder::new(COMMANDS)
+        .android_path("android")  // Required: Registers Android module with Tauri
+        .build();
 
     inject_android_permissions()
         .expect("Failed to inject Android permissions");
@@ -65,7 +67,7 @@ fn inject_android_permissions() -> std::io::Result<()> {
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Remove <uses-permission> tags you're now injecting -->
-    
+
     <application>
         <!-- Keep services, receivers, activities here -->
     </application>
@@ -83,6 +85,7 @@ cat src-tauri/gen/android/app/src/main/AndroidManifest.xml
 ```
 
 Look for:
+
 ```xml
 <!-- tauri-plugin-YOUR-PLUGIN-NAME.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
 <uses-permission android:name="..." />
@@ -145,6 +148,7 @@ fn inject_android_permissions() -> std::io::Result<()> {
 ```
 
 Users enable with:
+
 ```toml
 tauri-plugin-your-plugin = { version = "1.0", features = ["camera-access"] }
 ```
@@ -163,6 +167,9 @@ For complete documentation, read `THRESHOLD_PLUGIN_MANIFEST_PATTERN.md`.
 
 **Problem:** Permissions not appearing  
 **Fix:** Ensure you run `pnpm tauri android build`, not `cargo build`
+
+**Problem:** Plugin not appearing in Gradle files  
+**Fix:** Add `.android_path("android")` to your `build.rs` before `.build()` - this registers your Android module with Tauri's build system
 
 **Problem:** Build fails  
 **Fix:** Check XML syntax, verify block identifier is unique
