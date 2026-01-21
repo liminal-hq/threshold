@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'motion/react';
-import { Box } from '@mui/material';
+import { Box, ButtonBase } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 interface SwipeToDeleteRowProps {
@@ -63,7 +63,16 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
         }
     };
 
-    const handleTap = () => {
+    const handleTap = (event: MouseEvent | TouchEvent | PointerEvent) => {
+        const target = event.target as HTMLElement;
+        // Ignore taps on interactive elements *inside* the row
+        const interactiveMatch = target.closest('button, input, [role="button"], .MuiSwitch-root');
+
+        // If we found an interactive element, and it's NOT our row wrapper (which has class 'swipe-row-content'), ignore it.
+        if (interactiveMatch && !interactiveMatch.classList.contains('swipe-row-content')) {
+            return;
+        }
+
         if (!isDrag.current && onClick) {
             onClick();
         }
@@ -86,7 +95,8 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
                 borderRadius: '16px', // Matches the "bubble" look
                 mb: 2, // Space between bubbles
                 width: '100%',
-                touchAction: 'pan-y'
+                touchAction: 'pan-y',
+                WebkitTapHighlightColor: 'transparent',
             }}
         >
             {/* Background Layer (Red Delete Action) */}
@@ -120,10 +130,8 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
             {/* Foreground Layer (Swipeable Content) */}
             <motion.div
                 drag="x"
-                // Allow drag in both directions. 
-                // Setting constraints to 0 with `dragElastic` creates the resistance effect.
                 dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.5} // Symmetric resistance
+                dragElastic={0.5}
                 onDragStart={handleDragStart}
                 onDrag={handleDrag}
                 onDragEnd={handleDragEnd}
@@ -132,12 +140,24 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
                 onTap={handleTap}
             >
                 {/* 
-                  Wrapper box to ensure the foreground has a solid background 
-                  so the red layer is hidden behind it until swiped 
+                  Use ButtonBase for ripple effect. 
+                  Identify it with 'swipe-row-content' for the tap handler.
                 */}
-                <Box sx={{ position: 'relative', bgcolor: 'background.paper', borderRadius: '16px' }}>
+                <ButtonBase
+                    className="swipe-row-content"
+                    component="div"
+                    sx={{
+                        width: '100%',
+                        bgcolor: 'background.paper',
+                        borderRadius: '16px',
+                        overflow: 'hidden', // Contain ripple
+                        display: 'block', // ButtonBase is inline-flex by default
+                        textAlign: 'left', // Reset text align
+                        transition: 'none', // Prevent interference
+                    }}
+                >
                     {children}
-                </Box>
+                </ButtonBase>
             </motion.div>
         </Box>
     );
