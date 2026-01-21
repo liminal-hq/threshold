@@ -1,8 +1,19 @@
 # AGENTS.md
 
+## Table of Contents
+
+- [Localization and Spelling](#localization-and-spelling)
+- [Commit Messages](#commit-messages)
+- [Application Protocol](#application-protocol)
+- [Code Organization](#code-organization)
+- [Best Practices](#best-practices)
+- [Plugin Development](#plugin-development)
+- [UI Project Structure](#ui-project-structure)
+- [Tauri v2](#tauri-v2)
+
 ## Localization and Spelling
 
-**REQUIREMENT:** All UI strings, code variables, comments, and documentation MUST use **Canadian English** spelling.
+**REQUIREMENT:** All UI strings, code variables, comments, commit messages, and documentation MUST use **Canadian English** spelling.
 
 Examples:
 
@@ -14,23 +25,80 @@ Examples:
 
 ## Commit Messages
 
-- Use Conventional Commits format (e.g., `feat: ...`, `fix: ...`, `docs: ...`).
+**Format:** Use Conventional Commits format (e.g., `feat: ...`, `fix: ...`, `docs: ...`).
+
+**Body Requirements:**
+- Explain what and why (not how)
+- Use markdown: **bold**, _italics_, `code`, bullet lists
+- **NO markdown headings** - use **bold labels** for sections (not always required)
 
 ## Application Protocol
 
-- The application registers the `threshold://` protocol.
+- The application registers the `threshold://` protocol for deep linking.
+- **Use Cases:** External apps can launch Threshold with `threshold://set?time=07:30`
 - **IMPORTANT:** If the app name or identifier changes, ensure this protocol registration is updated in `tauri.conf.json` and relevant documentation.
+- **See Also:** `/docs/DESKTOP_DEEPLINKS.md` for usage examples
 
 ## Code Organization
 
 - This is a `pnpm` workspace monorepo.
 - `apps/` contains the Tauri applications.
+- `docs/` contains documentation.
 - `packages/` contains shared logic.
 - `plugins/` contains custom Tauri plugins.
 
 ## Best Practices
 
 - **NO BARREL FILES:** Do not use `index.ts` files to re-export modules. Import directly from the specific file.
+
+## Plugin Development
+
+When creating or modifying Threshold plugins with Android support:
+
+**Documentation:** All plugin patterns are in `/docs/patterns/`
+
+- **Quick Start:** `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md`
+- **Full Reference:** `/docs/patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md`
+- **PR Checklist:** `/docs/patterns/PLUGIN_MANIFEST_PR_CHECKLIST.md`
+- **AI Agent Guide:** `/docs/guides/AI_AGENT_USAGE_GUIDE.md`
+
+**Android Manifest Injection (Required):**
+- Plugins MUST own their Android permissions via build-time injection
+- Use `tauri_plugin::mobile::update_android_manifest()` in `build.rs`
+- Block identifier format: `tauri-plugin-{plugin-name}.permissions`
+- Inject permissions, keep components in library manifest
+- Never require users to manually edit manifests
+
+**Example:**
+```rust
+// plugins/your-plugin/build.rs
+const COMMANDS: &[&str] = &["command1", "command2"];
+
+fn main() {
+    tauri_plugin::Builder::new(COMMANDS).build();
+    inject_android_permissions()
+        .expect("Failed to inject permissions");
+}
+
+fn inject_android_permissions() -> std::io::Result<()> {
+    let permissions = vec![
+        r#"<uses-permission android:name="android.permission.CAMERA" />"#,
+    ];
+    tauri_plugin::mobile::update_android_manifest(
+        "tauri-plugin-your-plugin.permissions",
+        "manifest",
+        permissions.join("\n"),
+    )
+}
+```
+
+See quickstart guide for complete implementation steps.
+
+**Reference Implementation:** See `plugins/alarm-manager/build.rs` for a complete working example.
+
+**See Also:**
+- `/docs/ALARM_MANAGER.md` - Alarm manager implementation details
+- `/docs/ANDROID_INTENTS.md` - Android intent handling
 
 ## UI Project Structure
 
@@ -42,6 +110,8 @@ Follow this directory structure for React/Ionic applications:
 - **`src/services/`**: Singleton classes or modules for business logic (e.g., `DatabaseService`, `AlarmService`).
 - **`src/theme/`**: Global styles, Ionic variables, and theme definitions.
 - **`src/context/`**: React Context providers.
+
+**See Also:** `/docs/UI_TASK.md` for UI implementation details
 
 ## Tauri v2
 
@@ -80,9 +150,11 @@ useEffect(() => {
 - Most Tauri v2 APIs are async - use `async/await` pattern
 - Check plugin documentation for platform-specific limitations
 
-### Migration from Tauri v1
+### Common v1 Pitfalls (Agent Guide)
 
-**Configuration (`tauri.conf.json`) Breaking Changes:**
+Because many online resources refer to Tauri v1, older patterns may inadvertently be suggested. Use this reference to avoid v1 patterns.
+
+**Configuration (`tauri.conf.json`) Differences:**
 - `tauri` → `app` (top-level rename)
 - `build.distDir` → `frontendDist`
 - `build.devPath` → `devUrl` (now only accepts URLs, not paths)
@@ -110,6 +182,5 @@ useEffect(() => {
 - Many `tauri::api` modules moved to separate plugins
 - Use `std::fs` or `tauri_plugin_fs` instead of `tauri::api::file`
 - Menu and tray APIs moved to separate crates
-
 
 
