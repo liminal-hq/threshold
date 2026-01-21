@@ -8,7 +8,9 @@ import {
     List,
     Box,
     Button,
-    Container
+    Container,
+    Menu,
+    MenuItem
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -30,10 +32,25 @@ const Home: React.FC = () => {
     const [alarms, setAlarms] = useState<Alarm[]>([]);
     const [isMobile, setIsMobile] = useState(false);
     const is24h = SettingsService.getIs24h();
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const open = Boolean(anchorEl);
 
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
     }, []);
+
+    const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleSettingsClick = () => {
+        handleMenuClose();
+        navigate({ to: '/settings' });
+    };
 
     const loadData = async () => {
         try {
@@ -113,9 +130,26 @@ const Home: React.FC = () => {
                         <IconButton color="inherit" onClick={() => loadData()}>
                             <RefreshIcon />
                         </IconButton>
-                        <IconButton color="inherit" onClick={() => navigate({ to: '/settings' })}>
+                        <IconButton
+                            color="inherit"
+                            onClick={handleMenuClick}
+                            aria-controls={open ? 'basic-menu' : undefined}
+                            aria-haspopup="true"
+                            aria-expanded={open ? 'true' : undefined}
+                        >
                             <MoreVertIcon />
                         </IconButton>
+                        <Menu
+                            id="basic-menu"
+                            anchorEl={anchorEl}
+                            open={open}
+                            onClose={handleMenuClose}
+                            MenuListProps={{
+                                'aria-labelledby': 'basic-button',
+                            }}
+                        >
+                            <MenuItem onClick={handleSettingsClick}>Settings</MenuItem>
+                        </Menu>
                     </Toolbar>
                 </AppBar>
             )}
