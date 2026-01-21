@@ -5,6 +5,8 @@ export type Theme = 'deep-night' | 'canadian-cottage-winter' | 'georgian-bay-plu
 
 const KEY_THEME = 'threshold_theme';
 const KEY_24H = 'threshold_24h';
+const KEY_SILENCE_AFTER = 'threshold_silence_after';
+const KEY_SNOOZE_LENGTH = 'threshold_snooze_length';
 
 export const SettingsService = {
 	getTheme: (): Theme => {
@@ -41,6 +43,24 @@ export const SettingsService = {
 		SettingsService.applyTheme();
 		// Emit event for other windows
 		emit('theme-changed', { theme: SettingsService.getTheme(), forceDark: enabled });
+	},
+
+	getSilenceAfter: (): number => {
+		const val = localStorage.getItem(KEY_SILENCE_AFTER);
+		return val ? parseInt(val, 10) : 20; // Default 20 minutes
+	},
+
+	setSilenceAfter: (minutes: number) => {
+		localStorage.setItem(KEY_SILENCE_AFTER, String(minutes));
+	},
+
+	getSnoozeLength: (): number => {
+		const val = localStorage.getItem(KEY_SNOOZE_LENGTH);
+		return val ? parseInt(val, 10) : 10; // Default 10 minutes
+	},
+
+	setSnoozeLength: (minutes: number) => {
+		localStorage.setItem(KEY_SNOOZE_LENGTH, String(minutes));
 	},
 
 	// Apply on startup

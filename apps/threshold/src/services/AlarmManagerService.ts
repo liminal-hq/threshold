@@ -425,6 +425,30 @@ export class AlarmManagerService {
 		}
 	}
 
+	async snoozeAlarm(id: number, durationMinutes: number) {
+		console.log(`[AlarmManager] Snoozing alarm ${id} for ${durationMinutes} minutes`);
+		const alarms = await databaseService.getAllAlarms();
+		const alarm = alarms.find((a) => a.id === id);
+
+		if (!alarm) {
+			console.error(`[AlarmManager] Cannot snooze: Alarm ${id} not found`);
+			return;
+		}
+
+		const nextTrigger = Date.now() + durationMinutes * 60 * 1000;
+
+		// Update DB to reflect snooze time
+		await databaseService.saveAlarm({
+			...alarm,
+			nextTrigger,
+		});
+
+		// Schedule Native
+		await this.scheduleNativeAlarm(id, nextTrigger, alarm.soundUri);
+
+		this.notifyGlobalListeners();
+	}
+
 	async stopRinging() {
 		try {
 			console.log('[AlarmManager] Stopping ringing...');

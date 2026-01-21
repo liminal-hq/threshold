@@ -7,6 +7,7 @@ import {
     List,
     ListItem,
     ListItemText,
+    ListItemButton,
     Switch,
     FormControl,
     InputLabel,
@@ -15,7 +16,10 @@ import {
     Box,
     Container,
     ListSubheader,
-    Paper
+    Paper,
+    Dialog,
+    DialogTitle,
+    DialogContent
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useNavigate } from '@tanstack/react-router';
@@ -29,6 +33,11 @@ const Settings: React.FC = () => {
     const { theme, setTheme, forceDark, setForceDark } = useThemeContext();
     const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
     const [isMobile, setIsMobile] = useState(false);
+
+    // New Settings State
+    const [silenceAfter, setSilenceAfter] = useState<number>(SettingsService.getSilenceAfter());
+    const [snoozeLength, setSnoozeLength] = useState<number>(SettingsService.getSnoozeLength());
+    const [snoozeDialogOpen, setSnoozeDialogOpen] = useState(false);
 
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
@@ -98,6 +107,38 @@ const Settings: React.FC = () => {
                                     onChange={(e) => setForceDark(e.target.checked)}
                                 />
                             </ListItem>
+                        </List>
+
+                        <List subheader={<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Alarm Settings</ListSubheader>}>
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="silence-after-label">Silence After</InputLabel>
+                                    <Select
+                                        labelId="silence-after-label"
+                                        value={silenceAfter}
+                                        label="Silence After"
+                                        onChange={(e) => {
+                                            const val = Number(e.target.value);
+                                            SettingsService.setSilenceAfter(val);
+                                            setSilenceAfter(val);
+                                        }}
+                                    >
+                                        <MenuItem value={1}>1 minute</MenuItem>
+                                        <MenuItem value={5}>5 minutes</MenuItem>
+                                        <MenuItem value={10}>10 minutes</MenuItem>
+                                        <MenuItem value={15}>15 minutes</MenuItem>
+                                        <MenuItem value={20}>20 minutes</MenuItem>
+                                        <MenuItem value={-1}>Never</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </ListItem>
+
+                            <ListItemButton onClick={() => setSnoozeDialogOpen(true)} sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="Snooze Length"
+                                    secondary={`${snoozeLength} minute${snoozeLength > 1 ? 's' : ''}`}
+                                />
+                            </ListItemButton>
                         </List>
 
                         <List subheader={<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>General</ListSubheader>}>
@@ -199,6 +240,27 @@ const Settings: React.FC = () => {
                         </List>
                     </Paper>
                 </Container>
+
+                <Dialog open={snoozeDialogOpen} onClose={() => setSnoozeDialogOpen(false)}>
+                    <DialogTitle>Snooze Length</DialogTitle>
+                    <DialogContent dividers>
+                        <List>
+                            {Array.from({ length: 30 }, (_, i) => i + 1).map((min) => (
+                                <ListItemButton
+                                    key={min}
+                                    onClick={() => {
+                                        SettingsService.setSnoozeLength(min);
+                                        setSnoozeLength(min);
+                                        setSnoozeDialogOpen(false);
+                                    }}
+                                    selected={snoozeLength === min}
+                                >
+                                    <ListItemText primary={`${min} minute${min > 1 ? 's' : ''}`} />
+                                </ListItemButton>
+                            ))}
+                        </List>
+                    </DialogContent>
+                </Dialog>
             </Box>
         </Box>
     );

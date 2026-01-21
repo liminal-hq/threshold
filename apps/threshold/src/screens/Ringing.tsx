@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Button, Typography, Box, ThemeProvider } from '@mui/material';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
@@ -16,6 +16,10 @@ const Ringing: React.FC = () => {
 	const [alarm, setAlarm] = useState<Alarm | null>(null);
 	const [timeStr, setTimeStr] = useState<string>('');
 	const navigate = useNavigate();
+
+	// Settings state
+	const [snoozeLength] = useState<number>(SettingsService.getSnoozeLength());
+	const [silenceAfter] = useState<number>(SettingsService.getSilenceAfter());
 
 	// Theme state
 	const [theme, setTheme] = useState<Theme>(SettingsService.getTheme());
@@ -95,7 +99,7 @@ const Ringing: React.FC = () => {
 		return () => clearInterval(interval);
 	}, [id]);
 
-	const handleDismiss = async () => {
+	const handleDismiss = useCallback(async () => {
 		// Stop the ringing sound/vibration
 		await alarmManagerService.stopRinging();
 
@@ -111,13 +115,28 @@ const Ringing: React.FC = () => {
 		} else {
 			navigate({ to: '/home', replace: true });
 		}
-	};
+	}, [navigate]);
 
-	const handleSnooze = () => {
-		console.log('Snoozed Alarm', id);
-		// Implement snooze logic properly later
+	const handleSnooze = async () => {
+		const alarmId = parseInt(id);
+		console.log('Snoozing Alarm', alarmId, 'for', snoozeLength, 'minutes');
+		await alarmManagerService.snoozeAlarm(alarmId, snoozeLength);
 		handleDismiss();
 	};
+
+	// Silence After Timer
+	useEffect(() => {
+		if (silenceAfter > 0) {
+			console.log(`Setting silence timer for ${silenceAfter} minutes`);
+			const timer = setTimeout(() => {
+				console.log(`Silence limit reached (${silenceAfter}m). Dismissing alarm.`);
+				handleDismiss();
+			}, silenceAfter * 60 * 1000);
+			return () => clearTimeout(timer);
+		} else {
+			console.log('Silence timer disabled (Never or 0)');
+		}
+	}, [silenceAfter, handleDismiss]);
 
 	return (
 		<ThemeProvider theme={muiTheme}>
@@ -165,7 +184,7 @@ const Ringing: React.FC = () => {
 								}}
 								onClick={handleSnooze}
 							>
-								Snooze (10m)
+								Snooze ({snoozeLength}m)
 							</Button>
 						</div>
 					</div>
