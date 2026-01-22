@@ -11,7 +11,7 @@ html {
 }
 
 /* Dark mode support for ringing window */
-body.dark-mode .ringing-page {
+body.force-dark .ringing-page {
 	background: #121212;
 }
 
