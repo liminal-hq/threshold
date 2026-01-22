@@ -1,7 +1,6 @@
 {
 	"name": "Threshold Dev",
 	"dockerFile": "Dockerfile",
-	// "workspaceFolder": "/workspaces/{{PROJECT_NAME}}",
 	"forwardPorts": [
 		5173,
 		1420
@@ -12,6 +11,14 @@
 		"--env=PULSE_SERVER=unix:/run/user/1000/pulse/native",
 		"--volume=/run/user/1000/pulse/native:/run/user/1000/pulse/native"
 	],
+	
+	// Mount keystore directory from host (read-only for security)
+	// Comment out on machines without ~/threshold-keys/ (like laptop)
+	// git update-index --assume-unchanged .devcontainer/devcontainer.json
+	"mounts": [
+		"source=${localEnv:HOME}/threshold-keys,target=/keys,type=bind,readonly"
+	],
+	
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -21,7 +28,18 @@
 				"tauri-apps.tauri-vscode",
 				"ms-vscode.vscode-typescript-next",
 				"streetsidesoftware.code-spell-checker"
-			]
+			],
+			"settings": {
+				"files.exclude": {
+					"**/*.jks": true,
+					"**/*.keystore": true,
+					"**/keystore.properties": true
+				},
+				"files.watcherExclude": {
+					"**/*.jks": true,
+					"**/*.keystore": true
+				}
+			}
 		}
 	},
 	"postCreateCommand": "pnpm install"
