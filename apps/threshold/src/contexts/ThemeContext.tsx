@@ -35,7 +35,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 	const [theme, setThemeState] = useState<AppTheme>(SettingsService.getTheme());
 	const [forceDark, setForceDarkState] = useState<boolean>(SettingsService.getForceDark());
 	const [useMaterialYou, setUseMaterialYouState] = useState<boolean>(
-		SettingsService.getUseMaterialYou(),
+		SettingsService.getUseMaterialYou() ?? false,
 	);
 	const [materialYouResponse, setMaterialYouResponse] = useState<MaterialYouResponse | undefined>(
 		undefined,
@@ -57,6 +57,13 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 					);
 					console.log('Material You Response:', response);
 					setMaterialYouResponse(response);
+
+					// Enable by default if supported and not explicitly set
+					if (SettingsService.getUseMaterialYou() === undefined) {
+						console.log('Material You supported and not configured. Enabling by default.');
+						setUseMaterialYouState(true);
+						SettingsService.setUseMaterialYou(true);
+					}
 				} catch (e) {
 					console.error('Failed to fetch Material You colours:', e);
 				}
@@ -73,7 +80,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 			setForceDarkState(event.payload.forceDark);
 			// We assume useMaterialYou is synced via localstorage or we should add it to the payload
 			// For now, let's refresh it from storage
-			setUseMaterialYouState(SettingsService.getUseMaterialYou());
+			setUseMaterialYouState(SettingsService.getUseMaterialYou() ?? false);
 		});
 
 		return () => {

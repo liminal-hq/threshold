@@ -27,8 +27,11 @@ export const SettingsService = {
 		return TimePrefs.getSystemTimeFormat();
 	},
 
-	getUseMaterialYou: (): boolean => {
-		return localStorage.getItem(KEY_USE_MATERIAL_YOU) === 'true';
+	getUseMaterialYou: (): boolean | undefined => {
+		const val = localStorage.getItem(KEY_USE_MATERIAL_YOU);
+		if (val === 'true') return true;
+		if (val === 'false') return false;
+		return undefined;
 	},
 
 	setUseMaterialYou: (enabled: boolean) => {
