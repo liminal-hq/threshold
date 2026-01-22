@@ -1,0 +1,25 @@
+{
+  "$schema": "../../schemas/schema.json",
+  "default": [
+    {
+      "identifier": "get_material_you_colours",
+      "windows": [
+        "*"
+      ],
+      "permissions": [
+        "get_material_you_colours"
+      ]
+    }
+  ],
+  "set": [
+    {
+      "identifier": "get_material_you_colours",
+      "description": "Allows getting Material You colours",
+      "commands": {
+        "allow": [
+          "get_material_you_colours"
+        ]
+      }
+    }
+  ]
+}
