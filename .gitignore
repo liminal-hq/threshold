@@ -29,3 +29,10 @@ antigravity-backup.tar.gz
 
 # Tauri plugin build artifacts
 plugins/**/android/.tauri/
+
+# Android Keystores (CRITICAL - never commit!)
+*.jks
+*.keystore
+keystore.properties
+keys
+.threshold-keys
