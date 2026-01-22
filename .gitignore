@@ -24,6 +24,7 @@ android-build-results.log
 logcat*.log
 
 # Antigravity Backup
+gemini-backup.tar.gz
 antigravity-backup.tar.gz
 
 # Tauri plugin build artifacts
