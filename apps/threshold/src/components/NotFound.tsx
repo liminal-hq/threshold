@@ -24,7 +24,7 @@ export const NotFound = () => {
             justifyContent: 'center',
             padding: '20px',
             textAlign: 'center',
-            color: 'var(--ion-text-color, #fff)'
+            color: 'var(--app-text-colour, #fff)'
         }}>
             <h2>Page Not Found</h2>
             <p style={{ opacity: 0.7 }}>The requested route cannot be found.</p>
@@ -45,7 +45,7 @@ export const NotFound = () => {
                 style={{
                     marginTop: '16px',
                     padding: '8px 16px',
-                    background: 'var(--ion-color-primary, #6200ee)',
+                    background: 'var(--app-colour-primary, #6200ee)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '4px',

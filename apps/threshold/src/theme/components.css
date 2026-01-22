@@ -1,45 +1,4 @@
-/* Custom Pill Segment */
-ion-segment.custom-pill {
-	background: var(--app-colour-step-100, #f4f5f8);
-	border-radius: 12px; /* Less rounded to look more like a tab bar */
-	padding: 6px;
-	height: auto; /* Let content dictate height */
-	width: fit-content;
-	margin: 16px auto;
-	border: 1px solid var(--app-border-colour, rgba(0,0,0,0.1)); /* Add border to define the track */
-}
 
-ion-segment.custom-pill ion-segment-button {
-	--indicator-color: var(--app-colour-primary);
-	/* Use bold colors - High contrast for all themes */
-	--color: var(--app-text-colour) !important;
-	--color-checked: var(--app-text-colour) !important; /* Force same color as unselected for consistency */
-	
-	/* Layout fixes */
-	min-height: 36px;
-	--border-radius: 8px; /* Match container generally */
-	min-width: auto; /* Allow auto width */
-	padding: 0 16px; /* Add horizontal padding */
-	font-weight: 600;
-	letter-spacing: 0.5px;
-	
-	/* Ensure centering */
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-/* Dark mode overrides for custom pill to ensure text is light */
-@media (prefers-color-scheme: dark) {
-	ion-segment.custom-pill ion-segment-button {
-		--color: #ddd !important;
-		--color-checked: #000 !important; /* Contrast against lighter primary in dark mode */
-	}
-}
-body.dark-mode ion-segment.custom-pill ion-segment-button {
-	--color: #ddd !important;
-	--color-checked: #000 !important;
-}
 
 /* ... existing day styles ... */
 
