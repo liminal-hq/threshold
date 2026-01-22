@@ -11,7 +11,7 @@ import { platform } from '@tauri-apps/plugin-os';
 import { isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
 
 /* Theme variables */
-import './theme/variables.css';
+// import './theme/variables.css'; // Deprecated in favor of Code-First ThemeProvider
 import './theme/ringing.css';
 import './theme/components.css';
 import './theme/transitions.css';

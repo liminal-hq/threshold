@@ -26,12 +26,18 @@ import { useThemeContext } from '../contexts/ThemeContext';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
-    const { theme, setTheme, forceDark, setForceDark } = useThemeContext();
+    const {
+        theme, setTheme,
+        forceDark, setForceDark,
+        useMaterialYou, setUseMaterialYou
+    } = useThemeContext();
     const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
     const [isMobile, setIsMobile] = useState(false);
+    const [isAndroid, setIsAndroid] = useState(false);
 
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
+        setIsAndroid(PlatformUtils.getPlatform() === 'android');
     }, []);
 
     const handleTimeFormatChange = (enabled: boolean) => {
@@ -78,6 +84,7 @@ const Settings: React.FC = () => {
                                         label="Theme"
                                         onChange={(e) => setTheme(e.target.value as Theme)}
                                     >
+                                        <MenuItem value="system">System (Auto)</MenuItem>
                                         <MenuItem value="deep-night">Deep Night (Default)</MenuItem>
                                         <MenuItem value="canadian-cottage-winter">Canadian Cottage Winter</MenuItem>
                                         <MenuItem value="georgian-bay-plunge">Georgian Bay Plunge</MenuItem>
@@ -87,10 +94,25 @@ const Settings: React.FC = () => {
                                 </FormControl>
                             </ListItem>
 
+                            {/* Material You Toggle: Only visible for System Theme on Android */}
+                            {theme === 'system' && isAndroid && (
+                                <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                    <ListItemText
+                                        primary="Use Material You"
+                                        secondary="Use dynamic system colours"
+                                    />
+                                    <Switch
+                                        edge="end"
+                                        checked={useMaterialYou}
+                                        onChange={(e) => setUseMaterialYou(e.target.checked)}
+                                    />
+                                </ListItem>
+                            )}
+
                             <ListItem sx={{ px: isMobile ? 2 : 0 }}>
                                 <ListItemText
                                     primary="Force Dark Mode"
-                                    secondary="Override system color scheme"
+                                    secondary="Override system colour scheme"
                                 />
                                 <Switch
                                     edge="end"
