@@ -8,6 +8,7 @@ import { platform } from '@tauri-apps/plugin-os';
 import { listen } from '@tauri-apps/api/event';
 import '../theme/ringing.css';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
+import { ROUTES, SPECIAL_ALARM_IDS } from '../constants';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
@@ -50,9 +51,28 @@ const Ringing: React.FC = () => {
 		return () => clearInterval(interval);
 	}, [id]);
 
+	/**
+	 * Handles alarm dismissal with platform-specific behaviour.
+	 * 
+	 * - Test Alarm (ID 999): Navigates back to previous screen
+	 * - Mobile (iOS/Android): Minimizes app to background, preserving state
+	 * - Desktop: Closes the ringing window
+	 * 
+	 * @remarks
+	 * On mobile, we minimize instead of navigate to provide better UX:
+	 * the app disappears immediately without showing the home screen transition.
+	 * A small delay after minimize ensures the operation completes before navigation.
+	 */
 	const handleDismiss = async () => {
 		// Stop the ringing sound/vibration
 		await alarmManagerService.stopRinging();
+
+		// Test Alarm Logic
+		if (parseInt(id) === SPECIAL_ALARM_IDS.TEST_ALARM) {
+			// Return to previous screen (likely Settings)
+			window.history.back();
+			return;
+		}
 
 		// Check platform and close window if desktop
 		const os = platform();
@@ -61,10 +81,20 @@ const Ringing: React.FC = () => {
 				await getCurrentWindow().close();
 			} catch (e) {
 				console.error('Failed to close window', e);
-				navigate({ to: '/home', replace: true });
+				navigate({ to: ROUTES.HOME, replace: true });
 			}
 		} else {
-			navigate({ to: '/home', replace: true });
+			// On Mobile: Minimize the app so it vanishes but doesn't close
+			try {
+				await getCurrentWindow().minimize();
+				// Small delay to ensure minimize completes before navigation
+				await new Promise(resolve => setTimeout(resolve, 100));
+				// Navigate to home in background so next launch is clean
+				navigate({ to: ROUTES.HOME, replace: true });
+			} catch (e) {
+				console.error('Failed to minimize window', e);
+				navigate({ to: ROUTES.HOME, replace: true });
+			}
 		}
 	};
 
