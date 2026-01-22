@@ -1,10 +1,13 @@
 import { emit } from '@tauri-apps/api/event';
 import { TimePrefs } from '../utils/timePrefs';
+import { ThemeId } from '../theme/themes';
 
-export type Theme = 'deep-night' | 'canadian-cottage-winter' | 'georgian-bay-plunge' | 'boring-light' | 'boring-dark';
+export type Theme = ThemeId;
 
 const KEY_THEME = 'threshold_theme';
 const KEY_24H = 'threshold_24h';
+const KEY_USE_MATERIAL_YOU = 'threshold_use_material_you';
+const KEY_FORCE_DARK = 'threshold_force_dark';
 
 export const SettingsService = {
 	getTheme: (): Theme => {
@@ -15,13 +18,25 @@ export const SettingsService = {
 
 	setTheme: (theme: Theme) => {
 		localStorage.setItem(KEY_THEME, theme);
-		SettingsService.applyTheme();
-		// Emit event for other windows
+		// applyTheme is now handled by ThemeProvider listening to state changes
+		// But we emit event for other windows
 		emit('theme-changed', { theme, forceDark: SettingsService.getForceDark() });
 	},
 
 	getSystemTimeFormat: async () => {
 		return TimePrefs.getSystemTimeFormat();
+	},
+
+	getUseMaterialYou: (): boolean => {
+		return localStorage.getItem(KEY_USE_MATERIAL_YOU) === 'true';
+	},
+
+	setUseMaterialYou: (enabled: boolean) => {
+		localStorage.setItem(KEY_USE_MATERIAL_YOU, String(enabled));
+		emit('theme-changed', {
+			theme: SettingsService.getTheme(),
+			forceDark: SettingsService.getForceDark(),
+		});
 	},
 
 	getIs24h: (): boolean => {
@@ -33,20 +48,18 @@ export const SettingsService = {
 	},
 
 	getForceDark: (): boolean => {
-		return localStorage.getItem('threshold_force_dark') === 'true';
+		return localStorage.getItem(KEY_FORCE_DARK) === 'true';
 	},
 
 	setForceDark: (enabled: boolean) => {
-		localStorage.setItem('threshold_force_dark', String(enabled));
-		SettingsService.applyTheme();
+		localStorage.setItem(KEY_FORCE_DARK, String(enabled));
 		// Emit event for other windows
 		emit('theme-changed', { theme: SettingsService.getTheme(), forceDark: enabled });
 	},
 
-	// Apply on startup
+	// Deprecated: Logic moved to ThemeProvider
 	applyTheme: () => {
-		const theme = SettingsService.getTheme();
-		const forceDark = SettingsService.getForceDark();
-		document.body.className = `theme-${theme} ${forceDark ? 'force-dark' : ''}`;
+		// No-op or legacy fallback if needed
+		// The ThemeProvider will read from SettingsService on mount and handle injection.
 	},
 };
