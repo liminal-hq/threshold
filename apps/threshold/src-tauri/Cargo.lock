@@ -4724,6 +4724,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-theme-utils"
+version = "0.1.0"
+dependencies = [
+ "jni",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "tauri-plugin-time-prefs"
 version = "0.1.0"
 dependencies = [
@@ -4943,6 +4955,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-os",
  "tauri-plugin-sql",
+ "tauri-plugin-theme-utils",
  "tauri-plugin-time-prefs",
  "tauri-plugin-window-state",
 ]
