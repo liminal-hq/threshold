@@ -16,8 +16,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     #[cfg(target_os = "android")]
     let handle = api.register_android_plugin(PLUGIN_IDENTIFIER, "TimePrefsPlugin")?;
 
-    // On iOS we don't register anything because we are providing a Rust-side stub only.
-    // If we had Swift code, we would use api.register_ios_plugin.
+    // NOTE: iOS implementation is deferred. We intentionally do not register an iOS plugin here.
 
     Ok(TimePrefs {
         #[cfg(target_os = "android")]
@@ -43,7 +42,7 @@ impl<R: Runtime> TimePrefs<R> {
         #[cfg(target_os = "ios")]
         {
             // Stub implementation for iOS
-            // TODO: Implement full iOS plugin with Swift
+            // NOTE: iOS implementation is deferred; currently returning default 12-hour format
             Ok(TimeFormatResponse { is24_hour: false })
         }
     }
