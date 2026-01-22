@@ -137,7 +137,7 @@ echo -e "${MAGENTA}╔═══════════════════�
 echo -e "${MAGENTA}║         Building Release AAB...        ║${NC}"
 echo -e "${MAGENTA}╚════════════════════════════════════════╝${NC}\n"
 
-pnpm build:android -- --aab
+pnpm build:android
 
 BUILD_RESULT=$?
 
@@ -149,7 +149,7 @@ if [ $BUILD_RESULT -ne 0 ]; then
     exit 1
 fi
 
-AAB_PATH=$(find apps/threshold/src-tauri/gen/android/app/build/outputs/bundle/release -name "*.aab" -type f 2>/dev/null | head -n1)
+AAB_PATH=$(find apps/threshold/src-tauri/gen/android/app/build/outputs/bundle/universalRelease -name "*.aab" -type f 2>/dev/null | head -n1)
 
 if [ -z "$AAB_PATH" ]; then
     echo -e "\n${RED}✗ Build completed but no AAB found${NC}"
@@ -167,6 +167,47 @@ echo "   $AAB_PATH"
 echo ""
 echo -e "${BLUE}📦 File Size:${NC} $AAB_SIZE"
 echo ""
+
+# Check for debug symbols
+SYMBOLS_DIR=$(find apps/threshold/src-tauri/gen/android/app/build/intermediates/merged_native_libs/universalRelease -type d -name "lib" 2>/dev/null | head -n1)
+
+if [ -n "$SYMBOLS_DIR" ] && [ -d "$SYMBOLS_DIR" ]; then
+    # Check if libraries actually have debug symbols
+    SAMPLE_LIB=$(find "$SYMBOLS_DIR" -name "libthreshold.so" | head -n1)
+    
+    if [ -n "$SAMPLE_LIB" ] && file "$SAMPLE_LIB" | grep -q "not stripped"; then
+        echo -e "${BLUE}🔍 Creating debug symbols zip...${NC}"
+        
+        # Create symbols zip
+        cd "$SYMBOLS_DIR"
+        SYMBOLS_ZIP="native-debug-symbols.zip"
+        zip -r -q "$SYMBOLS_ZIP" arm64-v8a/ armeabi-v7a/ x86/ x86_64/ 2>/dev/null || true
+        
+        if [ -f "$SYMBOLS_ZIP" ]; then
+            SYMBOLS_SIZE=$(du -h "$SYMBOLS_ZIP" | cut -f1)
+            SYMBOLS_FULL_PATH="$SYMBOLS_DIR/$SYMBOLS_ZIP"
+            
+            echo -e "${GREEN}✓ Debug Symbols Package Created${NC}"
+            echo "   $SYMBOLS_FULL_PATH"
+            echo -e "${BLUE}📦 Symbols Size:${NC} $SYMBOLS_SIZE"
+            echo ""
+            
+            # Move to easier location
+            cp "$SYMBOLS_ZIP" "$(pwd | grep -o '.*/threshold')/native-debug-symbols.zip" 2>/dev/null || true
+        fi
+        cd - > /dev/null
+    else
+        echo -e "${YELLOW}⚠ Native libraries are stripped (no debug symbols)${NC}"
+        echo "   To enable crash symbolication, add to apps/threshold/src-tauri/Cargo.toml:"
+        echo "   [profile.release]"
+        echo "   strip = false"
+        echo ""
+    fi
+else
+    echo -e "${YELLOW}⚠ Native libraries directory not found${NC}"
+    echo "   (Build may not have completed successfully)"
+    echo ""
+fi
 
 # Verify signature
 echo -e "${BLUE}🔐 Verifying signature...${NC}"
@@ -186,13 +227,16 @@ echo -e "${MAGENTA}╔═══════════════════�
 echo -e "${MAGENTA}║            Next Steps                  ║${NC}"
 echo -e "${MAGENTA}╚════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "${YELLOW}1.${NC} Copy AAB to host (if needed):"
-echo "   docker cp <container>:/workspace/$AAB_PATH ."
-echo ""
-echo -e "${YELLOW}2.${NC} Upload to Play Console:"
+echo -e "${YELLOW}1.${NC} Upload to Play Console:"
 echo "   https://play.google.com/console"
+if [ -n "$SYMBOLS_ZIP" ]; then
+    echo "   📦 Upload AAB: $(basename $AAB_PATH)"
+    echo "   🐛 Upload symbols: $(basename $SYMBOLS_ZIP)"
+else
+    echo "   📦 Upload AAB: $(basename $AAB_PATH)"
+fi
 echo ""
-echo -e "${YELLOW}3.${NC} Before next build, increment version in:"
+echo -e "${YELLOW}2.${NC} Before next build, increment version in:"
 echo "   apps/threshold/src-tauri/tauri.conf.json"
 echo "   (Look for 'versionCode' under bundle.android)"
 echo ""
