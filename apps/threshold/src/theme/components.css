@@ -1,19 +1,19 @@
 /* Custom Pill Segment */
 ion-segment.custom-pill {
-	background: var(--ion-color-step-100, #f4f5f8);
+	background: var(--app-colour-step-100, #f4f5f8);
 	border-radius: 12px; /* Less rounded to look more like a tab bar */
 	padding: 6px;
 	height: auto; /* Let content dictate height */
 	width: fit-content;
 	margin: 16px auto;
-	border: 1px solid var(--ion-border-color, rgba(0,0,0,0.1)); /* Add border to define the track */
+	border: 1px solid var(--app-border-colour, rgba(0,0,0,0.1)); /* Add border to define the track */
 }
 
 ion-segment.custom-pill ion-segment-button {
-	--indicator-color: var(--ion-color-primary);
+	--indicator-color: var(--app-colour-primary);
 	/* Use bold colors - High contrast for all themes */
-	--color: var(--ion-text-color) !important;
-	--color-checked: var(--ion-text-color) !important; /* Force same color as unselected for consistency */
+	--color: var(--app-text-colour) !important;
+	--color-checked: var(--app-text-colour) !important; /* Force same color as unselected for consistency */
 	
 	/* Layout fixes */
 	min-height: 36px;
@@ -36,7 +36,7 @@ ion-segment.custom-pill ion-segment-button {
 		--color-checked: #000 !important; /* Contrast against lighter primary in dark mode */
 	}
 }
-body.force-dark ion-segment.custom-pill ion-segment-button {
+body.dark-mode ion-segment.custom-pill ion-segment-button {
 	--color: #ddd !important;
 	--color-checked: #000 !important;
 }
@@ -62,8 +62,8 @@ body.force-dark ion-segment.custom-pill ion-segment-button {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--ion-color-step-100, #f4f5f8);
-	color: var(--ion-text-color, #000); /* Use strong text color */
+	background: var(--app-colour-step-100, #f4f5f8);
+	color: var(--app-text-colour, #000); /* Use strong text color */
 	font-weight: 600;
 	font-size: 0.85rem;
 	cursor: pointer;
@@ -73,19 +73,19 @@ body.force-dark ion-segment.custom-pill ion-segment-button {
 }
 
 .day-pill.selected {
-	background: var(--ion-color-primary);
-	color: var(--ion-color-primary-contrast);
+	background: var(--app-colour-primary);
+	color: var(--app-colour-primary-contrast);
 	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
 .day-pill:hover:not(.selected) {
-	background: var(--ion-color-step-200, #eef);
+	background: var(--app-colour-step-200, #eef);
 }
 
 /* Desktop Footer */
 .desktop-footer {
-	background: var(--ion-background-color);
-	border-top: 1px solid var(--ion-border-color);
+	background: var(--app-background-colour);
+	border-top: 1px solid var(--app-border-colour);
 	padding: 16px 24px;
 	display: flex;
 	justify-content: flex-end; /* Align to right */
@@ -102,21 +102,21 @@ body.force-dark ion-segment.custom-pill ion-segment-button {
 }
 
 .settings-card {
-	background: var(--ion-card-background, #fff);
+	background: var(--app-card-background, #fff);
 	border-radius: 16px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 	overflow: hidden;
 	/* Use a more subtle border color that works in both light and dark if vars are set correctly, 
 	   or use a very disparate fallback. 
 	   Better yet, use a transparent border if shadow is enough, but user complained about lines. */
-	border: 1px solid var(--ion-border-color, rgba(0, 0, 0, 0.08));
+	border: 1px solid var(--app-border-colour, rgba(0, 0, 0, 0.08));
 	margin-bottom: 24px;
 }
 
 .settings-section-title {
 	font-size: 14px;
 	font-weight: 600;
-	color: var(--ion-text-color-step-400, #666);
+	color: var(--app-text-colour-step-400, #666);
 	margin: 0 0 8px 16px;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
@@ -124,7 +124,7 @@ body.force-dark ion-segment.custom-pill ion-segment-button {
 
 /* Alarm Item Card */
 .alarm-card {
-	background: var(--ion-card-background, #fff);
+	background: var(--app-card-background, #fff);
 	border-radius: 16px;
 	padding: 16px;
 	margin-bottom: 12px;
@@ -132,7 +132,7 @@ body.force-dark ion-segment.custom-pill ion-segment-button {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	border: 1px solid var(--ion-border-color, rgba(0,0,0,0.05));
+	border: 1px solid var(--app-border-colour, rgba(0,0,0,0.05));
 	cursor: pointer;
 	transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -152,19 +152,19 @@ body.force-dark ion-segment.custom-pill ion-segment-button {
 	font-size: 2rem;
 	font-weight: 300;
 	letter-spacing: -0.5px;
-	color: var(--ion-text-color);
+	color: var(--app-text-colour);
 }
 
 .alarm-label {
 	font-size: 0.9rem;
 	font-weight: 500;
-	color: var(--ion-text-color);
+	color: var(--app-text-colour);
 	opacity: 0.8;
 }
 
 .alarm-next {
 	font-size: 0.8rem;
-	color: var(--ion-text-color-step-400);
+	color: var(--app-text-colour-step-400);
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -180,7 +180,7 @@ body.force-dark ion-segment.custom-pill ion-segment-button {
 .delete-btn {
 	background: transparent;
 	border: none;
-	color: var(--ion-text-color-step-400);
+	color: var(--app-text-colour-step-400);
 	cursor: pointer;
 	padding: 8px;
 	border-radius: 50%;
@@ -191,8 +191,8 @@ body.force-dark ion-segment.custom-pill ion-segment-button {
 }
 
 .delete-btn:hover {
-	background-color: rgba(var(--ion-color-danger-rgb), 0.1);
-	color: var(--ion-color-danger);
+	background-color: rgba(235, 68, 90, 0.1); /* Standard red tint */
+	color: #eb445a; /* Standard red */
 }
 
 

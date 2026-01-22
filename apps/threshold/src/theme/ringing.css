@@ -11,7 +11,7 @@ html {
 }
 
 /* Dark mode support for ringing window */
-body.force-dark .ringing-page {
+body.dark-mode .ringing-page {
 	background: #121212;
 }
 
@@ -45,9 +45,9 @@ body.force-dark .ringing-page {
 	padding: 32px;
 	text-align: center;
 	
-	/* Visual styling - secondary color gradient */
-	background: radial-gradient(circle at center, var(--ion-color-secondary-tint), var(--ion-color-secondary));
-	color: var(--ion-color-secondary-contrast); /* Use secondary-contrast for proper contrast in all themes */
+	/* Visual styling - secondary colour gradient */
+	background: radial-gradient(circle at center, var(--app-colour-secondary-tint), var(--app-colour-secondary));
+	color: var(--app-colour-secondary-contrast); /* Use secondary-contrast for proper contrast in all themes */
 	animation: pulse-bg 4s infinite alternate;
 	
 	/* Rounded corners for floating card effect */
@@ -64,7 +64,7 @@ body.force-dark .ringing-page {
 	right: 0;
 	bottom: 0;
 	/* Increased opacity for maximum intensity */
-	background: radial-gradient(circle at center, rgba(var(--ion-color-secondary-contrast-rgb), 0.4), transparent 70%);
+	background: radial-gradient(circle at center, color-mix(in srgb, var(--app-colour-secondary-contrast), transparent 60%), transparent 70%);
 	/* Faster animation for more urgency? No, keep it rhythmic but deep */
 	animation: breathe 4s ease-in-out infinite;
 	pointer-events: none;
