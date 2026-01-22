@@ -160,12 +160,30 @@ echo -e "\n${GREEN}╔═══════════════════�
 echo -e "${GREEN}║     ✓ Release Build Successful! 🎉     ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════╝${NC}\n"
 
+# Create release directory and copy outputs
+RELEASE_DIR="release"
+echo -e "${BLUE}📦 Copying release files...${NC}"
+
+mkdir -p "$RELEASE_DIR"
+
+# Extract version from tauri.properties
+TAURI_PROPS="apps/threshold/src-tauri/gen/android/app/tauri.properties"
+if [ -f "$TAURI_PROPS" ]; then
+    VERSION_NAME=$(grep "tauri.android.versionName" "$TAURI_PROPS" | cut -d'=' -f2)
+    VERSION_CODE=$(grep "tauri.android.versionCode" "$TAURI_PROPS" | cut -d'=' -f2)
+    VERSION_SUFFIX="-v${VERSION_NAME}-${VERSION_CODE}"
+else
+    VERSION_SUFFIX=""
+fi
+
+# Copy AAB
+AAB_FILENAME=$(basename "$AAB_PATH" .aab)
+cp "$AAB_PATH" "$RELEASE_DIR/${AAB_FILENAME}${VERSION_SUFFIX}.aab"
+echo -e "${GREEN}✓ Copied AAB to: $RELEASE_DIR/${AAB_FILENAME}${VERSION_SUFFIX}.aab${NC}"
+
 # Show file info
-AAB_SIZE=$(du -h "$AAB_PATH" | cut -f1)
-echo -e "${BLUE}📍 AAB Location:${NC}"
-echo "   $AAB_PATH"
-echo ""
-echo -e "${BLUE}📦 File Size:${NC} $AAB_SIZE"
+AAB_SIZE=$(du -h "$RELEASE_DIR/${AAB_FILENAME}${VERSION_SUFFIX}.aab" | cut -f1)
+echo -e "${BLUE}📦 AAB Size:${NC} $AAB_SIZE"
 echo ""
 
 # Check for debug symbols
@@ -178,6 +196,9 @@ if [ -n "$SYMBOLS_DIR" ] && [ -d "$SYMBOLS_DIR" ]; then
     if [ -n "$SAMPLE_LIB" ] && file "$SAMPLE_LIB" | grep -q "not stripped"; then
         echo -e "${BLUE}🔍 Creating debug symbols zip...${NC}"
         
+        # Save current directory (repo root)
+        REPO_ROOT=$(pwd)
+        
         # Create symbols zip
         cd "$SYMBOLS_DIR"
         SYMBOLS_ZIP="native-debug-symbols.zip"
@@ -185,15 +206,14 @@ if [ -n "$SYMBOLS_DIR" ] && [ -d "$SYMBOLS_DIR" ]; then
         
         if [ -f "$SYMBOLS_ZIP" ]; then
             SYMBOLS_SIZE=$(du -h "$SYMBOLS_ZIP" | cut -f1)
-            SYMBOLS_FULL_PATH="$SYMBOLS_DIR/$SYMBOLS_ZIP"
+            
+            # Copy to release directory at repo root with version suffix
+            cp "$SYMBOLS_ZIP" "$REPO_ROOT/$RELEASE_DIR/native-debug-symbols${VERSION_SUFFIX}.zip"
             
             echo -e "${GREEN}✓ Debug Symbols Package Created${NC}"
-            echo "   $SYMBOLS_FULL_PATH"
+            echo -e "   Copied to: $RELEASE_DIR/native-debug-symbols${VERSION_SUFFIX}.zip"
             echo -e "${BLUE}📦 Symbols Size:${NC} $SYMBOLS_SIZE"
             echo ""
-            
-            # Move to easier location
-            cp "$SYMBOLS_ZIP" "$(pwd | grep -o '.*/threshold')/native-debug-symbols.zip" 2>/dev/null || true
         fi
         cd - > /dev/null
     else
@@ -227,14 +247,15 @@ echo -e "${MAGENTA}╔═══════════════════�
 echo -e "${MAGENTA}║            Next Steps                  ║${NC}"
 echo -e "${MAGENTA}╚════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "${YELLOW}1.${NC} Upload to Play Console:"
+echo -e "${YELLOW}1.${NC} Upload files from ${BLUE}release/${NC} folder to Play Console:"
 echo "   https://play.google.com/console"
-if [ -n "$SYMBOLS_ZIP" ]; then
-    echo "   📦 Upload AAB: $(basename $AAB_PATH)"
-    echo "   🐛 Upload symbols: $(basename $SYMBOLS_ZIP)"
-else
-    echo "   📦 Upload AAB: $(basename $AAB_PATH)"
+echo "   📦 AAB: release/${AAB_FILENAME}${VERSION_SUFFIX}.aab"
+
+# Check if we created symbols
+if [ -f "release/native-debug-symbols${VERSION_SUFFIX}.zip" ]; then
+    echo "   🐛 Symbols: release/native-debug-symbols${VERSION_SUFFIX}.zip"
 fi
+
 echo ""
 echo -e "${YELLOW}2.${NC} Before next build, increment version in:"
 echo "   apps/threshold/src-tauri/tauri.conf.json"
