@@ -60,6 +60,7 @@ pub fn run() {
 
     builder
         .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(tauri_plugin_theme_utils::init())
         .plugin(tauri_plugin_alarm_manager::init())
         .plugin(tauri_plugin_time_prefs::init())
         .plugin(tauri_plugin_deep_link::init())

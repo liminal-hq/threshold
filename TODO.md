@@ -6,7 +6,7 @@
 - [ ] Create Play Store Feature Graphics
 - [ ] Add force light mode setting and get a light mode screenshot for the site
 - [ ] Write Privacy Policy
-- [ ] Investigate Material You Dynamic Theming Integration
+- [x] Investigate Material You Dynamic Theming Integration
 
 ## Technical Debt
 
@@ -38,3 +38,4 @@
   - [ ] Implement Sound Picker (requires native plugin to list system ringtones).
   - [ ] Add Floating Window support for Desktop ringing experience.
   - [ ] Add "Undo" snackbar after deletion to mitigate accidental swipes.
+  - [ ] **Canadian Cottage Theme Series**: Expand theme support for seasons (e.g., Spring/Summer/Fall) and sub-theme selection (allow users to pick a static variant of a seasonal theme).
