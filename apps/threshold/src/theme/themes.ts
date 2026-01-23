@@ -18,23 +18,6 @@ export interface MaterialYouResponse {
     };
 }
 
-// Helper to generate RGB string "r, g, b" from hex
-function hexToRgb(hex: string): string {
-    // Handle 8-digit hex.
-    // NOTE: This helper assumes the input is ALREADY converted to CSS format (#RRGGBB or #RRGGBBAA)
-    // because `generateSystemTheme` runs `androidHexToCssHex` first.
-    // So for 8-digit hex, we strip the LAST 2 chars (Alpha) to get RRGGBB.
-
-    let cleanHex = hex.replace('#', '');
-    if (cleanHex.length === 8) {
-        // #RRGGBBAA -> RRGGBB (strip last 2 chars)
-        cleanHex = cleanHex.substring(0, 6);
-    }
-
-    const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(cleanHex);
-    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0, 0, 0';
-}
-
 // Convert Android ARGB hex (#AARRGGBB) to CSS RGBA hex (#RRGGBBAA)
 // If standard 6-digit hex is passed, returns as is.
 function androidHexToCssHex(hex: string): string {
@@ -48,31 +31,111 @@ function androidHexToCssHex(hex: string): string {
     return hex;
 }
 
-// Helper to darken/lighten would be good but for now we trust the system colours or boring defaults
-// We'll use a simple placeholder for dynamic generation or rely on CSS `color-mix` if supported,
-// but for now let's just use the boring theme as base and override primary/secondary.
+// Helper to convert Hex or HSL string to HSL string
+// Returns "hsl(h, s%, l%)"
+function colourToHsl(colour: string): string {
+    if (colour.startsWith('hsl')) return colour;
+    
+    let r = 0, g = 0, b = 0;
+    
+    // Handle Hex
+    if (colour.startsWith('#')) {
+        let hex = colour.replace('#', '');
+        
+        // Handle 8-digit hex (strip alpha for compatibility with base calc)
+        if (hex.length === 8) {
+             // #RRGGBBAA -> RRGGBB if it was converted by androidHexToCssHex
+             // or #AARRGGBB -> RRGGBB if raw.
+             // Given androidHexToCssHex is usually called first, let's assume standard CSS hex
+             // but strictly for this math we just want RGB.
+             if (colour.length === 9) hex = hex.substring(0, 6); 
+        }
+
+        if (hex.length === 3) {
+            r = parseInt(hex[0] + hex[0], 16);
+            g = parseInt(hex[1] + hex[1], 16);
+            b = parseInt(hex[2] + hex[2], 16);
+        } else if (hex.length === 6) {
+            r = parseInt(hex.substring(0, 2), 16);
+            g = parseInt(hex.substring(2, 4), 16);
+            b = parseInt(hex.substring(4, 6), 16);
+        }
+    } else if (colour.startsWith('rgb')) {
+        // Parse rgb(r, g, b)
+        const parts = colour.match(/\d+/g);
+        if (parts && parts.length >= 3) {
+            r = parseInt(parts[0]);
+            g = parseInt(parts[1]);
+            b = parseInt(parts[2]);
+        }
+    }
+
+    r /= 255;
+    g /= 255;
+    b /= 255;
+
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+}
+
+// Increases Lightness
+function getTint(hsl: string, amount: number): string {
+    const parts = hsl.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+    if (!parts) return hsl;
+    
+    const h = parseInt(parts[1]);
+    const s = parseInt(parts[2]);
+    let l = parseInt(parts[3]);
+    
+    l = Math.min(l + amount, 100);
+    
+    return `hsl(${h}, ${s}%, ${l}%)`;
+}
+
+// Decreases Lightness
+function getShade(hsl: string, amount: number): string {
+    const parts = hsl.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+    if (!parts) return hsl;
+    
+    const h = parseInt(parts[1]);
+    const s = parseInt(parts[2]);
+    let l = parseInt(parts[3]);
+    
+    l = Math.max(l - amount, 0);
+    
+    return `hsl(${h}, ${s}%, ${l}%)`;
+}
 
 const deepNightLight: ThemeDefinition = {
     id: 'deep-night',
     variables: {
-        '--ion-color-primary': '#002244',
-        '--ion-color-primary-rgb': '0, 34, 68',
-        '--ion-color-primary-contrast': '#ffffff',
-        '--ion-color-primary-contrast-rgb': '255, 255, 255',
-        '--ion-color-primary-shade': '#001e3c',
-        '--ion-color-primary-tint': '#1a3857',
+        '--app-colour-primary': 'hsl(210, 100%, 13%)', // #002244
+        '--app-colour-primary-contrast': '#ffffff',
+        '--app-colour-primary-shade': 'hsl(210, 100%, 12%)', // #001e3c approx
+        '--app-colour-primary-tint': 'hsl(210, 54%, 22%)', // #1a3857 approx
 
-        '--ion-color-secondary': '#2563eb',
-        '--ion-color-secondary-rgb': '37, 99, 235',
-        '--ion-color-secondary-contrast': '#ffffff',
-        '--ion-color-secondary-contrast-rgb': '255, 255, 255',
-        '--ion-color-secondary-shade': '#1d4ed8',
-        '--ion-color-secondary-tint': '#3b82f6',
+        '--app-colour-secondary': 'hsl(221, 83%, 53%)', // #2563eb
+        '--app-colour-secondary-contrast': '#ffffff',
+        '--app-colour-secondary-shade': 'hsl(224, 76%, 48%)', // #1d4ed8
+        '--app-colour-secondary-tint': 'hsl(217, 91%, 60%)', // #3b82f6
 
-        '--ion-background-color': '#f4f5f8',
-        '--ion-text-color': '#1a1a1a',
-        '--ion-card-background': '#ffffff',
-        '--ion-border-color': 'rgba(0, 0, 0, 0.12)',
+        '--app-background-colour': '#f4f5f8',
+        '--app-text-colour': '#1a1a1a',
+        '--app-card-background': '#ffffff',
+        '--app-border-colour': 'rgba(0, 0, 0, 0.12)',
     },
     muiPalette: {
         primary: { main: '#002244' },
@@ -85,19 +148,20 @@ const deepNightLight: ThemeDefinition = {
 const deepNightDark: ThemeDefinition = {
     id: 'deep-night',
     variables: {
-        '--ion-background-color': '#121212',
-        '--ion-text-color': '#f4f5f8',
-        '--ion-border-color': 'rgba(255, 255, 255, 0.08)',
-        '--ion-card-background': '#1a1a1a',
-        '--ion-color-step-100': '#1e1e1e',
-        '--ion-color-step-200': '#2a2a2a',
+        '--app-background-colour': '#121212',
+        '--app-text-colour': '#f4f5f8',
+        '--app-border-colour': 'rgba(255, 255, 255, 0.08)',
+        '--app-card-background': '#1a1a1a',
+        '--app-colour-step-100': '#1e1e1e',
+        '--app-colour-step-200': '#2a2a2a',
 
-        '--ion-color-primary': '#4c8dff',
-        '--ion-color-primary-contrast': '#ffffff',
+        '--app-colour-primary': '#4c8dff',
+        '--app-colour-primary-contrast': '#ffffff',
 
-        '--ion-color-secondary': '#2563eb', // Keep same base
-        '--ion-color-secondary-contrast': '#1a1a1a',
-        '--ion-color-secondary-contrast-rgb': '26, 26, 26',
+        '--app-colour-secondary': 'hsl(221, 83%, 53%)', // #2563eb
+        '--app-colour-secondary-contrast': '#1a1a1a',
+        '--app-colour-secondary-shade': 'hsl(224, 76%, 48%)',
+        '--app-colour-secondary-tint': 'hsl(217, 91%, 60%)',
     },
     muiPalette: {
         primary: { main: '#4c8dff' },
@@ -110,24 +174,20 @@ const deepNightDark: ThemeDefinition = {
 const canadianCottageWinterLight: ThemeDefinition = {
     id: 'canadian-cottage-winter',
     variables: {
-        '--ion-color-primary': 'hsl(210, 20%, 30%)',
-        '--ion-color-primary-rgb': '61, 77, 92',
-        '--ion-color-primary-contrast': '#ffffff',
-        '--ion-color-primary-contrast-rgb': '255, 255, 255',
-        '--ion-color-primary-shade': 'hsl(210, 20%, 26%)',
-        '--ion-color-primary-tint': 'hsl(210, 20%, 38%)',
+        '--app-colour-primary': 'hsl(210, 20%, 30%)',
+        '--app-colour-primary-contrast': '#ffffff',
+        '--app-colour-primary-shade': 'hsl(210, 20%, 26%)',
+        '--app-colour-primary-tint': 'hsl(210, 20%, 38%)',
 
-        '--ion-color-secondary': 'hsl(355, 65%, 45%)',
-        '--ion-color-secondary-rgb': '189, 40, 52',
-        '--ion-color-secondary-contrast': '#ffffff',
-        '--ion-color-secondary-contrast-rgb': '255, 255, 255',
-        '--ion-color-secondary-shade': 'hsl(355, 65%, 40%)',
-        '--ion-color-secondary-tint': 'hsl(355, 65%, 55%)',
+        '--app-colour-secondary': 'hsl(355, 65%, 45%)',
+        '--app-colour-secondary-contrast': '#ffffff',
+        '--app-colour-secondary-shade': 'hsl(355, 65%, 40%)',
+        '--app-colour-secondary-tint': 'hsl(355, 65%, 55%)',
 
-        '--ion-background-color': 'hsl(35, 30%, 94%)',
-        '--ion-text-color': 'hsl(210, 20%, 20%)',
-        '--ion-card-background': '#ffffff',
-        '--ion-border-color': 'rgba(0, 0, 0, 0.12)',
+        '--app-background-colour': 'hsl(35, 30%, 94%)',
+        '--app-text-colour': 'hsl(210, 20%, 20%)',
+        '--app-card-background': '#ffffff',
+        '--app-border-colour': 'rgba(0, 0, 0, 0.12)',
     },
     muiPalette: {
         primary: { main: 'hsl(210, 20%, 30%)' },
@@ -140,33 +200,27 @@ const canadianCottageWinterLight: ThemeDefinition = {
 const canadianCottageWinterDark: ThemeDefinition = {
     id: 'canadian-cottage-winter',
     variables: {
-        '--ion-background-color': 'hsl(30, 15%, 15%)',
-        '--ion-text-color': 'hsl(35, 20%, 90%)',
-        '--ion-border-color': 'rgba(255, 255, 255, 0.08)',
-        '--ion-card-background': 'hsl(30, 15%, 20%)',
-        '--ion-color-step-100': 'hsl(30, 15%, 25%)',
-        '--ion-color-step-200': 'hsl(30, 15%, 30%)',
-        '--ion-text-color-step-400': 'hsl(35, 10%, 70%)',
+        '--app-background-colour': 'hsl(30, 15%, 15%)',
+        '--app-text-colour': 'hsl(35, 20%, 90%)',
+        '--app-border-colour': 'rgba(255, 255, 255, 0.08)',
+        '--app-card-background': 'hsl(30, 15%, 20%)',
+        '--app-colour-step-100': 'hsl(30, 15%, 25%)',
+        '--app-colour-step-200': 'hsl(30, 15%, 30%)',
+        '--app-text-colour-step-400': 'hsl(35, 10%, 70%)',
 
-        '--ion-color-primary': 'hsl(210, 20%, 70%)',
-        '--ion-color-primary-rgb': '178, 194, 209',
-        '--ion-color-primary-contrast': '#000000',
-        '--ion-color-primary-contrast-rgb': '0, 0, 0',
-        '--ion-color-primary-shade': 'hsl(210, 20%, 62%)',
-        '--ion-color-primary-tint': 'hsl(210, 20%, 78%)',
+        '--app-colour-primary': 'hsl(210, 20%, 70%)',
+        '--app-colour-primary-contrast': '#000000',
+        '--app-colour-primary-shade': 'hsl(210, 20%, 62%)',
+        '--app-colour-primary-tint': 'hsl(210, 20%, 78%)',
 
-        '--ion-color-secondary': 'hsl(355, 65%, 45%)', // Inherited implicitly in CSS but explicit here
-        '--ion-color-secondary-contrast': 'hsl(210, 20%, 20%)',
-        '--ion-color-secondary-contrast-rgb': '43, 50, 56',
+        '--app-colour-secondary': 'hsl(355, 65%, 45%)',
+        '--app-colour-secondary-contrast': 'hsl(210, 20%, 20%)',
+        '--app-colour-secondary-shade': 'hsl(355, 65%, 40%)',
+        '--app-colour-secondary-tint': 'hsl(355, 65%, 55%)',
 
         // Special override for Canadian Cottage Segments to be RED
-        // We can't easily target a specific child component via global vars unless we use a global style block
-        // or a specific variable that the component uses.
-        // The original CSS used: `body.theme... ion-segment... { ... }`
-        // We will need to inject a <style> tag for these specific overrides in the provider,
-        // or handle it via a new variable like `--segment-indicator-color-override`.
-        '--segment-indicator-color-override': 'var(--ion-color-secondary)',
-        '--segment-checked-color-override': '#ffffff',
+        '--segment-indicator-colour-override': 'var(--app-colour-secondary)',
+        '--segment-checked-colour-override': '#ffffff',
     },
     muiPalette: {
         primary: { main: 'hsl(210, 20%, 70%)', contrastText: '#000000' },
@@ -179,24 +233,20 @@ const canadianCottageWinterDark: ThemeDefinition = {
 const georgianBayPlungeLight: ThemeDefinition = {
     id: 'georgian-bay-plunge',
     variables: {
-        '--ion-color-primary': 'hsl(190, 50%, 75%)',
-        '--ion-color-primary-rgb': '141, 209, 217',
-        '--ion-color-primary-contrast': 'hsl(210, 15%, 20%)',
-        '--ion-color-primary-contrast-rgb': '43, 50, 56',
-        '--ion-color-primary-shade': 'hsl(190, 50%, 65%)',
-        '--ion-color-primary-tint': 'hsl(190, 50%, 82%)',
+        '--app-colour-primary': 'hsl(190, 50%, 75%)',
+        '--app-colour-primary-contrast': 'hsl(210, 15%, 20%)',
+        '--app-colour-primary-shade': 'hsl(190, 50%, 65%)',
+        '--app-colour-primary-tint': 'hsl(190, 50%, 82%)',
 
-        '--ion-color-secondary': 'hsl(190, 50%, 35%)',
-        '--ion-color-secondary-rgb': '45, 122, 140',
-        '--ion-color-secondary-contrast': '#ffffff',
-        '--ion-color-secondary-contrast-rgb': '255, 255, 255',
-        '--ion-color-secondary-shade': 'hsl(190, 50%, 30%)',
-        '--ion-color-secondary-tint': 'hsl(190, 50%, 45%)',
+        '--app-colour-secondary': 'hsl(190, 50%, 35%)',
+        '--app-colour-secondary-contrast': '#ffffff',
+        '--app-colour-secondary-shade': 'hsl(190, 50%, 30%)',
+        '--app-colour-secondary-tint': 'hsl(190, 50%, 45%)',
 
-        '--ion-background-color': 'hsl(210, 15%, 96%)',
-        '--ion-text-color': 'hsl(210, 15%, 20%)',
-        '--ion-card-background': '#ffffff',
-        '--ion-border-color': 'rgba(0, 0, 0, 0.12)',
+        '--app-background-colour': 'hsl(210, 15%, 96%)',
+        '--app-text-colour': 'hsl(210, 15%, 20%)',
+        '--app-card-background': '#ffffff',
+        '--app-border-colour': 'rgba(0, 0, 0, 0.12)',
     },
     muiPalette: {
         primary: { main: 'hsl(190, 50%, 75%)', contrastText: 'hsl(210, 15%, 20%)' },
@@ -209,19 +259,20 @@ const georgianBayPlungeLight: ThemeDefinition = {
 const georgianBayPlungeDark: ThemeDefinition = {
     id: 'georgian-bay-plunge',
     variables: {
-        '--ion-background-color': 'hsl(200, 20%, 12%)',
-        '--ion-text-color': 'hsl(190, 30%, 90%)',
-        '--ion-border-color': 'rgba(255, 255, 255, 0.08)',
-        '--ion-card-background': 'hsl(200, 20%, 16%)',
-        '--ion-color-step-100': 'hsl(200, 20%, 20%)',
-        '--ion-color-step-200': 'hsl(200, 20%, 25%)',
+        '--app-background-colour': 'hsl(200, 20%, 12%)',
+        '--app-text-colour': 'hsl(190, 30%, 90%)',
+        '--app-border-colour': 'rgba(255, 255, 255, 0.08)',
+        '--app-card-background': 'hsl(200, 20%, 16%)',
+        '--app-colour-step-100': 'hsl(200, 20%, 20%)',
+        '--app-colour-step-200': 'hsl(200, 20%, 25%)',
 
-        '--ion-color-primary': 'hsl(190, 50%, 75%)', // Inherited from light
-        '--ion-color-primary-contrast': 'hsl(210, 15%, 20%)',
+        '--app-colour-primary': 'hsl(190, 50%, 75%)',
+        '--app-colour-primary-contrast': 'hsl(210, 15%, 20%)',
 
-        '--ion-color-secondary': 'hsl(190, 50%, 35%)',
-        '--ion-color-secondary-contrast': 'hsl(210, 15%, 20%)',
-        '--ion-color-secondary-contrast-rgb': '43, 50, 56',
+        '--app-colour-secondary': 'hsl(190, 50%, 35%)',
+        '--app-colour-secondary-contrast': 'hsl(210, 15%, 20%)',
+        '--app-colour-secondary-shade': 'hsl(190, 50%, 30%)',
+        '--app-colour-secondary-tint': 'hsl(190, 50%, 45%)',
     },
     muiPalette: {
         primary: { main: 'hsl(190, 50%, 75%)', contrastText: 'hsl(210, 15%, 20%)' },
@@ -234,24 +285,20 @@ const georgianBayPlungeDark: ThemeDefinition = {
 export const boringLight: ThemeDefinition = {
     id: 'boring-light',
     variables: {
-        '--ion-color-primary': 'hsl(210, 100%, 50%)',
-        '--ion-color-primary-rgb': '0, 128, 255',
-        '--ion-color-primary-contrast': '#ffffff',
-        '--ion-color-primary-contrast-rgb': '255, 255, 255',
-        '--ion-color-primary-shade': 'hsl(210, 100%, 40%)',
-        '--ion-color-primary-tint': 'hsl(210, 100%, 60%)',
+        '--app-colour-primary': 'hsl(210, 100%, 50%)',
+        '--app-colour-primary-contrast': '#ffffff',
+        '--app-colour-primary-shade': 'hsl(210, 100%, 40%)',
+        '--app-colour-primary-tint': 'hsl(210, 100%, 60%)',
 
-        '--ion-color-secondary': 'hsl(0, 0%, 50%)',
-        '--ion-color-secondary-rgb': '128, 128, 128',
-        '--ion-color-secondary-contrast': '#ffffff',
-        '--ion-color-secondary-contrast-rgb': '255, 255, 255',
-        '--ion-color-secondary-shade': 'hsl(0, 0%, 40%)',
-        '--ion-color-secondary-tint': 'hsl(0, 0%, 60%)',
+        '--app-colour-secondary': 'hsl(0, 0%, 50%)',
+        '--app-colour-secondary-contrast': '#ffffff',
+        '--app-colour-secondary-shade': 'hsl(0, 0%, 40%)',
+        '--app-colour-secondary-tint': 'hsl(0, 0%, 60%)',
 
-        '--ion-background-color': '#ffffff',
-        '--ion-text-color': '#000000',
-        '--ion-card-background': '#ffffff',
-        '--ion-border-color': 'rgba(0, 0, 0, 0.12)',
+        '--app-background-colour': '#ffffff',
+        '--app-text-colour': '#000000',
+        '--app-card-background': '#ffffff',
+        '--app-border-colour': 'rgba(0, 0, 0, 0.12)',
     },
     muiPalette: {
         primary: { main: 'hsl(210, 100%, 50%)' },
@@ -264,19 +311,20 @@ export const boringLight: ThemeDefinition = {
 export const boringDark: ThemeDefinition = {
     id: 'boring-dark',
     variables: {
-        '--ion-background-color': 'hsl(0, 0%, 12%)',
-        '--ion-text-color': 'hsl(0, 0%, 90%)',
-        '--ion-border-color': 'rgba(255, 255, 255, 0.08)',
-        '--ion-card-background': 'hsl(0, 0%, 16%)',
-        '--ion-color-step-100': 'hsl(0, 0%, 18%)',
-        '--ion-color-step-200': 'hsl(0, 0%, 22%)',
+        '--app-background-colour': 'hsl(0, 0%, 12%)',
+        '--app-text-colour': 'hsl(0, 0%, 90%)',
+        '--app-border-colour': 'rgba(255, 255, 255, 0.08)',
+        '--app-card-background': 'hsl(0, 0%, 16%)',
+        '--app-colour-step-100': 'hsl(0, 0%, 18%)',
+        '--app-colour-step-200': 'hsl(0, 0%, 22%)',
 
-        '--ion-color-primary': 'hsl(210, 100%, 50%)',
-        '--ion-color-primary-contrast': '#ffffff',
+        '--app-colour-primary': 'hsl(210, 100%, 50%)',
+        '--app-colour-primary-contrast': '#ffffff',
 
-        '--ion-color-secondary': 'hsl(0, 0%, 50%)',
-        '--ion-color-secondary-contrast': 'hsl(0, 0%, 10%)',
-        '--ion-color-secondary-contrast-rgb': '26, 26, 26',
+        '--app-colour-secondary': 'hsl(0, 0%, 50%)',
+        '--app-colour-secondary-contrast': 'hsl(0, 0%, 10%)',
+        '--app-colour-secondary-shade': 'hsl(0, 0%, 40%)',
+        '--app-colour-secondary-tint': 'hsl(0, 0%, 60%)',
     },
     muiPalette: {
         primary: { main: 'hsl(210, 100%, 50%)' },
@@ -295,61 +343,61 @@ export const themes = {
 };
 
 export function generateSystemTheme(isDark: boolean, response?: MaterialYouResponse): ThemeDefinition {
-    const base = isDark ? boringDark : boringLight;
+    // FALLBACK: Use Deep Night as the default branded theme instead of Boring
+    const base = isDark ? deepNightDark : deepNightLight;
+    
     if (!response || !response.supported || !response.palettes) return base;
 
     const palettes = response.palettes;
 
-    // Map system colours to theme variables
     // Use tone '600' as standard accent if available, else '500', fallback to base
-
-    // Safety helpers
-    // Uses androidHexToCssHex to ensure any ARGB colours from plugin are converted to RGBA
     const getColour = (palette: Record<string, string> | undefined, tone: string) =>
         palette && palette[tone] ? androidHexToCssHex(palette[tone]) : undefined;
 
-    const primary = getColour(palettes.system_accent1, '600')
-        || getColour(palettes.system_accent1, '500')
-        || base.variables['--ion-color-primary'];
+    const primaryHex = getColour(palettes.system_accent1, '600')
+        || getColour(palettes.system_accent1, '500');
+    
+    // If system primary is missing, fall back to base
+    const primary = primaryHex ? colourToHsl(primaryHex) : base.variables['--app-colour-primary'];
 
-    const secondary = getColour(palettes.system_accent3, '600')
-        || getColour(palettes.system_accent3, '500')
-        || base.variables['--ion-color-secondary'];
+    const secondaryHex = getColour(palettes.system_accent3, '600')
+        || getColour(palettes.system_accent3, '500');
+
+    // If system secondary is missing, fall back to base
+    const secondary = secondaryHex ? colourToHsl(secondaryHex) : base.variables['--app-colour-secondary'];
 
     // Calculate contrasts for Primary
-    // (Simplification: Use white/black based on mode, or hardcode white for these saturated accents)
     const primaryContrast = '#ffffff';
     const secondaryContrast = isDark ?
         (getColour(palettes.system_neutral1, '900') || '#000000') : '#ffffff';
 
     const overrides: Record<string, string> = {
-        '--ion-color-primary': primary,
-        '--ion-color-primary-rgb': hexToRgb(primary),
-        '--ion-color-primary-contrast': primaryContrast,
-        '--ion-color-primary-contrast-rgb': hexToRgb(primaryContrast),
-        // Shades/Tints skipped for now, would need color lib
+        '--app-colour-primary': primary,
+        '--app-colour-primary-contrast': primaryContrast,
+        // Calculate tints/shades for system theme
+        '--app-colour-primary-tint': getTint(primary, 10),
+        '--app-colour-primary-shade': getShade(primary, 10),
 
-        '--ion-color-secondary': secondary,
-        '--ion-color-secondary-rgb': hexToRgb(secondary),
-        '--ion-color-secondary-contrast': secondaryContrast,
-        '--ion-color-secondary-contrast-rgb': hexToRgb(secondaryContrast),
+        '--app-colour-secondary': secondary,
+        '--app-colour-secondary-contrast': secondaryContrast,
+        '--app-colour-secondary-tint': getTint(secondary, 10),
+        '--app-colour-secondary-shade': getShade(secondary, 10),
     };
 
     // Optional: Full Monet Backgrounds
-    // If we want to use system_neutral1 for backgrounds
     if (isDark) {
         const bg = getColour(palettes.system_neutral1, '900');
         if (bg) {
-            overrides['--ion-background-color'] = bg;
-            overrides['--ion-card-background'] = getColour(palettes.system_neutral1, '800') || '#1e1e1e';
-            overrides['--ion-text-color'] = getColour(palettes.system_neutral1, '100') || '#ffffff';
+            overrides['--app-background-colour'] = bg;
+            overrides['--app-card-background'] = getColour(palettes.system_neutral1, '800') || '#1e1e1e';
+            overrides['--app-text-colour'] = getColour(palettes.system_neutral1, '100') || '#ffffff';
         }
     } else {
         const bg = getColour(palettes.system_neutral1, '50');
         if (bg) {
-            overrides['--ion-background-color'] = bg; // Very light
-            overrides['--ion-card-background'] = getColour(palettes.system_neutral1, '10') || '#ffffff'; // White-ish
-            overrides['--ion-text-color'] = getColour(palettes.system_neutral1, '900') || '#000000';
+            overrides['--app-background-colour'] = bg; // Very light
+            overrides['--app-card-background'] = getColour(palettes.system_neutral1, '10') || '#ffffff'; // White-ish
+            overrides['--app-text-colour'] = getColour(palettes.system_neutral1, '900') || '#000000';
         }
     }
 
@@ -361,11 +409,11 @@ export function generateSystemTheme(isDark: boolean, response?: MaterialYouRespo
             primary: { main: primary },
             secondary: { main: secondary, contrastText: secondaryContrast },
             background: {
-                default: overrides['--ion-background-color'] || base.muiPalette.background.default,
-                paper: overrides['--ion-card-background'] || base.muiPalette.background.paper,
+                default: overrides['--app-background-colour'] || base.muiPalette.background.default,
+                paper: overrides['--app-card-background'] || base.muiPalette.background.paper,
             },
             text: {
-                primary: overrides['--ion-text-color'] || base.muiPalette.text.primary,
+                primary: overrides['--app-text-colour'] || base.muiPalette.text.primary,
             }
         }
     };

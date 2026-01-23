@@ -4,10 +4,10 @@ import { generateSystemTheme, boringLight, boringDark, MaterialYouResponse } fro
 describe('themes', () => {
     it('should generate system theme using boring defaults when no colours provided', () => {
         const light = generateSystemTheme(false, undefined);
-        expect(light.variables['--ion-color-primary']).toBe(boringLight.variables['--ion-color-primary']);
+        expect(light.variables['--app-colour-primary']).toBe(boringLight.variables['--app-colour-primary']);
 
         const dark = generateSystemTheme(true, undefined);
-        expect(dark.variables['--ion-color-primary']).toBe(boringDark.variables['--ion-color-primary']);
+        expect(dark.variables['--app-colour-primary']).toBe(boringDark.variables['--app-colour-primary']);
     });
 
     it('should override primary/secondary with system colours', () => {
@@ -21,8 +21,8 @@ describe('themes', () => {
         };
 
         const theme = generateSystemTheme(false, response);
-        expect(theme.variables['--ion-color-primary']).toBe('#ff0000');
-        expect(theme.variables['--ion-color-secondary']).toBe('#00ff00');
+        expect(theme.variables['--app-colour-primary']).toBe('hsl(0, 100%, 50%)');
+        expect(theme.variables['--app-colour-secondary']).toBe('hsl(120, 100%, 50%)');
     });
 
     it('should apply dark mode neutral overrides if provided', () => {
@@ -36,6 +36,6 @@ describe('themes', () => {
         };
 
         const theme = generateSystemTheme(true, response);
-        expect(theme.variables['--ion-background-color']).toBe('#111111');
+        expect(theme.variables['--app-background-colour']).toBe('#111111');
     });
 });

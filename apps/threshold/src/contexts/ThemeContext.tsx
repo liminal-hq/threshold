@@ -112,7 +112,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 		const root = document.documentElement; // Or body
 
 		// Clear previous theme classes (optional, but good for cleanup)
-		document.body.className = `theme-${activeThemeDef.id} ${isDarkMode ? 'force-dark' : ''}`;
+		document.body.className = `theme-${activeThemeDef.id} ${isDarkMode ? 'dark-mode' : ''} ${forceDark ? 'force-dark-mode' : ''}`;
 
 		// Cleanup stale variables from previous injection
 		lastInjectedKeys.current.forEach((key) => {

@@ -137,7 +137,7 @@ echo -e "${MAGENTA}╔═══════════════════�
 echo -e "${MAGENTA}║         Building Release AAB...        ║${NC}"
 echo -e "${MAGENTA}╚════════════════════════════════════════╝${NC}\n"
 
-pnpm build:android -- --aab
+pnpm build:android
 
 BUILD_RESULT=$?
 
@@ -149,7 +149,7 @@ if [ $BUILD_RESULT -ne 0 ]; then
     exit 1
 fi
 
-AAB_PATH=$(find apps/threshold/src-tauri/gen/android/app/build/outputs/bundle/release -name "*.aab" -type f 2>/dev/null | head -n1)
+AAB_PATH=$(find apps/threshold/src-tauri/gen/android/app/build/outputs/bundle/universalRelease -name "*.aab" -type f 2>/dev/null | head -n1)
 
 if [ -z "$AAB_PATH" ]; then
     echo -e "\n${RED}✗ Build completed but no AAB found${NC}"
@@ -160,13 +160,74 @@ echo -e "\n${GREEN}╔═══════════════════�
 echo -e "${GREEN}║     ✓ Release Build Successful! 🎉     ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════╝${NC}\n"
 
+# Create release directory and copy outputs
+RELEASE_DIR="release"
+echo -e "${BLUE}📦 Copying release files...${NC}"
+
+mkdir -p "$RELEASE_DIR"
+
+# Extract version from tauri.properties
+TAURI_PROPS="apps/threshold/src-tauri/gen/android/app/tauri.properties"
+if [ -f "$TAURI_PROPS" ]; then
+    VERSION_NAME=$(grep "tauri.android.versionName" "$TAURI_PROPS" | cut -d'=' -f2)
+    VERSION_CODE=$(grep "tauri.android.versionCode" "$TAURI_PROPS" | cut -d'=' -f2)
+    VERSION_SUFFIX="-v${VERSION_NAME}-${VERSION_CODE}"
+else
+    VERSION_SUFFIX=""
+fi
+
+# Copy AAB
+AAB_FILENAME=$(basename "$AAB_PATH" .aab)
+cp "$AAB_PATH" "$RELEASE_DIR/${AAB_FILENAME}${VERSION_SUFFIX}.aab"
+echo -e "${GREEN}✓ Copied AAB to: $RELEASE_DIR/${AAB_FILENAME}${VERSION_SUFFIX}.aab${NC}"
+
 # Show file info
-AAB_SIZE=$(du -h "$AAB_PATH" | cut -f1)
-echo -e "${BLUE}📍 AAB Location:${NC}"
-echo "   $AAB_PATH"
+AAB_SIZE=$(du -h "$RELEASE_DIR/${AAB_FILENAME}${VERSION_SUFFIX}.aab" | cut -f1)
+echo -e "${BLUE}📦 AAB Size:${NC} $AAB_SIZE"
 echo ""
-echo -e "${BLUE}📦 File Size:${NC} $AAB_SIZE"
-echo ""
+
+# Check for debug symbols
+SYMBOLS_DIR=$(find apps/threshold/src-tauri/gen/android/app/build/intermediates/merged_native_libs/universalRelease -type d -name "lib" 2>/dev/null | head -n1)
+
+if [ -n "$SYMBOLS_DIR" ] && [ -d "$SYMBOLS_DIR" ]; then
+    # Check if libraries actually have debug symbols
+    SAMPLE_LIB=$(find "$SYMBOLS_DIR" -name "libthreshold.so" | head -n1)
+    
+    if [ -n "$SAMPLE_LIB" ] && file "$SAMPLE_LIB" | grep -q "not stripped"; then
+        echo -e "${BLUE}🔍 Creating debug symbols zip...${NC}"
+        
+        # Save current directory (repo root)
+        REPO_ROOT=$(pwd)
+        
+        # Create symbols zip
+        cd "$SYMBOLS_DIR"
+        SYMBOLS_ZIP="native-debug-symbols.zip"
+        zip -r -q "$SYMBOLS_ZIP" arm64-v8a/ armeabi-v7a/ x86/ x86_64/ 2>/dev/null || true
+        
+        if [ -f "$SYMBOLS_ZIP" ]; then
+            SYMBOLS_SIZE=$(du -h "$SYMBOLS_ZIP" | cut -f1)
+            
+            # Copy to release directory at repo root with version suffix
+            cp "$SYMBOLS_ZIP" "$REPO_ROOT/$RELEASE_DIR/native-debug-symbols${VERSION_SUFFIX}.zip"
+            
+            echo -e "${GREEN}✓ Debug Symbols Package Created${NC}"
+            echo -e "   Copied to: $RELEASE_DIR/native-debug-symbols${VERSION_SUFFIX}.zip"
+            echo -e "${BLUE}📦 Symbols Size:${NC} $SYMBOLS_SIZE"
+            echo ""
+        fi
+        cd - > /dev/null
+    else
+        echo -e "${YELLOW}⚠ Native libraries are stripped (no debug symbols)${NC}"
+        echo "   To enable crash symbolication, add to apps/threshold/src-tauri/Cargo.toml:"
+        echo "   [profile.release]"
+        echo "   strip = false"
+        echo ""
+    fi
+else
+    echo -e "${YELLOW}⚠ Native libraries directory not found${NC}"
+    echo "   (Build may not have completed successfully)"
+    echo ""
+fi
 
 # Verify signature
 echo -e "${BLUE}🔐 Verifying signature...${NC}"
@@ -186,13 +247,17 @@ echo -e "${MAGENTA}╔═══════════════════�
 echo -e "${MAGENTA}║            Next Steps                  ║${NC}"
 echo -e "${MAGENTA}╚════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "${YELLOW}1.${NC} Copy AAB to host (if needed):"
-echo "   docker cp <container>:/workspace/$AAB_PATH ."
-echo ""
-echo -e "${YELLOW}2.${NC} Upload to Play Console:"
+echo -e "${YELLOW}1.${NC} Upload files from ${BLUE}release/${NC} folder to Play Console:"
 echo "   https://play.google.com/console"
+echo "   📦 AAB: release/${AAB_FILENAME}${VERSION_SUFFIX}.aab"
+
+# Check if we created symbols
+if [ -f "release/native-debug-symbols${VERSION_SUFFIX}.zip" ]; then
+    echo "   🐛 Symbols: release/native-debug-symbols${VERSION_SUFFIX}.zip"
+fi
+
 echo ""
-echo -e "${YELLOW}3.${NC} Before next build, increment version in:"
+echo -e "${YELLOW}2.${NC} Before next build, increment version in:"
 echo "   apps/threshold/src-tauri/tauri.conf.json"
 echo "   (Look for 'versionCode' under bundle.android)"
 echo ""
