@@ -17,6 +17,8 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     let handle = api.register_android_plugin(PLUGIN_IDENTIFIER, "TimePrefsPlugin")?;
 
     // NOTE: iOS implementation is deferred. We intentionally do not register an iOS plugin here.
+    // On iOS we don't register anything because we are providing a Rust-side stub only.
+    // If we had Swift code, we would use api.register_ios_plugin.
 
     Ok(TimePrefs {
         #[cfg(target_os = "android")]
