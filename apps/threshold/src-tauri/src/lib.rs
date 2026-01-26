@@ -1,3 +1,5 @@
+pub mod alarm;
+
 #[cfg(target_os = "linux")]
 fn configure_linux_env() {
     use std::{env, path::Path};
