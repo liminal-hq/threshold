@@ -1,0 +1,119 @@
+<svg viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pixel Watch 2 - Alarm List Screen -->
+  
+  <!-- Background -->
+  <rect width="384" height="384" fill="#0A0A0A" rx="192"/>
+  
+  <!-- Vignette -->
+  <defs>
+    <radialGradient id="vignette">
+      <stop offset="60%" stop-color="#0A0A0A" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.8"/>
+    </radialGradient>
+  </defs>
+  <rect width="384" height="384" fill="url(#vignette)" rx="192"/>
+  
+  <!-- Time Text (Always Visible) -->
+  <text 
+    x="192" 
+    y="35" 
+    text-anchor="middle" 
+    font-family="Roboto, sans-serif" 
+    font-size="16" 
+    fill="#FFFFFF"
+    font-weight="400">
+    2:45
+  </text>
+  
+  <!-- Scrollable Content Area -->
+  <g transform="translate(0, 60)">
+    
+    <!-- Alarm Card 1 (Enabled - Fixed) -->
+    <g>
+      <rect x="40" y="20" width="304" height="80" rx="16" fill="#1A1A1A"/>
+      
+      <!-- Time -->
+      <text 
+        x="60" 
+        y="55" 
+        font-family="Roboto, sans-serif" 
+        font-size="32" 
+        fill="#FFFFFF"
+        font-weight="700">
+        7:30 AM
+      </text>
+      
+      <!-- Label -->
+      <text 
+        x="60" 
+        y="80" 
+        font-family="Roboto, sans-serif" 
+        font-size="16" 
+        fill="#999999"
+        font-weight="400">
+        Meditation
+      </text>
+      
+      <!-- Status Indicator (Enabled) -->
+      <circle cx="320" cy="60" r="8" fill="#4A9EFF"/>
+    </g>
+    
+    <!-- Alarm Card 2 (Disabled) -->
+    <g>
+      <rect x="40" y="120" width="304" height="80" rx="16" fill="#1A1A1A" opacity="0.5"/>
+      
+      <text 
+        x="60" 
+        y="155" 
+        font-family="Roboto, sans-serif" 
+        font-size="32" 
+        fill="#666666"
+        font-weight="700">
+        9:00 AM
+      </text>
+      
+      <text 
+        x="60" 
+        y="180" 
+        font-family="Roboto, sans-serif" 
+        font-size="16" 
+        fill="#666666"
+        font-weight="400">
+        Workout
+      </text>
+      
+      <circle cx="320" cy="160" r="8" fill="#333333"/>
+    </g>
+    
+    <!-- Alarm Card 3 (Window Mode) -->
+    <g>
+      <rect x="40" y="220" width="304" height="80" rx="16" fill="#1A1A1A"/>
+      
+      <text 
+        x="60" 
+        y="255" 
+        font-family="Roboto, sans-serif" 
+        font-size="28" 
+        fill="#FFFFFF"
+        font-weight="700">
+        7:00-7:30
+      </text>
+      
+      <text 
+        x="60" 
+        y="280" 
+        font-family="Roboto, sans-serif" 
+        font-size="16" 
+        fill="#999999"
+        font-weight="400">
+        Wake Window
+      </text>
+      
+      <!-- Window Indicator (3 dots) -->
+      <circle cx="306" cy="260" r="3" fill="#4A9EFF" opacity="0.5"/>
+      <circle cx="316" cy="260" r="3" fill="#4A9EFF" opacity="0.7"/>
+      <circle cx="326" cy="260" r="3" fill="#4A9EFF" opacity="0.9"/>
+    </g>
+    
+  </g>
+</svg>
