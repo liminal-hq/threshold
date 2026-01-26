@@ -32,6 +32,8 @@ Examples:
 - Use markdown: **bold**, _italics_, `code`, bullet lists
 - **NO markdown headings** - use **bold labels** for sections (not always required)
 
+**Specific Updates**: Each commit message should reflect the specific changes made in that commit. Do not just recap the entire project history or scope. Focus on the now.
+
 ## Application Protocol
 
 - The application registers the `threshold://` protocol for deep linking.
