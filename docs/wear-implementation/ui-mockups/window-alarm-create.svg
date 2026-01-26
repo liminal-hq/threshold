@@ -1,0 +1,134 @@
+<svg viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pixel Watch 2 - Window Alarm Visualization -->
+  
+  <!-- Background -->
+  <rect width="384" height="384" fill="#0A0A0A" rx="192"/>
+  
+  <!-- Vignette -->
+  <defs>
+    <radialGradient id="vignette">
+      <stop offset="60%" stop-color="#0A0A0A" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.8"/>
+    </radialGradient>
+  </defs>
+  <rect width="384" height="384" fill="url(#vignette)" rx="192"/>
+  
+  <!-- Title -->
+  <text 
+    x="192" 
+    y="60" 
+    text-anchor="middle" 
+    font-family="Roboto, sans-serif" 
+    font-size="20" 
+    fill="#FFFFFF"
+    font-weight="500">
+    Window Alarm
+  </text>
+  
+  <!-- Window Range Visualization -->
+  <g transform="translate(192, 160)">
+    
+    <!-- Start Time -->
+    <g transform="translate(-80, 0)">
+      <text 
+        x="0" 
+        y="0" 
+        text-anchor="middle" 
+        font-family="Roboto, sans-serif" 
+        font-size="28" 
+        fill="#FFFFFF"
+        font-weight="700">
+        7:00
+      </text>
+      <text 
+        x="0" 
+        y="25" 
+        text-anchor="middle" 
+        font-family="Roboto, sans-serif" 
+        font-size="14" 
+        fill="#999999"
+        font-weight="400">
+        Start
+      </text>
+    </g>
+    
+    <!-- Range Indicator Line -->
+    <line x1="-50" y1="-5" x2="50" y2="-5" stroke="#4A9EFF" stroke-width="4" stroke-linecap="round"/>
+    
+    <!-- Random Possibility Dots (Threshold Concept) -->
+    <circle cx="-30" cy="-5" r="3" fill="#4A9EFF" opacity="0.3">
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="-10" cy="-5" r="3" fill="#4A9EFF" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;1.0;0.5" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="15" cy="-5" r="3" fill="#4A9EFF" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;0.9;0.6" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="35" cy="-5" r="3" fill="#4A9EFF" opacity="0.4">
+      <animate attributeName="opacity" values="0.4;0.7;0.4" dur="2.8s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- End Time -->
+    <g transform="translate(80, 0)">
+      <text 
+        x="0" 
+        y="0" 
+        text-anchor="middle" 
+        font-family="Roboto, sans-serif" 
+        font-size="28" 
+        fill="#FFFFFF"
+        font-weight="700">
+        7:30
+      </text>
+      <text 
+        x="0" 
+        y="25" 
+        text-anchor="middle" 
+        font-family="Roboto, sans-serif" 
+        font-size="14" 
+        fill="#999999"
+        font-weight="400">
+        End
+      </text>
+    </g>
+    
+    <!-- Description -->
+    <text 
+      x="0" 
+      y="70" 
+      text-anchor="middle" 
+      font-family="Roboto, sans-serif" 
+      font-size="16" 
+      fill="#999999"
+      font-weight="400">
+      Alarm at random time
+    </text>
+    <text 
+      x="0" 
+      y="90" 
+      text-anchor="middle" 
+      font-family="Roboto, sans-serif" 
+      font-size="16" 
+      fill="#999999"
+      font-weight="400">
+      within 30 minutes
+    </text>
+    
+  </g>
+  
+  <!-- Save Button -->
+  <g transform="translate(192, 330)">
+    <rect x="-50" y="-22" width="100" height="44" rx="22" fill="#4A9EFF"/>
+    <text 
+      x="0" 
+      y="5" 
+      text-anchor="middle" 
+      font-family="Roboto, sans-serif" 
+      font-size="18" 
+      fill="#FFFFFF"
+      font-weight="700">
+      Save
+    </text>
+  </g>
+</svg>
