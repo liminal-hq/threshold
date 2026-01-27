@@ -20,22 +20,19 @@ docker push ghcr.io/<owner>/<repo>/ci-base:latest
 
 ## 2. Maintaining the Image in GitHub Actions
 
-You can create a separate workflow (e.g., `.github/workflows/build-image.yml`) to automatically rebuild and push this image whenever `Dockerfile` changes.
+The workflow is already maintained in `.github/workflows/build-ci-image.yml`. It is configured to be manually triggered (`workflow_dispatch`), but you can enable `push` triggers if desired.
+
+Current implementation handles repository name casing correctly:
 
 ```yaml
 name: Build and Push CI Image
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.devcontainer/Dockerfile'
   workflow_dispatch:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -51,13 +48,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Lowercase Repository Name
+        run: |
+          echo "IMAGE_REPOSITORY=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: .devcontainer/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}/ci-base:latest
+          tags: ghcr.io/${{ env.IMAGE_REPOSITORY }}/ci-base:latest
 ```
 
 ## 3. Update the Test Workflow

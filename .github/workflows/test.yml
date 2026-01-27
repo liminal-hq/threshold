@@ -2,8 +2,6 @@ name: Test
 
 on:
   pull_request:
-    branches:
-      - main
 
 jobs:
   test-js:
@@ -12,14 +10,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
 
-      - name: Install pnpm
-        run: npm install -g pnpm
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -80,19 +79,28 @@ jobs:
       - name: Run Rust Tests
         run: |
           mkdir -p rust-test-results
+          EXIT_CODE=0
 
           # Test Main App
           echo "Running tests in apps/threshold/src-tauri"
-          (cd apps/threshold/src-tauri && cargo nextest run --junit-path "../../../rust-test-results/app.xml")
+          (cd apps/threshold/src-tauri && cargo nextest run --profile ci) || EXIT_CODE=1
+          if [ -f "apps/threshold/src-tauri/junit.xml" ]; then
+            mv apps/threshold/src-tauri/junit.xml rust-test-results/app.xml
+          fi
 
           # Test Plugins
           for plugin in plugins/*; do
             if [ -f "$plugin/Cargo.toml" ]; then
               plugin_name=$(basename "$plugin")
               echo "Running tests in $plugin"
-              (cd "$plugin" && cargo nextest run --junit-path "../../rust-test-results/$plugin_name.xml")
+              (cd "$plugin" && cargo nextest run --profile ci) || EXIT_CODE=1
+              if [ -f "$plugin/junit.xml" ]; then
+                mv "$plugin/junit.xml" "rust-test-results/$plugin_name.xml"
+              fi
             fi
           done
+          
+          exit $EXIT_CODE
 
       - name: Upload Rust Test Results
         uses: actions/upload-artifact@v4
