@@ -1,3 +1,2 @@
 [profile.ci]
-print-test-output = true
 junit = { path = "junit.xml" }
