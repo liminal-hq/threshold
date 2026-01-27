@@ -83,7 +83,7 @@ jobs:
 
           # Test Main App
           echo "Running tests in apps/threshold/src-tauri"
-          (cd apps/threshold/src-tauri && cargo nextest run --profile ci) || EXIT_CODE=1
+          (cd apps/threshold/src-tauri && cargo nextest run --profile ci --config-file ../../../nextest.toml) || EXIT_CODE=1
           if [ -f "apps/threshold/src-tauri/junit.xml" ]; then
             mv apps/threshold/src-tauri/junit.xml rust-test-results/app.xml
           fi
@@ -93,7 +93,7 @@ jobs:
             if [ -f "$plugin/Cargo.toml" ]; then
               plugin_name=$(basename "$plugin")
               echo "Running tests in $plugin"
-              (cd "$plugin" && cargo nextest run --profile ci) || EXIT_CODE=1
+              (cd "$plugin" && cargo nextest run --profile ci --config-file ../../nextest.toml) || EXIT_CODE=1
               if [ -f "$plugin/junit.xml" ]; then
                 mv "$plugin/junit.xml" "rust-test-results/$plugin_name.xml"
               fi
