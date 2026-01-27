@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { generateSystemTheme, boringLight, boringDark, MaterialYouResponse } from './themes';
+import { generateSystemTheme, deepNightLight, deepNightDark, MaterialYouResponse } from './themes';
 
 describe('themes', () => {
-    it('should generate system theme using boring defaults when no colours provided', () => {
+    it('should generate system theme using deep-night defaults when no colours provided', () => {
         const light = generateSystemTheme(false, undefined);
-        expect(light.variables['--app-colour-primary']).toBe(boringLight.variables['--app-colour-primary']);
+        expect(light.variables['--app-colour-primary']).toBe(deepNightLight.variables['--app-colour-primary']);
 
         const dark = generateSystemTheme(true, undefined);
-        expect(dark.variables['--app-colour-primary']).toBe(boringDark.variables['--app-colour-primary']);
+        expect(dark.variables['--app-colour-primary']).toBe(deepNightDark.variables['--app-colour-primary']);
     });
 
     it('should override primary/secondary with system colours', () => {

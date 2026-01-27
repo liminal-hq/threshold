@@ -1,12 +1,12 @@
 node_modules/
-target/
+/target/
+plugins/*/target/
 dist/
 .DS_Store
 .env
 .idea/
 .vscode/
 build/
-apps/desktop/src-tauri/target/
 codex-backup.tar.gz
 
 # User Vault
@@ -40,5 +40,14 @@ keystore.properties
 keys
 .threshold-keys
 
+
 # Release outputs
 /release/
+
+# Test Results
+junit.xml
+js-test-results.xml
+rust-test-results/
+test-results/
+coverage/
+junit.xml

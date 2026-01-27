@@ -8,7 +8,8 @@
 		"build": "tsc && vite build",
 		"preview": "vite preview",
 		"tauri": "tauri",
-		"test": "vitest"
+		"test": "vitest",
+		"test:ci": "vitest run --reporter=junit --reporter=default --outputFile.junit=junit.xml"
 	},
 	"dependencies": {
 		"@emotion/react": "^11.14.0",
