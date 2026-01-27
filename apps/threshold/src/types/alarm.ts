@@ -1,4 +1,5 @@
-export type AlarmMode = 'FIXED' | 'WINDOW';
+export { AlarmMode } from '@threshold/core/types';
+import { AlarmMode } from '@threshold/core/types';
 
 export interface AlarmRecord {
     id: number;

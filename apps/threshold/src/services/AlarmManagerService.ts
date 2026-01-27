@@ -238,7 +238,7 @@ export class AlarmManagerService {
 					const timeStr = `${imp.hour.toString().padStart(2, '0')}:${imp.minute.toString().padStart(2, '0')}`;
 
 					const duplicate = allAlarms.find(
-						(a) => a.mode === 'FIXED' && a.fixedTime === timeStr && a.label === imp.label,
+						(a) => a.mode === AlarmMode.Fixed && a.fixedTime === timeStr && a.label === imp.label,
 					);
 
 					if (duplicate) {
@@ -251,19 +251,12 @@ export class AlarmManagerService {
 
 					const newAlarm: AlarmInput = {
 						label: imp.label,
-						mode: 'FIXED' as AlarmMode, // Using 'as AlarmMode' if 'FIXED' string is not matching enum, but let's check types/alarm.ts again.
+						mode: AlarmMode.Fixed,
 						fixedTime: timeStr,
 						activeDays: [0, 1, 2, 3, 4, 5, 6], // Default to every day
 						enabled: true,
 					};
 
-					// Cast to bypass Omit type mismatch locally as we know saveAndSchedule accepts AlarmInput compatible
-                    // Actually, let's fix saveAndSchedule signature to accept AlarmInput first?
-                    // But signature is `saveAndSchedule(alarm: Omit<Alarm, 'id'> & { id?: number })` which is legacy type.
-                    // We can just cast newAlarm to any or fix signature.
-                    // Let's cast to `any` just for the call or fix signature.
-                    // The goal was to remove `any`.
-                    // We should update saveAndSchedule signature to `AlarmInput`.
 					await this.saveAndSchedule(newAlarm);
 				}
 			}

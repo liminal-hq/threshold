@@ -32,7 +32,7 @@ const EditAlarm: React.FC = () => {
     const [isMobile, setIsMobile] = useState(false);
 
     const [label, setLabel] = useState('');
-    const [mode, setMode] = useState<AlarmMode>('FIXED');
+    const [mode, setMode] = useState<AlarmMode>(AlarmMode.Fixed);
     const [activeDays, setActiveDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]); // Every day default
 
     // Default to next hour ceiling
@@ -88,7 +88,7 @@ const EditAlarm: React.FC = () => {
             enabled: true,
         };
 
-        if (mode === 'FIXED') {
+        if (mode === AlarmMode.Fixed) {
             alarmData.fixedTime = fixedTime;
         } else {
             alarmData.windowStart = windowStart;
@@ -166,11 +166,11 @@ const EditAlarm: React.FC = () => {
                                 color="primary"
                                 sx={{ mb: 3 }}
                             >
-                                <ToggleButton value="FIXED">Fixed Time</ToggleButton>
-                                <ToggleButton value="WINDOW">Window</ToggleButton>
+                                <ToggleButton value={AlarmMode.Fixed}>Fixed Time</ToggleButton>
+                                <ToggleButton value={AlarmMode.RandomWindow}>Window</ToggleButton>
                             </ToggleButtonGroup>
 
-                            {mode === 'FIXED' ? (
+                            {mode === AlarmMode.Fixed ? (
                                 <Box sx={{ mb: 3 }}>
                                     {isMobile ? (
                                         <MuiTimePicker
