@@ -1,4 +1,8 @@
 pub mod alarm;
+pub mod commands;
+
+use alarm::{database::AlarmDatabase, AlarmCoordinator};
+use tauri::Manager;
 
 #[cfg(target_os = "linux")]
 fn configure_linux_env() {
@@ -61,7 +65,11 @@ pub fn run() {
     }
 
     builder
-        .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations("sqlite:alarms.db", alarm::database::migrations())
+                .build(),
+        )
         .plugin(tauri_plugin_theme_utils::init())
         .plugin(tauri_plugin_alarm_manager::init())
         .plugin(tauri_plugin_time_prefs::init())
@@ -69,6 +77,14 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            commands::get_alarms,
+            commands::get_alarm,
+            commands::save_alarm,
+            commands::toggle_alarm,
+            commands::delete_alarm,
+            commands::dismiss_alarm,
+        ])
         .setup(|app| {
             #[cfg(mobile)]
             app.handle().plugin(tauri_plugin_app_events::init())?;
@@ -80,6 +96,15 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // Initialize database and coordinator
+            let db = tauri::async_runtime::block_on(async {
+                AlarmDatabase::new(app.handle()).await
+            })?;
+
+            let coordinator = AlarmCoordinator::new(db);
+            app.manage(coordinator);
+
             Ok(())
         })
         .run(tauri::generate_context!())

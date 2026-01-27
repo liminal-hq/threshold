@@ -170,7 +170,7 @@ impl From<AlarmRow> for AlarmRecord {
 
 /// Returns database migrations for use with tauri-plugin-sql.
 /// These should be registered during app setup using:
-/// ```rust
+/// ```rust,ignore
 /// tauri::Builder::default()
 ///     .plugin(tauri_plugin_sql::Builder::default()
 ///         .add_migrations("sqlite:alarms.db", migrations())
@@ -185,7 +185,7 @@ pub fn migrations() -> Vec<Migration> {
                 CREATE TABLE IF NOT EXISTS alarms (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     label TEXT,
-                    enabled INTEGER NOT NULL DEFAULT 0,
+                    enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0, 1)),
                     mode TEXT NOT NULL,
                     fixed_time TEXT,
                     window_start TEXT,
@@ -590,5 +590,29 @@ mod tests {
         // Fetch it - should default to empty array and log warning
         let alarm = db.get_by_id(1).await.unwrap();
         assert_eq!(alarm.active_days, Vec::<i32>::new());
+    }
+
+    #[tokio::test]
+    async fn test_enabled_constraint() {
+        let db = setup_test_db().await;
+
+        // Try to insert with invalid enabled value (2)
+        // Should fail due to CHECK(enabled IN (0, 1))
+        let result = sqlx::query(
+            "INSERT INTO alarms (label, enabled, mode, active_days) VALUES (?, ?, ?, ?)"
+        )
+        .bind("Constraint Test")
+        .bind(2) // Invalid value
+        .bind("FIXED")
+        .bind("[]")
+        .execute(&db.pool)
+        .await;
+
+        assert!(result.is_err());
+        // Verify it's a constraint violation
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        // SQLite constraint error message usually contains "CHECK constraint failed"
+        assert!(msg.contains("CHECK constraint failed") || msg.contains("constraint"));
     }
 }
