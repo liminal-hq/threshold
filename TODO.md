@@ -33,7 +33,7 @@
 ## Features / Data Model
   - [ ] Enhance SQLite schema with `native_id` column to support robust deduplication of alarms imported from Android Intents (currently deduplicated by label + time).
   - [ ] Implement `AlarmManagerService` logic to check `native_id` during import.
-  - [ ] **Snooze Notification Reminder**: Snooze should minimize the app so it vanishes but doesn't close. This should also bring up a notification to the user to remind them and let them clear the Snooze state.
+  - [x] **Snooze Notification Reminder**: Snooze should minimize the app so it vanishes but doesn't close. This should also bring up a notification to the user to remind them and let them clear the Snooze state.
 
 - **UI / UX**
   - [ ] Implement Sound Picker (requires native plugin to list system ringtones).
