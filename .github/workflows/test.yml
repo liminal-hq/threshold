@@ -29,14 +29,17 @@ jobs:
 
       - name: Run JS/TS Tests
         run: |
-          pnpm -r test -- --reporter=junit --outputFile.junit=js-test-results.xml
+          pnpm -r test -- --reporter=junit --outputFile.junit=junit.xml
+
+      - name: Debug JS Test Results
+        run: find . -name "junit.xml"
 
       - name: Upload JS Test Results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: js-test-results
-          path: '**/js-test-results.xml'
+          path: '**/junit.xml'
 
       # - name: Lint Code
       #   run: pnpm format:check
@@ -85,22 +88,30 @@ jobs:
           mkdir -p rust-test-results
           EXIT_CODE=0
 
+          # Function to run tests if they exist
+          run_tests() {
+            local dir=$1
+            local name=$2
+            if [ -d "$dir/src" ] && grep -r "\[test\]" "$dir/src" > /dev/null; then
+              echo "Running tests in $dir"
+              (cd "$dir" && cargo nextest run --profile ci --config-file ../../../nextest.toml) || return 1
+              if [ -f "$dir/junit.xml" ]; then
+                mv "$dir/junit.xml" "rust-test-results/$name.xml"
+              fi
+            else
+              echo "No tests found in $dir, skipping..."
+            fi
+            return 0
+          }
+
           # Test Main App
-          echo "Running tests in apps/threshold/src-tauri"
-          (cd apps/threshold/src-tauri && cargo nextest run --profile ci --config-file ../../../nextest.toml) || EXIT_CODE=1
-          if [ -f "apps/threshold/src-tauri/junit.xml" ]; then
-            mv apps/threshold/src-tauri/junit.xml rust-test-results/app.xml
-          fi
+          run_tests "apps/threshold/src-tauri" "app" || EXIT_CODE=1
 
           # Test Plugins
           for plugin in plugins/*; do
             if [ -f "$plugin/Cargo.toml" ]; then
               plugin_name=$(basename "$plugin")
-              echo "Running tests in $plugin"
-              (cd "$plugin" && cargo nextest run --profile ci --config-file ../../nextest.toml) || EXIT_CODE=1
-              if [ -f "$plugin/junit.xml" ]; then
-                mv "$plugin/junit.xml" "rust-test-results/$plugin_name.xml"
-              fi
+              run_tests "$plugin" "$plugin_name" || EXIT_CODE=1
             fi
           done
           

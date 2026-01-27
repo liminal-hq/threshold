@@ -50,3 +50,4 @@ js-test-results.xml
 rust-test-results/
 test-results/
 coverage/
+junit.xml
