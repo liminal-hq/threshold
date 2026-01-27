@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AlarmService } from './AlarmService';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { AlarmRecord, AlarmInput } from '../types/alarm';
+import { AlarmMode, AlarmRecord, AlarmInput } from '../types/alarm';
 
 // Mock Tauri APIs
 vi.mock('@tauri-apps/api/core', () => ({
@@ -22,7 +22,7 @@ describe('AlarmService', () => {
         id: 1,
         label: 'Morning',
         enabled: true,
-        mode: 'FIXED',
+        mode: AlarmMode.Fixed,
         fixedTime: '07:00',
         windowStart: null,
         windowEnd: null,
@@ -96,7 +96,7 @@ describe('AlarmService', () => {
             (invoke as any).mockResolvedValue(mockAlarm);
             const input: AlarmInput = {
                 enabled: true,
-                mode: 'FIXED',
+                mode: AlarmMode.Fixed,
                 activeDays: [],
             };
 

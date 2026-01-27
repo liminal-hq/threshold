@@ -1,14 +1,14 @@
 import React from 'react';
 import { Card, Typography, Switch, IconButton, Box, Stack } from '@mui/material';
 import { Delete as DeleteIcon, Shuffle as ShuffleIcon, AccessTime as AccessTimeIcon } from '@mui/icons-material';
-import { Alarm } from '../services/DatabaseService';
+import { AlarmRecord } from '../types/alarm';
 import { format } from 'date-fns';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SwipeToDeleteRow } from './SwipeToDeleteRow';
 
 interface AlarmItemProps {
-	alarm: Alarm;
+	alarm: AlarmRecord;
 	is24h: boolean;
 	onToggle: (enabled: boolean) => void;
 	onDelete: () => void;
@@ -23,7 +23,7 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 	onClick,
 }) => {
 	const isMobile = PlatformUtils.isMobile();
-	const formatTime = (timeStr?: string) => {
+	const formatTime = (timeStr?: string | null) => {
 		if (!timeStr) return '--:--';
 		return TimeFormatHelper.formatTimeString(timeStr, is24h);
 	};

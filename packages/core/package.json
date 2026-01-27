@@ -4,8 +4,14 @@
 	"type": "module",
 	"private": true,
 	"exports": {
-		"./types": "./dist/types.js",
-		"./scheduler": "./dist/scheduler.js"
+		"./types": {
+			"source": "./src/types.ts",
+			"default": "./dist/types.js"
+		},
+		"./scheduler": {
+			"source": "./src/scheduler.ts",
+			"default": "./dist/scheduler.js"
+		}
 	},
 	"scripts": {
 		"build": "tsc",

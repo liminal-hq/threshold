@@ -18,11 +18,11 @@ import { TimePicker as MuiTimePicker } from '@mui/x-date-pickers/TimePicker';
 import { TimePicker as DesktopCustomTimePicker } from '../components/TimePicker';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { PlatformUtils } from '../utils/PlatformUtils';
-import { databaseService } from '../services/DatabaseService';
-import { alarmManagerService } from '../services/AlarmManagerService';
 import { DaySelector } from '../components/DaySelector';
 import { SettingsService } from '../services/SettingsService';
 import { parse, format } from 'date-fns';
+import { AlarmService } from '../services/AlarmService';
+import { AlarmInput, AlarmMode } from '../types/alarm';
 
 const EditAlarm: React.FC = () => {
     const { id } = useParams({ from: '/edit/$id' });
@@ -32,7 +32,7 @@ const EditAlarm: React.FC = () => {
     const [isMobile, setIsMobile] = useState(false);
 
     const [label, setLabel] = useState('');
-    const [mode, setMode] = useState<'FIXED' | 'WINDOW'>('FIXED');
+    const [mode, setMode] = useState<AlarmMode>(AlarmMode.Fixed);
     const [activeDays, setActiveDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]); // Every day default
 
     // Default to next hour ceiling
@@ -59,15 +59,19 @@ const EditAlarm: React.FC = () => {
     }, [id]);
 
     const loadAlarm = async (alarmId: number) => {
-        const alarms = await databaseService.getAllAlarms();
-        const alarm = alarms.find((a) => a.id === alarmId);
-        if (alarm) {
-            setLabel(alarm.label || '');
-            setMode(alarm.mode);
-            setActiveDays(alarm.activeDays);
-            if (alarm.fixedTime) setFixedTime(alarm.fixedTime);
-            if (alarm.windowStart) setWindowStart(alarm.windowStart);
-            if (alarm.windowEnd) setWindowEnd(alarm.windowEnd);
+        try {
+            const alarm = await AlarmService.get(alarmId);
+            if (alarm) {
+                setLabel(alarm.label || '');
+                setMode(alarm.mode);
+                setActiveDays(alarm.activeDays);
+                if (alarm.fixedTime) setFixedTime(alarm.fixedTime);
+                if (alarm.windowStart) setWindowStart(alarm.windowStart);
+                if (alarm.windowEnd) setWindowEnd(alarm.windowEnd);
+            }
+        } catch (e) {
+            console.error('Failed to load alarm', e);
+            // navigate({ to: '/home' }); // Optional: redirect if not found
         }
     };
 
@@ -77,14 +81,14 @@ const EditAlarm: React.FC = () => {
             return;
         }
 
-        const alarmData: any = {
+        const alarmData: AlarmInput = {
             label,
             mode,
             activeDays,
             enabled: true,
         };
 
-        if (mode === 'FIXED') {
+        if (mode === AlarmMode.Fixed) {
             alarmData.fixedTime = fixedTime;
         } else {
             alarmData.windowStart = windowStart;
@@ -96,7 +100,7 @@ const EditAlarm: React.FC = () => {
         }
 
         try {
-            await alarmManagerService.saveAndSchedule(alarmData);
+            await AlarmService.save(alarmData);
             navigate({ to: '/home' }); // Go back to home
         } catch (e) {
             console.error('Failed to save alarm:', e);
@@ -162,11 +166,11 @@ const EditAlarm: React.FC = () => {
                                 color="primary"
                                 sx={{ mb: 3 }}
                             >
-                                <ToggleButton value="FIXED">Fixed Time</ToggleButton>
-                                <ToggleButton value="WINDOW">Window</ToggleButton>
+                                <ToggleButton value={AlarmMode.Fixed}>Fixed Time</ToggleButton>
+                                <ToggleButton value={AlarmMode.RandomWindow}>Window</ToggleButton>
                             </ToggleButtonGroup>
 
-                            {mode === 'FIXED' ? (
+                            {mode === AlarmMode.Fixed ? (
                                 <Box sx={{ mb: 3 }}>
                                     {isMobile ? (
                                         <MuiTimePicker
