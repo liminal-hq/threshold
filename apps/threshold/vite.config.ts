@@ -11,6 +11,8 @@ export default defineConfig(async () => ({
 	resolve: {
 		alias: {
 			history: path.resolve(__dirname, 'node_modules/history/index.js'), // Force resolution to CJS entry point
+            '@threshold/core/types': path.resolve(__dirname, '../../packages/core/src/types.ts'),
+            '@threshold/core/scheduler': path.resolve(__dirname, '../../packages/core/src/scheduler.ts'),
 		},
 	},
 
