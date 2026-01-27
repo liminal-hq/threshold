@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "apps/threshold/src-tauri",
+    "plugins/alarm-manager",
+    "plugins/theme-utils",
+    "plugins/time-prefs",
+]
+resolver = "2"

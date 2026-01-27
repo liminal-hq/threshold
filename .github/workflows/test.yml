@@ -85,44 +85,14 @@ jobs:
 
       - name: Run Rust Tests
         run: |
-          mkdir -p rust-test-results
-          EXIT_CODE=0
-
-          # Function to run tests if they exist
-          run_tests() {
-            local dir=$1
-            local name=$2
-            if [ -d "$dir/src" ] && grep -r "\[test\]" "$dir/src" > /dev/null; then
-              echo "Running tests in $dir"
-              (cd "$dir" && cargo nextest run --profile ci --config-file ../../../nextest.toml) || return 1
-              if [ -f "$dir/junit.xml" ]; then
-                mv "$dir/junit.xml" "rust-test-results/$name.xml"
-              fi
-            else
-              echo "No tests found in $dir, skipping..."
-            fi
-            return 0
-          }
-
-          # Test Main App
-          run_tests "apps/threshold/src-tauri" "app" || EXIT_CODE=1
-
-          # Test Plugins
-          for plugin in plugins/*; do
-            if [ -f "$plugin/Cargo.toml" ]; then
-              plugin_name=$(basename "$plugin")
-              run_tests "$plugin" "$plugin_name" || EXIT_CODE=1
-            fi
-          done
-          
-          exit $EXIT_CODE
+          cargo nextest run --workspace --profile ci
 
       - name: Upload Rust Test Results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: rust-test-results
-          path: rust-test-results/*.xml
+          path: target/nextest/ci/junit.xml
 
       # - name: Rust Format Check
       #   run: cargo fmt --all -- --check
