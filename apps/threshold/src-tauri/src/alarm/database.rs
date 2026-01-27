@@ -591,4 +591,28 @@ mod tests {
         let alarm = db.get_by_id(1).await.unwrap();
         assert_eq!(alarm.active_days, Vec::<i32>::new());
     }
+
+    #[tokio::test]
+    async fn test_enabled_constraint() {
+        let db = setup_test_db().await;
+
+        // Try to insert with invalid enabled value (2)
+        // Should fail due to CHECK(enabled IN (0, 1))
+        let result = sqlx::query(
+            "INSERT INTO alarms (label, enabled, mode, active_days) VALUES (?, ?, ?, ?)"
+        )
+        .bind("Constraint Test")
+        .bind(2) // Invalid value
+        .bind("FIXED")
+        .bind("[]")
+        .execute(&db.pool)
+        .await;
+
+        assert!(result.is_err());
+        // Verify it's a constraint violation
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        // SQLite constraint error message usually contains "CHECK constraint failed"
+        assert!(msg.contains("CHECK constraint failed") || msg.contains("constraint"));
+    }
 }
