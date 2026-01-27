@@ -9,6 +9,7 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
 	plugins: [react()],
 	resolve: {
+        conditions: ['source', 'import', 'module', 'browser', 'default'],
 		alias: {
 			history: path.resolve(__dirname, 'node_modules/history/index.js'), // Force resolution to CJS entry point
 		},
