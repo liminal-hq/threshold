@@ -1,11 +1,12 @@
 import { databaseService } from './DatabaseService';
-import { APP_NAME } from '../constants';
+import { APP_NAME, ROUTES } from '../constants';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { sendNotification, registerActionTypes, onAction } from '@tauri-apps/plugin-notification';
 import { Alarm, AlarmMode, DayOfWeek } from '@threshold/core/types';
 import { calculateNextTrigger as calcTrigger } from '@threshold/core/scheduler';
+import { SettingsService } from './SettingsService';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
 interface ImportedAlarm {
@@ -115,30 +116,81 @@ export class AlarmManagerService {
 									},
 								],
 							},
+							{
+								id: 'snooze_reminder',
+								actions: [
+									{
+										id: 'clear_snooze',
+										title: 'Clear Snooze',
+										destructive: true,
+										foreground: false,
+									},
+									{
+										id: 'open_app',
+										title: 'Open App',
+										foreground: true,
+									},
+									{
+										id: 'snooze_again',
+										title: 'Snooze Again',
+										foreground: false,
+									},
+								],
+							},
 						]);
 
-						await onAction((notification) => {
+						await onAction(async (notification) => {
 							console.log('[AlarmManager] Action performed:', notification);
 
 							const actionTypeId = (notification as any).actionTypeId;
-							if (actionTypeId !== 'alarm_trigger') {
-								console.log(
-									'[AlarmManager] Ignoring action from different category:',
-									actionTypeId,
-								);
+							const actionId = (notification as any).actionId;
+							const alarmId = (notification as any).id ? parseInt((notification as any).id) : null;
+
+							// Handle alarm_trigger actions
+							if (actionTypeId === 'alarm_trigger') {
+								if (actionId === 'dismiss') {
+									console.log('[AlarmManager] Action: Dismiss');
+									this.stopRinging();
+								} else if (actionId === 'snooze') {
+									console.log('[AlarmManager] Action: Snooze');
+									this.stopRinging();
+								}
 								return;
 							}
 
-							const actionId = (notification as any).actionId;
+							// Handle snooze_reminder actions
+							if (actionTypeId === 'snooze_reminder') {
+								if (!alarmId) {
+									console.error('[AlarmManager] Snooze action missing alarm ID');
+									return;
+								}
 
-							if (actionId === 'dismiss') {
-								console.log('[AlarmManager] Action: Dismiss');
-								this.stopRinging();
-							} else if (actionId === 'snooze') {
-								console.log('[AlarmManager] Action: Snooze');
-								// Placeholder: Treat snooze as cancel for now until full snooze logic is reviewed
-								this.stopRinging();
+								if (actionId === 'clear_snooze') {
+									console.log('[AlarmManager] Action: Clear Snooze for alarm', alarmId);
+									// Cancel the snoozed alarm
+									await this.cancelNativeAlarm(alarmId);
+									// Reschedule the alarm to its normal next trigger
+									const alarm = await this.getAlarm(alarmId);
+									if (alarm) {
+										await this.saveAndSchedule(alarm);
+									}
+								} else if (actionId === 'open_app') {
+									console.log('[AlarmManager] Action: Open App');
+									// Navigate to home screen (app will come to foreground automatically)
+									if (this.router) {
+										this.router.navigate({ to: ROUTES.HOME });
+									}
+								} else if (actionId === 'snooze_again') {
+									console.log('[AlarmManager] Action: Snooze Again for alarm', alarmId);
+									// Get current snooze duration from settings
+									const snoozeLength = SettingsService.getSnoozeLength();
+									// Snooze again
+									await this.snoozeAlarm(alarmId, snoozeLength);
+								}
+								return;
 							}
+
+							console.log('[AlarmManager] Ignoring action from unknown category:', actionTypeId);
 						});
 						console.log('[AlarmManager] Notification actions registered.');
 					} catch (e) {
@@ -205,6 +257,14 @@ export class AlarmManagerService {
 
 	async loadAlarms(): Promise<Alarm[]> {
 		return await databaseService.getAllAlarms();
+	}
+
+	/**
+	 * Gets a single alarm by ID
+	 */
+	async getAlarm(id: number): Promise<Alarm | undefined> {
+		const alarms = await databaseService.getAllAlarms();
+		return alarms.find((a) => a.id === id);
 	}
 
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
@@ -423,6 +483,45 @@ export class AlarmManagerService {
 		if (alarm) {
 			await this.saveAndSchedule(alarm);
 		}
+	}
+
+	async snoozeAlarm(id: number, durationMinutes: number) {
+		console.log(`[AlarmManager] Snoozing alarm ${id} for ${durationMinutes} minutes`);
+		const alarms = await databaseService.getAllAlarms();
+		const alarm = alarms.find((a) => a.id === id);
+
+		if (!alarm) {
+			console.error(`[AlarmManager] Cannot snooze: Alarm ${id} not found`);
+			return;
+		}
+
+		const nextTrigger = Date.now() + durationMinutes * 60 * 1000;
+
+		// Update DB to reflect snooze time
+		await databaseService.saveAlarm({
+			...alarm,
+			nextTrigger,
+		});
+
+		// Schedule Native
+		await this.scheduleNativeAlarm(id, nextTrigger, alarm.soundUri);
+
+		// Send persistent notification for mobile
+		if (PlatformUtils.isMobile()) {
+			try {
+				await sendNotification({
+					title: `Alarm Snoozed`,
+					body: `"${alarm.label || 'Alarm'}" will ring again in ${durationMinutes} minutes`,
+					actionTypeId: 'snooze_reminder',
+					ongoing: true,
+					id: id, // Numeric ID for Tauri notification
+				});
+			} catch (e) {
+				console.error('[AlarmManager] Failed to send snooze notification:', e);
+			}
+		}
+
+		this.notifyGlobalListeners();
 	}
 
 	async stopRinging() {
