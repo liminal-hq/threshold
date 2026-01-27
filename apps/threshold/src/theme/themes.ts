@@ -119,7 +119,7 @@ function getShade(hsl: string, amount: number): string {
     return `hsl(${h}, ${s}%, ${l}%)`;
 }
 
-const deepNightLight: ThemeDefinition = {
+export const deepNightLight: ThemeDefinition = {
     id: 'deep-night',
     variables: {
         '--app-colour-primary': 'hsl(210, 100%, 13%)', // #002244
@@ -145,7 +145,7 @@ const deepNightLight: ThemeDefinition = {
     }
 };
 
-const deepNightDark: ThemeDefinition = {
+export const deepNightDark: ThemeDefinition = {
     id: 'deep-night',
     variables: {
         '--app-background-colour': '#121212',
