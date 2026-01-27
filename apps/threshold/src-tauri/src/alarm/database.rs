@@ -170,7 +170,7 @@ impl From<AlarmRow> for AlarmRecord {
 
 /// Returns database migrations for use with tauri-plugin-sql.
 /// These should be registered during app setup using:
-/// ```rust
+/// ```rust,ignore
 /// tauri::Builder::default()
 ///     .plugin(tauri_plugin_sql::Builder::default()
 ///         .add_migrations("sqlite:alarms.db", migrations())
