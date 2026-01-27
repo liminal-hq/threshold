@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-    AppBar,
-    Toolbar,
-    Typography,
     IconButton,
     Fab,
     List,
@@ -10,9 +7,9 @@ import {
     Button,
     Container
 } from '@mui/material';
+import { MobileToolbar } from '../components/MobileToolbar';
 import {
     Add as AddIcon,
-    MoreVert as MoreVertIcon,
     SettingsOutlined as SettingsOutlinedIcon,
     Refresh as RefreshIcon
 } from '@mui/icons-material';
@@ -30,10 +27,13 @@ const Home: React.FC = () => {
     const [alarms, setAlarms] = useState<Alarm[]>([]);
     const [isMobile, setIsMobile] = useState(false);
     const is24h = SettingsService.getIs24h();
-
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
     }, []);
+
+    const handleSettingsClick = () => {
+        navigate({ to: '/settings' });
+    };
 
     const loadData = async () => {
         try {
@@ -105,19 +105,17 @@ const Home: React.FC = () => {
     return (
         <Box sx={{ minHeight: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {isMobile && (
-                <AppBar position="sticky" elevation={0} sx={{ paddingTop: 'env(safe-area-inset-top)' }}>
-                    <Toolbar>
-                        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                            {APP_NAME}
-                        </Typography>
+                <MobileToolbar
+                    title={APP_NAME}
+                    endAction={
                         <IconButton color="inherit" onClick={() => loadData()}>
                             <RefreshIcon />
                         </IconButton>
-                        <IconButton color="inherit" onClick={() => navigate({ to: '/settings' })}>
-                            <MoreVertIcon />
-                        </IconButton>
-                    </Toolbar>
-                </AppBar>
+                    }
+                    menuItems={[
+                        { label: 'Settings', onClick: handleSettingsClick }
+                    ]}
+                />
             )}
 
             {/* Desktop settings button */}

@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-    AppBar,
-    Toolbar,
     Typography,
     IconButton,
     Button,
@@ -14,6 +12,7 @@ import {
     FormHelperText,
     Paper
 } from '@mui/material';
+import { MobileToolbar } from '../components/MobileToolbar';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { TimePicker as MuiTimePicker } from '@mui/x-date-pickers/TimePicker';
 import { TimePicker as DesktopCustomTimePicker } from '../components/TimePicker';
@@ -123,19 +122,19 @@ const EditAlarm: React.FC = () => {
         <Box sx={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {/* Mobile Header: Placed OUTSIDE IonContent to avoid scrolling issues and overlay */}
             {isMobile && (
-                <AppBar position="sticky" elevation={0} sx={{ paddingTop: 'env(safe-area-inset-top)' }}>
-                    <Toolbar>
+                <MobileToolbar
+                    startAction={
                         <IconButton edge="start" color="inherit" onClick={() => navigate({ to: '/home' })}>
                             <CloseIcon />
                         </IconButton>
-                        <Typography variant="h6" sx={{ flexGrow: 1, ml: 2 }}>
-                            {isNew ? 'New Alarm' : 'Edit Alarm'}
-                        </Typography>
+                    }
+                    title={isNew ? 'New Alarm' : 'Edit Alarm'}
+                    endAction={
                         <Button color="inherit" onClick={handleSave}>
                             Save
                         </Button>
-                    </Toolbar>
-                </AppBar>
+                    }
+                />
             )}
             <Box sx={{ flexGrow: 1 }}>
                 <Container maxWidth="sm" sx={{

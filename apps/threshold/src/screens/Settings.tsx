@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-    AppBar,
-    Toolbar,
-    Typography,
     IconButton,
     List,
     ListItem,
@@ -15,8 +12,10 @@ import {
     Box,
     Container,
     ListSubheader,
-    Paper
+    Paper,
+    Typography
 } from '@mui/material';
+import { MobileToolbar } from '../components/MobileToolbar';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useNavigate } from '@tanstack/react-router';
 import { PlatformUtils } from '../utils/PlatformUtils';
@@ -50,16 +49,14 @@ const Settings: React.FC = () => {
         <Box sx={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {/* Mobile Header: Placed OUTSIDE IonContent to avoid scrolling issues and overlay */}
             {isMobile && (
-                <AppBar position="sticky" elevation={0} sx={{ paddingTop: 'env(safe-area-inset-top)' }}>
-                    <Toolbar>
+                <MobileToolbar
+                    startAction={
                         <IconButton edge="start" color="inherit" onClick={() => navigate({ to: '/home' })}>
                             <ArrowBackIcon />
                         </IconButton>
-                        <Typography variant="h6" sx={{ flexGrow: 1, ml: 2 }}>
-                            Settings
-                        </Typography>
-                    </Toolbar>
-                </AppBar>
+                    }
+                    title="Settings"
+                />
             )}
             <Box sx={{ flexGrow: 1 }}>
                 {/* Desktop Spacing Fix: Adjusted mt to 2 to work with RootLayout spacing */}
