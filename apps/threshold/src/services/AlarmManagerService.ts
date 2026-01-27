@@ -5,7 +5,7 @@ import { listen, emit } from '@tauri-apps/api/event';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { sendNotification, registerActionTypes, onAction } from '@tauri-apps/plugin-notification';
 import { Alarm } from '@threshold/core/types';
-import { AlarmRecord } from '../types/alarm';
+import { AlarmInput, AlarmRecord, AlarmMode } from '../types/alarm';
 import { AlarmService } from './AlarmService';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
@@ -249,14 +249,21 @@ export class AlarmManagerService {
 					// Cancel the 'temporary' native alarm created by the Intent
 					await this.cancelNativeAlarm(imp.id);
 
-					const newAlarm: any = {
+					const newAlarm: AlarmInput = {
 						label: imp.label,
-						mode: 'FIXED',
+						mode: 'FIXED' as AlarmMode, // Using 'as AlarmMode' if 'FIXED' string is not matching enum, but let's check types/alarm.ts again.
 						fixedTime: timeStr,
 						activeDays: [0, 1, 2, 3, 4, 5, 6], // Default to every day
 						enabled: true,
 					};
 
+					// Cast to bypass Omit type mismatch locally as we know saveAndSchedule accepts AlarmInput compatible
+                    // Actually, let's fix saveAndSchedule signature to accept AlarmInput first?
+                    // But signature is `saveAndSchedule(alarm: Omit<Alarm, 'id'> & { id?: number })` which is legacy type.
+                    // We can just cast newAlarm to any or fix signature.
+                    // Let's cast to `any` just for the call or fix signature.
+                    // The goal was to remove `any`.
+                    // We should update saveAndSchedule signature to `AlarmInput`.
 					await this.saveAndSchedule(newAlarm);
 				}
 			}
@@ -286,10 +293,10 @@ export class AlarmManagerService {
         // Sync handled by listener
 	}
 
-	async saveAndSchedule(alarm: Omit<Alarm, 'id'> & { id?: number }) {
+	async saveAndSchedule(alarm: AlarmInput) {
         // Use AlarmService
         // Map to AlarmInput compatible object
-        const input: any = {
+        const input: AlarmInput = {
             id: alarm.id,
             label: alarm.label,
             enabled: alarm.enabled,
@@ -301,10 +308,9 @@ export class AlarmManagerService {
             soundUri: alarm.soundUri,
             soundTitle: alarm.soundTitle
         };
-        await AlarmService.save(input);
+        const saved = await AlarmService.save(input);
         // Sync handled by listener
-        return 0; // Returning 0 as ID since we might not know it immediately without refactoring, but call sites don't strictly use it except for logging usually.
-        // Actually AlarmService.save returns the record with ID. We could return it.
+        return saved.id;
 	}
 
 	async deleteAlarm(id: number) {
