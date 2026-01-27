@@ -23,6 +23,8 @@ import { alarmManagerService } from '../services/AlarmManagerService';
 import { DaySelector } from '../components/DaySelector';
 import { SettingsService } from '../services/SettingsService';
 import { parse, format } from 'date-fns';
+import { alarmSoundPickerService } from '../services/AlarmSoundPickerService';
+import { MusicNote as MusicNoteIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 
 const EditAlarm: React.FC = () => {
     const { id } = useParams({ from: '/edit/$id' });
@@ -48,6 +50,9 @@ const EditAlarm: React.FC = () => {
     const [windowStart, setWindowStart] = useState(defaultTimeStr);
     const [windowEnd, setWindowEnd] = useState(defaultEndStr);
 
+    const [soundUri, setSoundUri] = useState<string | null>(null);
+    const [soundTitle, setSoundTitle] = useState<string | null>(null);
+
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
     }, []);
@@ -68,6 +73,8 @@ const EditAlarm: React.FC = () => {
             if (alarm.fixedTime) setFixedTime(alarm.fixedTime);
             if (alarm.windowStart) setWindowStart(alarm.windowStart);
             if (alarm.windowEnd) setWindowEnd(alarm.windowEnd);
+            setSoundUri(alarm.soundUri || null);
+            setSoundTitle(alarm.soundTitle || null);
         }
     };
 
@@ -82,6 +89,8 @@ const EditAlarm: React.FC = () => {
             mode,
             activeDays,
             enabled: true,
+            soundUri,
+            soundTitle
         };
 
         if (mode === 'FIXED') {
@@ -101,6 +110,21 @@ const EditAlarm: React.FC = () => {
         } catch (e) {
             console.error('Failed to save alarm:', e);
             alert('Failed to save alarm. Please try again.');
+        }
+    };
+
+    const handlePickSound = async () => {
+        try {
+            const result = await alarmSoundPickerService.pickAlarmSound({
+                existingUri: soundUri,
+                title: 'Select Alarm Sound'
+            });
+            setSoundUri(result.uri);
+            setSoundTitle(result.title);
+        } catch (error: any) {
+            if (error.message !== 'cancelled') {
+                console.error('Failed to pick sound:', error);
+            }
         }
     };
 
@@ -244,6 +268,36 @@ const EditAlarm: React.FC = () => {
                             <Box>
                                 <Typography variant="subtitle2" gutterBottom>Repeats</Typography>
                                 <DaySelector selectedDays={activeDays} onChange={setActiveDays} />
+                            </Box>
+
+                            <Box sx={{ mt: 3 }}>
+                                <Typography variant="subtitle2" gutterBottom>Sound</Typography>
+                                <Paper
+                                    variant="outlined"
+                                    onClick={isMobile ? handlePickSound : undefined}
+                                    sx={{
+                                        p: 2,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        cursor: isMobile ? 'pointer' : 'default',
+                                        '&:hover': isMobile ? { bgcolor: 'action.hover' } : {},
+                                        borderRadius: 1,
+                                        opacity: isMobile ? 1 : 0.8
+                                    }}
+                                >
+                                    <MusicNoteIcon sx={{ mr: 2, color: 'text.secondary' }} />
+                                    <Box sx={{ flexGrow: 1 }}>
+                                        <Typography variant="body1">
+                                            {soundTitle || (isMobile ? 'Default' : 'System Default')}
+                                        </Typography>
+                                        {!isMobile && (
+                                            <Typography variant="caption" color="text.secondary" display="block">
+                                                Sound selection is only available on mobile devices.
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                    {isMobile && <ChevronRightIcon color="action" />}
+                                </Paper>
                             </Box>
                         </Paper>
                     </Stack>
