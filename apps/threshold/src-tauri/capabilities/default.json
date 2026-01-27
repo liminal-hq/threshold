@@ -29,6 +29,7 @@
 		"core:window:allow-set-decorations",
 		"alarm-manager:default",
 		"time-prefs:default",
-		"theme-utils:default"
+		"theme-utils:default",
+		"dialog:default"
 	]
 }

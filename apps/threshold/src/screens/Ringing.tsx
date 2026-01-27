@@ -4,7 +4,8 @@ import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { Alarm } from '../services/DatabaseService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { platform } from '@tauri-apps/plugin-os';
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { PlatformUtils } from '../utils/PlatformUtils';
 import { listen } from '@tauri-apps/api/event';
 import '../theme/ringing.css';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
@@ -116,8 +117,7 @@ const Ringing: React.FC = () => {
 		}
 
 		// Check platform and close window if desktop
-		const os = platform();
-		if (os !== 'ios' && os !== 'android') {
+		if (PlatformUtils.isDesktop()) {
 			try {
 				await getCurrentWindow().close();
 			} catch (e) {
@@ -159,6 +159,35 @@ const Ringing: React.FC = () => {
 			console.log('Silence timer disabled (Never or 0)');
 		}
 	}, [silenceAfter, handleDismiss]);
+
+	// Audio playback logic for desktop
+	useEffect(() => {
+		if (PlatformUtils.isMobile() || !alarm || !alarm.soundUri) {
+			return;
+		}
+
+		console.log('[Ringing] Attempting to play sound:', alarm.soundUri);
+		let audio: HTMLAudioElement | null = null;
+
+		try {
+			const assetUrl = convertFileSrc(alarm.soundUri);
+			audio = new Audio(assetUrl);
+			audio.loop = true;
+			audio.play().catch(e => {
+				console.error('[Ringing] Failed to play audio:', e);
+			});
+		} catch (e) {
+			console.error('[Ringing] Error initializing audio:', e);
+		}
+
+		return () => {
+			if (audio) {
+				audio.pause();
+				audio.src = '';
+				audio = null;
+			}
+		};
+	}, [alarm]);
 
 	return (
 		<ThemeProvider theme={muiTheme}>

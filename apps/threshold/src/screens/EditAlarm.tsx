@@ -274,29 +274,23 @@ const EditAlarm: React.FC = () => {
                                 <Typography variant="subtitle2" gutterBottom>Sound</Typography>
                                 <Paper
                                     variant="outlined"
-                                    onClick={isMobile ? handlePickSound : undefined}
+                                    onClick={handlePickSound}
                                     sx={{
                                         p: 2,
                                         display: 'flex',
                                         alignItems: 'center',
-                                        cursor: isMobile ? 'pointer' : 'default',
-                                        '&:hover': isMobile ? { bgcolor: 'action.hover' } : {},
-                                        borderRadius: 1,
-                                        opacity: isMobile ? 1 : 0.8
+                                        cursor: 'pointer',
+                                        '&:hover': { bgcolor: 'action.hover' },
+                                        borderRadius: 1
                                     }}
                                 >
                                     <MusicNoteIcon sx={{ mr: 2, color: 'text.secondary' }} />
                                     <Box sx={{ flexGrow: 1 }}>
                                         <Typography variant="body1">
-                                            {soundTitle || (isMobile ? 'Default' : 'System Default')}
+                                            {soundTitle || 'System Default'}
                                         </Typography>
-                                        {!isMobile && (
-                                            <Typography variant="caption" color="text.secondary" display="block">
-                                                Sound selection is only available on mobile devices.
-                                            </Typography>
-                                        )}
                                     </Box>
-                                    {isMobile && <ChevronRightIcon color="action" />}
+                                    <ChevronRightIcon color="action" />
                                 </Paper>
                             </Box>
                         </Paper>
