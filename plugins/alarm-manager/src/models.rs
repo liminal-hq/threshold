@@ -40,6 +40,12 @@ pub struct PickedAlarmSound {
     pub title: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RingEventPayload {
+    pub id: i32,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActiveAlarmResponse {

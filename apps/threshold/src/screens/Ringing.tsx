@@ -75,10 +75,30 @@ const Ringing: React.FC = () => {
 
 	useEffect(() => {
 		const loadAlarm = async () => {
-			const alarms = await alarmManagerService.loadAlarms();
-			const found = alarms.find((a) => a.id === parseInt(id));
-			if (found) {
-				setAlarm(found);
+			try {
+				if (alarmManagerService.isInitialized()) {
+					console.log('[Ringing] AlarmManager already initialized.');
+				} else {
+					console.log('[Ringing] Initializing AlarmManagerService...');
+					await alarmManagerService.init();
+				}
+				
+				const alarms = await alarmManagerService.loadAlarms();
+				const found = alarms.find((a) => a.id === parseInt(id));
+				
+				if (found) {
+					setAlarm((prev) => {
+						if (!prev || prev.id !== found.id || prev.soundUri !== found.soundUri) {
+							console.log('[Ringing] Alarm updated:', found.id, 'soundUri:', found.soundUri);
+							return found;
+						}
+						return prev;
+					});
+				} else {
+					console.error('[Ringing] Alarm not found for ID:', id);
+				}
+			} catch (e) {
+				console.error('[Ringing] Failed to load alarm:', e);
 			}
 		};
 		loadAlarm();
@@ -105,13 +125,16 @@ const Ringing: React.FC = () => {
 	 * the app disappears immediately without showing the home screen transition.
 	 * A small delay after minimize ensures the operation completes before navigation.
 	 */
+	// Audio / Synth State
+	const [audioError, setAudioError] = useState<string | null>(null);
+	const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
+
 	const handleDismiss = useCallback(async () => {
-		// Stop the ringing sound/vibration
+		console.log('[Ringing] Dismissing Alarm', id);
 		await alarmManagerService.stopRinging();
 
 		// Test Alarm Logic
 		if (parseInt(id) === SPECIAL_ALARM_IDS.TEST_ALARM) {
-			// Return to previous screen (likely Settings)
 			window.history.back();
 			return;
 		}
@@ -162,36 +185,145 @@ const Ringing: React.FC = () => {
 
 	// Audio playback logic for desktop
 	useEffect(() => {
-		if (PlatformUtils.isMobile() || !alarm || !alarm.soundUri) {
+		if (PlatformUtils.isMobile() || !alarm) {
 			return;
 		}
 
-		console.log('[Ringing] Attempting to play sound:', alarm.soundUri);
+		console.log('[Ringing] Audio Effect Triggered. soundUri:', alarm.soundUri);
 		let audio: HTMLAudioElement | null = null;
+		let synthInterval: any = null;
+		let isCleanedUp = false;
 
-		try {
-			const assetUrl = convertFileSrc(alarm.soundUri);
-			audio = new Audio(assetUrl);
-			audio.loop = true;
-			audio.play().catch(e => {
-				console.error('[Ringing] Failed to play audio:', e);
-			});
-		} catch (e) {
-			console.error('[Ringing] Error initializing audio:', e);
-		}
+		const startSynthFallback = (reason: string) => {
+			if (isCleanedUp) return;
+			console.log(`[Ringing] Starting Synth Fallback (Reason: ${reason})`);
+			const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+			
+			const playBeep = () => {
+				if (isCleanedUp) return;
+				if (audioCtx.state === 'suspended') audioCtx.resume();
+				const osc = audioCtx.createOscillator();
+				const gain = audioCtx.createGain();
+				
+				osc.type = 'square';
+				osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+				
+				// Increased volume for synth fallback
+				gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+				gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+				
+				osc.connect(gain);
+				gain.connect(audioCtx.destination);
+				
+				osc.start();
+				osc.stop(audioCtx.currentTime + 0.5);
+			};
+
+			playBeep();
+			synthInterval = setInterval(playBeep, 1000);
+		};
+
+		const startAudio = async () => {
+			if (!alarm.soundUri) {
+				startSynthFallback('No soundUri');
+				return;
+			}
+
+			try {
+				let assetUrl = alarm.soundUri;
+				
+				// Better heuristic: if it looks like an absolute path and isn't a likely web-root relative path
+				const isAbsolutePath = alarm.soundUri.startsWith('/') || alarm.soundUri.includes(':\\');
+				const isWebRootPath = alarm.soundUri.startsWith('/alarms/') || alarm.soundUri.startsWith('/static/');
+				
+				// IF the file is actually inside our public folder, use the relative path instead of asset protocol
+				// This is much safer and avoids "URL can't be shown" security errors
+				if (isAbsolutePath && alarm.soundUri.includes('/public/alarms/')) {
+					const fileName = alarm.soundUri.split('/public/alarms/').pop();
+					assetUrl = `/alarms/${fileName}`;
+					console.log('[Ringing] Detected bundled asset from absolute path. Using relative URL:', assetUrl);
+				} else if (isAbsolutePath && !isWebRootPath) {
+					// Truly external file
+					assetUrl = convertFileSrc(alarm.soundUri);
+					console.log('[Ringing] External file detected. Using asset protocol:', assetUrl);
+				}
+				
+				console.log('[Ringing] Final Audio URL:', assetUrl);
+
+				audio = new Audio(assetUrl);
+				audio.loop = true;
+				
+				audio.addEventListener('error', (e: any) => {
+					if (isCleanedUp) return;
+					const error = audio?.error;
+					console.error('[Ringing] Audio element error:', {
+						code: error?.code,
+						message: error?.message,
+						event: e
+					});
+					setAudioError(`Code ${error?.code}: ${error?.message || 'Load failed'}`);
+					if (!synthInterval) startSynthFallback('Audio error event');
+				});
+
+				await audio.play().then(() => {
+					console.log('[Ringing] Audio playback started successfully');
+					setIsAudioUnlocked(true);
+				}).catch(e => {
+					if (isCleanedUp) return;
+					
+					// Ignore abort errors which usually mean the effect was cleaned up
+					if (e.name === 'AbortError') {
+						console.log('[Ringing] Audio playback aborted during load (cleanup)');
+						return;
+					}
+
+					console.warn('[Ringing] Playback blocked or failed:', e.name, e.message);
+					setAudioError(e.message);
+					if (!synthInterval) startSynthFallback(`Playback fail: ${e.name}`);
+				});
+			} catch (e: any) {
+				if (isCleanedUp) return;
+				console.error('[Ringing] Audio initialization failed:', e);
+				if (!synthInterval) startSynthFallback('Initialization exception');
+			}
+		};
+
+		startAudio();
 
 		return () => {
+			isCleanedUp = true;
 			if (audio) {
+				console.log('[Ringing] Cleaning up audio');
 				audio.pause();
 				audio.src = '';
 				audio = null;
 			}
+			if (synthInterval) {
+				console.log('[Ringing] Cleaning up synth');
+				clearInterval(synthInterval);
+			}
 		};
 	}, [alarm]);
 
+	// Global click listener to "unlock" audio if it was blocked
+	useEffect(() => {
+		const unlock = () => {
+			if (!isAudioUnlocked) {
+				console.log('[Ringing] User interacted. Audio should be unlocked now.');
+				setIsAudioUnlocked(true);
+			}
+		};
+		window.addEventListener('click', unlock);
+		return () => window.removeEventListener('click', unlock);
+	}, [isAudioUnlocked]);
+
 	return (
 		<ThemeProvider theme={muiTheme}>
-			<Box className="ringing-page" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+			<Box 
+				className="ringing-page" 
+				onClick={() => setIsAudioUnlocked(true)}
+				sx={{ height: '100%', display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
+			>
 				<Box sx={{ flexGrow: 1 }}>
 					<div className="ringing-container" data-tauri-drag-region="true">
 						<Typography variant="h1" className="ringing-time" sx={{ fontSize: '5rem', fontWeight: 800 }}>{timeStr}</Typography>
@@ -237,6 +369,17 @@ const Ringing: React.FC = () => {
 							>
 								Snooze ({snoozeLength}m)
 							</Button>
+							
+							{audioError && !isAudioUnlocked && (
+								<Button
+									variant="text"
+									fullWidth
+									onClick={() => setIsAudioUnlocked(true)}
+									sx={{ mt: 2, color: 'rgba(255,255,255,0.8)', textDecoration: 'underline' }}
+								>
+									Click to unlock sound
+								</Button>
+							)}
 						</div>
 					</div>
 				</Box>
