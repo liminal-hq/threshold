@@ -85,7 +85,7 @@ jobs:
 
       - name: Run Rust Tests
         run: |
-          cargo nextest run --workspace --profile ci
+          cargo nextest run --workspace --config-file nextest.toml --profile ci
 
       - name: Upload Rust Test Results
         uses: actions/upload-artifact@v4
