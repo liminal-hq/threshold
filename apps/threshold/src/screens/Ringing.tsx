@@ -10,7 +10,8 @@ import '../theme/ringing.css';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { ROUTES, SPECIAL_ALARM_IDS } from '../constants';
 import { SettingsService, Theme } from '../services/SettingsService';
-import { createMuiTheme } from '../theme/themes';
+import { createTheme } from '@mui/material/styles';
+import { themes, generateSystemTheme } from '../theme/themes';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
@@ -51,7 +52,24 @@ const Ringing: React.FC = () => {
 	}, []);
 
 	const muiTheme = useMemo(() => {
-		return createMuiTheme(theme, forceDark);
+		// Determine if dark mode based on theme and forceDark
+		const isDarkMode = theme === 'boring-dark' || (forceDark && theme !== 'boring-light');
+		
+		// Get theme definition
+		let themeDef;
+		if (theme === 'system') {
+			themeDef = generateSystemTheme(isDarkMode);
+		} else {
+			const themeGroup = themes[theme] || themes['deep-night'];
+			themeDef = isDarkMode ? (themeGroup as any).dark : (themeGroup as any).light;
+		}
+		
+		return createTheme({
+			palette: {
+				mode: isDarkMode ? 'dark' : 'light',
+				...themeDef.muiPalette,
+			},
+		});
 	}, [theme, forceDark]);
 
 	useEffect(() => {
