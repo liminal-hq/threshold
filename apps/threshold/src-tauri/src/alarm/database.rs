@@ -185,7 +185,7 @@ pub fn migrations() -> Vec<Migration> {
                 CREATE TABLE IF NOT EXISTS alarms (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     label TEXT,
-                    enabled INTEGER NOT NULL DEFAULT 0,
+                    enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0, 1)),
                     mode TEXT NOT NULL,
                     fixed_time TEXT,
                     window_start TEXT,
