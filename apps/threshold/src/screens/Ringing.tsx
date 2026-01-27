@@ -2,16 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Button, Typography, Box } from '@mui/material';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
-import { Alarm } from '../services/DatabaseService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { platform } from '@tauri-apps/plugin-os';
 import { listen } from '@tauri-apps/api/event';
 import '../theme/ringing.css';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
+import { AlarmService } from '../services/AlarmService';
+import { AlarmRecord } from '../types/alarm';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
-	const [alarm, setAlarm] = useState<Alarm | null>(null);
+	const [alarm, setAlarm] = useState<AlarmRecord | null>(null);
 	const [timeStr, setTimeStr] = useState<string>('');
 	const navigate = useNavigate();
 
@@ -32,11 +33,14 @@ const Ringing: React.FC = () => {
 
 	useEffect(() => {
 		const loadAlarm = async () => {
-			const alarms = await alarmManagerService.loadAlarms();
-			const found = alarms.find((a) => a.id === parseInt(id));
-			if (found) {
-				setAlarm(found);
-			}
+            try {
+                const found = await AlarmService.get(parseInt(id));
+                if (found) {
+                    setAlarm(found);
+                }
+            } catch (e) {
+                console.error('Failed to load ringing alarm', e);
+            }
 		};
 		loadAlarm();
 
@@ -53,6 +57,13 @@ const Ringing: React.FC = () => {
 	const handleDismiss = async () => {
 		// Stop the ringing sound/vibration
 		await alarmManagerService.stopRinging();
+
+        // Notify backend to dismiss (reschedule)
+        try {
+            await AlarmService.dismiss(parseInt(id));
+        } catch (e) {
+            console.error('Failed to dismiss alarm in backend', e);
+        }
 
 		// Check platform and close window if desktop
 		const os = platform();

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { RouterProvider } from '@tanstack/react-router';
 import { router } from './router';
 import { ThemeContextProvider } from './contexts/ThemeContext';
+import { AlarmsProvider } from './contexts/AlarmsContext';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
@@ -17,6 +18,7 @@ import './theme/components.css';
 import './theme/transitions.css';
 import { routeTransitions } from './utils/RouteTransitions';
 import { SettingsService } from './services/SettingsService';
+import { alarmManagerService } from './services/AlarmManagerService';
 
 const App: React.FC = () => {
 	console.log('📦 [threshold] App rendering, pathname:', window.location.pathname);
@@ -38,6 +40,17 @@ const App: React.FC = () => {
 			}
 		};
 		initTimePrefs();
+
+		// Initialize Alarm Manager Service
+		const initAlarmService = async () => {
+			try {
+				alarmManagerService.setRouter(router);
+				await alarmManagerService.init();
+			} catch (e) {
+				console.error('[App] Failed to init AlarmManagerService:', e);
+			}
+		};
+		initAlarmService();
 
 		const showWindow = async () => {
 			try {
@@ -126,9 +139,11 @@ const App: React.FC = () => {
 
 	return (
 		<ThemeContextProvider>
-			<LocalizationProvider dateAdapter={AdapterDateFns}>
-				<RouterProvider router={router} />
-			</LocalizationProvider>
+			<AlarmsProvider>
+				<LocalizationProvider dateAdapter={AdapterDateFns}>
+					<RouterProvider router={router} />
+				</LocalizationProvider>
+			</AlarmsProvider>
 		</ThemeContextProvider>
 	);
 };
