@@ -18,6 +18,7 @@ impl AlarmDatabase {
         }
 
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(5)
             .connect_with(
                 sqlx::sqlite::SqliteConnectOptions::new()
                     .filename(db_path)
@@ -28,7 +29,7 @@ impl AlarmDatabase {
         Ok(Self { pool })
     }
 
-    pub async fn get_all<R: Runtime>(&self, _app: &AppHandle<R>) -> Result<Vec<AlarmRecord>> {
+    pub async fn get_all(&self) -> Result<Vec<AlarmRecord>> {
         let rows = sqlx::query_as::<_, AlarmRow>("SELECT * FROM alarms ORDER BY id")
             .fetch_all(&self.pool)
             .await?;
@@ -36,11 +37,7 @@ impl AlarmDatabase {
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 
-    pub async fn get_by_id<R: Runtime>(
-        &self,
-        _app: &AppHandle<R>,
-        id: i32,
-    ) -> Result<AlarmRecord> {
+    pub async fn get_by_id(&self, id: i32) -> Result<AlarmRecord> {
         let row = sqlx::query_as::<_, AlarmRow>("SELECT * FROM alarms WHERE id = ?")
             .bind(id)
             .fetch_optional(&self.pool)
@@ -51,9 +48,8 @@ impl AlarmDatabase {
         Ok(row.into())
     }
 
-    pub async fn save<R: Runtime>(
+    pub async fn save(
         &self,
-        _app: &AppHandle<R>,
         input: AlarmInput,
         next_trigger: Option<i64>,
     ) -> Result<AlarmRecord> {
@@ -88,10 +84,7 @@ impl AlarmDatabase {
             .execute(&self.pool)
             .await?;
 
-            // We can't call self.get_by_id recursively easily if we needed AppHandle there,
-            // but we removed AppHandle dependency from get_by_id logic (using self.pool).
-            // Passing _app is fine.
-            self.get_by_id(_app, id).await
+            self.get_by_id(id).await
         } else {
             // Insert new
             let result = sqlx::query(
@@ -113,11 +106,11 @@ impl AlarmDatabase {
             .execute(&self.pool)
             .await?;
 
-            self.get_by_id(_app, result.last_insert_rowid() as i32).await
+            self.get_by_id(result.last_insert_rowid() as i32).await
         }
     }
 
-    pub async fn delete<R: Runtime>(&self, _app: &AppHandle<R>, id: i32) -> Result<()> {
+    pub async fn delete(&self, id: i32) -> Result<()> {
         sqlx::query("DELETE FROM alarms WHERE id = ?")
             .bind(id)
             .execute(&self.pool)
@@ -147,11 +140,17 @@ impl From<AlarmRow> for AlarmRecord {
         let mode = match row.mode.as_str() {
             "FIXED" => AlarmMode::Fixed,
             "WINDOW" => AlarmMode::Window,
-            _ => AlarmMode::Fixed,
+            _ => {
+                log::warn!("Invalid alarm mode '{}' for alarm {}, defaulting to FIXED", row.mode, row.id);
+                AlarmMode::Fixed
+            }
         };
 
         let active_days: Vec<i32> = serde_json::from_str(&row.active_days)
-            .unwrap_or_else(|_| vec![]);
+            .unwrap_or_else(|e| {
+                log::warn!("Failed to parse active_days for alarm {}: {}, using empty array", row.id, e);
+                vec![]
+            });
 
         Self {
             id: row.id,
@@ -169,6 +168,14 @@ impl From<AlarmRow> for AlarmRecord {
     }
 }
 
+/// Returns database migrations for use with tauri-plugin-sql.
+/// These should be registered during app setup using:
+/// ```rust
+/// tauri::Builder::default()
+///     .plugin(tauri_plugin_sql::Builder::default()
+///         .add_migrations("sqlite:alarms.db", migrations())
+///         .build())
+/// ```
 pub fn migrations() -> Vec<Migration> {
     vec![
         Migration {
