@@ -9,7 +9,8 @@
 	},
 	"scripts": {
 		"build": "tsc",
-		"test": "vitest run"
+		"test": "vitest run",
+		"test:ci": "vitest run --reporter=junit --reporter=default --outputFile.junit=junit.xml"
 	},
 	"dependencies": {
 		"date-fns": "^3.0.0"
