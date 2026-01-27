@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
-    AppBar,
-    Toolbar,
-    Typography,
     IconButton,
     Fab,
     List,
     Box,
     Button,
-    Container,
-    Menu,
-    MenuItem
+    Container
 } from '@mui/material';
+import { MobileToolbar } from '../components/MobileToolbar';
 import {
     Add as AddIcon,
-    MoreVert as MoreVertIcon,
     SettingsOutlined as SettingsOutlinedIcon,
     Refresh as RefreshIcon
 } from '@mui/icons-material';
@@ -32,23 +27,11 @@ const Home: React.FC = () => {
     const [alarms, setAlarms] = useState<Alarm[]>([]);
     const [isMobile, setIsMobile] = useState(false);
     const is24h = SettingsService.getIs24h();
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const open = Boolean(anchorEl);
-
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
     }, []);
 
-    const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleMenuClose = () => {
-        setAnchorEl(null);
-    };
-
     const handleSettingsClick = () => {
-        handleMenuClose();
         navigate({ to: '/settings' });
     };
 
@@ -122,36 +105,17 @@ const Home: React.FC = () => {
     return (
         <Box sx={{ minHeight: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {isMobile && (
-                <AppBar position="sticky" elevation={0} sx={{ paddingTop: 'env(safe-area-inset-top)' }}>
-                    <Toolbar>
-                        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                            {APP_NAME}
-                        </Typography>
+                <MobileToolbar
+                    title={APP_NAME}
+                    endAction={
                         <IconButton color="inherit" onClick={() => loadData()}>
                             <RefreshIcon />
                         </IconButton>
-                        <IconButton
-                            color="inherit"
-                            onClick={handleMenuClick}
-                            aria-controls={open ? 'basic-menu' : undefined}
-                            aria-haspopup="true"
-                            aria-expanded={open ? 'true' : undefined}
-                        >
-                            <MoreVertIcon />
-                        </IconButton>
-                        <Menu
-                            id="basic-menu"
-                            anchorEl={anchorEl}
-                            open={open}
-                            onClose={handleMenuClose}
-                            MenuListProps={{
-                                'aria-labelledby': 'basic-button',
-                            }}
-                        >
-                            <MenuItem onClick={handleSettingsClick}>Settings</MenuItem>
-                        </Menu>
-                    </Toolbar>
-                </AppBar>
+                    }
+                    menuItems={[
+                        { label: 'Settings', onClick: handleSettingsClick }
+                    ]}
+                />
             )}
 
             {/* Desktop settings button */}
