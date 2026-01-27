@@ -40,5 +40,13 @@ keystore.properties
 keys
 .threshold-keys
 
+
 # Release outputs
 /release/
+
+# Test Results
+junit.xml
+js-test-results.xml
+rust-test-results/
+test-results/
+coverage/
