@@ -9,7 +9,9 @@
 		"preview": "vite preview",
 		"tauri": "tauri",
 		"test": "vitest",
-		"test:ci": "vitest run --reporter=junit --reporter=default --outputFile.junit=junit.xml"
+		"pretest": "pnpm --filter @threshold/core build",
+		"test:ci": "vitest run --reporter=junit --reporter=default --outputFile.junit=junit.xml",
+		"pretest:ci": "pnpm --filter @threshold/core build"
 	},
 	"dependencies": {
 		"@emotion/react": "^11.14.0",
