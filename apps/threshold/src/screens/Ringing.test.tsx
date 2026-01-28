@@ -15,184 +15,184 @@ import * as tauriWindow from '@tauri-apps/api/window';
 // --- Mocks ---
 
 vi.mock('../services/AlarmManagerService', () => ({
-    alarmManagerService: {
-        init: vi.fn(),
-        isInitialized: vi.fn(() => true),
-        loadAlarms: vi.fn(),
-        stopRinging: vi.fn(),
-        snoozeAlarm: vi.fn(),
-    }
+	alarmManagerService: {
+		init: vi.fn(),
+		isInitialized: vi.fn(() => true),
+		loadAlarms: vi.fn(),
+		stopRinging: vi.fn(),
+		snoozeAlarm: vi.fn(),
+	},
 }));
 
 vi.mock('../services/SettingsService', () => ({
-    SettingsService: {
-        getSnoozeLength: vi.fn(() => 10),
-        getSilenceAfter: vi.fn(() => 20),
-        getTheme: vi.fn(() => 'boring-dark'),
-        getForceDark: vi.fn(() => false),
-    }
+	SettingsService: {
+		getSnoozeLength: vi.fn(() => 10),
+		getSilenceAfter: vi.fn(() => 20),
+		getTheme: vi.fn(() => 'boring-dark'),
+		getForceDark: vi.fn(() => false),
+	},
 }));
 
 vi.mock('../utils/PlatformUtils', () => ({
-    PlatformUtils: {
-        isDesktop: vi.fn(),
-        isMobile: vi.fn(),
-        getPlatform: vi.fn(() => 'test-os'),
-    }
+	PlatformUtils: {
+		isDesktop: vi.fn(),
+		isMobile: vi.fn(),
+		getPlatform: vi.fn(() => 'test-os'),
+	},
 }));
 
 vi.mock('@tauri-apps/api/window', () => ({
-    getCurrentWindow: vi.fn(),
+	getCurrentWindow: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/api/event', () => ({
-    listen: vi.fn(() => Promise.resolve(() => {})),
-    emit: vi.fn(),
+	listen: vi.fn(() => Promise.resolve(() => {})),
+	emit: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({
-    convertFileSrc: vi.fn((src) => src),
-    invoke: vi.fn(),
+	convertFileSrc: vi.fn((src) => src),
+	invoke: vi.fn(),
 }));
 
 vi.mock('@tanstack/react-router', () => ({
-    useParams: vi.fn(),
-    useNavigate: vi.fn(),
+	useParams: vi.fn(),
+	useNavigate: vi.fn(),
 }));
 
 // Mock Audio (Global)
 // Mock Audio (Global)
 const mockAudioContext = {
-    createOscillator: vi.fn(() => ({
-        connect: vi.fn(),
-        start: vi.fn(),
-        stop: vi.fn(),
-        frequency: { setValueAtTime: vi.fn() },
-        type: 'square'
-    })),
-    createGain: vi.fn(() => ({
-        connect: vi.fn(),
-        gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }
-    })),
-    state: 'suspended',
-    resume: vi.fn(),
-    currentTime: 0,
-    destination: {}
+	createOscillator: vi.fn(() => ({
+		connect: vi.fn(),
+		start: vi.fn(),
+		stop: vi.fn(),
+		frequency: { setValueAtTime: vi.fn() },
+		type: 'square',
+	})),
+	createGain: vi.fn(() => ({
+		connect: vi.fn(),
+		gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+	})),
+	state: 'suspended',
+	resume: vi.fn(),
+	currentTime: 0,
+	destination: {},
 };
 window.AudioContext = vi.fn(() => mockAudioContext) as any;
 (window as any).webkitAudioContext = window.AudioContext;
 
 describe('Ringing Screen Logic', () => {
-    const mockNavigate = vi.fn();
-    const mockWindow = {
-        close: vi.fn(),
-        minimize: vi.fn(),
-    };
+	const mockNavigate = vi.fn();
+	const mockWindow = {
+		close: vi.fn(),
+		minimize: vi.fn(),
+	};
 
-    beforeEach(async () => {
-        vi.clearAllMocks();
-        
-        // Setup Router Mock
-        const router = await import('@tanstack/react-router');
-        (router.useNavigate as any).mockReturnValue(mockNavigate);
-        (router.useParams as any).mockReturnValue({ id: '1' });
+	beforeEach(async () => {
+		vi.clearAllMocks();
 
-        // Setup Window Mock
-        (tauriWindow.getCurrentWindow as any).mockReturnValue(mockWindow);
-        
-        // Setup Alarm Mock default
-        (alarmManagerService.loadAlarms as any).mockResolvedValue([
-            { id: 1, label: 'Morning Alarm', time: '08:00', enabled: true, days: [], soundUri: '' }
-        ]);
-        
-        // Setup Platform Default (Desktop)
-        (PlatformUtils.isDesktop as any).mockReturnValue(true);
-        (PlatformUtils.isMobile as any).mockReturnValue(false);
+		// Setup Router Mock
+		const router = await import('@tanstack/react-router');
+		(router.useNavigate as any).mockReturnValue(mockNavigate);
+		(router.useParams as any).mockReturnValue({ id: '1' });
 
-        // Ensure Event Listeners return matching promises
-        const { listen } = await import('@tauri-apps/api/event');
-        (listen as any).mockImplementation(() => Promise.resolve(() => {}));
-    });
+		// Setup Window Mock
+		(tauriWindow.getCurrentWindow as any).mockReturnValue(mockWindow);
 
-    afterEach(() => {
-        cleanup();
-        vi.clearAllMocks();
-    });
+		// Setup Alarm Mock default
+		(alarmManagerService.loadAlarms as any).mockResolvedValue([
+			{ id: 1, label: 'Morning Alarm', time: '08:00', enabled: true, days: [], soundUri: '' },
+		]);
 
-    const renderWithTheme = (component: React.ReactNode) => {
-        const theme = createTheme();
-        return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>);
-    };
+		// Setup Platform Default (Desktop)
+		(PlatformUtils.isDesktop as any).mockReturnValue(true);
+		(PlatformUtils.isMobile as any).mockReturnValue(false);
 
-    it('should show the alarm label', async () => {
-        renderWithTheme(<Ringing />);
-        expect(await screen.findByText('Morning Alarm')).toBeInTheDocument();
-    });
+		// Ensure Event Listeners return matching promises
+		const { listen } = await import('@tauri-apps/api/event');
+		(listen as any).mockImplementation(() => Promise.resolve(() => {}));
+	});
 
-    it('should close window on desktop when dismissed', async () => {
-        // Arrange
-        (PlatformUtils.isDesktop as any).mockReturnValue(true);
-        (PlatformUtils.isMobile as any).mockReturnValue(false);
+	afterEach(() => {
+		cleanup();
+		vi.clearAllMocks();
+	});
 
-        // Act
-        renderWithTheme(<Ringing />);
-        
-        const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
-        fireEvent.click(stopBtn);
+	const renderWithTheme = (component: React.ReactNode) => {
+		const theme = createTheme();
+		return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>);
+	};
 
-        // Assert
-        await waitFor(() => {
-            expect(alarmManagerService.stopRinging).toHaveBeenCalled();
-            expect(mockWindow.close).toHaveBeenCalled();
-        });
-        expect(mockWindow.minimize).not.toHaveBeenCalled();
-    });
+	it('should show the alarm label', async () => {
+		renderWithTheme(<Ringing />);
+		expect(await screen.findByText('Morning Alarm')).toBeInTheDocument();
+	});
 
-    it('should minimize window on mobile when dismissed', async () => {
-        // Arrange
-        (PlatformUtils.isDesktop as any).mockReturnValue(false);
-        (PlatformUtils.isMobile as any).mockReturnValue(true);
+	it('should close window on desktop when dismissed', async () => {
+		// Arrange
+		(PlatformUtils.isDesktop as any).mockReturnValue(true);
+		(PlatformUtils.isMobile as any).mockReturnValue(false);
 
-        // Act
-        renderWithTheme(<Ringing />);
-        
-        const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
-        fireEvent.click(stopBtn);
+		// Act
+		renderWithTheme(<Ringing />);
 
-        // Assert
-        await waitFor(() => {
-            expect(alarmManagerService.stopRinging).toHaveBeenCalled();
-            expect(mockWindow.minimize).toHaveBeenCalled();
-        });
-        expect(mockWindow.close).not.toHaveBeenCalled();
-        
-        // Should navigate to home after delay
-        await waitFor(() => {
-            expect(mockNavigate).toHaveBeenCalledWith({ to: ROUTES.HOME, replace: true });
-        });
-    });
+		const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
+		fireEvent.click(stopBtn);
 
-    it('should navigate back for Test Alarm (ID 999) on mobile', async () => {
-        // Arrange
-        (PlatformUtils.isDesktop as any).mockReturnValue(false);
-        (PlatformUtils.isMobile as any).mockReturnValue(true);
-        const router = await import('@tanstack/react-router');
-        (router.useParams as any).mockReturnValue({ id: String(SPECIAL_ALARM_IDS.TEST_ALARM) });
-        
-        const historySpy = vi.spyOn(window.history, 'back');
+		// Assert
+		await waitFor(() => {
+			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+			expect(mockWindow.close).toHaveBeenCalled();
+		});
+		expect(mockWindow.minimize).not.toHaveBeenCalled();
+	});
 
-        // Act
-        // Test alarm 999 won't load from DB, so label might be empty, but buttons present
-        renderWithTheme(<Ringing />);
-        
-        const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
-        fireEvent.click(stopBtn);
+	it('should minimize window on mobile when dismissed', async () => {
+		// Arrange
+		(PlatformUtils.isDesktop as any).mockReturnValue(false);
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
 
-        // Assert
-        await waitFor(() => {
-            expect(alarmManagerService.stopRinging).toHaveBeenCalled();
-            expect(historySpy).toHaveBeenCalled();
-        });
-        expect(mockWindow.minimize).not.toHaveBeenCalled();
-    });
+		// Act
+		renderWithTheme(<Ringing />);
+
+		const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
+		fireEvent.click(stopBtn);
+
+		// Assert
+		await waitFor(() => {
+			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+			expect(mockWindow.minimize).toHaveBeenCalled();
+		});
+		expect(mockWindow.close).not.toHaveBeenCalled();
+
+		// Should navigate to home after delay
+		await waitFor(() => {
+			expect(mockNavigate).toHaveBeenCalledWith({ to: ROUTES.HOME, replace: true });
+		});
+	});
+
+	it('should navigate back for Test Alarm (ID 999) on mobile', async () => {
+		// Arrange
+		(PlatformUtils.isDesktop as any).mockReturnValue(false);
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+		const router = await import('@tanstack/react-router');
+		(router.useParams as any).mockReturnValue({ id: String(SPECIAL_ALARM_IDS.TEST_ALARM) });
+
+		const historySpy = vi.spyOn(window.history, 'back');
+
+		// Act
+		// Test alarm 999 won't load from DB, so label might be empty, but buttons present
+		renderWithTheme(<Ringing />);
+
+		const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
+		fireEvent.click(stopBtn);
+
+		// Assert
+		await waitFor(() => {
+			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+			expect(historySpy).toHaveBeenCalled();
+		});
+		expect(mockWindow.minimize).not.toHaveBeenCalled();
+	});
 });
