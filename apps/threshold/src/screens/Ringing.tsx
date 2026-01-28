@@ -310,7 +310,6 @@ const Ringing: React.FC = () => {
 					height: '100%', 
 					display: 'flex', 
 					flexDirection: 'column', 
-					cursor: 'pointer',
 					userSelect: 'none' // Disable text selection
 				}}
 			>
