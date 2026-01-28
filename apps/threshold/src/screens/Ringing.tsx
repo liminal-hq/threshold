@@ -133,12 +133,6 @@ const Ringing: React.FC = () => {
 		console.log('[Ringing] Dismissing Alarm', id);
 		await alarmManagerService.stopRinging();
 
-		// Test Alarm Logic
-		if (parseInt(id) === SPECIAL_ALARM_IDS.TEST_ALARM) {
-			window.history.back();
-			return;
-		}
-
 		// Check platform and close window if desktop
 		if (PlatformUtils.isDesktop()) {
 			try {
@@ -147,18 +141,25 @@ const Ringing: React.FC = () => {
 				console.error('Failed to close window', e);
 				navigate({ to: ROUTES.HOME, replace: true });
 			}
-		} else {
-			// On Mobile: Minimize the app so it vanishes but doesn't close
-			try {
-				await getCurrentWindow().minimize();
-				// Small delay to ensure minimize completes before navigation
-				await new Promise(resolve => setTimeout(resolve, 100));
-				// Navigate to home in background so next launch is clean
-				navigate({ to: ROUTES.HOME, replace: true });
-			} catch (e) {
-				console.error('Failed to minimize window', e);
-				navigate({ to: ROUTES.HOME, replace: true });
-			}
+			return;
+		}
+
+		// Test Alarm Logic
+		if (parseInt(id) === SPECIAL_ALARM_IDS.TEST_ALARM) {
+			window.history.back();
+			return;
+		}
+
+		// On Mobile: Minimize the app so it vanishes but doesn't close
+		try {
+			await getCurrentWindow().minimize();
+			// Small delay to ensure minimize completes before navigation
+			await new Promise(resolve => setTimeout(resolve, 100));
+			// Navigate to home in background so next launch is clean
+			navigate({ to: ROUTES.HOME, replace: true });
+		} catch (e) {
+			console.error('Failed to minimize window', e);
+			navigate({ to: ROUTES.HOME, replace: true });
 		}
 	}, [navigate, id]);
 
