@@ -63,6 +63,11 @@ body.dark-mode .ringing-page {
 	overflow: hidden;
 }
 
+/* Remove box-shadow on desktop to prevent transparency artifacts */
+.ringing-page.desktop-mode .ringing-container {
+	box-shadow: none;
+}
+
 /* Breathing animation overlay - placed above background, below content */
 .ringing-container::after {
 	content: '';

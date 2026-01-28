@@ -339,7 +339,7 @@ const Ringing: React.FC = () => {
 	return (
 		<ThemeProvider theme={muiTheme}>
 			<Box 
-				className="ringing-page" 
+				className={`ringing-page ${PlatformUtils.isDesktop() ? 'desktop-mode' : ''}`}
 				onClick={() => setIsAudioUnlocked(true)}
 				sx={{ 
 					height: '100%', 
@@ -353,13 +353,6 @@ const Ringing: React.FC = () => {
 					<div 
 						className="ringing-container" 
 						data-tauri-drag-region="true"
-						style={{
-							// Remove box-shadow on desktop to prevent transparency artifacts
-							boxShadow: PlatformUtils.isDesktop() ? 'none' : undefined,
-							// Ensure the container itself is fully opaque if needed, or follows design
-							// The user wants transparency "off the hop" meaning around the container?
-							// The container itself has a background gradient.
-						}}
 					>
 						<Typography variant="h1" className="ringing-time" sx={{ fontSize: '5rem', fontWeight: 800 }}>{timeStr}</Typography>
 						<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>{alarm?.label}</Typography>
