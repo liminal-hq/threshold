@@ -1,5 +1,10 @@
 /* Ringing Screen Styles - Clean rebuild without 100vh issues */
 
+.ringing-page,
+.ringing-page * {
+	-webkit-tap-highlight-color: transparent;
+}
+
 /* Aggressive reset for body/html - use * selector to ensure it applies */
 body,
 html {
