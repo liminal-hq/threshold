@@ -19,7 +19,7 @@ Before starting Milestone A, ensure you have:
 ### Codebase Familiarity
 - ✅ Read `README.md` and `SPEC.md`
 - ✅ Read `AGENTS.md` (Canadian spelling, commit conventions)
-- ✅ Understand current architecture (TypeScript DatabaseService)
+- ✅ Understand current architecture (Rust alarm core + AlarmService)
 - ✅ Familiar with Tauri v2 plugin system
 
 ---
@@ -236,7 +236,7 @@ Before moving to Milestone B, verify:
 1. **Read Milestone B** in `implementation-roadmap.md`
 2. **Create AlarmService.ts** wrapper for Rust commands
 3. **Update screens** to use new service
-4. **Remove old DatabaseService**
+4. **Confirm legacy database service removal (completed)**
 5. **Test thoroughly** on both desktop and Android
 
 ---

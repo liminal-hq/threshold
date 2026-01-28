@@ -31,7 +31,7 @@ Each milestone is **testable and shippable** independently.
 - Event emission system
 - Tauri commands exposed to TypeScript
 
-**No UI changes yet** - TypeScript still uses old DatabaseService, but new commands are available.
+**Note:** TypeScript now uses Rust commands; the legacy database service is removed.
 
 ---
 
@@ -842,11 +842,11 @@ cargo test
 ## Milestone B: TypeScript Migration
 
 **Duration:** 2-3 days  
-**Goal:** Replace TypeScript DatabaseService with Rust commands  
+**Goal:** Replace the legacy TypeScript database service with Rust commands  
 **Deliverables:**
 - Updated TypeScript services
 - Event listeners in UI
-- Remove old DatabaseService
+- Remove legacy database service
 - Same UI, new backend
 
 ---
@@ -1075,25 +1075,25 @@ function RingingScreen() {
 
 ---
 
-### B7: Remove Old DatabaseService
+### B7: Remove Legacy DatabaseService (Completed)
 
-**Steps:**
-1. Delete `apps/threshold/src/services/DatabaseService.ts`
-2. Delete `apps/threshold/src/services/DatabaseService.test.ts`
-3. Remove `@tauri-apps/plugin-sql` from `apps/threshold/package.json`
-4. Update all imports to use new `AlarmService`
+**Completed steps:**
+1. Deleted `apps/threshold/src/services/DatabaseService.ts`
+2. Deleted `apps/threshold/src/services/DatabaseService.test.ts`
+3. Removed `@tauri-apps/plugin-sql` from `apps/threshold/package.json`
+4. Updated imports to use `AlarmService`
 
 ---
 
 ### Milestone B Completion Checklist
 
-- [ ] AlarmService created and tested
-- [ ] All screens updated to use AlarmService
-- [ ] Event listeners working (UI updates automatically)
-- [ ] Old DatabaseService removed
-- [ ] No TypeScript errors
-- [ ] App functions identically to before (same UX)
-- [ ] Desktop and Mobile both work
+- [x] AlarmService created and tested
+- [x] All screens updated to use AlarmService
+- [x] Event listeners working (UI updates automatically)
+- [x] Legacy database service removed
+- [x] No TypeScript errors
+- [x] App functions identically to before (same UX)
+- [x] Desktop and Mobile both work
 
 **Next:** Milestone C (Update alarm-manager to react to events)
 

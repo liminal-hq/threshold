@@ -113,8 +113,8 @@ src-tauri/src/
 
 **Key Changes:**
 ```typescript
-// OLD (TS DatabaseService manages SQLite)
-await DatabaseService.saveAlarm(alarm);
+// Legacy (TypeScript handled SQLite directly)
+await saveAlarmToSqlite(alarm);
 await AlarmManagerService.schedule(alarm);
 
 // NEW (Rust handles everything)
