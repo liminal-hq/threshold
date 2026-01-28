@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Button, Typography, Box, ThemeProvider } from '@mui/material';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Button, Typography, Box } from '@mui/material';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { Alarm } from '../services/DatabaseService';
@@ -10,9 +10,7 @@ import { listen } from '@tauri-apps/api/event';
 import '../theme/ringing.css';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { ROUTES, SPECIAL_ALARM_IDS } from '../constants';
-import { SettingsService, Theme } from '../services/SettingsService';
-import { createTheme } from '@mui/material/styles';
-import { themes, generateSystemTheme } from '../theme/themes';
+import { SettingsService } from '../services/SettingsService';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
@@ -24,11 +22,8 @@ const Ringing: React.FC = () => {
 	const [snoozeLength] = useState<number>(SettingsService.getSnoozeLength());
 	const [silenceAfter] = useState<number>(SettingsService.getSilenceAfter());
 
-	// Theme state
-	const [theme, setTheme] = useState<Theme>(SettingsService.getTheme());
-	const [forceDark, setForceDark] = useState<boolean>(SettingsService.getForceDark());
-
-	// Listen for theme changes and Alarm Updates (Singleton pattern)
+	// Listen for Alarm Updates (Singleton pattern)
+	// Note: Theme changes are handled globally by App.tsx -> ThemeContextProvider
 	useEffect(() => {
 		const unlistenUpdate = listen<{ id: number }>('alarm-update', (event) => {
 			console.log('Ringing window received update:', event.payload);
@@ -40,38 +35,7 @@ const Ringing: React.FC = () => {
 		};
 	}, [navigate]);
 
-	useEffect(() => {
-		const unlisten = listen<{ theme: Theme; forceDark: boolean }>('theme-changed', (event) => {
-			console.log('[Ringing] Theme changed event received:', event.payload);
-			setTheme(event.payload.theme);
-			setForceDark(event.payload.forceDark);
-		});
-
-		return () => {
-			unlisten.then((fn) => fn());
-		};
-	}, []);
-
-	const muiTheme = useMemo(() => {
-		// Determine if dark mode based on theme and forceDark
-		const isDarkMode = theme === 'boring-dark' || (forceDark && theme !== 'boring-light');
-		
-		// Get theme definition
-		let themeDef;
-		if (theme === 'system') {
-			themeDef = generateSystemTheme(isDarkMode);
-		} else {
-			const themeGroup = themes[theme] || themes['deep-night'];
-			themeDef = isDarkMode ? (themeGroup as any).dark : (themeGroup as any).light;
-		}
-		
-		return createTheme({
-			palette: {
-				mode: isDarkMode ? 'dark' : 'light',
-				...themeDef.muiPalette,
-			},
-		});
-	}, [theme, forceDark]);
+	// Removed manual theme reconstruction. Inherits from Global Context.
 
 	useEffect(() => {
 		const loadAlarm = async () => {
@@ -337,7 +301,8 @@ const Ringing: React.FC = () => {
 	}, []);
 
 	return (
-		<ThemeProvider theme={muiTheme}>
+		// ThemeProvider is already provided by App.tsx -> ThemeContextProvider
+		// We just use the global theme context which correctly handles System/Material You/Built-in logic
 			<Box 
 				className={`ringing-page ${PlatformUtils.isDesktop() ? 'desktop-mode' : ''}`}
 				onClick={() => setIsAudioUnlocked(true)}
@@ -412,7 +377,6 @@ const Ringing: React.FC = () => {
 					</div>
 				</Box>
 			</Box>
-		</ThemeProvider>
 	);
 };
 

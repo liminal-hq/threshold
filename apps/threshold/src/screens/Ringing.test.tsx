@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom'; // Fix toBeInTheDocument
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import Ringing from './Ringing';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { PlatformUtils } from '../utils/PlatformUtils';
@@ -106,8 +108,13 @@ describe('Ringing Screen Logic', () => {
         vi.resetAllMocks();
     });
 
+    const renderWithTheme = (component: React.ReactNode) => {
+        const theme = createTheme();
+        return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>);
+    };
+
     it('should show the alarm label', async () => {
-        render(<Ringing />);
+        renderWithTheme(<Ringing />);
         expect(await screen.findByText('Morning Alarm')).toBeInTheDocument();
     });
 
@@ -117,7 +124,7 @@ describe('Ringing Screen Logic', () => {
         (PlatformUtils.isMobile as any).mockReturnValue(false);
 
         // Act
-        render(<Ringing />);
+        renderWithTheme(<Ringing />);
         
         const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
         fireEvent.click(stopBtn);
@@ -134,7 +141,7 @@ describe('Ringing Screen Logic', () => {
         (PlatformUtils.isMobile as any).mockReturnValue(true);
 
         // Act
-        render(<Ringing />);
+        renderWithTheme(<Ringing />);
         
         const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
         fireEvent.click(stopBtn);
@@ -161,7 +168,7 @@ describe('Ringing Screen Logic', () => {
 
         // Act
         // Test alarm 999 won't load from DB, so label might be empty, but buttons present
-        render(<Ringing />);
+        renderWithTheme(<Ringing />);
         
         const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
         fireEvent.click(stopBtn);
