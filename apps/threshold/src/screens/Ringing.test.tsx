@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom'; // Fix toBeInTheDocument
+import * as matchers from '@testing-library/jest-dom/matchers';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import Ringing from './Ringing';
+
+// Extend Vitest's expect with jest-dom matchers
+expect.extend(matchers);
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SPECIAL_ALARM_IDS, ROUTES } from '../constants';
