@@ -318,15 +318,49 @@ const Ringing: React.FC = () => {
 		return () => window.removeEventListener('click', unlock);
 	}, [isAudioUnlocked]);
 
+	// Handle transparency for desktop
+	useEffect(() => {
+		if (PlatformUtils.isMobile()) return;
+
+		// Save original background
+		const originalBg = document.body.style.backgroundColor;
+		
+		// Set transparent background for the window
+		document.body.style.backgroundColor = 'transparent';
+		document.documentElement.style.backgroundColor = 'transparent';
+
+		return () => {
+			// Restore original background
+			document.body.style.backgroundColor = originalBg;
+			document.documentElement.style.backgroundColor = '';
+		};
+	}, []);
+
 	return (
 		<ThemeProvider theme={muiTheme}>
 			<Box 
 				className="ringing-page" 
 				onClick={() => setIsAudioUnlocked(true)}
-				sx={{ height: '100%', display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
+				sx={{ 
+					height: '100%', 
+					display: 'flex', 
+					flexDirection: 'column', 
+					cursor: 'pointer',
+					userSelect: 'none' // Disable text selection
+				}}
 			>
 				<Box sx={{ flexGrow: 1 }}>
-					<div className="ringing-container" data-tauri-drag-region="true">
+					<div 
+						className="ringing-container" 
+						data-tauri-drag-region="true"
+						style={{
+							// Remove box-shadow on desktop to prevent transparency artifacts
+							boxShadow: PlatformUtils.isDesktop() ? 'none' : undefined,
+							// Ensure the container itself is fully opaque if needed, or follows design
+							// The user wants transparency "off the hop" meaning around the container?
+							// The container itself has a background gradient.
+						}}
+					>
 						<Typography variant="h1" className="ringing-time" sx={{ fontSize: '5rem', fontWeight: 800 }}>{timeStr}</Typography>
 						<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>{alarm?.label}</Typography>
 
