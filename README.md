@@ -50,7 +50,7 @@ pnpm dev:android
 To capture logs from the Android device, use the following `adb` command. This filters specifically for the app's tags and saves the output to a file:
 
 ```bash
-adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* DatabaseService:* chromium:I Tauri/Console:* *:E > logcat.log
+adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* AlarmReceiver:* AlarmRingingService:* BootReceiver:* SetAlarmActivity:* AlarmService:* ThemeUtils:* TimePrefsPlugin:* chromium:I Tauri/Console:* *:E > logcat.log
 ```
 
 ## Documentation

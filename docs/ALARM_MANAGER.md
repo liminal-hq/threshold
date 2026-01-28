@@ -82,7 +82,7 @@ The `alarms` table in `alarms.db` is updated with new columns:
 *   `sound_title` (TEXT, nullable)
 
 **Migration Strategy**:
-On app init, `DatabaseService` checks for the existence of these columns and executes `ALTER TABLE` if they are missing.
+On app init, the Rust alarm database layer checks for the existence of these columns and executes `ALTER TABLE` if they are missing.
 
 ### SharedPreferences (Android Native)
 
