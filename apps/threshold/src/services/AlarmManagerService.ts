@@ -1,4 +1,3 @@
-import { databaseService } from './DatabaseService';
 import { APP_NAME } from '../constants';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
@@ -31,10 +30,6 @@ export class AlarmManagerService {
 		this.initPromise = (async () => {
 			try {
 				console.log('[AlarmManager] Starting service initialization...');
-                // We still init databaseService because we might need it for legacy reads or if AlarmService fails?
-                // Actually, let's keep it to be safe, but we rely on AlarmService mostly.
-				await databaseService.init();
-				console.log('[AlarmManager] Database service ready.');
 
 				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
 				// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
@@ -218,10 +213,6 @@ export class AlarmManagerService {
             this.scheduledIds.delete(id);
         }
     }
-
-	async loadAlarms(): Promise<Alarm[]> {
-		return await databaseService.getAllAlarms();
-	}
 
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
 	private async checkImports() {
