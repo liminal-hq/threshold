@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Button, Typography, Box, ThemeProvider } from '@mui/material';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Button, Typography, Box } from '@mui/material';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { Alarm } from '../services/DatabaseService';
@@ -10,9 +10,7 @@ import { listen } from '@tauri-apps/api/event';
 import '../theme/ringing.css';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { ROUTES, SPECIAL_ALARM_IDS } from '../constants';
-import { SettingsService, Theme } from '../services/SettingsService';
-import { createTheme } from '@mui/material/styles';
-import { themes, generateSystemTheme } from '../theme/themes';
+import { SettingsService } from '../services/SettingsService';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
@@ -24,11 +22,8 @@ const Ringing: React.FC = () => {
 	const [snoozeLength] = useState<number>(SettingsService.getSnoozeLength());
 	const [silenceAfter] = useState<number>(SettingsService.getSilenceAfter());
 
-	// Theme state
-	const [theme, setTheme] = useState<Theme>(SettingsService.getTheme());
-	const [forceDark, setForceDark] = useState<boolean>(SettingsService.getForceDark());
-
-	// Listen for theme changes and Alarm Updates (Singleton pattern)
+	// Listen for Alarm Updates (Singleton pattern)
+	// Note: Theme changes are handled globally by App.tsx -> ThemeContextProvider
 	useEffect(() => {
 		const unlistenUpdate = listen<{ id: number }>('alarm-update', (event) => {
 			console.log('Ringing window received update:', event.payload);
@@ -40,38 +35,7 @@ const Ringing: React.FC = () => {
 		};
 	}, [navigate]);
 
-	useEffect(() => {
-		const unlisten = listen<{ theme: Theme; forceDark: boolean }>('theme-changed', (event) => {
-			console.log('[Ringing] Theme changed event received:', event.payload);
-			setTheme(event.payload.theme);
-			setForceDark(event.payload.forceDark);
-		});
-
-		return () => {
-			unlisten.then((fn) => fn());
-		};
-	}, []);
-
-	const muiTheme = useMemo(() => {
-		// Determine if dark mode based on theme and forceDark
-		const isDarkMode = theme === 'boring-dark' || (forceDark && theme !== 'boring-light');
-		
-		// Get theme definition
-		let themeDef;
-		if (theme === 'system') {
-			themeDef = generateSystemTheme(isDarkMode);
-		} else {
-			const themeGroup = themes[theme] || themes['deep-night'];
-			themeDef = isDarkMode ? (themeGroup as any).dark : (themeGroup as any).light;
-		}
-		
-		return createTheme({
-			palette: {
-				mode: isDarkMode ? 'dark' : 'light',
-				...themeDef.muiPalette,
-			},
-		});
-	}, [theme, forceDark]);
+	// Removed manual theme reconstruction. Inherits from Global Context.
 
 	useEffect(() => {
 		const loadAlarm = async () => {
@@ -133,12 +97,6 @@ const Ringing: React.FC = () => {
 		console.log('[Ringing] Dismissing Alarm', id);
 		await alarmManagerService.stopRinging();
 
-		// Test Alarm Logic
-		if (parseInt(id) === SPECIAL_ALARM_IDS.TEST_ALARM) {
-			window.history.back();
-			return;
-		}
-
 		// Check platform and close window if desktop
 		if (PlatformUtils.isDesktop()) {
 			try {
@@ -147,18 +105,25 @@ const Ringing: React.FC = () => {
 				console.error('Failed to close window', e);
 				navigate({ to: ROUTES.HOME, replace: true });
 			}
-		} else {
-			// On Mobile: Minimize the app so it vanishes but doesn't close
-			try {
-				await getCurrentWindow().minimize();
-				// Small delay to ensure minimize completes before navigation
-				await new Promise(resolve => setTimeout(resolve, 100));
-				// Navigate to home in background so next launch is clean
-				navigate({ to: ROUTES.HOME, replace: true });
-			} catch (e) {
-				console.error('Failed to minimize window', e);
-				navigate({ to: ROUTES.HOME, replace: true });
-			}
+			return;
+		}
+
+		// Test Alarm Logic
+		if (parseInt(id) === SPECIAL_ALARM_IDS.TEST_ALARM) {
+			window.history.back();
+			return;
+		}
+
+		// On Mobile: Minimize the app so it vanishes but doesn't close
+		try {
+			await getCurrentWindow().minimize();
+			// Small delay to ensure minimize completes before navigation
+			await new Promise(resolve => setTimeout(resolve, 100));
+			// Navigate to home in background so next launch is clean
+			navigate({ to: ROUTES.HOME, replace: true });
+		} catch (e) {
+			console.error('Failed to minimize window', e);
+			navigate({ to: ROUTES.HOME, replace: true });
 		}
 	}, [navigate, id]);
 
@@ -317,15 +282,42 @@ const Ringing: React.FC = () => {
 		return () => window.removeEventListener('click', unlock);
 	}, [isAudioUnlocked]);
 
+	// Handle transparency for desktop
+	useEffect(() => {
+		if (PlatformUtils.isMobile()) return;
+
+		// Save original background
+		const originalBg = document.body.style.backgroundColor;
+		
+		// Set transparent background for the window
+		document.body.style.backgroundColor = 'transparent';
+		document.documentElement.style.backgroundColor = 'transparent';
+
+		return () => {
+			// Restore original background
+			document.body.style.backgroundColor = originalBg;
+			document.documentElement.style.backgroundColor = '';
+		};
+	}, []);
+
 	return (
-		<ThemeProvider theme={muiTheme}>
+		// ThemeProvider is already provided by App.tsx -> ThemeContextProvider
+		// We just use the global theme context which correctly handles System/Material You/Built-in logic
 			<Box 
-				className="ringing-page" 
+				className={`ringing-page ${PlatformUtils.isDesktop() ? 'desktop-mode' : ''}`}
 				onClick={() => setIsAudioUnlocked(true)}
-				sx={{ height: '100%', display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
+				sx={{ 
+					height: '100%', 
+					display: 'flex', 
+					flexDirection: 'column', 
+					userSelect: 'none' // Disable text selection
+				}}
 			>
 				<Box sx={{ flexGrow: 1 }}>
-					<div className="ringing-container" data-tauri-drag-region="true">
+					<div 
+						className="ringing-container" 
+						data-tauri-drag-region="true"
+					>
 						<Typography variant="h1" className="ringing-time" sx={{ fontSize: '5rem', fontWeight: 800 }}>{timeStr}</Typography>
 						<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>{alarm?.label}</Typography>
 
@@ -384,7 +376,6 @@ const Ringing: React.FC = () => {
 					</div>
 				</Box>
 			</Box>
-		</ThemeProvider>
 	);
 };
 
