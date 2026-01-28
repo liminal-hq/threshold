@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import Ringing from './Ringing';
@@ -61,23 +61,26 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 // Mock Audio (Global)
-window.AudioContext = vi.fn().mockImplementation(() => ({
-    createOscillator: () => ({
+// Mock Audio (Global)
+const mockAudioContext = {
+    createOscillator: vi.fn(() => ({
         connect: vi.fn(),
         start: vi.fn(),
         stop: vi.fn(),
         frequency: { setValueAtTime: vi.fn() },
         type: 'square'
-    }),
-    createGain: () => ({
+    })),
+    createGain: vi.fn(() => ({
         connect: vi.fn(),
         gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }
-    }),
+    })),
     state: 'suspended',
     resume: vi.fn(),
     currentTime: 0,
     destination: {}
-}));
+};
+window.AudioContext = vi.fn(() => mockAudioContext) as any;
+(window as any).webkitAudioContext = window.AudioContext;
 
 describe('Ringing Screen Logic', () => {
     const mockNavigate = vi.fn();
@@ -105,10 +108,15 @@ describe('Ringing Screen Logic', () => {
         // Setup Platform Default (Desktop)
         (PlatformUtils.isDesktop as any).mockReturnValue(true);
         (PlatformUtils.isMobile as any).mockReturnValue(false);
+
+        // Ensure Event Listeners return matching promises
+        const { listen } = await import('@tauri-apps/api/event');
+        (listen as any).mockImplementation(() => Promise.resolve(() => {}));
     });
 
     afterEach(() => {
-        vi.resetAllMocks();
+        cleanup();
+        vi.clearAllMocks();
     });
 
     const renderWithTheme = (component: React.ReactNode) => {
@@ -133,8 +141,10 @@ describe('Ringing Screen Logic', () => {
         fireEvent.click(stopBtn);
 
         // Assert
-        expect(alarmManagerService.stopRinging).toHaveBeenCalled();
-        expect(mockWindow.close).toHaveBeenCalled();
+        await waitFor(() => {
+            expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+            expect(mockWindow.close).toHaveBeenCalled();
+        });
         expect(mockWindow.minimize).not.toHaveBeenCalled();
     });
 
@@ -150,9 +160,11 @@ describe('Ringing Screen Logic', () => {
         fireEvent.click(stopBtn);
 
         // Assert
-        expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+        await waitFor(() => {
+            expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+            expect(mockWindow.minimize).toHaveBeenCalled();
+        });
         expect(mockWindow.close).not.toHaveBeenCalled();
-        expect(mockWindow.minimize).toHaveBeenCalled();
         
         // Should navigate to home after delay
         await waitFor(() => {
@@ -177,8 +189,10 @@ describe('Ringing Screen Logic', () => {
         fireEvent.click(stopBtn);
 
         // Assert
-        expect(alarmManagerService.stopRinging).toHaveBeenCalled();
-        expect(historySpy).toHaveBeenCalled();
+        await waitFor(() => {
+            expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+            expect(historySpy).toHaveBeenCalled();
+        });
         expect(mockWindow.minimize).not.toHaveBeenCalled();
     });
 });
