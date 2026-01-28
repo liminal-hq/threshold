@@ -5,7 +5,8 @@
 		"moduleResolution": "bundler",
 		"jsx": "react-jsx",
 		"noEmit": true,
-		"allowImportingTsExtensions": true
+		"allowImportingTsExtensions": true,
+		"types": ["vitest/globals", "@testing-library/jest-dom"]
 	},
 	"include": ["src"],
 	"references": [{ "path": "./tsconfig.node.json" }]
