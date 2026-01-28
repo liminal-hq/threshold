@@ -55,7 +55,7 @@ impl<R: Runtime> AlarmManager<R> {
         }
 
         println!("Desktop: Alarm {} firing!", id);
-        if let Err(e) = app_handle.emit("alarm-ring", id) {
+        if let Err(e) = app_handle.emit("alarm-ring", RingEventPayload { id }) {
              eprintln!("Failed to emit alarm-ring event: {}", e);
         }
 

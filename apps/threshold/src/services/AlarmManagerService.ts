@@ -24,6 +24,10 @@ export class AlarmManagerService {
 		this.router = router;
 	}
 
+	public isInitialized(): boolean {
+		return this.initPromise !== null;
+	}
+
 	async init() {
 		if (this.initPromise) return this.initPromise;
 
@@ -44,21 +48,7 @@ export class AlarmManagerService {
 				});
 				console.log('[AlarmManager] Event listener 1/3 registered.');
 
-				// Listen for alarms ringing from the Android Plugin (emitted via trigger())
-				try {
-					await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
-						console.log(
-							`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`,
-						);
-						this.handleAlarmRing(event.payload.id);
-					});
-					console.log('[AlarmManager] Event listener 2/3 registered.');
-				} catch (e) {
-					console.warn(
-						'[AlarmManager] Failed to register plugin event listener (may not be available on this platform):',
-						e,
-					);
-				}
+				console.log('[AlarmManager] Event listener 1/3 registered.');
 
 				console.log('[AlarmManager] Setting up event listener 3/3: global-alarms-changed...');
 				// Listen for global alarm changes (from other windows)

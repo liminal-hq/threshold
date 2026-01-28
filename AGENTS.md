@@ -52,6 +52,7 @@ Examples:
 ## Best Practices
 
 - **NO BARREL FILES:** Do not use `index.ts` files to re-export modules. Import directly from the specific file.
+- **USE HELPERS:** Always check for existing helper utilities before implementing manual logic. For example, use `PlatformUtils` (e.g., `isMobile()`, `isDesktop()`) instead of manual platform checks.
 
 ## Plugin Development
 

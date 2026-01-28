@@ -23,6 +23,13 @@ import { alarmManagerService } from '../services/AlarmManagerService';
 import { DaySelector } from '../components/DaySelector';
 import { SettingsService } from '../services/SettingsService';
 import { parse, format } from 'date-fns';
+import { alarmSoundPickerService } from '../services/AlarmSoundPickerService';
+import { MusicNote as MusicNoteIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
+import { Select, MenuItem, FormControl, SelectChangeEvent } from '@mui/material';
+
+const BUNDLED_ALARMS = [
+	{ title: 'Ambient Drone', uri: '/alarms/ambient_drone.flac' }
+];
 
 const EditAlarm: React.FC = () => {
     const { id } = useParams({ from: '/edit/$id' });
@@ -48,6 +55,9 @@ const EditAlarm: React.FC = () => {
     const [windowStart, setWindowStart] = useState(defaultTimeStr);
     const [windowEnd, setWindowEnd] = useState(defaultEndStr);
 
+    const [soundUri, setSoundUri] = useState<string | null>(null);
+    const [soundTitle, setSoundTitle] = useState<string | null>(null);
+
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
     }, []);
@@ -68,6 +78,8 @@ const EditAlarm: React.FC = () => {
             if (alarm.fixedTime) setFixedTime(alarm.fixedTime);
             if (alarm.windowStart) setWindowStart(alarm.windowStart);
             if (alarm.windowEnd) setWindowEnd(alarm.windowEnd);
+            setSoundUri(alarm.soundUri || null);
+            setSoundTitle(alarm.soundTitle || null);
         }
     };
 
@@ -82,6 +94,8 @@ const EditAlarm: React.FC = () => {
             mode,
             activeDays,
             enabled: true,
+            soundUri,
+            soundTitle
         };
 
         if (mode === 'FIXED') {
@@ -103,6 +117,45 @@ const EditAlarm: React.FC = () => {
             alert('Failed to save alarm. Please try again.');
         }
     };
+
+    	const handleSoundChange = async (event: SelectChangeEvent) => {
+		const val = event.target.value;
+
+		if (val === 'PICK_FILE') {
+			// Trigger file picker
+			handlePickSound();
+		} else if (val === 'DEFAULT') {
+			setSoundUri(null);
+			setSoundTitle(null);
+		} else {
+			// Bundled sound
+			const found = BUNDLED_ALARMS.find(s => s.uri === val);
+			if (found) {
+				setSoundUri(found.uri);
+				setSoundTitle(found.title);
+			} else {
+				// It might be a custom file previously picked that is not in the bundled list
+				// In this case, we just keep it as is, but this branch shouldn't technically be hit
+				// by the select change unless we add it to the menu items.
+				setSoundUri(val);
+			}
+		}
+	};
+
+	const handlePickSound = async () => {
+		try {
+			const result = await alarmSoundPickerService.pickAlarmSound({
+				existingUri: soundUri,
+				title: 'Select Alarm Sound'
+			});
+			setSoundUri(result.uri);
+			setSoundTitle(result.title);
+		} catch (error: any) {
+			if (error.message !== 'cancelled') {
+				console.error('Failed to pick sound:', error);
+			}
+		}
+	};
 
     const parseTime = (timeStr: string) => {
         try {
@@ -245,6 +298,78 @@ const EditAlarm: React.FC = () => {
                                 <Typography variant="subtitle2" gutterBottom>Repeats</Typography>
                                 <DaySelector selectedDays={activeDays} onChange={setActiveDays} />
                             </Box>
+
+							<Box sx={{ mt: 3 }}>
+								<Typography variant="subtitle2" gutterBottom>Sound</Typography>
+								{isMobile ? (
+									<Paper
+										variant="outlined"
+										onClick={handlePickSound}
+										sx={{
+											p: 2,
+											display: 'flex',
+											alignItems: 'center',
+											cursor: 'pointer',
+											'&:hover': { bgcolor: 'action.hover' },
+											borderRadius: 1
+										}}
+									>
+										<MusicNoteIcon sx={{ mr: 2, color: 'text.secondary' }} />
+										<Box sx={{ flexGrow: 1 }}>
+											<Typography variant="body1">
+												{soundTitle || 'System Default'}
+											</Typography>
+										</Box>
+										<ChevronRightIcon color="action" />
+									</Paper>
+								) : (
+									<FormControl fullWidth>
+										<Select
+											value={
+												// If null/undefined -> DEFAULT
+												// If in bundled list -> uri
+												// If custom file -> use the uri itself (we'll render a special item for it)
+												!soundUri ? 'DEFAULT' : soundUri
+											}
+											onChange={handleSoundChange}
+											displayEmpty
+											renderValue={(selected) => {
+												if (selected === 'DEFAULT') return 'System Default';
+												if (selected === 'PICK_FILE') return 'Pick specific file...'; // Transient state
+												
+												const bundled = BUNDLED_ALARMS.find(b => b.uri === selected);
+												if (bundled) return bundled.title;
+												
+												// If it's a custom path, show title if available, else show truncated path
+												if (soundTitle) return soundTitle;
+												return selected.split(/[/\\]/).pop();
+											}}
+										>
+											<MenuItem value="DEFAULT">
+												<MusicNoteIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+												System Default
+											</MenuItem>
+											
+											{BUNDLED_ALARMS.map(sound => (
+												<MenuItem key={sound.uri} value={sound.uri}>
+													{sound.title}
+												</MenuItem>
+											))}
+
+											{/* If we have a custom sound URI that is NOT in the bundled list, show it here so the Select holds its value */}
+											{soundUri && !BUNDLED_ALARMS.find(b => b.uri === soundUri) && (
+												<MenuItem value={soundUri}>
+													{soundTitle || soundUri.split(/[/\\]/).pop()}
+												</MenuItem>
+											)}
+
+											<MenuItem value="PICK_FILE" sx={{ fontStyle: 'italic', color: 'primary.main' }}>
+												Pick specific file...
+											</MenuItem>
+										</Select>
+									</FormControl>
+								)}
+							</Box>
                         </Paper>
                     </Stack>
 

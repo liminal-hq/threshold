@@ -5,8 +5,11 @@ function forwardConsole(
 	logger: (message: string) => Promise<void>,
 ) {
 	const original = console[fnName];
-	console[fnName] = (message) => {
-		original(message);
+	console[fnName] = (...args: any[]) => {
+		original(...args);
+		const message = args
+			.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)))
+			.join(' ');
 		logger(message);
 	};
 }
