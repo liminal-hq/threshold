@@ -1,8 +1,10 @@
 # Threshold Wear OS - Architecture Overview
 
-**Version:** 2.0 (Rust-Core Architecture)  
-**Last Updated:** January 25, 2026  
+**Version:** 2.0 (Rust-Core Architecture)
+**Last Updated:** January 25, 2026
 **Status:** Ready for Implementation
+
+> **📖 For Complete Event System:** See [event-architecture.md](event-architecture.md) for the Level 3 Granular Event System with Revision Tracking (11 semantic events, incremental sync, conflict detection).
 
 ---
 

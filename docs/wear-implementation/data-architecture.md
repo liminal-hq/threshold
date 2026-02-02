@@ -1,8 +1,10 @@
 # Threshold Wear OS - Data Architecture
 
-**Version:** 2.0 (Rust-Core Architecture)  
-**Last Updated:** January 25, 2026  
+**Version:** 2.0 (Rust-Core Architecture)
+**Last Updated:** January 25, 2026
 **Status:** Implementation Ready
+
+> **📖 For Revision System & Sync Protocol:** See [event-architecture.md](event-architecture.md) sections 2 (Revision System Design) and 6 (Sync Protocol) for complete specifications including incremental sync, conflict detection, and tombstone handling.
 
 ---
 
