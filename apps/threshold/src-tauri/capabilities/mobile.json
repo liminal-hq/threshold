@@ -5,6 +5,9 @@
   "windows": ["*"],
   "platforms": ["android", "iOS"],
   "permissions": [
-    "app-events:default"
+    "app-events:default",
+    "dialog:default",
+    "fs:default",
+    "fs:allow-write-text-file"
   ]
 }

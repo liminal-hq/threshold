@@ -17,15 +17,17 @@ import {
     Typography,
     Dialog,
     DialogTitle,
-    DialogContent
+    DialogContent,
+    CircularProgress
 } from '@mui/material';
 import { MobileToolbar } from '../components/MobileToolbar';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon, FileDownload as FileDownloadIcon } from '@mui/icons-material';
 import { useNavigate } from '@tanstack/react-router';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SettingsService, Theme } from '../services/SettingsService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { eventLogService } from '../services/EventLogService';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
@@ -42,6 +44,7 @@ const Settings: React.FC = () => {
     const [silenceAfter, setSilenceAfter] = useState<number>(SettingsService.getSilenceAfter());
     const [snoozeLength, setSnoozeLength] = useState<number>(SettingsService.getSnoozeLength());
     const [snoozeDialogOpen, setSnoozeDialogOpen] = useState(false);
+    const [isExportingLogs, setIsExportingLogs] = useState(false);
 
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
@@ -51,6 +54,16 @@ const Settings: React.FC = () => {
     const handleTimeFormatChange = (enabled: boolean) => {
         setIs24h(enabled);
         SettingsService.setIs24h(enabled);
+    };
+
+    const handleExportLogs = async () => {
+        if (isExportingLogs) return;
+        setIsExportingLogs(true);
+        try {
+            await eventLogService.downloadEventLogs();
+        } finally {
+            setIsExportingLogs(false);
+        }
     };
 
     return (
@@ -254,6 +267,31 @@ const Settings: React.FC = () => {
                                     }}
                                 >
                                     <span style={{ fontSize: '1.2rem' }}>📩</span>
+                                </IconButton>
+                            </ListItem>
+
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="Download Event Logs"
+                                    secondary="Save event logs to send to the developer"
+                                />
+                                <IconButton
+                                    edge="end"
+                                    onClick={handleExportLogs}
+                                    disabled={isExportingLogs}
+                                    sx={{
+                                        bgcolor: 'info.main',
+                                        color: 'info.contrastText',
+                                        '&:hover': {
+                                            bgcolor: 'info.dark',
+                                        }
+                                    }}
+                                >
+                                    {isExportingLogs ? (
+                                        <CircularProgress size={20} color="inherit" />
+                                    ) : (
+                                        <FileDownloadIcon />
+                                    )}
                                 </IconButton>
                             </ListItem>
                         </List>

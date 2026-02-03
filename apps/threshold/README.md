@@ -73,6 +73,17 @@ tauri_plugin_log::Builder::default()
     .build(),
 ```
 
+### Event Log Downloader
+
+Desktop and Android builds include an event log downloader for sending diagnostics to the developer.
+
+1. Open **Settings → Developer**.
+2. Select **Download Event Logs**.
+3. Choose where to save the log file, then share it with the developer.
+
+The export bundles the app log files into a single text file with an app/version header.
+On Android, the export includes app logs only (system logcat access is restricted).
+
 ## Android Transitions
 
 The application uses native-like page transitions on Android using the View Transitions API.

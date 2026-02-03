@@ -1,4 +1,4 @@
-import { warn, debug, trace, info, error } from '@tauri-apps/plugin-log';
+import { warn, debug, info, error } from '@tauri-apps/plugin-log';
 
 function forwardConsole(
 	fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',
@@ -15,7 +15,7 @@ function forwardConsole(
 }
 
 export const initLogger = () => {
-	forwardConsole('log', trace);
+	forwardConsole('log', info);
 	forwardConsole('debug', debug);
 	forwardConsole('info', info);
 	forwardConsole('warn', warn);
