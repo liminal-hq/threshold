@@ -158,7 +158,7 @@ describe('Scheduler Logic', () => {
 			const next = calculateNextTrigger(alarm, baseDate); // 10am
 			expect(next).toBeDefined();
 			const date = new Date(next!);
-			expect(date.getDate()).toBe(2); // Thu Nov 2
+			expect(date.getDate()).toBe(8); // Wed Nov 8
 			expect(date.getHours()).toBeGreaterThanOrEqual(9);
 			expect(date.getHours()).toBeLessThan(11);
 		});
