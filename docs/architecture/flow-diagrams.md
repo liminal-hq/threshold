@@ -213,6 +213,10 @@ sequenceDiagram
     participant Events as Event System
     participant AlarmMgr as Alarm Manager
     participant WearSync as Wear Sync
+    participant Android as Android APIs
+    participant Desktop as Desktop Notifications
+    participant DataLayer as Wear Data Layer
+    participant Watch as Wear OS App
 
     User->>UI: Taps "Save"
     UI->>Service: saveAlarm(input)
@@ -267,6 +271,7 @@ sequenceDiagram
     participant DB as SQLite
     participant Events as Event System
     participant AlarmMgr as Alarm Manager
+    participant Android as Android APIs
 
     User->>Toggle: Swipes OFF
     Toggle->>Rust: invoke('toggle_alarm', {id: 1, enabled: false})
@@ -301,6 +306,7 @@ sequenceDiagram
     participant Rust as Rust Core
     participant Events as Event System
     participant AlarmMgr as Alarm Manager
+    participant DataLayer as Wear Data Layer
 
     User->>Watch: Taps toggle
     Watch->>WearSync: MessageClient.send("/cmd/alarm_set_enabled", {id: 1, enabled: true})
@@ -376,6 +382,9 @@ sequenceDiagram
     participant Service as AlarmRingingService
     participant App as Tauri App
     participant UI as Ringing Screen
+    participant User
+    participant Rust as Rust Core
+    participant Events as Event System
 
     System->>Receiver: onReceive(ALARM_TRIGGER)
     Receiver->>Receiver: Extract alarm_id, sound_uri
@@ -391,7 +400,7 @@ sequenceDiagram
     Service->>App: Launch via deep link
     App->>UI: Navigate to /ringing/:id
     
-    UI-->>User: Full-screen ringing UI
+    UI-->>User: Full screen ringing UI
     
     Note over Service: Sound playing, vibrating
     
@@ -538,8 +547,9 @@ sequenceDiagram
     participant WearSync as Wear Sync Plugin Phone
     participant Rust as Rust Core Phone
     participant Events as Event System
+    participant DataLayer as Wear Data Layer
 
-    User->>Watch: Long-press alarm → Delete
+    User->>Watch: Long press alarm to delete
     Watch->>MessageClient: sendMessage("/cmd/alarm_delete", {id: 1})
     
     Note over MessageClient: Message travels<br/>phone-watch link
@@ -595,6 +605,11 @@ sequenceDiagram
     participant SharedPrefs as SharedPreferences
     participant AlarmUtils as AlarmUtils
     participant AlarmMgr as Android AlarmManager
+    participant Android as Android APIs
+    participant App as Tauri App
+    participant Rust as Rust Core
+    participant Events as Event System
+    participant User
 
     Device->>System: Device boots
     System->>BootReceiver: BOOT_COMPLETED broadcast
@@ -616,7 +631,7 @@ sequenceDiagram
     Note over BootReceiver: App NOT launched<br/>Uses cached data only
     
     alt User later opens app
-        User->>App: Launch Threshold
+    User->>App: Launch Threshold
         App->>Rust: Initialize, load from SQLite
         Rust->>Events: emit("alarms:changed")
         Events->>AlarmMgr: Validate & re-sync
@@ -751,13 +766,14 @@ sequenceDiagram
     participant Android as Android APIs
     participant WearSync as Wear Sync
     participant Watch as Wear OS
+    participant DataLayer as Wear Data Layer
 
     User->>UI: Opens app
-    User->>UI: Taps "+" to create alarm
+    User->>UI: Taps "+" to add alarm
     UI->>UI: Navigate to /edit
     
-    User->>UI: Sets window: 7:00-7:30
-    User->>UI: Selects days: M-F
+    User->>UI: Sets window: 7:00 to 7:30
+    User->>UI: Selects days: Mon to Fri
     User->>UI: Taps "Save"
     
     UI->>Rust: invoke('save_alarm', input)
@@ -803,6 +819,7 @@ sequenceDiagram
     participant Rust as Rust Core
     participant Events as Event System
     participant AlarmMgr as Alarm Manager
+    participant User
 
     Note over Android: 7:17 AM - Trigger time!
     
@@ -816,7 +833,7 @@ sequenceDiagram
     
     Service->>App: Launch via deep link
     App->>UI: Navigate to /ringing/1
-    UI-->>User: Full-screen ringing UI
+    UI-->>User: Full screen ringing UI
     
     Note over Service,User: Sound playing & vibrating
     
@@ -857,6 +874,8 @@ sequenceDiagram
     participant Events as Event System
     participant UI as Phone UI
     participant AlarmMgr as Alarm Manager
+    participant DataLayer as Wear Data Layer
+    participant Android as Android APIs
 
     User->>Watch: Taps toggle switch
     Watch->>Watch: Optimistic UI update
@@ -1078,6 +1097,8 @@ sequenceDiagram
     participant DB as SQLite
     participant Events as Event System
     participant AlarmMgr as Alarm Manager
+    participant Android as Android APIs
+    participant User
 
     Boot->>Cache: Read cached alarms
     Cache-->>Boot: {id:1, trigger:...}
@@ -1091,7 +1112,7 @@ sequenceDiagram
     DB-->>Rust: [AlarmRecord, ...]
     
     Rust->>Events: emit("alarms:changed")
-    Events->>AlarmMgr: Re-sync from source of truth
+    Events->>AlarmMgr: Resync from source of truth
     
     AlarmMgr->>AlarmMgr: Compare DB vs. cache
     AlarmMgr->>Cache: Update cache to match DB
