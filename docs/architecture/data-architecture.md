@@ -1,4 +1,4 @@
-# Threshold Wear OS - Data Architecture
+# Threshold — Data Architecture
 
 **Version:** 2.0 (Rust-Core Architecture)
 **Last Updated:** January 25, 2026
@@ -10,7 +10,7 @@
 
 ## Overview
 
-This document defines data models, storage strategies, and synchronization protocols for Threshold's Rust-core architecture with Wear OS support.
+This document defines data models, storage strategies, and synchronisation protocols for Threshold's Rust-core architecture.
 
 **Key Principles:**
 - SQLite (via Rust) is the single source of truth

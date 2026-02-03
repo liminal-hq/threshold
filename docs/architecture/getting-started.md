@@ -1,4 +1,4 @@
-# Getting Started - Threshold Wear OS Implementation
+# Getting Started — Threshold Implementation
 
 **Quick Start Guide**  
 **Updated:** January 25, 2026

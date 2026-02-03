@@ -1,4 +1,4 @@
-# Threshold Wear OS - Architecture Overview
+# Threshold — Architecture Overview
 
 **Version:** 2.0 (Rust-Core Architecture)
 **Last Updated:** January 25, 2026
@@ -24,7 +24,7 @@ This architecture embodies Threshold's core principles:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    TypeScript UI Layer                      │
-│              (React + Ionic - Desktop & Mobile)             │
+│           (React + MUI - Desktop & Mobile)                 │
 │                                                             │
 │  • Renders alarm list                                      │
 │  • Handles user input                                      │

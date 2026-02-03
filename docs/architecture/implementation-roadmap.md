@@ -1,7 +1,7 @@
-# Threshold Wear OS - Implementation Roadmap
+# Threshold — Implementation Roadmap
 
-**Project:** Threshold Wear OS Companion  
-**Duration:** 5 Milestones (~6-8 weeks with AI tooling)  
+**Project:** Threshold
+**Duration:** 5 Milestones (~6-8 weeks with AI tooling)
 **Architecture:** Rust-Core Event-Driven
 
 ---
