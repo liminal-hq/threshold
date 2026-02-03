@@ -56,9 +56,11 @@ describe('DatabaseService', () => {
 
         // params[1] is enabled
         // params[7] is next_trigger
+        // params[8] is last_fired_at
 
         // We expect conversion to 0 (integer) and null (for SQL NULL)
         expect(params[1]).toBe(0);
         expect(params[7]).toBe(null);
+        expect(params[8]).toBe(null);
     });
 });

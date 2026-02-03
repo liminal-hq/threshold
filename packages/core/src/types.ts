@@ -27,4 +27,5 @@ export interface Alarm {
 
 	// Persistence
 	nextTrigger?: number; // Epoch millis
+	lastFiredAt?: number; // Epoch millis
 }

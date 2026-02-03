@@ -19,6 +19,7 @@ interface ImportedAlarm {
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
 	private router: any = null;
+	private pendingFiredAlarm: { id: number; firedAt: number } | null = null;
 
 	public setRouter(router: any) {
 		this.router = router;
@@ -61,6 +62,14 @@ export class AlarmManagerService {
 				console.log('[AlarmManager] Checking for native imports...');
 				await this.checkImports();
 				console.log('[AlarmManager] Native imports check complete.');
+
+				const ringingAlarmId = this.getRingingAlarmIdFromPath();
+				if (ringingAlarmId !== null) {
+					const firedAt = Date.now();
+					this.pendingFiredAlarm = { id: ringingAlarmId, firedAt };
+					console.log(`[AlarmManager] Ringing route detected on init. Marking alarm ${ringingAlarmId} as fired.`);
+					await this.markAlarmFired(ringingAlarmId, firedAt);
+				}
 
 				console.log('[AlarmManager] Rescheduling all alarms...');
 				await this.rescheduleAll();
@@ -225,24 +234,56 @@ export class AlarmManagerService {
 		}
 	}
 
+	private getRingingAlarmIdFromPath(): number | null {
+		const match = window.location.pathname.match(/^\/ringing\/(\d+)/);
+		if (!match) return null;
+		const parsed = Number.parseInt(match[1], 10);
+		return Number.isNaN(parsed) ? null : parsed;
+	}
+
+	private async markAlarmFired(id: number, firedAt: number) {
+		const alarm = await this.getAlarm(id);
+		if (!alarm) {
+			console.error(`[AlarmManager] Failed to mark fired: Alarm ${id} not found`);
+			return;
+		}
+
+		console.log(`[AlarmManager] Marking alarm ${id} as fired at ${new Date(firedAt).toLocaleString()}`);
+		await databaseService.saveAlarm({
+			...alarm,
+			lastFiredAt: firedAt,
+		});
+	}
+
 	// Re-hydrate all alarms on startup (send to Rust scheduler)
 	async rescheduleAll() {
 		console.log('[AlarmManager] Rescheduling all alarms...');
 		const alarms = await databaseService.getAllAlarms();
 		for (const alarm of alarms) {
 			if (alarm.enabled && alarm.nextTrigger) {
+				const pendingFired =
+					this.pendingFiredAlarm && alarm.id === this.pendingFiredAlarm.id
+						? this.pendingFiredAlarm
+						: null;
+				const rescheduleAlarm =
+					pendingFired && !alarm.lastFiredAt
+						? { ...alarm, lastFiredAt: pendingFired.firedAt }
+						: alarm;
+
 				// If trigger is in the future, schedule it
 				if (alarm.nextTrigger > Date.now()) {
-					await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger);
+					await this.scheduleNativeAlarm(rescheduleAlarm.id, rescheduleAlarm.nextTrigger);
 				} else {
 					// Missed alarm? For now, maybe just calc next trigger
 					console.log(
 						`[AlarmManager] Alarm ${alarm.id} missed trigger at ${new Date(alarm.nextTrigger).toLocaleString()}. Rescheduling next.`,
 					);
-					this.saveAndSchedule(alarm);
+					this.saveAndSchedule(rescheduleAlarm);
 				}
 			}
 		}
+
+		this.pendingFiredAlarm = null;
 	}
 
 	async loadAlarms(): Promise<Alarm[]> {
@@ -352,6 +393,9 @@ export class AlarmManagerService {
 		console.log(
 			`[AlarmManager] Configuring alarm: Label="${alarm.label}", Enabled=${alarm.enabled}, Days=[${alarm.activeDays}]`,
 		);
+		console.log(
+			`[AlarmManager] Scheduling context: mode=${alarm.mode} lastFiredAt=${alarm.lastFiredAt ?? 'none'} windowStart=${alarm.windowStart ?? 'n/a'} windowEnd=${alarm.windowEnd ?? 'n/a'}`,
+		);
 
 		const coreAlarm = {
 			...alarm,
@@ -407,6 +451,8 @@ export class AlarmManagerService {
 	}
 
 	private async handleAlarmRing(id: number) {
+		const firedAt = Date.now();
+
 		// 1. Send Notification
 		const isMobile = PlatformUtils.isMobile();
 		sendNotification({
@@ -471,7 +517,7 @@ export class AlarmManagerService {
 		const alarms = await databaseService.getAllAlarms();
 		const alarm = alarms.find((a) => a.id === id);
 		if (alarm) {
-			await this.saveAndSchedule(alarm);
+			await this.saveAndSchedule({ ...alarm, lastFiredAt: firedAt });
 		}
 	}
 

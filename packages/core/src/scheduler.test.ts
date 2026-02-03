@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateNextTrigger } from './scheduler';
 import { Alarm, AlarmMode, DayOfWeek } from './types';
-import { addDays, setHours, setMinutes, setSeconds, subMinutes } from 'date-fns';
+import { addDays, setHours, setMinutes } from 'date-fns';
 
 describe('Scheduler Logic', () => {
 	const baseDate = new Date(2023, 10, 1, 10, 0, 0); // Nov 1 2023, 10:00 AM (Wednesday)
@@ -142,6 +142,48 @@ describe('Scheduler Logic', () => {
 
 			expect(date.getDate()).toBe(1); // Today
 			expect(date.getTime()).toBeGreaterThan(baseDate.getTime()); // After now
+		});
+
+		it('skips today if the window already fired', () => {
+			const alarm: Alarm = {
+				id: 2,
+				enabled: true,
+				mode: AlarmMode.RandomWindow,
+				windowStart: '09:00',
+				windowEnd: '11:00',
+				activeDays: [3], // Wed
+				lastFiredAt: setMinutes(setHours(baseDate, 10), 5).getTime(), // 10:05am
+			};
+
+			const next = calculateNextTrigger(alarm, baseDate); // 10am
+			expect(next).toBeDefined();
+			const date = new Date(next!);
+			expect(date.getDate()).toBe(8); // Wed Nov 8
+			expect(date.getHours()).toBeGreaterThanOrEqual(9);
+			expect(date.getHours()).toBeLessThan(11);
+		});
+
+		it('skips an overnight window after it already fired', () => {
+			const overnightAlarm: Alarm = {
+				id: 2,
+				enabled: true,
+				mode: AlarmMode.RandomWindow,
+				windowStart: '23:00',
+				windowEnd: '02:00',
+				activeDays: [3], // Wed
+				lastFiredAt: new Date(2023, 10, 2, 0, 30, 0).getTime(), // Thu 00:30
+			};
+
+			const now = new Date(2023, 10, 2, 1, 0, 0); // Thu 01:00
+			const next = calculateNextTrigger(overnightAlarm, now);
+			expect(next).toBeDefined();
+			const date = new Date(next!);
+
+			const nextWindowStart = setHours(new Date(2023, 10, 8, 0, 0, 0), 23); // Wed Nov 8 23:00
+			const nextWindowEnd = setHours(addDays(new Date(2023, 10, 8, 0, 0, 0), 1), 2); // Thu Nov 9 02:00
+
+			expect(date.getTime()).toBeGreaterThanOrEqual(nextWindowStart.getTime());
+			expect(date.getTime()).toBeLessThan(nextWindowEnd.getTime());
 		});
 	});
 });

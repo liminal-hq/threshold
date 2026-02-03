@@ -34,6 +34,7 @@ export class DatabaseService {
         window_end TEXT,
         active_days TEXT,
         next_trigger INTEGER,
+        last_fired_at INTEGER,
         sound_uri TEXT,
         sound_title TEXT
       )
@@ -45,12 +46,22 @@ export class DatabaseService {
 			// Check if sound_uri column exists
 			const columns = await this.db!.select<any[]>('PRAGMA table_info(alarms)');
 			const hasSoundUri = columns.some((c) => c.name === 'sound_uri');
+			const hasLastFiredAt = columns.some((c) => c.name === 'last_fired_at');
 
 			if (!hasSoundUri) {
 				console.log('Migrating database: adding sound columns');
 				await this.db!.execute('ALTER TABLE alarms ADD COLUMN sound_uri TEXT');
 				await this.db!.execute('ALTER TABLE alarms ADD COLUMN sound_title TEXT');
 			}
+
+			if (!hasLastFiredAt) {
+				console.log('Migrating database: adding last fired column');
+				await this.db!.execute('ALTER TABLE alarms ADD COLUMN last_fired_at INTEGER');
+			}
+
+			console.log(
+				`[DatabaseService] Migration check complete. last_fired_at present=${hasLastFiredAt}`,
+			);
 		} catch (e) {
 			console.error('Migration failed', e);
 		}
@@ -68,7 +79,7 @@ export class DatabaseService {
 
 		if (alarm.id) {
 			await this.db!.execute(
-				`UPDATE alarms SET label=?, enabled=?, mode=?, fixed_time=?, window_start=?, window_end=?, active_days=?, next_trigger=?, sound_uri=?, sound_title=? WHERE id=?`,
+				`UPDATE alarms SET label=?, enabled=?, mode=?, fixed_time=?, window_start=?, window_end=?, active_days=?, next_trigger=?, last_fired_at=?, sound_uri=?, sound_title=? WHERE id=?`,
 				[
 					alarm.label,
 					alarm.enabled ? 1 : 0,
@@ -78,6 +89,7 @@ export class DatabaseService {
 					alarm.windowEnd,
 					daysJson,
 					alarm.nextTrigger ?? null,
+					alarm.lastFiredAt ?? null,
 					alarm.soundUri ?? null,
 					alarm.soundTitle ?? null,
 					alarm.id,
@@ -86,7 +98,7 @@ export class DatabaseService {
 			return alarm.id;
 		} else {
 			const result = await this.db!.execute(
-				`INSERT INTO alarms (label, enabled, mode, fixed_time, window_start, window_end, active_days, next_trigger, sound_uri, sound_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO alarms (label, enabled, mode, fixed_time, window_start, window_end, active_days, next_trigger, last_fired_at, sound_uri, sound_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					alarm.label,
 					alarm.enabled ? 1 : 0,
@@ -96,6 +108,7 @@ export class DatabaseService {
 					alarm.windowEnd,
 					daysJson,
 					alarm.nextTrigger ?? null,
+					alarm.lastFiredAt ?? null,
 					alarm.soundUri ?? null,
 					alarm.soundTitle ?? null,
 				],
@@ -120,6 +133,7 @@ export class DatabaseService {
 			windowEnd: row.window_end,
 			activeDays: JSON.parse(row.active_days || '[]') as DayOfWeek[],
 			nextTrigger: row.next_trigger,
+			lastFiredAt: row.last_fired_at,
 			soundUri: row.sound_uri,
 			soundTitle: row.sound_title,
 		};
