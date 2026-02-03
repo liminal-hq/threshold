@@ -36,7 +36,7 @@ graph TB
     subgraph "Rust Core"
         Commands[Command Handlers]
         Coordinator[AlarmCoordinator]
-        Scheduler[Scheduler<br/>SECRET SAUCE]
+        Scheduler["Scheduler<br/>SECRET SAUCE"]
         Database[AlarmDatabase]
     end
 
@@ -176,7 +176,7 @@ graph TD
     
     Event --> UI[TypeScript UI]
     Event --> AlarmMgr[alarm-manager]
-    Event --> WearSync[wear-sync<br/>Android only]
+    Event --> WearSync["wear-sync<br/>Android only"]
     
     UI --> ReactState[React State Update]
     AlarmMgr --> Android[Android AlarmManager]
@@ -474,7 +474,7 @@ graph TB
         EventListener[Event Listener]
     end
 
-    EventListener -->|Platform dispatch| Choice{Platform?}
+    EventListener -->|Platform dispatch| Choice{"Platform?"}
     
     Choice -->|Android| AndroidPath[Android Implementation]
     Choice -->|Desktop| DesktopPath[Desktop Implementation]
@@ -565,8 +565,8 @@ graph LR
     
     Watch -->|/cmd/alarm_set_enabled| Toggle[Toggle Alarm]
     Watch -->|/cmd/alarm_delete| Delete[Delete Alarm]
-    Watch -->|/cmd/alarm_create| Create[Create Alarm<br/>Future]
-    Watch -->|/cmd/pick_mood| Mood[Pick Mood<br/>Ritual Mode]
+    Watch -->|/cmd/alarm_create| Create["Create Alarm<br/>Future"]
+    Watch -->|/cmd/pick_mood| Mood["Pick Mood<br/>Ritual Mode"]
     
     Toggle --> Rust[Rust Core]
     Delete --> Rust
@@ -629,21 +629,21 @@ sequenceDiagram
 graph TB
     Problem[Problem: Boot Recovery]
     
-    Problem --> Option1{Option 1:<br/>Launch app on boot}
-    Problem --> Option2{Option 2:<br/>SharedPreferences cache}
+    Problem --> Option1{"Option 1:<br/>Launch app on boot"}
+    Problem --> Option2{"Option 2:<br/>SharedPreferences cache"}
     
     Option1 --> Launch[App starts in background]
     Launch --> LoadDB[Load SQLite]
-    LoadDB --> Fail1[❌ Restricted on Android 12+]
-    LoadDB --> Fail2[❌ Slow user boot]
-    LoadDB --> Fail3[❌ Not guaranteed]
+    LoadDB --> Fail1["❌ Restricted on Android 12+"]
+    LoadDB --> Fail2["❌ Slow user boot"]
+    LoadDB --> Fail3["❌ Not guaranteed"]
     
     Option2 --> Cache[Cache minimal data]
     Cache --> Read[BootReceiver reads cache]
     Read --> Schedule[Reschedule alarms]
-    Schedule --> Success1[✅ Fast]
-    Schedule --> Success2[✅ Reliable]
-    Schedule --> Success3[✅ No app launch needed]
+    Schedule --> Success1["✅ Fast"]
+    Schedule --> Success2["✅ Reliable"]
+    Schedule --> Success3["✅ No app launch needed"]
     
     Success1 --> Validate[App validates later]
     Success2 --> Validate
@@ -667,31 +667,31 @@ graph TB
 graph TB
     subgraph "Android Platform"
         Android[Android]
-        A1[✅ Guaranteed Wake from Doze]
-        A2[✅ Boot Recovery via SharedPreferences]
-        A3[✅ Foreground Service Ringing]
-        A4[✅ Native Sound Picker]
-        A5[✅ Wear OS Sync]
-        A6[✅ Full AlarmManager API]
+        A1["✅ Guaranteed Wake from Doze"]
+        A2["✅ Boot Recovery via SharedPreferences"]
+        A3["✅ Foreground Service Ringing"]
+        A4["✅ Native Sound Picker"]
+        A5["✅ Wear OS Sync"]
+        A6["✅ Full AlarmManager API"]
     end
 
     subgraph "Desktop Platform"
         Desktop[Desktop]
-        D1[❌ No Wake from Sleep]
-        D2[⚠️ Best-effort Notifications]
-        D3[✅ System Notifications]
-        D4[⚠️ File Picker for Sounds]
-        D5[❌ No Wearable Support]
-        D6[✅ Local Scheduler]
+        D1["❌ No Wake from Sleep"]
+        D2["⚠️ Best-effort Notifications"]
+        D3["✅ System Notifications"]
+        D4["⚠️ File Picker for Sounds"]
+        D5["❌ No Wearable Support"]
+        D6["✅ Local Scheduler"]
     end
 
     subgraph "Common Features"
         Common[Both Platforms]
-        C1[✅ SQLite Database]
-        C2[✅ Rust Core Logic]
-        C3[✅ Window Randomization]
-        C4[✅ Event-Driven Architecture]
-        C5[✅ TypeScript UI]
+        C1["✅ SQLite Database"]
+        C2["✅ Rust Core Logic"]
+        C3["✅ Window Randomisation"]
+        C4["✅ Event-Driven Architecture"]
+        C5["✅ TypeScript UI"]
     end
     
     style Android fill:#a8e6cf
@@ -713,18 +713,18 @@ graph TB
     Rust -->|Events| Events
 
     subgraph "Android Branch"
-        Events -->|alarms:changed| AndroidPlugin[alarm-manager<br/>Android impl]
+        Events -->|alarms:changed| AndroidPlugin["alarm-manager<br/>Android impl"]
         AndroidPlugin --> AlarmMgr[AlarmManager]
         AndroidPlugin --> SharedPrefs[(SharedPreferences)]
         AndroidPlugin --> Foreground[Foreground Service]
         
-        Events -->|alarms:changed| WearPlugin[wear-sync<br/>Android only]
+        Events -->|alarms:changed| WearPlugin["wear-sync<br/>Android only"]
         WearPlugin --> DataLayer[Wear Data Layer]
         DataLayer <--> Watch[Wear OS App]
     end
 
     subgraph "Desktop Branch"
-        Events -->|alarms:changed| DesktopPlugin[alarm-manager<br/>Desktop impl]
+        Events -->|alarms:changed| DesktopPlugin["alarm-manager<br/>Desktop impl"]
         DesktopPlugin --> LocalTimer[Local Timer]
         DesktopPlugin --> SystemNotif[System Notifications]
     end
@@ -905,17 +905,17 @@ graph TB
     Events --> WearSync[wear-sync Plugin]
     Events --> UI[TypeScript UI]
     
-    AlarmMgr -.->|❌ No direct communication| WearSync
-    WearSync -.->|❌ No direct communication| AlarmMgr
-    
-    AlarmMgr -->|✅ Can call| Rust
-    WearSync -->|✅ Can call| Rust
+    AlarmMgr -.->|"❌ No direct communication"| WearSync
+    WearSync -.->|"❌ No direct communication"| AlarmMgr
+
+    AlarmMgr -->|"✅ Can call"| Rust
+    WearSync -->|"✅ Can call"| Rust
     
     style Rust fill:#99ccff
     style Events fill:#ffcc99
     
-    Note1[All coordination<br/>through events]
-    Note2[Plugins invoke commands<br/>like normal callers]
+    Note1["All coordination<br/>through events"]
+    Note2["Plugins invoke commands<br/>like normal callers"]
 ```
 
 ### 12.2 Event Listener Registration
@@ -1001,7 +1001,7 @@ sequenceDiagram
 
 ```mermaid
 graph TB
-    UI[TypeScript UI<br/>Main Thread]
+    UI["TypeScript UI<br/>Main Thread"]
     IPC[Tauri IPC Bridge]
     Tokio[Tokio Async Runtime]
     Command[Command Handler]
@@ -1032,7 +1032,7 @@ graph LR
     Emit -->|Broadcast immediately| Listeners
     Emit -->|Returns immediately| Command
     
-    Note1[Events don't wait<br/>for listener completion]
+    Note1["Events don't wait<br/>for listener completion"]
     
     style Emit fill:#ffcc99
 ```
@@ -1108,27 +1108,27 @@ sequenceDiagram
 graph TB
     subgraph "User Interface"
         User[User]
-        UI[React UI<br/>TypeScript]
+        UI["React UI<br/>TypeScript"]
         Watch[Wear OS App]
     end
 
     subgraph "Rust Core - Source of Truth"
         Commands[Command Handlers]
         Coordinator[AlarmCoordinator]
-        Scheduler[Scheduler<br/>SECRET SAUCE]
+        Scheduler["Scheduler<br/>SECRET SAUCE"]
         DB[(SQLite)]
         Events[Event Emitter]
     end
 
     subgraph "Plugins - Event Listeners"
         AlarmMgr[alarm-manager]
-        WearSync[wear-sync<br/>Android only]
+        WearSync["wear-sync<br/>Android only"]
     end
 
     subgraph "Android Native"
         AlarmAPI[AlarmManager API]
-        SharedPrefs[(SharedPreferences<br/>Boot Cache)]
-        ForegroundSvc[Foreground Service<br/>Ringing]
+        SharedPrefs[("SharedPreferences<br/>Boot Cache")]
+        ForegroundSvc["Foreground Service<br/>Ringing"]
         DataLayer[Wear Data Layer]
     end
 
