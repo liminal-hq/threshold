@@ -28,7 +28,7 @@ threshold/
 │   │   ├── THRESHOLD_PLUGIN_MANIFEST_PATTERN.md
 │   │   ├── PLUGIN_MANIFEST_QUICKSTART.md
 │   │   └── PLUGIN_MANIFEST_PR_CHECKLIST.md
-│   ├── ALARM_MANAGER.md
+│   ├── alarm-manager-plugin.md
 │   ├── ANDROID_INTENTS.md
 │   ├── DESKTOP_DEEPLINKS.md
 │   └── UI_TASK.md

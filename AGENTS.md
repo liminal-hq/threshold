@@ -110,7 +110,7 @@ See quickstart guide for complete implementation steps.
 
 **See Also:**
 
-- `/docs/ALARM_MANAGER.md` - Alarm manager implementation details
+- `/docs/alarm-manager-plugin.md` - Alarm manager plugin specification
 - `/docs/ANDROID_INTENTS.md` - Android intent handling
 
 ## UI Project Structure

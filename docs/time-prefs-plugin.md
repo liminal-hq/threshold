@@ -1,6 +1,10 @@
 # Time Preferences Plugin (`time-prefs`)
 
-This plugin provides a cross-platform API to retrieve the user's preferred time format (12-hour or 24-hour).
+**Plugin location:** `plugins/time-prefs/`
+**Status:** Active
+**Platforms:** Android (native), iOS (stub), Desktop (Intl fallback)
+
+> This document describes the `time-prefs` Tauri plugin, which provides a cross-platform API to retrieve the user's preferred time format. For plugin development patterns, see [Plugin Manifest Pattern](patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md).
 
 ## Purpose
 
