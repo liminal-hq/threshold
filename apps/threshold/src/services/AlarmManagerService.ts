@@ -62,6 +62,12 @@ export class AlarmManagerService {
 				await this.checkImports();
 				console.log('[AlarmManager] Native imports check complete.');
 
+				const ringingAlarmId = this.getRingingAlarmIdFromPath();
+				if (ringingAlarmId !== null) {
+					console.log(`[AlarmManager] Ringing route detected on init. Marking alarm ${ringingAlarmId} as fired.`);
+					await this.markAlarmFired(ringingAlarmId, Date.now());
+				}
+
 				console.log('[AlarmManager] Rescheduling all alarms...');
 				await this.rescheduleAll();
 				console.log('[AlarmManager] Reschedule complete.');
@@ -225,6 +231,27 @@ export class AlarmManagerService {
 		}
 	}
 
+	private getRingingAlarmIdFromPath(): number | null {
+		const match = window.location.pathname.match(/^\/ringing\/(\d+)/);
+		if (!match) return null;
+		const parsed = Number.parseInt(match[1], 10);
+		return Number.isNaN(parsed) ? null : parsed;
+	}
+
+	private async markAlarmFired(id: number, firedAt: number) {
+		const alarm = await this.getAlarm(id);
+		if (!alarm) {
+			console.error(`[AlarmManager] Failed to mark fired: Alarm ${id} not found`);
+			return;
+		}
+
+		console.log(`[AlarmManager] Marking alarm ${id} as fired at ${new Date(firedAt).toLocaleString()}`);
+		await databaseService.saveAlarm({
+			...alarm,
+			lastFiredAt: firedAt,
+		});
+	}
+
 	// Re-hydrate all alarms on startup (send to Rust scheduler)
 	async rescheduleAll() {
 		console.log('[AlarmManager] Rescheduling all alarms...');
@@ -351,6 +378,9 @@ export class AlarmManagerService {
 		// 1. Calculate next trigger
 		console.log(
 			`[AlarmManager] Configuring alarm: Label="${alarm.label}", Enabled=${alarm.enabled}, Days=[${alarm.activeDays}]`,
+		);
+		console.log(
+			`[AlarmManager] Scheduling context: mode=${alarm.mode} lastFiredAt=${alarm.lastFiredAt ?? 'none'} windowStart=${alarm.windowStart ?? 'n/a'} windowEnd=${alarm.windowEnd ?? 'n/a'}`,
 		);
 
 		const coreAlarm = {
