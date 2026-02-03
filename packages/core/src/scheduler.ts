@@ -109,6 +109,9 @@ function getRandomWindowTrigger(alarm: Alarm, date: Date, now: Date): number | n
 	// One-shot default: if the window already fired, skip scheduling within it.
 	// TODO: Add a future continuousWindow flag to allow re-arming within the same window.
 	if (wasLastFiredInWindow(alarm, windowStart, windowEnd)) {
+		console.log(
+			`[Scheduler] Skipping window (already fired). lastFiredAt=${alarm.lastFiredAt} windowStart=${windowStart.toISOString()} windowEnd=${windowEnd.toISOString()}`,
+		);
 		return null;
 	}
 
@@ -163,5 +166,8 @@ function wasLastFiredInWindow(alarm: Alarm, windowStart: Date, windowEnd: Date):
 	const lastFired = new Date(alarm.lastFiredAt);
 	const lastFiredMillis = lastFired.getTime();
 
+	console.log(
+		`[Scheduler] lastFiredAt check: lastFired=${lastFired.toISOString()} windowStart=${windowStart.toISOString()} windowEnd=${windowEnd.toISOString()}`,
+	);
 	return lastFiredMillis >= windowStart.getTime() && lastFiredMillis < windowEnd.getTime();
 }
