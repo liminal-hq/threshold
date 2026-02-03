@@ -6,6 +6,7 @@
 		"jsx": "react-jsx",
 		"noEmit": true,
 		"allowImportingTsExtensions": true,
+		"customConditions": ["source"],
 		"types": ["vitest/globals", "@testing-library/jest-dom"]
 	},
 	"include": ["src"],
