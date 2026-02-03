@@ -106,6 +106,12 @@ function getRandomWindowTrigger(alarm: Alarm, date: Date, now: Date): number | n
 		windowEnd = addDays(windowEnd, 1);
 	}
 
+	// One-shot default: if the window already fired, skip scheduling within it.
+	// TODO: Add a future continuousWindow flag to allow re-arming within the same window.
+	if (wasLastFiredInWindow(alarm, windowStart, windowEnd)) {
+		return null;
+	}
+
 	// Determine the effective sampling range [sampleStart, windowEnd]
 	let sampleStart = windowStart;
 
@@ -149,4 +155,13 @@ function setTime(date: Date, hours: number, minutes: number): Date {
 	d = setSeconds(d, 0);
 	d = setMilliseconds(d, 0);
 	return d;
+}
+
+function wasLastFiredInWindow(alarm: Alarm, windowStart: Date, windowEnd: Date): boolean {
+	if (!alarm.lastFiredAt) return false;
+
+	const lastFired = new Date(alarm.lastFiredAt);
+	const lastFiredMillis = lastFired.getTime();
+
+	return lastFiredMillis >= windowStart.getTime() && lastFiredMillis < windowEnd.getTime();
 }
