@@ -46,7 +46,7 @@ Examples:
 - The application registers the `threshold://` protocol for deep linking.
 - **Use Cases:** External apps can launch Threshold with `threshold://set?time=07:30`
 - **IMPORTANT:** If the app name or identifier changes, ensure this protocol registration is updated in `tauri.conf.json` and relevant documentation.
-- **See Also:** `/docs/desktop-deeplinks.md` for usage examples
+- **See Also:** `/docs/desktop/deeplinks.md` for usage examples
 
 ## Code Organization
 
@@ -65,12 +65,12 @@ Examples:
 
 When creating or modifying Threshold plugins with Android support:
 
-**Documentation:** All plugin patterns are in `/docs/patterns/`
+**Documentation:** All plugin patterns are in `/docs/plugins/`
 
-- **Quick Start:** `/docs/patterns/plugin-manifest-quickstart.md`
-- **Full Reference:** `/docs/patterns/plugin-manifest-pattern.md`
-- **PR Checklist:** `/docs/patterns/plugin-manifest-pr-checklist.md`
-- **AI Agent Guide:** `/docs/guides/ai-agent-usage-guide.md`
+- **Quick Start:** `/docs/plugins/plugin-manifest-quickstart.md`
+- **Full Reference:** `/docs/plugins/plugin-manifest-pattern.md`
+- **PR Checklist:** `/docs/plugins/plugin-manifest-pr-checklist.md`
+- **AI Agent Guide:** `/docs/ai-agent-usage-guide.md`
 
 **Android Manifest Injection (Required):**
 
@@ -110,21 +110,21 @@ See quickstart guide for complete implementation steps.
 
 **See Also:**
 
-- `/docs/alarm-manager-plugin.md` - Alarm manager plugin specification
-- `/docs/android-intents.md` - Android intent handling
+- `/docs/plugins/alarm-manager.md` - Alarm manager plugin specification
+- `/docs/android/intents.md` - Android intent handling
 
 ## UI Project Structure
 
-Follow this directory structure for React/Ionic applications:
+Follow this directory structure for React/MUI applications:
 
 - **`src/components/`**: Reusable UI components (Buttons, Cards, TimePickers). Prefer "dumb" components that take props.
 - **`src/screens/`**: Full-page views corresponding to routes (e.g., `Home.tsx`, `EditAlarm.tsx`, `Ringing.tsx`).
 - **`src/hooks/`**: Custom React hooks for logic reuse.
 - **`src/services/`**: Singleton classes or modules for business logic (e.g., `DatabaseService`, `AlarmService`).
-- **`src/theme/`**: Global styles, Ionic variables, and theme definitions.
+- **`src/theme/`**: Global styles, MUI theme definitions, and Material You integration.
 - **`src/context/`**: React Context providers.
 
-**See Also:** `/docs/ui-task.md` for UI implementation details
+**See Also:** `/docs/ui/ui-task.md` for UI implementation details
 
 ## Tauri v2
 
@@ -156,7 +156,7 @@ useEffect(() => {
 ### Window Management
 
 - **Desktop platforms**: Use custom title bars with `data-tauri-drag-region` attribute for draggable areas
-- **Mobile platforms**: Use native Ionic headers (`IonHeader`, `IonToolbar`)
+- **Mobile platforms**: Use MUI `AppBar`/`Toolbar` or custom headers
 - Window controls (minimize, maximize, close) should only render on desktop
 
 ### Tauri APIs

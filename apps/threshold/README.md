@@ -87,4 +87,4 @@ On Android, the export includes app logs only (system logcat access is restricte
 ## Android Transitions
 
 The application uses native-like page transitions on Android using the View Transitions API.
-For implementation details, see [docs/android-transitions.md](../../docs/android-transitions.md).
+For implementation details, see [docs/android/transitions.md](../../docs/android/transitions.md).

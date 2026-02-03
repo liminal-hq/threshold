@@ -6,7 +6,7 @@ Welcome to the Threshold project! This is a minimalist alarm clock application d
 
 This is a **monorepo** managed by `pnpm workspaces`.
 
-- `apps/threshold`: The main Tauri v2 application (React + Ionic).
+- `apps/threshold`: The main Tauri v2 application (React + MUI).
 - `packages/core`: Shared Typescript logic (Scheduler, Recurrence rules).
 - `plugins/alarm-manager`: Custom Tauri Plugin for native Android AlarmManager integration.
 - `plugins/alarm-manager/android`: The native Android library code.
@@ -55,6 +55,6 @@ adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* AlarmReceiver:* Al
 
 ## Documentation
 
-- [UI Task Description](docs/ui-task.md)
+- [UI Task Description](docs/ui/ui-task.md)
 - [Agent Guidelines](AGENTS.md)
 - [Specification](SPEC.md)
