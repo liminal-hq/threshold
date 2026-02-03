@@ -1,9 +1,3 @@
-> **⚠️ DEPRECATED - January 2026**  
-> This document references the removed DatabaseService.  
-> See [event-architecture.md](../wear-implementation/event-architecture.md) for current architecture.
-
----
-
 # Alarm Manager Specification
 
 ## Overview
@@ -88,7 +82,7 @@ The `alarms` table in `alarms.db` is updated with new columns:
 *   `sound_title` (TEXT, nullable)
 
 **Migration Strategy**:
-On app init, the Rust alarm database layer checks for the existence of these columns and executes `ALTER TABLE` if they are missing.
+On app init, `DatabaseService` checks for the existence of these columns and executes `ALTER TABLE` if they are missing.
 
 ### SharedPreferences (Android Native)
 
