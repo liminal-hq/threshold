@@ -19,8 +19,10 @@ The project is a **Tauri v2 Monorepo** managed with `pnpm`.
 ### Structure (`pnpm-workspace.yaml`)
 
 - `apps/threshold`: The main Tauri application.
-- `packages/core`: Shared pure TypeScript logic (Recurrence rules, Random sampling).
+- `packages/core`: Shared TypeScript types and scheduler logic (`calculateNextTrigger`).
 - `plugins/alarm-manager`: Custom Tauri plugin wrapping Android's `AlarmManager`.
+- `plugins/time-prefs`: Custom Tauri plugin for 12/24h time format preference.
+- `plugins/theme-utils`: Custom Tauri plugin for Material You dynamic colour extraction.
 
 ## 3. Requirements
 

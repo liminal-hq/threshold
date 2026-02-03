@@ -59,7 +59,7 @@ This architecture embodies Threshold's core principles:
 └──────────────────┬────────────────────┬─────────────────────┘
                    │                    │
          ┌─────────▼──────────┐  ┌──────▼─────────────────────┐
-         │  alarm-manager     │  │  wear-sync                 │
+         │  alarm-manager     │  │  wear-sync (PLANNED)       │
          │  (Generic Plugin)  │  │  (Generic Plugin)          │
          │                    │  │                            │
          │  Android:          │  │  Android Only:             │
@@ -69,7 +69,7 @@ This architecture embodies Threshold's core principles:
          │  • SharedPrefs     │  │                            │
          │                    │  │  Calls back to Rust:       │
          │  Desktop:          │  │  • invoke('toggle_alarm')  │
-         │  • notify-rust     │  │  • invoke('delete_alarm')  │
+         │  • Ring window     │  │  • invoke('delete_alarm')  │
          │  • Local scheduler │  │                            │
          └────────────────────┘  └────────────────────────────┘
 ```
@@ -164,8 +164,8 @@ app.listen("alarms:changed", move |event| {
 - Launches app when alarm fires
 
 **Desktop Implementation:**
-- Schedules notifications via `notify-rust` or similar
-- Local timer/scheduler (no system wake guarantee)
+- Schedules via local timer (no system wake guarantee)
+- Opens dedicated Ring window + notification when alarm fires
 
 **Responsibilities:**
 - ✅ React to `alarms:changed` events
@@ -181,9 +181,11 @@ app.listen("alarms:changed", move |event| {
 
 ---
 
-### 4. wear-sync Plugin (plugins/wear-sync/)
+### 4. wear-sync Plugin (plugins/wear-sync/) — PLANNED
 
-**Purpose:** Wear OS Data Layer synchronization
+> **Note:** This plugin does not exist yet. It is planned for Milestone D, which is blocked on the event system (Milestone A.5). See [implementation-roadmap.md](implementation-roadmap.md).
+
+**Purpose:** Wear OS Data Layer synchronisation
 
 **Generic Design:** Could be published as `tauri-plugin-wear-sync`
 
@@ -212,6 +214,13 @@ app.listen("alarms:changed", move |event| {
 - ❌ Calculate next triggers
 - ❌ Access SQLite database
 - ❌ Schedule native alarms
+
+---
+
+### 5. Other Plugins
+
+- **time-prefs** (`plugins/time-prefs/`): Reads the device's 12/24-hour time format preference. Used by the UI to display times correctly.
+- **theme-utils** (`plugins/theme-utils/`): Extracts Material You dynamic colours from the Android wallpaper for theming.
 
 ---
 
