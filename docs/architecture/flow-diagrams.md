@@ -152,8 +152,8 @@ sequenceDiagram
     participant Coord as AlarmCoordinator
     participant Tauri as Tauri Event System
     participant UI as TypeScript Listener
-    participant AlarmMgr as alarm-manager Plugin
-    participant WearSync as wear-sync Plugin
+    participant AlarmMgr as Alarm Manager Plugin
+    participant WearSync as Wear Sync Plugin
 
     Coord->>Tauri: emit("alarms:changed", alarms)
     
@@ -211,8 +211,8 @@ sequenceDiagram
     participant Sched as Scheduler
     participant DB as SQLite
     participant Events as Event System
-    participant AlarmMgr as alarm-manager
-    participant WearSync as wear-sync
+    participant AlarmMgr as Alarm Manager
+    participant WearSync as Wear Sync
 
     User->>UI: Taps "Save"
     UI->>Service: saveAlarm(input)
@@ -266,7 +266,7 @@ sequenceDiagram
     participant Rust as Rust Core
     participant DB as SQLite
     participant Events as Event System
-    participant AlarmMgr as alarm-manager
+    participant AlarmMgr as Alarm Manager
 
     User->>Toggle: Swipes OFF
     Toggle->>Rust: invoke('toggle_alarm', {id: 1, enabled: false})
@@ -297,10 +297,10 @@ sequenceDiagram
 sequenceDiagram
     participant User
     participant Watch as Wear OS App
-    participant WearSync as wear-sync Plugin
+    participant WearSync as Wear Sync Plugin
     participant Rust as Rust Core
     participant Events as Event System
-    participant AlarmMgr as alarm-manager
+    participant AlarmMgr as Alarm Manager
 
     User->>Watch: Taps toggle
     Watch->>WearSync: MessageClient.send("/cmd/alarm_set_enabled", {id: 1, enabled: true})
@@ -443,7 +443,7 @@ graph LR
 sequenceDiagram
     participant Rust as Rust Core
     participant Events as Event System
-    participant AlarmMgr as alarm-manager (Desktop)
+    participant AlarmMgr as Alarm Manager Desktop
     participant Scheduler as Local Scheduler
     participant System as OS Notifications
 
@@ -504,9 +504,9 @@ graph TB
 
 ```mermaid
 sequenceDiagram
-    participant Rust as Rust Core (Phone)
+    participant Rust as Rust Core Phone
     participant Events as Event System
-    participant WearSync as wear-sync Plugin
+    participant WearSync as Wear Sync Plugin
     participant DataClient as Wear DataClient
     participant DataLayer as Wear Data Layer
     participant Watch as Wear OS App
@@ -534,9 +534,9 @@ sequenceDiagram
 sequenceDiagram
     participant User
     participant Watch as Wear OS App
-    participant MessageClient as MessageClient (Watch)
-    participant WearSync as wear-sync Plugin (Phone)
-    participant Rust as Rust Core (Phone)
+    participant MessageClient as MessageClient Watch
+    participant WearSync as Wear Sync Plugin Phone
+    participant Rust as Rust Core Phone
     participant Events as Event System
 
     User->>Watch: Long-press alarm → Delete
@@ -747,9 +747,9 @@ sequenceDiagram
     participant Rust as Rust Core
     participant DB as SQLite
     participant Events as Event System
-    participant AlarmMgr as alarm-manager
+    participant AlarmMgr as Alarm Manager
     participant Android as Android APIs
-    participant WearSync as wear-sync
+    participant WearSync as Wear Sync
     participant Watch as Wear OS
 
     User->>UI: Opens app
@@ -802,7 +802,7 @@ sequenceDiagram
     participant UI as Ringing Screen
     participant Rust as Rust Core
     participant Events as Event System
-    participant AlarmMgr as alarm-manager
+    participant AlarmMgr as Alarm Manager
 
     Note over Android: 7:17 AM - Trigger time!
     
@@ -852,11 +852,11 @@ sequenceDiagram
     participant User
     participant Watch as Wear OS App
     participant Messages as MessageClient
-    participant WearSync as wear-sync (Phone)
+    participant WearSync as Wear Sync Phone
     participant Rust as Rust Core
     participant Events as Event System
     participant UI as Phone UI
-    participant AlarmMgr as alarm-manager
+    participant AlarmMgr as Alarm Manager
 
     User->>Watch: Taps toggle switch
     Watch->>Watch: Optimistic UI update
@@ -923,7 +923,7 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant Main as main.rs
-    participant Plugin as Plugin::init()
+    participant Plugin as Plugin init
     participant App as AppHandle
     participant Listener as Event Listener
 
@@ -1032,7 +1032,7 @@ graph LR
     Emit -->|Broadcast immediately| Listeners
     Emit -->|Returns immediately| Command
     
-    Note1[Events don't wait<br/>for listener completion]
+    Note1["Events do not wait<br/>for listener completion"]
     
     style Emit fill:#ffcc99
 ```
@@ -1077,7 +1077,7 @@ sequenceDiagram
     participant Rust as Rust Core
     participant DB as SQLite
     participant Events as Event System
-    participant AlarmMgr as alarm-manager
+    participant AlarmMgr as Alarm Manager
 
     Boot->>Cache: Read cached alarms
     Cache-->>Boot: {id:1, trigger:...}

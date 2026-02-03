@@ -1412,8 +1412,8 @@ sequenceDiagram
     participant User
     participant UI as TypeScript UI
     participant Core as Rust Core
-    participant AlarmMgr as alarm-manager
-    participant WearSync as wear-sync
+    participant AlarmMgr as Alarm Manager
+    participant WearSync as Wear Sync
     participant Watch as Watch App
 
     User->>UI: Tap "Save"
