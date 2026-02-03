@@ -55,6 +55,6 @@ adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* AlarmReceiver:* Al
 
 ## Documentation
 
-- [UI Task Description](docs/UI_TASK.md)
+- [UI Task Description](docs/ui-task.md)
 - [Agent Guidelines](AGENTS.md)
 - [Specification](SPEC.md)

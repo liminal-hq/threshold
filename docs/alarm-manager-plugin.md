@@ -4,7 +4,7 @@
 **Status:** Active — Milestones A-C complete
 **Platforms:** Android (native), Desktop (tokio fallback)
 
-> This document describes the `alarm-manager` Tauri plugin, which bridges the Tauri webview to the native Android `AlarmManager` API. For plugin development patterns, see [Plugin Manifest Pattern](patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md). For the event system that drives this plugin, see [Event Architecture](wear-implementation/event-architecture.md).
+> This document describes the `alarm-manager` Tauri plugin, which bridges the Tauri webview to the native Android `AlarmManager` API. For plugin development patterns, see [Plugin Manifest Pattern](patterns/plugin-manifest-pattern.md). For the event system that drives this plugin, see [Event Architecture](wear-implementation/event-architecture.md).
 
 ## Overview
 

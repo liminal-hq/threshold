@@ -23,15 +23,15 @@ Store the pattern documents in your repository where AI agents can reference the
 threshold/
 ├── docs/
 │   ├── guides/
-│   │   └── AI_AGENT_USAGE_GUIDE.md
+│   │   └── ai-agent-usage-guide.md
 │   ├── patterns/
-│   │   ├── THRESHOLD_PLUGIN_MANIFEST_PATTERN.md
-│   │   ├── PLUGIN_MANIFEST_QUICKSTART.md
-│   │   └── PLUGIN_MANIFEST_PR_CHECKLIST.md
+│   │   ├── plugin-manifest-pattern.md
+│   │   ├── plugin-manifest-quickstart.md
+│   │   └── plugin-manifest-pr-checklist.md
 │   ├── alarm-manager-plugin.md
-│   ├── ANDROID_INTENTS.md
-│   ├── DESKTOP_DEEPLINKS.md
-│   └── UI_TASK.md
+│   ├── android-intents.md
+│   ├── desktop-deeplinks.md
+│   └── ui-task.md
 └── plugins/
     ├── alarm-manager/
     └── predictive-back/
@@ -56,8 +56,8 @@ threshold/
 I need to create a new Tauri plugin called `notification-manager` with Android support.
 
 Please follow the Threshold Android Manifest Injection Pattern documented in:
-- `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md` (for quick reference)
-- `/docs/patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md` (for comprehensive details)
+- `/docs/patterns/plugin-manifest-quickstart.md` (for quick reference)
+- `/docs/patterns/plugin-manifest-pattern.md` (for comprehensive details)
 
 Requirements:
 1. Plugin needs these Android permissions:
@@ -124,7 +124,7 @@ Follow all phases and provide verification results when complete.
 Please review this PR that adds Android manifest injection to the barcode-scanner plugin.
 
 Use the review checklist at:
-`/docs/patterns/PLUGIN_MANIFEST_PR_CHECKLIST.md`
+`/docs/patterns/plugin-manifest-pr-checklist.md`
 
 Files changed in this PR:
 - plugins/barcode-scanner/build.rs
@@ -158,7 +158,7 @@ I'm implementing Android manifest injection in my plugin but getting this error:
 ```
 
 Please help troubleshoot using:
-`/docs/patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md`
+`/docs/patterns/plugin-manifest-pattern.md`
 
 Specifically, check the troubleshooting section and compare my implementation to the examples.
 
@@ -188,7 +188,7 @@ Implement Android manifest injection for my plugin.
 
 **✅ Good:**
 ```
-Implement Android manifest injection following the pattern in `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md`.
+Implement Android manifest injection following the pattern in `/docs/patterns/plugin-manifest-quickstart.md`.
 ```
 
 **Why:** Explicit paths ensure the agent reads your specific documentation, not its general knowledge.
@@ -208,7 +208,7 @@ Add these Android permissions using the manifest injection pattern:
 - CAMERA
 - VIBRATE
 
-Follow the template in section 4 of PLUGIN_MANIFEST_QUICKSTART.md.
+Follow the template in section 4 of plugin-manifest-quickstart.md.
 ```
 
 **Why:** Specific requirements + doc reference = better results.
@@ -245,7 +245,7 @@ Fix my build.rs using the pattern doc.
 
 **✅ Good:**
 ```
-Fix my build.rs by comparing it to the "Template Code" section in THRESHOLD_PLUGIN_MANIFEST_PATTERN.md (line ~450).
+Fix my build.rs by comparing it to the "Template Code" section in plugin-manifest-pattern.md (line ~450).
 
 Focus on:
 - COMMANDS array definition
@@ -266,8 +266,8 @@ Please implement Android manifest injection for the location-tracker plugin.
 
 Read documents in this order:
 1. `/docs/patterns/DOCUMENTATION_OVERVIEW.md` - understand the doc structure
-2. `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md` - get quick template
-3. `/docs/patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md` section 7 - review "Feature-Gated Permissions" pattern (location is sensitive)
+2. `/docs/patterns/plugin-manifest-quickstart.md` - get quick template
+3. `/docs/patterns/plugin-manifest-pattern.md` section 7 - review "Feature-Gated Permissions" pattern (location is sensitive)
 
 Requirements:
 - Base permissions: ACCESS_FINE_LOCATION
@@ -329,7 +329,7 @@ Do not consider the task complete until all verification passes.
 ```markdown
 Create a new Tauri plugin called `{plugin-name}` with Android support.
 
-Follow: `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md`
+Follow: `/docs/patterns/plugin-manifest-quickstart.md`
 
 Android permissions needed:
 - {PERMISSION_1}
@@ -362,7 +362,7 @@ Required Android permissions:
 - {PERMISSION_1}
 - {PERMISSION_2}
 
-Follow the pattern in `/docs/patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md` sections 4-6.
+Follow the pattern in `/docs/patterns/plugin-manifest-pattern.md` sections 4-6.
 
 Create:
 1. build.rs with manifest injection
@@ -382,7 +382,7 @@ Current manifest is at: `plugins/{plugin-name}/android/src/main/AndroidManifest.
 
 Steps:
 1. Extract all `<uses-permission>` from library manifest
-2. Implement injection in build.rs following `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md`
+2. Implement injection in build.rs following `/docs/patterns/plugin-manifest-quickstart.md`
 3. Remove permissions from library manifest (keep components)
 4. Verify with multiple builds (test idempotency)
 
@@ -416,7 +416,7 @@ jobs:
         run: |
           ai-agent run --prompt "
           Review the changed plugin files against the checklist in:
-          /docs/patterns/PLUGIN_MANIFEST_PR_CHECKLIST.md
+          /docs/patterns/plugin-manifest-pr-checklist.md
           
           Report any violations of the pattern.
           " --files plugins/**
@@ -433,7 +433,7 @@ When you discover new patterns or issues:
 1. **Update the main pattern doc**
    ```bash
    # Add to troubleshooting section
-   vim docs/patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md
+   vim docs/patterns/plugin-manifest-pattern.md
    ```
 
 2. **Increment version**
@@ -479,7 +479,7 @@ You'll know the docs are working well with AI agents when:
 **Objective:** Create a new plugin with Android location tracking.
 
 **Phase 1: Initial Setup**
-Prompt: Create plugin structure following `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md`
+Prompt: Create plugin structure following `/docs/patterns/plugin-manifest-quickstart.md`
 
 Commands:
 - start_tracking
@@ -491,7 +491,7 @@ Permissions:
 - ACCESS_BACKGROUND_LOCATION (feature-gated)
 
 **Phase 2: Implement Feature Gate**
-Prompt: Add optional background location feature following the "Feature-Gated Permissions" pattern in `/docs/patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md` section 7.
+Prompt: Add optional background location feature following the "Feature-Gated Permissions" pattern in `/docs/patterns/plugin-manifest-pattern.md` section 7.
 
 **Phase 3: Verify**
 Prompt: Run all verification steps from the quickstart guide and provide:
@@ -500,7 +500,7 @@ Prompt: Run all verification steps from the quickstart guide and provide:
 3. Feature gate test results (with/without feature)
 
 **Phase 4: Self-Review**
-Prompt: Review your implementation against `/docs/patterns/PLUGIN_MANIFEST_PR_CHECKLIST.md` and fix any issues found.
+Prompt: Review your implementation against `/docs/patterns/plugin-manifest-pr-checklist.md` and fix any issues found.
 
 **Phase 5: Documentation**
 Prompt: Create a README section documenting the Android permissions following the template in the pattern doc section on "Permission Rationale Documentation".
@@ -516,7 +516,7 @@ Prompt: Create a README section documenting the Android permissions following th
 
 **Solution:**
 ```markdown
-CRITICAL: You MUST read and follow `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md`.
+CRITICAL: You MUST read and follow `/docs/patterns/plugin-manifest-quickstart.md`.
 
 Before writing any code:
 1. Read the document

@@ -46,7 +46,7 @@ Examples:
 - The application registers the `threshold://` protocol for deep linking.
 - **Use Cases:** External apps can launch Threshold with `threshold://set?time=07:30`
 - **IMPORTANT:** If the app name or identifier changes, ensure this protocol registration is updated in `tauri.conf.json` and relevant documentation.
-- **See Also:** `/docs/DESKTOP_DEEPLINKS.md` for usage examples
+- **See Also:** `/docs/desktop-deeplinks.md` for usage examples
 
 ## Code Organization
 
@@ -67,10 +67,10 @@ When creating or modifying Threshold plugins with Android support:
 
 **Documentation:** All plugin patterns are in `/docs/patterns/`
 
-- **Quick Start:** `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md`
-- **Full Reference:** `/docs/patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md`
-- **PR Checklist:** `/docs/patterns/PLUGIN_MANIFEST_PR_CHECKLIST.md`
-- **AI Agent Guide:** `/docs/guides/AI_AGENT_USAGE_GUIDE.md`
+- **Quick Start:** `/docs/patterns/plugin-manifest-quickstart.md`
+- **Full Reference:** `/docs/patterns/plugin-manifest-pattern.md`
+- **PR Checklist:** `/docs/patterns/plugin-manifest-pr-checklist.md`
+- **AI Agent Guide:** `/docs/guides/ai-agent-usage-guide.md`
 
 **Android Manifest Injection (Required):**
 
@@ -111,7 +111,7 @@ See quickstart guide for complete implementation steps.
 **See Also:**
 
 - `/docs/alarm-manager-plugin.md` - Alarm manager plugin specification
-- `/docs/ANDROID_INTENTS.md` - Android intent handling
+- `/docs/android-intents.md` - Android intent handling
 
 ## UI Project Structure
 
@@ -124,7 +124,7 @@ Follow this directory structure for React/Ionic applications:
 - **`src/theme/`**: Global styles, Ionic variables, and theme definitions.
 - **`src/context/`**: React Context providers.
 
-**See Also:** `/docs/UI_TASK.md` for UI implementation details
+**See Also:** `/docs/ui-task.md` for UI implementation details
 
 ## Tauri v2
 
