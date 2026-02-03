@@ -19,6 +19,7 @@ interface ImportedAlarm {
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
 	private router: any = null;
+	private pendingFiredAlarm: { id: number; firedAt: number } | null = null;
 
 	public setRouter(router: any) {
 		this.router = router;
@@ -64,8 +65,10 @@ export class AlarmManagerService {
 
 				const ringingAlarmId = this.getRingingAlarmIdFromPath();
 				if (ringingAlarmId !== null) {
+					const firedAt = Date.now();
+					this.pendingFiredAlarm = { id: ringingAlarmId, firedAt };
 					console.log(`[AlarmManager] Ringing route detected on init. Marking alarm ${ringingAlarmId} as fired.`);
-					await this.markAlarmFired(ringingAlarmId, Date.now());
+					await this.markAlarmFired(ringingAlarmId, firedAt);
 				}
 
 				console.log('[AlarmManager] Rescheduling all alarms...');
@@ -258,18 +261,29 @@ export class AlarmManagerService {
 		const alarms = await databaseService.getAllAlarms();
 		for (const alarm of alarms) {
 			if (alarm.enabled && alarm.nextTrigger) {
+				const pendingFired =
+					this.pendingFiredAlarm && alarm.id === this.pendingFiredAlarm.id
+						? this.pendingFiredAlarm
+						: null;
+				const rescheduleAlarm =
+					pendingFired && !alarm.lastFiredAt
+						? { ...alarm, lastFiredAt: pendingFired.firedAt }
+						: alarm;
+
 				// If trigger is in the future, schedule it
 				if (alarm.nextTrigger > Date.now()) {
-					await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger);
+					await this.scheduleNativeAlarm(rescheduleAlarm.id, rescheduleAlarm.nextTrigger);
 				} else {
 					// Missed alarm? For now, maybe just calc next trigger
 					console.log(
 						`[AlarmManager] Alarm ${alarm.id} missed trigger at ${new Date(alarm.nextTrigger).toLocaleString()}. Rescheduling next.`,
 					);
-					this.saveAndSchedule(alarm);
+					this.saveAndSchedule(rescheduleAlarm);
 				}
 			}
 		}
+
+		this.pendingFiredAlarm = null;
 	}
 
 	async loadAlarms(): Promise<Alarm[]> {

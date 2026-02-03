@@ -58,6 +58,10 @@ export class DatabaseService {
 				console.log('Migrating database: adding last fired column');
 				await this.db!.execute('ALTER TABLE alarms ADD COLUMN last_fired_at INTEGER');
 			}
+
+			console.log(
+				`[DatabaseService] Migration check complete. last_fired_at present=${hasLastFiredAt}`,
+			);
 		} catch (e) {
 			console.error('Migration failed', e);
 		}
