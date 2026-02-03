@@ -17,6 +17,8 @@
 		"core:window:default",
 		"core:window:allow-start-dragging",
 		"log:default",
+		"fs:default",
+		"fs:allow-write-text-file",
 		"core:window:allow-show",
 		"core:window:allow-set-focus",
 		"core:window:allow-maximize",
