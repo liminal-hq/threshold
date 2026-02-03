@@ -465,7 +465,7 @@ class BootReceiver : BroadcastReceiver() {
 | **Alarm Scheduling** | AlarmManager.setAlarmClock() | notify-rust (no wake) | N/A (syncs from phone) |
 | **Boot Recovery** | BootReceiver + SharedPrefs | N/A | N/A |
 | **Sound Picker** | Native RingtonePickerActivity | File picker | N/A |
-| **Ringing UI** | Full-screen Activity | Notification | Watch vibration + complication |
+| **Ringing UI** | Full-screen Activity + notification | Dedicated Ring window + notification | Watch vibration + complication |
 | **Wake from Sleep** | ✅ Guaranteed | ❌ Not reliable | ✅ Via phone |
 | **Data Sync** | Local SQLite | Local SQLite | Wear Data Layer from phone |
 
