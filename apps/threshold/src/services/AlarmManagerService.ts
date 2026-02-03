@@ -407,6 +407,8 @@ export class AlarmManagerService {
 	}
 
 	private async handleAlarmRing(id: number) {
+		const firedAt = Date.now();
+
 		// 1. Send Notification
 		const isMobile = PlatformUtils.isMobile();
 		sendNotification({
@@ -471,7 +473,7 @@ export class AlarmManagerService {
 		const alarms = await databaseService.getAllAlarms();
 		const alarm = alarms.find((a) => a.id === id);
 		if (alarm) {
-			await this.saveAndSchedule(alarm);
+			await this.saveAndSchedule({ ...alarm, lastFiredAt: firedAt });
 		}
 	}
 
