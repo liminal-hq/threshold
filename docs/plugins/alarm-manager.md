@@ -4,7 +4,7 @@
 **Status:** Active — Milestones A-C complete
 **Platforms:** Android (native), Desktop (tokio fallback)
 
-> This document describes the `alarm-manager` Tauri plugin, which bridges the Tauri webview to the native Android `AlarmManager` API. For plugin development patterns, see [Plugin Manifest Pattern](plugin-manifest-pattern.md). For the event system that drives this plugin, see [Event Architecture](../wear-implementation/event-architecture.md).
+> This document describes the `alarm-manager` Tauri plugin, which bridges the Tauri webview to the native Android `AlarmManager` API. For plugin development patterns, see [Plugin Manifest Pattern](plugin-manifest-pattern.md). For the event system that drives this plugin, see [Event Architecture](../architecture/event-architecture.md).
 
 ## Overview
 
@@ -120,7 +120,7 @@ The Rust core (`AlarmCoordinator`) is the single owner of scheduling. The plugin
     *   Plugin receives event → calls Kotlin `AlarmUtils.cancelAlarm`.
     *   Kotlin: Cancels `PendingIntent` and removes entries from SharedPreferences.
 
-> **Note:** The event system that drives these flows is defined in [event-architecture.md](../wear-implementation/event-architecture.md). Once the Level 3 Granular Event System (issue #112) is implemented, this plugin will subscribe to `alarm:scheduled` and `alarm:cancelled` events with full revision tracking.
+> **Note:** The event system that drives these flows is defined in [event-architecture.md](../architecture/event-architecture.md). Once the Level 3 Granular Event System (issue #112) is implemented, this plugin will subscribe to `alarm:scheduled` and `alarm:cancelled` events with full revision tracking.
 
 ## Ringing Flows
 

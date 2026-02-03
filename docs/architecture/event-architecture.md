@@ -1475,9 +1475,9 @@ sequenceDiagram
 
 ## Related Documents
 
-- `docs/wear-implementation/implementation-roadmap.md` - Build plan
-- `docs/wear-implementation/data-architecture.md` - Data models
-- `docs/wear-implementation/getting-started.md` - Setup guide
+- `docs/architecture/implementation-roadmap.md` - Build plan
+- `docs/architecture/data-architecture.md` - Data models
+- `docs/architecture/getting-started.md` - Setup guide
 - `docs/wear-implementation/ui-mockups.md` - Watch app designs
 
 ---

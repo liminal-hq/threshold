@@ -22,6 +22,13 @@ Store the pattern documents in your repository where AI agents can reference the
 ```
 threshold/
 ├── docs/
+│   ├── architecture/
+│   │   ├── event-architecture.md
+│   │   ├── architecture.md
+│   │   ├── data-architecture.md
+│   │   ├── flow-diagrams.md
+│   │   ├── getting-started.md
+│   │   └── implementation-roadmap.md
 │   ├── plugins/
 │   │   ├── alarm-manager.md
 │   │   ├── time-prefs.md
@@ -40,7 +47,7 @@ threshold/
 │   ├── infrastructure/
 │   │   └── ghcr-setup.md
 │   ├── wear-implementation/
-│   │   └── ...
+│   │   └── ui-mockups.md
 │   └── ai-agent-usage-guide.md
 └── plugins/
     ├── alarm-manager/

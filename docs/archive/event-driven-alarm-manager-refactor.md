@@ -1,6 +1,6 @@
 > **⚠️ DEPRECATED - January 2026**  
 > This document describes an older design that has been superseded.  
-> See [event-architecture.md](../wear-implementation/event-architecture.md) for current architecture.
+> See [event-architecture.md](../architecture/event-architecture.md) for current architecture.
 
 ---
 

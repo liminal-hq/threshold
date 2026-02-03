@@ -1,6 +1,6 @@
 > **⚠️ DEPRECATED - January 2026**  
 > This document describes the old TypeScript scheduler that has been replaced.  
-> Scheduler logic is now in Rust. See [event-architecture.md](../wear-implementation/event-architecture.md) for current architecture.
+> Scheduler logic is now in Rust. See [event-architecture.md](../architecture/event-architecture.md) for current architecture.
 
 ---
 

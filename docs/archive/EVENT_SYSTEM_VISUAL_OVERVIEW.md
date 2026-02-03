@@ -1,5 +1,5 @@
 > **⚠️ DEPRECATED - February 2026**  
-> Visual diagrams have been merged into [event-architecture.md](../wear-implementation/event-architecture.md).  
+> Visual diagrams have been merged into [event-architecture.md](../architecture/event-architecture.md).  
 > See the "Visual Reference" section in that document.
 
 ---
