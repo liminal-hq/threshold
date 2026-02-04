@@ -84,6 +84,9 @@ function handleDeepLink(url: string) {
         }
         
         console.log('Deep link parsed:', { url, path });
+        if (path.startsWith('/ringing/')) {
+            console.log('[DeepLink] Ringing route detected:', path);
+        }
         
         // Navigate using router
         if (routerInstance) {

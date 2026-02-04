@@ -459,6 +459,7 @@ export class AlarmManagerService {
 
 	private async handleAlarmRing(id: number) {
 		const firedAt = Date.now();
+		console.log(`[AlarmManager] Alarm ring received for ${id} at ${new Date(firedAt).toLocaleString()}`);
 
 		// 1. Send Notification
 		const isMobile = PlatformUtils.isMobile();
