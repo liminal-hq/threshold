@@ -11,6 +11,7 @@ import '../theme/ringing.css';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { ROUTES, SPECIAL_ALARM_IDS } from '../constants';
 import { SettingsService } from '../services/SettingsService';
+import { appManagementService } from '../services/AppManagementService';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
@@ -46,10 +47,10 @@ const Ringing: React.FC = () => {
 					console.log('[Ringing] Initializing AlarmManagerService...');
 					await alarmManagerService.init();
 				}
-				
+
 				const alarms = await alarmManagerService.loadAlarms();
 				const found = alarms.find((a) => a.id === parseInt(id));
-				
+
 				if (found) {
 					setAlarm((prev) => {
 						if (!prev || prev.id !== found.id || prev.soundUri !== found.soundUri) {
@@ -79,11 +80,11 @@ const Ringing: React.FC = () => {
 
 	/**
 	 * Handles alarm dismissal with platform-specific behaviour.
-	 * 
+	 *
 	 * - Test Alarm (ID 999): Navigates back to previous screen
 	 * - Mobile (iOS/Android): Minimizes app to background, preserving state
 	 * - Desktop: Closes the ringing window
-	 * 
+	 *
 	 * @remarks
 	 * On mobile, we minimize instead of navigate to provide better UX:
 	 * the app disappears immediately without showing the home screen transition.
@@ -116,9 +117,9 @@ const Ringing: React.FC = () => {
 
 		// On Mobile: Minimize the app so it vanishes but doesn't close
 		try {
-			await getCurrentWindow().minimize();
+			await appManagementService.minimizeApp();
 			// Small delay to ensure minimize completes before navigation
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 			// Navigate to home in background so next launch is clean
 			navigate({ to: ROUTES.HOME, replace: true });
 		} catch (e) {
@@ -138,10 +139,13 @@ const Ringing: React.FC = () => {
 	useEffect(() => {
 		if (silenceAfter > 0) {
 			console.log(`Setting silence timer for ${silenceAfter} minutes`);
-			const timer = setTimeout(() => {
-				console.log(`Silence limit reached (${silenceAfter}m). Dismissing alarm.`);
-				handleDismiss();
-			}, silenceAfter * 60 * 1000);
+			const timer = setTimeout(
+				() => {
+					console.log(`Silence limit reached (${silenceAfter}m). Dismissing alarm.`);
+					handleDismiss();
+				},
+				silenceAfter * 60 * 1000,
+			);
 			return () => clearTimeout(timer);
 		} else {
 			console.log('Silence timer disabled (Never or 0)');
@@ -163,23 +167,23 @@ const Ringing: React.FC = () => {
 			if (isCleanedUp) return;
 			console.log(`[Ringing] Starting Synth Fallback (Reason: ${reason})`);
 			const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-			
+
 			const playBeep = () => {
 				if (isCleanedUp) return;
 				if (audioCtx.state === 'suspended') audioCtx.resume();
 				const osc = audioCtx.createOscillator();
 				const gain = audioCtx.createGain();
-				
+
 				osc.type = 'square';
 				osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
-				
+
 				// Increased volume for synth fallback
 				gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
 				gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
-				
+
 				osc.connect(gain);
 				gain.connect(audioCtx.destination);
-				
+
 				osc.start();
 				osc.stop(audioCtx.currentTime + 0.5);
 			};
@@ -196,56 +200,63 @@ const Ringing: React.FC = () => {
 
 			try {
 				let assetUrl = alarm.soundUri;
-				
+
 				// Better heuristic: if it looks like an absolute path and isn't a likely web-root relative path
 				const isAbsolutePath = alarm.soundUri.startsWith('/') || alarm.soundUri.includes(':\\');
-				const isWebRootPath = alarm.soundUri.startsWith('/alarms/') || alarm.soundUri.startsWith('/static/');
-				
+				const isWebRootPath =
+					alarm.soundUri.startsWith('/alarms/') || alarm.soundUri.startsWith('/static/');
+
 				// IF the file is actually inside our public folder, use the relative path instead of asset protocol
 				// This is much safer and avoids "URL can't be shown" security errors
 				if (isAbsolutePath && alarm.soundUri.includes('/public/alarms/')) {
 					const fileName = alarm.soundUri.split('/public/alarms/').pop();
 					assetUrl = `/alarms/${fileName}`;
-					console.log('[Ringing] Detected bundled asset from absolute path. Using relative URL:', assetUrl);
+					console.log(
+						'[Ringing] Detected bundled asset from absolute path. Using relative URL:',
+						assetUrl,
+					);
 				} else if (isAbsolutePath && !isWebRootPath) {
 					// Truly external file
 					assetUrl = convertFileSrc(alarm.soundUri);
 					console.log('[Ringing] External file detected. Using asset protocol:', assetUrl);
 				}
-				
+
 				console.log('[Ringing] Final Audio URL:', assetUrl);
 
 				audio = new Audio(assetUrl);
 				audio.loop = true;
-				
+
 				audio.addEventListener('error', (e: any) => {
 					if (isCleanedUp) return;
 					const error = audio?.error;
 					console.error('[Ringing] Audio element error:', {
 						code: error?.code,
 						message: error?.message,
-						event: e
+						event: e,
 					});
 					setAudioError(`Code ${error?.code}: ${error?.message || 'Load failed'}`);
 					if (!synthInterval) startSynthFallback('Audio error event');
 				});
 
-				await audio.play().then(() => {
-					console.log('[Ringing] Audio playback started successfully');
-					setIsAudioUnlocked(true);
-				}).catch(e => {
-					if (isCleanedUp) return;
-					
-					// Ignore abort errors which usually mean the effect was cleaned up
-					if (e.name === 'AbortError') {
-						console.log('[Ringing] Audio playback aborted during load (cleanup)');
-						return;
-					}
+				await audio
+					.play()
+					.then(() => {
+						console.log('[Ringing] Audio playback started successfully');
+						setIsAudioUnlocked(true);
+					})
+					.catch((e) => {
+						if (isCleanedUp) return;
 
-					console.warn('[Ringing] Playback blocked or failed:', e.name, e.message);
-					setAudioError(e.message);
-					if (!synthInterval) startSynthFallback(`Playback fail: ${e.name}`);
-				});
+						// Ignore abort errors which usually mean the effect was cleaned up
+						if (e.name === 'AbortError') {
+							console.log('[Ringing] Audio playback aborted during load (cleanup)');
+							return;
+						}
+
+						console.warn('[Ringing] Playback blocked or failed:', e.name, e.message);
+						setAudioError(e.message);
+						if (!synthInterval) startSynthFallback(`Playback fail: ${e.name}`);
+					});
 			} catch (e: any) {
 				if (isCleanedUp) return;
 				console.error('[Ringing] Audio initialization failed:', e);
@@ -288,7 +299,7 @@ const Ringing: React.FC = () => {
 
 		// Save original background
 		const originalBg = document.body.style.backgroundColor;
-		
+
 		// Set transparent background for the window
 		document.body.style.backgroundColor = 'transparent';
 		document.documentElement.style.backgroundColor = 'transparent';
@@ -303,79 +314,84 @@ const Ringing: React.FC = () => {
 	return (
 		// ThemeProvider is already provided by App.tsx -> ThemeContextProvider
 		// We just use the global theme context which correctly handles System/Material You/Built-in logic
-			<Box 
-				className={`ringing-page ${PlatformUtils.isDesktop() ? 'desktop-mode' : ''}`}
-				onClick={() => setIsAudioUnlocked(true)}
-				sx={{ 
-					height: '100%', 
-					display: 'flex', 
-					flexDirection: 'column', 
-					userSelect: 'none' // Disable text selection
-				}}
-			>
-				<Box sx={{ flexGrow: 1 }}>
-					<div 
-						className="ringing-container" 
-						data-tauri-drag-region="true"
+		<Box
+			className={`ringing-page ${PlatformUtils.isDesktop() ? 'desktop-mode' : ''}`}
+			onClick={() => setIsAudioUnlocked(true)}
+			sx={{
+				height: '100%',
+				display: 'flex',
+				flexDirection: 'column',
+				userSelect: 'none', // Disable text selection
+			}}
+		>
+			<Box sx={{ flexGrow: 1 }}>
+				<div className="ringing-container" data-tauri-drag-region="true">
+					<Typography
+						variant="h1"
+						className="ringing-time"
+						sx={{ fontSize: '5rem', fontWeight: 800 }}
 					>
-						<Typography variant="h1" className="ringing-time" sx={{ fontSize: '5rem', fontWeight: 800 }}>{timeStr}</Typography>
-						<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>{alarm?.label}</Typography>
+						{timeStr}
+					</Typography>
+					<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>
+						{alarm?.label}
+					</Typography>
 
-						<div className="ringing-actions">
+					<div className="ringing-actions">
+						<Button
+							variant="contained"
+							fullWidth
+							size="large"
+							sx={{
+								bgcolor: 'secondary.contrastText', // Matches the clock text colour (White in Light, Dark in Dark)
+								color: 'secondary.main', // Matches the page background colour
+								borderRadius: '50px',
+								fontWeight: 'bold',
+								height: '56px',
+								'&:hover': {
+									bgcolor: 'secondary.contrastText',
+									filter: 'brightness(0.9)',
+								},
+								textTransform: 'none',
+								fontSize: '1.2rem',
+								boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+							}}
+							onClick={handleDismiss}
+						>
+							Stop Alarm
+						</Button>
+						<Button
+							variant="outlined"
+							fullWidth
+							size="large"
+							sx={{
+								color: 'inherit', // Inherit from theme instead of hardcoded white
+								borderColor: 'currentColor',
+								borderRadius: '50px',
+								fontWeight: '600',
+								mt: 1,
+								'&:hover': { borderColor: 'currentColor', bgcolor: 'rgba(255,255,255,0.1)' },
+								textTransform: 'none',
+							}}
+							onClick={handleSnooze}
+						>
+							Snooze ({snoozeLength}m)
+						</Button>
+
+						{audioError && !isAudioUnlocked && (
 							<Button
-								variant="contained"
+								variant="text"
 								fullWidth
-								size="large"
-								sx={{
-									bgcolor: 'secondary.contrastText', // Matches the clock text colour (White in Light, Dark in Dark)
-									color: 'secondary.main', // Matches the page background colour
-									borderRadius: '50px',
-									fontWeight: 'bold',
-									height: '56px',
-									'&:hover': {
-										bgcolor: 'secondary.contrastText',
-										filter: 'brightness(0.9)'
-									},
-									textTransform: 'none',
-									fontSize: '1.2rem',
-									boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
-								}}
-								onClick={handleDismiss}
+								onClick={() => setIsAudioUnlocked(true)}
+								sx={{ mt: 2, color: 'rgba(255,255,255,0.8)', textDecoration: 'underline' }}
 							>
-								Stop Alarm
+								Click to unlock sound
 							</Button>
-							<Button
-								variant="outlined"
-								fullWidth
-								size="large"
-								sx={{
-									color: 'inherit', // Inherit from theme instead of hardcoded white
-									borderColor: 'currentColor',
-									borderRadius: '50px',
-									fontWeight: '600',
-									mt: 1,
-									'&:hover': { borderColor: 'currentColor', bgcolor: 'rgba(255,255,255,0.1)' },
-									textTransform: 'none'
-								}}
-								onClick={handleSnooze}
-							>
-								Snooze ({snoozeLength}m)
-							</Button>
-							
-							{audioError && !isAudioUnlocked && (
-								<Button
-									variant="text"
-									fullWidth
-									onClick={() => setIsAudioUnlocked(true)}
-									sx={{ mt: 2, color: 'rgba(255,255,255,0.8)', textDecoration: 'underline' }}
-								>
-									Click to unlock sound
-								</Button>
-							)}
-						</div>
+						)}
 					</div>
-				</Box>
+				</div>
 			</Box>
+		</Box>
 	);
 };
 

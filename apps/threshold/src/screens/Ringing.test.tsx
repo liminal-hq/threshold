@@ -8,6 +8,7 @@ import Ringing from './Ringing';
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
 import { alarmManagerService } from '../services/AlarmManagerService';
+import { appManagementService } from '../services/AppManagementService';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SPECIAL_ALARM_IDS, ROUTES } from '../constants';
 import * as tauriWindow from '@tauri-apps/api/window';
@@ -21,6 +22,12 @@ vi.mock('../services/AlarmManagerService', () => ({
 		loadAlarms: vi.fn(),
 		stopRinging: vi.fn(),
 		snoozeAlarm: vi.fn(),
+	},
+}));
+
+vi.mock('../services/AppManagementService', () => ({
+	appManagementService: {
+		minimizeApp: vi.fn(),
 	},
 }));
 
@@ -162,7 +169,7 @@ describe('Ringing Screen Logic', () => {
 		// Assert
 		await waitFor(() => {
 			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
-			expect(mockWindow.minimize).toHaveBeenCalled();
+			expect(appManagementService.minimizeApp).toHaveBeenCalled();
 		});
 		expect(mockWindow.close).not.toHaveBeenCalled();
 
