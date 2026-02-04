@@ -7,6 +7,7 @@ Specifications and development patterns for Threshold's custom Tauri plugins.
 | Plugin | Description | Platforms |
 |--------|-------------|-----------|
 | [alarm-manager](alarm-manager.md) | Native Android `AlarmManager` integration | Android, Desktop |
+| [app-management](app-management.md) | Mobile lifecycle management (minimise app) | Android, iOS (stubbed) |
 | [time-prefs](time-prefs.md) | System time format preferences | Android, iOS, Desktop |
 | [wear-sync](wear-sync.md) | Wear OS Data Layer synchronisation | Android (Wear OS) |
 
