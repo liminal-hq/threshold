@@ -1134,7 +1134,7 @@ Study these official plugins for real-world patterns:
 - Tag issues with `plugin-development` and `android`
 
 **Found a bug in this document?**
-- Submit a PR to update `THRESHOLD_PLUGIN_MANIFEST_PATTERN.md`
+- Submit a PR to update `plugin-manifest-pattern.md`
 
 **Need help implementing?**
 - Review the alarm-manager reference implementation

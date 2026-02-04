@@ -44,6 +44,27 @@ jobs:
       # - name: Lint Code
       #   run: pnpm format:check
 
+  lint-mermaid:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint Mermaid diagrams
+        run: pnpm run lint:mermaid
+
   test-rust:
     runs-on: ubuntu-24.04
     steps:
@@ -103,7 +124,7 @@ jobs:
   report:
     runs-on: ubuntu-24.04
     if: always()
-    needs: [test-js, test-rust]
+    needs: [test-js, test-rust, lint-mermaid]
     permissions:
       contents: read
       checks: write

@@ -1,12 +1,11 @@
-import { databaseService } from './DatabaseService';
-import { APP_NAME, ROUTES } from '../constants';
+import { APP_NAME } from '../constants';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { sendNotification, registerActionTypes, onAction } from '@tauri-apps/plugin-notification';
-import { Alarm, AlarmMode, DayOfWeek } from '@threshold/core/types';
-import { calculateNextTrigger as calcTrigger } from '@threshold/core/scheduler';
-import { SettingsService } from './SettingsService';
+import { Alarm } from '@threshold/core/types';
+import { AlarmInput, AlarmRecord, AlarmMode } from '../types/alarm';
+import { AlarmService } from './AlarmService';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
 interface ImportedAlarm {
@@ -19,7 +18,7 @@ interface ImportedAlarm {
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
 	private router: any = null;
-	private pendingFiredAlarm: { id: number; firedAt: number } | null = null;
+	private scheduledIds = new Set<number>();
 
 	public setRouter(router: any) {
 		this.router = router;
@@ -35,27 +34,37 @@ export class AlarmManagerService {
 		this.initPromise = (async () => {
 			try {
 				console.log('[AlarmManager] Starting service initialization...');
-				await databaseService.init();
-				console.log('[AlarmManager] Database service ready.');
 
 				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
 				// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
 				await listen<{ id: number }>('alarm-ring', (event) => {
 					console.log(`========== FRONTEND EVENT RECEIVED: alarm-ring ==========`);
 					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
-					console.log(`[AlarmManager] Event details:`, event);
 					this.handleAlarmRing(event.payload.id);
-					console.log(`========== FRONTEND EVENT HANDLER CALLED ==========`);
 				});
 				console.log('[AlarmManager] Event listener 1/3 registered.');
 
-				console.log('[AlarmManager] Event listener 1/3 registered.');
+				// Listen for alarms ringing from the Android Plugin (emitted via trigger())
+				try {
+					await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
+						console.log(
+							`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`,
+						);
+						this.handleAlarmRing(event.payload.id);
+					});
+					console.log('[AlarmManager] Event listener 2/3 registered.');
+				} catch (e) {
+					console.warn(
+						'[AlarmManager] Failed to register plugin event listener (may not be available on this platform):',
+						e,
+					);
+				}
 
-				console.log('[AlarmManager] Setting up event listener 3/3: global-alarms-changed...');
-				// Listen for global alarm changes (from other windows)
-				await listen('global-alarms-changed', () => {
-					console.log('[AlarmManager] Received global-alarms-changed event');
-					this.notifyListeners();
+				console.log('[AlarmManager] Setting up event listener 3/3: alarms:changed...');
+				// Listen for global alarm changes (from Rust/UI)
+				await listen<AlarmRecord[]>('alarms:changed', (event) => {
+					console.log('[AlarmManager] Received alarms:changed event', event.payload?.length);
+					this.syncNativeAlarms(event.payload);
 				});
 				console.log('[AlarmManager] Event listener 3/3 registered.');
 
@@ -63,16 +72,10 @@ export class AlarmManagerService {
 				await this.checkImports();
 				console.log('[AlarmManager] Native imports check complete.');
 
-				const ringingAlarmId = this.getRingingAlarmIdFromPath();
-				if (ringingAlarmId !== null) {
-					const firedAt = Date.now();
-					this.pendingFiredAlarm = { id: ringingAlarmId, firedAt };
-					console.log(`[AlarmManager] Ringing route detected on init. Marking alarm ${ringingAlarmId} as fired.`);
-					await this.markAlarmFired(ringingAlarmId, firedAt);
-				}
-
 				console.log('[AlarmManager] Rescheduling all alarms...');
-				await this.rescheduleAll();
+				// Initial sync
+				const alarms = await AlarmService.getAll();
+				await this.syncNativeAlarms(alarms);
 				console.log('[AlarmManager] Reschedule complete.');
 
 				console.log('[AlarmManager] Service initialization complete.');
@@ -115,81 +118,30 @@ export class AlarmManagerService {
 									},
 								],
 							},
-							{
-								id: 'snooze_reminder',
-								actions: [
-									{
-										id: 'clear_snooze',
-										title: 'Clear Snooze',
-										destructive: true,
-										foreground: false,
-									},
-									{
-										id: 'open_app',
-										title: 'Open App',
-										foreground: true,
-									},
-									{
-										id: 'snooze_again',
-										title: 'Snooze Again',
-										foreground: false,
-									},
-								],
-							},
 						]);
 
-						await onAction(async (notification) => {
+						await onAction((notification) => {
 							console.log('[AlarmManager] Action performed:', notification);
 
 							const actionTypeId = (notification as any).actionTypeId;
+							if (actionTypeId !== 'alarm_trigger') {
+								console.log(
+									'[AlarmManager] Ignoring action from different category:',
+									actionTypeId,
+								);
+								return;
+							}
+
 							const actionId = (notification as any).actionId;
-							const alarmId = (notification as any).id ? parseInt((notification as any).id) : null;
 
-							// Handle alarm_trigger actions
-							if (actionTypeId === 'alarm_trigger') {
-								if (actionId === 'dismiss') {
-									console.log('[AlarmManager] Action: Dismiss');
-									this.stopRinging();
-								} else if (actionId === 'snooze') {
-									console.log('[AlarmManager] Action: Snooze');
-									this.stopRinging();
-								}
-								return;
+							if (actionId === 'dismiss') {
+								console.log('[AlarmManager] Action: Dismiss');
+								this.stopRinging();
+							} else if (actionId === 'snooze') {
+								console.log('[AlarmManager] Action: Snooze');
+								// Placeholder: Treat snooze as cancel for now until full snooze logic is reviewed
+								this.stopRinging();
 							}
-
-							// Handle snooze_reminder actions
-							if (actionTypeId === 'snooze_reminder') {
-								if (!alarmId) {
-									console.error('[AlarmManager] Snooze action missing alarm ID');
-									return;
-								}
-
-								if (actionId === 'clear_snooze') {
-									console.log('[AlarmManager] Action: Clear Snooze for alarm', alarmId);
-									// Cancel the snoozed alarm
-									await this.cancelNativeAlarm(alarmId);
-									// Reschedule the alarm to its normal next trigger
-									const alarm = await this.getAlarm(alarmId);
-									if (alarm) {
-										await this.saveAndSchedule(alarm);
-									}
-								} else if (actionId === 'open_app') {
-									console.log('[AlarmManager] Action: Open App');
-									// Navigate to home screen (app will come to foreground automatically)
-									if (this.router) {
-										this.router.navigate({ to: ROUTES.HOME });
-									}
-								} else if (actionId === 'snooze_again') {
-									console.log('[AlarmManager] Action: Snooze Again for alarm', alarmId);
-									// Get current snooze duration from settings
-									const snoozeLength = SettingsService.getSnoozeLength();
-									// Snooze again
-									await this.snoozeAlarm(alarmId, snoozeLength);
-								}
-								return;
-							}
-
-							console.log('[AlarmManager] Ignoring action from unknown category:', actionTypeId);
 						});
 						console.log('[AlarmManager] Notification actions registered.');
 					} catch (e) {
@@ -234,75 +186,36 @@ export class AlarmManagerService {
 		}
 	}
 
-	private getRingingAlarmIdFromPath(): number | null {
-		const match = window.location.pathname.match(/^\/ringing\/(\d+)/);
-		if (!match) return null;
-		const parsed = Number.parseInt(match[1], 10);
-		return Number.isNaN(parsed) ? null : parsed;
-	}
+	/**
+	 * Sync native alarms with the current state from Rust
+	 */
+	private async syncNativeAlarms(alarms: AlarmRecord[]) {
+		const currentIds = new Set<number>();
 
-	private async markAlarmFired(id: number, firedAt: number) {
-		const alarm = await this.getAlarm(id);
-		if (!alarm) {
-			console.error(`[AlarmManager] Failed to mark fired: Alarm ${id} not found`);
-			return;
-		}
-
-		console.log(`[AlarmManager] Marking alarm ${id} as fired at ${new Date(firedAt).toLocaleString()}`);
-		await databaseService.saveAlarm({
-			...alarm,
-			lastFiredAt: firedAt,
-		});
-	}
-
-	// Re-hydrate all alarms on startup (send to Rust scheduler)
-	async rescheduleAll() {
-		console.log('[AlarmManager] Rescheduling all alarms...');
-		const alarms = await databaseService.getAllAlarms();
 		for (const alarm of alarms) {
-			if (alarm.enabled && alarm.nextTrigger) {
-				const pendingFired =
-					this.pendingFiredAlarm && alarm.id === this.pendingFiredAlarm.id
-						? this.pendingFiredAlarm
-						: null;
-				const rescheduleAlarm =
-					pendingFired && !alarm.lastFiredAt
-						? { ...alarm, lastFiredAt: pendingFired.firedAt }
-						: alarm;
+			currentIds.add(alarm.id);
 
-				// If trigger is in the future, schedule it
-				if (alarm.nextTrigger > Date.now()) {
-					const nextTrigger = rescheduleAlarm.nextTrigger ?? alarm.nextTrigger;
-					await this.scheduleNativeAlarm(rescheduleAlarm.id, nextTrigger);
-				} else {
-					// Missed alarm? For now, maybe just calc next trigger
-					console.log(
-						`[AlarmManager] Alarm ${alarm.id} missed trigger at ${new Date(alarm.nextTrigger).toLocaleString()}. Rescheduling next.`,
-					);
-					const missedAlarm =
-						rescheduleAlarm.mode === AlarmMode.RandomWindow &&
-						rescheduleAlarm.nextTrigger &&
-						!rescheduleAlarm.lastFiredAt
-							? { ...rescheduleAlarm, lastFiredAt: rescheduleAlarm.nextTrigger }
-							: rescheduleAlarm;
-					this.saveAndSchedule(missedAlarm);
+			// If enabled and has future trigger, schedule it
+			if (alarm.enabled && alarm.nextTrigger && alarm.nextTrigger > Date.now()) {
+				await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger, alarm.soundUri);
+				this.scheduledIds.add(alarm.id);
+			} else {
+				// If disabled or expired, ensure it's not scheduled
+				// (Optimisation: only cancel if we think it's scheduled)
+				if (this.scheduledIds.has(alarm.id)) {
+					await this.cancelNativeAlarm(alarm.id);
+					this.scheduledIds.delete(alarm.id);
 				}
 			}
 		}
 
-		this.pendingFiredAlarm = null;
-	}
-
-	async loadAlarms(): Promise<Alarm[]> {
-		return await databaseService.getAllAlarms();
-	}
-
-	/**
-	 * Gets a single alarm by ID
-	 */
-	async getAlarm(id: number): Promise<Alarm | undefined> {
-		const alarms = await databaseService.getAllAlarms();
-		return alarms.find((a) => a.id === id);
+		// Identify deleted alarms (present in scheduledIds but not in current alarms)
+		const toCancel = [...this.scheduledIds].filter((id) => !currentIds.has(id));
+		for (const id of toCancel) {
+			console.log(`[AlarmManager] Alarm ${id} removed, cancelling native schedule.`);
+			await this.cancelNativeAlarm(id);
+			this.scheduledIds.delete(id);
+		}
 	}
 
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
@@ -316,7 +229,7 @@ export class AlarmManagerService {
 				console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
 				for (const imp of imports) {
 					// Deduplication Check
-					const allAlarms = await databaseService.getAllAlarms();
+					const allAlarms = await AlarmService.getAll();
 					const timeStr = `${imp.hour.toString().padStart(2, '0')}:${imp.minute.toString().padStart(2, '0')}`;
 
 					const duplicate = allAlarms.find(
@@ -331,7 +244,7 @@ export class AlarmManagerService {
 					// Cancel the 'temporary' native alarm created by the Intent
 					await this.cancelNativeAlarm(imp.id);
 
-					const newAlarm: Omit<Alarm, 'id'> & { id?: number } = {
+					const newAlarm: AlarmInput = {
 						label: imp.label,
 						mode: AlarmMode.Fixed,
 						fixedTime: timeStr,
@@ -363,87 +276,20 @@ export class AlarmManagerService {
 	}
 
 	async toggleAlarm(alarm: Alarm, enabled: boolean) {
-		const updatedAlarm = { ...alarm, enabled };
-		if (enabled) {
-			this.rescheduleAlarm(updatedAlarm);
-		} else {
-			await this.cancelNativeAlarm(alarm.id);
-			await databaseService.saveAlarm({ ...updatedAlarm, nextTrigger: undefined });
-			this.notifyGlobalListeners();
-		}
+		// Use AlarmService
+		await AlarmService.toggle(alarm.id, enabled);
+		// Sync handled by listener
 	}
 
-	private async rescheduleAlarm(alarm: Alarm) {
-		return this.saveAndSchedule(alarm);
-	}
-
-	// Helper to emit change event locally
-	private notifyListeners() {
-		document.dispatchEvent(new CustomEvent('alarms-changed'));
-	}
-
-	// Helper to emit change event globally (cross-window)
-	private async notifyGlobalListeners() {
-		try {
-			await emit('global-alarms-changed');
-			// Also notify locally for the window that initiated the change
-			this.notifyListeners();
-		} catch (e) {
-			console.error('Failed to emit global-alarms-changed', e);
-			// Fallback to local
-			this.notifyListeners();
-		}
-	}
-
-	async saveAndSchedule(alarm: Omit<Alarm, 'id'> & { id?: number }) {
-		// 1. Calculate next trigger
-		console.log(
-			`[AlarmManager] Configuring alarm: Label="${alarm.label}", Enabled=${alarm.enabled}, Days=[${alarm.activeDays}]`,
-		);
-		console.log(
-			`[AlarmManager] Scheduling context: mode=${alarm.mode} lastFiredAt=${alarm.lastFiredAt ?? 'none'} windowStart=${alarm.windowStart ?? 'n/a'} windowEnd=${alarm.windowEnd ?? 'n/a'}`,
-		);
-
-		const coreAlarm = {
-			...alarm,
-			id: alarm.id || 0, // Temp ID for calc
-			activeDays: alarm.activeDays as DayOfWeek[],
-		};
-
-		const nextTrigger = calcTrigger(coreAlarm);
-		if (nextTrigger) {
-			console.log(
-				`[AlarmManager] Next trigger calculated: ${new Date(nextTrigger).toLocaleString()} (${nextTrigger})`,
-			);
-		} else {
-			console.log('[AlarmManager] No next trigger calculated (disabled or no active days?)');
-		}
-
-		// 2. Save to DB
-		const id = await databaseService.saveAlarm({
-			...alarm,
-			nextTrigger: nextTrigger ?? undefined,
-		});
-
-		// 3. Schedule Native
-		if (alarm.enabled && nextTrigger) {
-			await this.scheduleNativeAlarm(id, nextTrigger, alarm.soundUri);
-		} else {
-			await this.cancelNativeAlarm(id);
-		}
-
-		this.notifyGlobalListeners();
-		return id;
+	async saveAndSchedule(alarm: AlarmInput) {
+		const saved = await AlarmService.save(alarm);
+		// Sync handled by listener
+		return saved.id;
 	}
 
 	async deleteAlarm(id: number) {
-		console.log(`[DELETE_DEBUG] AlarmManagerService.deleteAlarm(${id}) called`);
-		await this.cancelNativeAlarm(id);
-		console.log(`[DELETE_DEBUG] cancelled native alarm ${id}, now deleting from DB...`);
-		await databaseService.deleteAlarm(id);
-		console.log(`[DELETE_DEBUG] DB delete complete for ${id}, notifying listeners...`);
-		this.notifyGlobalListeners();
-		console.log(`[DELETE_DEBUG] listeners notified for ${id}`);
+		await AlarmService.delete(id);
+		// Sync handled by listener
 	}
 
 	private async scheduleNativeAlarm(id: number, timestamp: number, soundUri?: string | null) {
@@ -458,9 +304,6 @@ export class AlarmManagerService {
 	}
 
 	private async handleAlarmRing(id: number) {
-		const firedAt = Date.now();
-		console.log(`[AlarmManager] Alarm ring received for ${id} at ${new Date(firedAt).toLocaleString()}`);
-
 		// 1. Send Notification
 		const isMobile = PlatformUtils.isMobile();
 		sendNotification({
@@ -522,50 +365,9 @@ export class AlarmManagerService {
 
 		// 3. Auto-Reschedule (Calculate next trigger)
 		console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
-		const alarms = await databaseService.getAllAlarms();
-		const alarm = alarms.find((a) => a.id === id);
-		if (alarm) {
-			await this.saveAndSchedule({ ...alarm, lastFiredAt: firedAt });
-		}
-	}
-
-	async snoozeAlarm(id: number, durationMinutes: number) {
-		console.log(`[AlarmManager] Snoozing alarm ${id} for ${durationMinutes} minutes`);
-		const alarms = await databaseService.getAllAlarms();
-		const alarm = alarms.find((a) => a.id === id);
-
-		if (!alarm) {
-			console.error(`[AlarmManager] Cannot snooze: Alarm ${id} not found`);
-			return;
-		}
-
-		const nextTrigger = Date.now() + durationMinutes * 60 * 1000;
-
-		// Update DB to reflect snooze time
-		await databaseService.saveAlarm({
-			...alarm,
-			nextTrigger,
-		});
-
-		// Schedule Native
-		await this.scheduleNativeAlarm(id, nextTrigger, alarm.soundUri);
-
-		// Send persistent notification for mobile
-		if (PlatformUtils.isMobile()) {
-			try {
-				await sendNotification({
-					title: `Alarm Snoozed`,
-					body: `"${alarm.label || 'Alarm'}" will ring again in ${durationMinutes} minutes`,
-					actionTypeId: 'snooze_reminder',
-					ongoing: true,
-					id: id, // Numeric ID for Tauri notification
-				});
-			} catch (e) {
-				console.error('[AlarmManager] Failed to send snooze notification:', e);
-			}
-		}
-
-		this.notifyGlobalListeners();
+		// Use AlarmService to dismiss/reschedule
+		// Note: dismiss_alarm in Rust recalculates next trigger.
+		await AlarmService.dismiss(id);
 	}
 
 	async stopRinging() {

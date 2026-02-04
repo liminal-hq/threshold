@@ -1,8 +1,10 @@
-# Threshold Wear OS - Architecture Overview
+# Threshold — Architecture Overview
 
-**Version:** 2.0 (Rust-Core Architecture)  
-**Last Updated:** January 25, 2026  
+**Version:** 2.0 (Rust-Core Architecture)
+**Last Updated:** January 25, 2026
 **Status:** Ready for Implementation
+
+> **📖 For Complete Event System:** See [event-architecture.md](event-architecture.md) for the Level 3 Granular Event System with Revision Tracking (11 semantic events, incremental sync, conflict detection).
 
 ---
 
@@ -22,7 +24,7 @@ This architecture embodies Threshold's core principles:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    TypeScript UI Layer                      │
-│              (React + Ionic - Desktop & Mobile)             │
+│           (React + MUI - Desktop & Mobile)                 │
 │                                                             │
 │  • Renders alarm list                                      │
 │  • Handles user input                                      │
@@ -57,7 +59,7 @@ This architecture embodies Threshold's core principles:
 └──────────────────┬────────────────────┬─────────────────────┘
                    │                    │
          ┌─────────▼──────────┐  ┌──────▼─────────────────────┐
-         │  alarm-manager     │  │  wear-sync                 │
+         │  alarm-manager     │  │  wear-sync (PLANNED)       │
          │  (Generic Plugin)  │  │  (Generic Plugin)          │
          │                    │  │                            │
          │  Android:          │  │  Android Only:             │
@@ -67,7 +69,7 @@ This architecture embodies Threshold's core principles:
          │  • SharedPrefs     │  │                            │
          │                    │  │  Calls back to Rust:       │
          │  Desktop:          │  │  • invoke('toggle_alarm')  │
-         │  • notify-rust     │  │  • invoke('delete_alarm')  │
+         │  • Ring window     │  │  • invoke('delete_alarm')  │
          │  • Local scheduler │  │                            │
          └────────────────────┘  └────────────────────────────┘
 ```
@@ -113,8 +115,8 @@ src-tauri/src/
 
 **Key Changes:**
 ```typescript
-// OLD (TS DatabaseService manages SQLite)
-await DatabaseService.saveAlarm(alarm);
+// Legacy (TypeScript handled SQLite directly)
+await saveAlarmToSqlite(alarm);
 await AlarmManagerService.schedule(alarm);
 
 // NEW (Rust handles everything)
@@ -162,8 +164,8 @@ app.listen("alarms:changed", move |event| {
 - Launches app when alarm fires
 
 **Desktop Implementation:**
-- Schedules notifications via `notify-rust` or similar
-- Local timer/scheduler (no system wake guarantee)
+- Schedules via local timer (no system wake guarantee)
+- Opens dedicated Ring window + notification when alarm fires
 
 **Responsibilities:**
 - ✅ React to `alarms:changed` events
@@ -179,9 +181,11 @@ app.listen("alarms:changed", move |event| {
 
 ---
 
-### 4. wear-sync Plugin (plugins/wear-sync/)
+### 4. wear-sync Plugin (plugins/wear-sync/) — PLANNED
 
-**Purpose:** Wear OS Data Layer synchronization
+> **Note:** This plugin does not exist yet. It is planned for Milestone D, which is blocked on the event system (Milestone A.5). See [implementation-roadmap.md](implementation-roadmap.md).
+
+**Purpose:** Wear OS Data Layer synchronisation
 
 **Generic Design:** Could be published as `tauri-plugin-wear-sync`
 
@@ -210,6 +214,13 @@ app.listen("alarms:changed", move |event| {
 - ❌ Calculate next triggers
 - ❌ Access SQLite database
 - ❌ Schedule native alarms
+
+---
+
+### 5. Other Plugins
+
+- **time-prefs** (`plugins/time-prefs/`): Reads the device's 12/24-hour time format preference. Used by the UI to display times correctly.
+- **theme-utils** (`plugins/theme-utils/`): Extracts Material You dynamic colours from the Android wallpaper for theming.
 
 ---
 
@@ -463,7 +474,7 @@ class BootReceiver : BroadcastReceiver() {
 | **Alarm Scheduling** | AlarmManager.setAlarmClock() | notify-rust (no wake) | N/A (syncs from phone) |
 | **Boot Recovery** | BootReceiver + SharedPrefs | N/A | N/A |
 | **Sound Picker** | Native RingtonePickerActivity | File picker | N/A |
-| **Ringing UI** | Full-screen Activity | Notification | Watch vibration + complication |
+| **Ringing UI** | Full-screen Activity + notification | Dedicated Ring window + notification | Watch vibration + complication |
 | **Wake from Sleep** | ✅ Guaranteed | ❌ Not reliable | ✅ Via phone |
 | **Data Sync** | Local SQLite | Local SQLite | Wear Data Layer from phone |
 

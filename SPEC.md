@@ -11,16 +11,18 @@ The project is a **Tauri v2 Monorepo** managed with `pnpm`.
 
 ### Stack
 
-- **Frontend:** React + TypeScript + Ionic Framework.
+- **Frontend:** React + TypeScript + MUI (Material-UI v7).
 - **Backend (Host):** Rust (Tauri).
 - **Mobile Native:** Kotlin (via Custom Tauri Plugin).
-- **Persistence:** SQLite (`tauri-plugin-sql`).
+- **Persistence:** SQLite (Rust-managed via sqlx).
 
 ### Structure (`pnpm-workspace.yaml`)
 
 - `apps/threshold`: The main Tauri application.
-- `packages/core`: Shared pure TypeScript logic (Recurrence rules, Random sampling).
+- `packages/core`: Shared TypeScript types and scheduler logic (`calculateNextTrigger`).
 - `plugins/alarm-manager`: Custom Tauri plugin wrapping Android's `AlarmManager`.
+- `plugins/time-prefs`: Custom Tauri plugin for 12/24h time format preference.
+- `plugins/theme-utils`: Custom Tauri plugin for Material You dynamic colour extraction.
 
 ## 3. Requirements
 
@@ -68,6 +70,6 @@ The project is a **Tauri v2 Monorepo** managed with `pnpm`.
 
 ## 5. Implementation Strategy
 
-1.  **Core Logic:** `packages/core` calculates the `next_trigger` timestamp.
-2.  **Frontend:** React UI captures user input, uses `Core` to get the timestamp, saves to SQLite, and calls the Native Plugin.
-3.  **Native Plugin:** Receives `schedule(id, timestamp)`. Sets the system alarm. onTrigger, launches the app's Ringing Screen.
+1.  **Core Logic:** Rust core (`src-tauri/src/alarm/`) calculates the `next_trigger` timestamp and manages SQLite.
+2.  **Frontend:** React UI captures user input, invokes Rust commands, and listens to events for state updates.
+3.  **Plugins:** React to `alarms:changed` events — alarm-manager schedules native alarms, wear-sync publishes to Wear Data Layer.

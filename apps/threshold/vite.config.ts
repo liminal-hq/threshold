@@ -11,7 +11,9 @@ const useCoreSource = coreMode !== 'dist';
 export default defineConfig(async () => ({
 	plugins: [react()],
 	resolve: {
-		conditions: useCoreSource ? ['source', 'module', 'browser', 'default'] : ['module', 'browser', 'default'],
+		conditions: useCoreSource
+			? ['source', 'import', 'module', 'browser', 'default']
+			: ['import', 'module', 'browser', 'default'],
 		alias: {
 			history: path.resolve(__dirname, 'node_modules/history/index.js'), // Force resolution to CJS entry point
 		},

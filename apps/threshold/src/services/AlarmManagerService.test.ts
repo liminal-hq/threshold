@@ -1,17 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { AlarmManagerService } from './AlarmManagerService';
-import { databaseService } from './DatabaseService';
 import { AlarmMode } from '@threshold/core/types';
+import { AlarmService } from './AlarmService';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { sendNotification, registerActionTypes, onAction } from '@tauri-apps/plugin-notification';
 
-vi.mock('./DatabaseService', () => ({
-	databaseService: {
-		init: vi.fn(),
-		getAllAlarms: vi.fn(),
-		saveAlarm: vi.fn(),
-		deleteAlarm: vi.fn(),
+vi.mock('./AlarmService', () => ({
+	AlarmService: {
+		getAll: vi.fn(),
 	},
 }));
 
@@ -40,9 +37,7 @@ describe('AlarmManagerService', () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
 
-		(databaseService.init as any).mockResolvedValue(undefined);
-		(databaseService.getAllAlarms as any).mockResolvedValue([]);
-		(databaseService.saveAlarm as any).mockResolvedValue(1);
+		(AlarmService.getAll as any).mockResolvedValue([]);
 
 		(listen as any).mockResolvedValue(undefined);
 		(emit as any).mockResolvedValue(undefined);
@@ -71,56 +66,53 @@ describe('AlarmManagerService', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('marks alarms fired on ringing route initialisation', async () => {
+	it('schedules enabled alarms returned during initial sync', async () => {
 		const service = new AlarmManagerService();
-		const now = 1700000000000;
-		vi.spyOn(Date, 'now').mockReturnValue(now);
+		const nextTrigger = Date.now() + 60_000;
 
-		(databaseService.getAllAlarms as any).mockResolvedValue([
+		(AlarmService.getAll as any).mockResolvedValue([
 			{
 				id: 12,
-				enabled: false,
+				enabled: true,
 				mode: AlarmMode.Fixed,
 				fixedTime: '07:30',
 				activeDays: [1],
 				label: 'Weekday alarm',
+				nextTrigger,
+				soundUri: null,
+				soundTitle: null,
 			},
 		]);
 
-		// @ts-ignore
-		global.window.location = { pathname: '/ringing/12' } as any;
-
 		await service.init();
 
-		expect(databaseService.saveAlarm).toHaveBeenCalledTimes(1);
-		const savedAlarm = (databaseService.saveAlarm as any).mock.calls[0][0];
-		expect(savedAlarm.id).toBe(12);
-		expect(savedAlarm.lastFiredAt).toBe(now);
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|schedule', {
+			payload: { id: 12, triggerAt: nextTrigger, soundUri: null },
+		});
 	});
 
-	it('rescheduleAll applies pending fired alarms before recalculating', async () => {
+	it('cancels removed alarms on sync', async () => {
 		const service = new AlarmManagerService();
-		const pastTrigger = Date.now() - 1000;
+		const nextTrigger = Date.now() + 60_000;
 
-		(databaseService.getAllAlarms as any).mockResolvedValue([
+		await (service as any).syncNativeAlarms([
 			{
 				id: 7,
 				enabled: true,
 				mode: AlarmMode.Fixed,
 				fixedTime: '06:45',
 				activeDays: [1],
-				nextTrigger: pastTrigger,
+				label: 'Morning alarm',
+				nextTrigger,
+				soundUri: null,
+				soundTitle: null,
 			},
 		]);
 
-		const saveSpy = vi.spyOn(service as any, 'saveAndSchedule').mockResolvedValue(7);
-		(service as any).pendingFiredAlarm = { id: 7, firedAt: 555555 };
+		await (service as any).syncNativeAlarms([]);
 
-		await service.rescheduleAll();
-
-		expect(saveSpy).toHaveBeenCalledTimes(1);
-		const updatedAlarm = saveSpy.mock.calls[0][0] as { lastFiredAt?: number };
-		expect(updatedAlarm.lastFiredAt).toBe(555555);
-		expect((service as any).pendingFiredAlarm).toBe(null);
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel', {
+			payload: { id: 7 },
+		});
 	});
 });

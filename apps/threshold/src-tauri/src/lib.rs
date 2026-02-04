@@ -1,3 +1,9 @@
+pub mod alarm;
+pub mod commands;
+
+use alarm::{database::AlarmDatabase, AlarmCoordinator};
+use tauri::Manager;
+
 #[cfg(target_os = "linux")]
 fn configure_linux_env() {
     use std::{env, path::Path};
@@ -62,11 +68,21 @@ pub fn run() {
 
     builder = builder.invoke_handler(tauri::generate_handler![
         event_logs::export_event_logs,
-        event_logs::get_event_logs
+        event_logs::get_event_logs,
+        commands::get_alarms,
+        commands::get_alarm,
+        commands::save_alarm,
+        commands::toggle_alarm,
+        commands::delete_alarm,
+        commands::dismiss_alarm,
     ]);
 
     builder
-        .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations("sqlite:alarms.db", alarm::database::migrations())
+                .build(),
+        )
         .plugin(tauri_plugin_theme_utils::init())
         .plugin(tauri_plugin_alarm_manager::init())
         .plugin(tauri_plugin_time_prefs::init())
@@ -110,6 +126,15 @@ pub fn run() {
             {
                 app.handle().plugin(log_builder.build())?;
             }
+
+            // Initialize database and coordinator
+            let db = tauri::async_runtime::block_on(async {
+                AlarmDatabase::new(app.handle()).await
+            })?;
+
+            let coordinator = AlarmCoordinator::new(db);
+            app.manage(coordinator);
+
             Ok(())
         })
         .run(tauri::generate_context!())

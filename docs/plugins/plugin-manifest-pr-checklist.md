@@ -377,7 +377,7 @@ tauri_plugin::mobile::update_android_manifest(
 )
 ```
 
-See `THRESHOLD_PLUGIN_MANIFEST_PATTERN.md` for complete guide.
+See `plugin-manifest-pattern.md` for complete guide.
 ```
 
 ### Architecture Discussion Comment
@@ -442,7 +442,7 @@ jobs:
 ## Contact
 
 **Questions about reviewing manifest injection PRs?**
-- Refer to `THRESHOLD_PLUGIN_MANIFEST_PATTERN.md`
+- Refer to `plugin-manifest-pattern.md`
 - Check alarm-manager implementation as reference
 - Ask in Threshold maintainer discussions
 
