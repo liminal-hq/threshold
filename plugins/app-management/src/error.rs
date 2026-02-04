@@ -19,3 +19,16 @@ impl Serialize for Error {
     serializer.serialize_str(self.to_string().as_ref())
   }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_serialization() {
+        let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        let error = Error::Io(io_error);
+        let serialized = serde_json::to_string(&error).unwrap();
+        assert_eq!(serialized, "\"test error\"");
+    }
+}

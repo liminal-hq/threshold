@@ -3,7 +3,6 @@ use tauri::{
   Manager, Runtime,
 };
 
-pub use models::*;
 
 #[cfg(desktop)]
 mod desktop;
@@ -45,4 +44,16 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
       Ok(())
     })
     .build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_plugin_init() {
+        // Just verify we can call init and get a plugin builder back
+        // We can't actually build it without a runtime context easily, but this checks syntax/imports
+        let _plugin = init::<tauri::Wry>();
+    }
 }
