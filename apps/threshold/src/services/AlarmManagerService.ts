@@ -272,13 +272,20 @@ export class AlarmManagerService {
 
 				// If trigger is in the future, schedule it
 				if (alarm.nextTrigger > Date.now()) {
-					await this.scheduleNativeAlarm(rescheduleAlarm.id, rescheduleAlarm.nextTrigger);
+					const nextTrigger = rescheduleAlarm.nextTrigger ?? alarm.nextTrigger;
+					await this.scheduleNativeAlarm(rescheduleAlarm.id, nextTrigger);
 				} else {
 					// Missed alarm? For now, maybe just calc next trigger
 					console.log(
 						`[AlarmManager] Alarm ${alarm.id} missed trigger at ${new Date(alarm.nextTrigger).toLocaleString()}. Rescheduling next.`,
 					);
-					this.saveAndSchedule(rescheduleAlarm);
+					const missedAlarm =
+						rescheduleAlarm.mode === AlarmMode.RandomWindow &&
+						rescheduleAlarm.nextTrigger &&
+						!rescheduleAlarm.lastFiredAt
+							? { ...rescheduleAlarm, lastFiredAt: rescheduleAlarm.nextTrigger }
+							: rescheduleAlarm;
+					this.saveAndSchedule(missedAlarm);
 				}
 			}
 		}
@@ -452,6 +459,7 @@ export class AlarmManagerService {
 
 	private async handleAlarmRing(id: number) {
 		const firedAt = Date.now();
+		console.log(`[AlarmManager] Alarm ring received for ${id} at ${new Date(firedAt).toLocaleString()}`);
 
 		// 1. Send Notification
 		const isMobile = PlatformUtils.isMobile();

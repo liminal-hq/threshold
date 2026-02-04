@@ -77,6 +77,7 @@ describe('Scheduler Logic', () => {
 			expect(next).toBeDefined();
 			const date = new Date(next!);
 			expect(date.getDate()).toBe(1);
+			expect(date.getSeconds()).toBe(0);
 			expect(date.getHours()).toBeGreaterThanOrEqual(12);
 			expect(date.getHours()).toBeLessThan(14); // strict less than 14:00 usually, or <= 13:59
 		});
@@ -94,6 +95,7 @@ describe('Scheduler Logic', () => {
 			const next = calculateNextTrigger(alarm, baseDate); // Wed 10am
 			expect(next).toBeDefined();
 			const date = new Date(next!);
+			expect(date.getSeconds()).toBe(0);
 
 			// Could be Wed 23:xx or Thu 01:xx
 			// But start is Wed 23:00.
@@ -120,6 +122,7 @@ describe('Scheduler Logic', () => {
 			expect(next).toBeDefined();
 			const date = new Date(next!);
 			expect(date.getDate()).toBe(2); // Thu Nov 2
+			expect(date.getSeconds()).toBe(0);
 			expect(date.getHours()).toBeGreaterThanOrEqual(8);
 			expect(date.getHours()).toBeLessThan(9);
 		});
@@ -141,6 +144,7 @@ describe('Scheduler Logic', () => {
 			const date = new Date(next!);
 
 			expect(date.getDate()).toBe(1); // Today
+			expect(date.getSeconds()).toBe(0);
 			expect(date.getTime()).toBeGreaterThan(baseDate.getTime()); // After now
 		});
 
@@ -159,6 +163,7 @@ describe('Scheduler Logic', () => {
 			expect(next).toBeDefined();
 			const date = new Date(next!);
 			expect(date.getDate()).toBe(8); // Wed Nov 8
+			expect(date.getSeconds()).toBe(0);
 			expect(date.getHours()).toBeGreaterThanOrEqual(9);
 			expect(date.getHours()).toBeLessThan(11);
 		});
@@ -178,6 +183,7 @@ describe('Scheduler Logic', () => {
 			const next = calculateNextTrigger(overnightAlarm, now);
 			expect(next).toBeDefined();
 			const date = new Date(next!);
+			expect(date.getSeconds()).toBe(0);
 
 			const nextWindowStart = setHours(new Date(2023, 10, 8, 0, 0, 0), 23); // Wed Nov 8 23:00
 			const nextWindowEnd = setHours(addDays(new Date(2023, 10, 8, 0, 0, 0), 1), 2); // Thu Nov 9 02:00

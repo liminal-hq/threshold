@@ -4,6 +4,124 @@ This document tracks all releases of the Threshold application.
 
 ---
 
+## Version 0.1.4
+
+**Release Date:** February 3, 2026  
+**Status:** Released
+
+> [!NOTE]
+> This release focuses on critical window alarm fixes, event log diagnostics, build system improvements, and theme enhancements.
+
+### ✨ New Features
+
+**Event Log Export**
+
+- Added event log downloader for desktop and Android platforms
+- Backend Tauri command to bundle app log files
+- Settings action to download event logs for diagnostics
+- Android save dialog support via filesystem plugin
+- Automatic export directory creation and file URI normalisation
+- Log size capping with preference for newest files
+- Improved log signal by routing `console.log` to info level
+- Reduced noisy mobile targets for cleaner logs
+
+**Theme Improvements**
+
+- Default theme now follows system preference (Material You enabled by default)
+- New installs automatically use system palette
+- Improved first-run experience with sensible theme defaults
+
+### 🐛 Bug Fixes
+
+**Window Alarm Fixes** (Critical)
+
+- **Fixed window alarm re-ring bug** (#111, #120): Window alarms could re-arm within the same window after firing, creating "zombie alarms"
+- Added `lastFiredAt` tracking to alarm model with SQLite schema migration
+- Window alarms now properly skip re-arming if already fired in the current window
+- Missed window alarms (when app was closed) now correctly treated as fired
+- Guard against same-window re-rings during reschedule operations
+- Added comprehensive test coverage for same-day and overnight window skips
+
+**Scheduler Improvements**
+
+- Window triggers now align to minute boundaries for clearer user expectations
+- Randomization occurs over minute-aligned times within the window
+- Added second-level alignment test coverage
+- Fixed active day expectations after skipping fired windows
+
+**Build System Fixes**
+
+- Resolved TypeScript and Rust compiler warnings to prevent build failures
+- Fixed invalid regex escape sequences in ringing path matching
+- Ensured `@threshold/core` builds before app to prevent stale type definitions
+- Added prebuild hooks for desktop and Android to keep core dist fresh
+- Implemented source conditional exports to avoid stale dist artefacts
+- Preserved fast dev flow with source resolution
+
+**Logging Improvements**
+
+- Removed event log size cap to ensure full file contents in exports
+- Added trace logging for ringing entry and alarm-ring receipt
+- Improved visibility into window re-arm decisions during field testing
+- Log migration presence for field validation
+
+### 🧪 Testing
+
+**Test Coverage Additions**
+
+- Added `AlarmManagerService` tests for fired alarm handling
+- Covered ringing-route init and pending fired reschedule behaviour
+- Added window skip tests for same-day and overnight scenarios
+- Added unit tests for log truncation helper
+- Fixed active day expectation in scheduler tests
+
+### 📚 Documentation
+
+- Documented event log downloader in desktop app README
+- Added inline documentation for window alarm behaviour
+- Improved code comments for migration visibility
+
+### 🔧 Configuration & Refactoring
+
+**Build System**
+
+- Source conditional exports for `@threshold/core` entry points
+- Enabled source condition in app TypeScript and Vite resolution
+- Prebuild hooks ensure core builds before packaged builds
+- Removed unused mut warning in log setup
+
+**Code Quality**
+
+- Proper regex literals for path matching
+- Typed test payloads for better type safety
+- Removed unreachable code paths in mobile logger setup
+- Ensured reschedule uses defined trigger types
+
+### 📝 Technical Details
+
+**Major PRs Merged:**
+
+- [#123](https://github.com/liminal-hq/threshold/pull/123) - Add event log downloader and improve logger
+- [#120](https://github.com/liminal-hq/threshold/pull/120) - Prevent window re-ring after firing
+
+**Issues Closed:**
+
+- [#122](https://github.com/liminal-hq/threshold/issues/122) - Window triggers should align to minutes
+- [#111](https://github.com/liminal-hq/threshold/issues/111) - Window alarms re-ring after firing
+
+**Commits:** 19 commits since v0.1.3  
+**Contributors:** Scott Morris
+
+### ✅ Verification
+
+- [x] **Window Alarms**: Verified no re-ring after firing in same window
+- [x] **Event Logs**: Export functionality tested on desktop and Android
+- [x] **Build**: All TypeScript and Rust warnings resolved
+- [x] **Tests**: All automated tests passing
+- [x] **Theme**: System palette defaults working correctly
+
+---
+
 ## Version 0.1.3
 
 **Release Date:** January 28, 2026  

@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf, time::SystemTime};
 
 use tauri::{AppHandle, Manager};
 
-const MAX_EVENT_LOG_BYTES: usize = 512_000;
+const MAX_EVENT_LOG_BYTES: usize = usize::MAX;
 
 fn truncate_to_limit(value: &str, limit: usize) -> (String, bool) {
     if value.len() <= limit {

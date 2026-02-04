@@ -18,11 +18,11 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-	theme: 'deep-night',
+	theme: 'system',
 	setTheme: () => {},
 	forceDark: false,
 	setForceDark: () => {},
-	useMaterialYou: false,
+	useMaterialYou: true,
 	setUseMaterialYou: () => {},
 	isDarkMode: false,
 });
@@ -35,7 +35,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 	const [theme, setThemeState] = useState<AppTheme>(SettingsService.getTheme());
 	const [forceDark, setForceDarkState] = useState<boolean>(SettingsService.getForceDark());
 	const [useMaterialYou, setUseMaterialYouState] = useState<boolean>(
-		SettingsService.getUseMaterialYou() ?? false,
+		SettingsService.getUseMaterialYou() ?? true,
 	);
 	const [materialYouResponse, setMaterialYouResponse] = useState<MaterialYouResponse | undefined>(
 		undefined,

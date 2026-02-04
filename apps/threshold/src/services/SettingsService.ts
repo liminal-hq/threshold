@@ -15,7 +15,7 @@ export const SettingsService = {
 	getTheme: (): Theme => {
 		const theme = localStorage.getItem(KEY_THEME) as string;
 		if (theme === 'canadian-cottage') return 'canadian-cottage-winter';
-		return (theme as Theme) || 'deep-night';
+		return (theme as Theme) || 'system';
 	},
 
 	setTheme: (theme: Theme) => {
@@ -33,7 +33,7 @@ export const SettingsService = {
 		const val = localStorage.getItem(KEY_USE_MATERIAL_YOU);
 		if (val === 'true') return true;
 		if (val === 'false') return false;
-		return undefined;
+		return true;
 	},
 
 	setUseMaterialYou: (enabled: boolean) => {
