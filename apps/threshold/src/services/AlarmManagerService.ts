@@ -279,7 +279,13 @@ export class AlarmManagerService {
 					console.log(
 						`[AlarmManager] Alarm ${alarm.id} missed trigger at ${new Date(alarm.nextTrigger).toLocaleString()}. Rescheduling next.`,
 					);
-					this.saveAndSchedule(rescheduleAlarm);
+					const missedAlarm =
+						rescheduleAlarm.mode === AlarmMode.RandomWindow &&
+						rescheduleAlarm.nextTrigger &&
+						!rescheduleAlarm.lastFiredAt
+							? { ...rescheduleAlarm, lastFiredAt: rescheduleAlarm.nextTrigger }
+							: rescheduleAlarm;
+					this.saveAndSchedule(missedAlarm);
 				}
 			}
 		}
