@@ -44,21 +44,7 @@ jobs:
       - name: Build Android Release
         run: ./scripts/build-release-devcontainer.sh
 
-      - name: Upload AAB
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release-please.outputs.upload_url }}
-          asset_path: ./release/app-release-universalRelease-v${{ needs.release-please.outputs.tag_name }}.aab
-          asset_name: threshold-android-${{ needs.release-please.outputs.tag_name }}.aab
-          asset_content_type: application/vnd.android.package-archive
-        # Note: The exact filename depends on how build-release-devcontainer.sh names it.
-        # The script outputs to release/${AAB_FILENAME}${VERSION_SUFFIX}.aab
-        # We might need a wildcard upload or a step to find the file name.
-
-      - name: Find and Upload Artifacts
-        if: always() # Run even if previous specific upload fails, to try wildcard approach if needed
+      - name: Upload Android Artifacts
         uses: softprops/action-gh-release@v2
         with:
           files: |
