@@ -103,10 +103,12 @@ pub fn run() {
                 });
 
                 app.handle().plugin(log_builder.build())?;
-                return Ok(());
             }
 
-            app.handle().plugin(log_builder.build())?;
+            #[cfg(not(mobile))]
+            {
+                app.handle().plugin(log_builder.build())?;
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

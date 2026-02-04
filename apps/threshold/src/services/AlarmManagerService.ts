@@ -272,7 +272,8 @@ export class AlarmManagerService {
 
 				// If trigger is in the future, schedule it
 				if (alarm.nextTrigger > Date.now()) {
-					await this.scheduleNativeAlarm(rescheduleAlarm.id, rescheduleAlarm.nextTrigger);
+					const nextTrigger = rescheduleAlarm.nextTrigger ?? alarm.nextTrigger;
+					await this.scheduleNativeAlarm(rescheduleAlarm.id, nextTrigger);
 				} else {
 					// Missed alarm? For now, maybe just calc next trigger
 					console.log(

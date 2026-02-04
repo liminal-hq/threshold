@@ -119,7 +119,7 @@ describe('AlarmManagerService', () => {
 		await service.rescheduleAll();
 
 		expect(saveSpy).toHaveBeenCalledTimes(1);
-		const updatedAlarm = saveSpy.mock.calls[0][0];
+		const updatedAlarm = saveSpy.mock.calls[0][0] as { lastFiredAt?: number };
 		expect(updatedAlarm.lastFiredAt).toBe(555555);
 		expect((service as any).pendingFiredAlarm).toBe(null);
 	});
