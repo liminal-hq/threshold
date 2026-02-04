@@ -18,10 +18,14 @@ interface ImportedAlarm {
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
 	private router: any = null;
-    private scheduledIds = new Set<number>();
+	private scheduledIds = new Set<number>();
 
 	public setRouter(router: any) {
 		this.router = router;
+	}
+
+	public isInitialized(): boolean {
+		return this.initPromise !== null;
 	}
 
 	async init() {
@@ -69,9 +73,9 @@ export class AlarmManagerService {
 				console.log('[AlarmManager] Native imports check complete.');
 
 				console.log('[AlarmManager] Rescheduling all alarms...');
-                // Initial sync
+				// Initial sync
 				const alarms = await AlarmService.getAll();
-                await this.syncNativeAlarms(alarms);
+				await this.syncNativeAlarms(alarms);
 				console.log('[AlarmManager] Reschedule complete.');
 
 				console.log('[AlarmManager] Service initialization complete.');
@@ -182,37 +186,37 @@ export class AlarmManagerService {
 		}
 	}
 
-    /**
-     * Sync native alarms with the current state from Rust
-     */
-    private async syncNativeAlarms(alarms: AlarmRecord[]) {
-        const currentIds = new Set<number>();
+	/**
+	 * Sync native alarms with the current state from Rust
+	 */
+	private async syncNativeAlarms(alarms: AlarmRecord[]) {
+		const currentIds = new Set<number>();
 
-        for (const alarm of alarms) {
-            currentIds.add(alarm.id);
+		for (const alarm of alarms) {
+			currentIds.add(alarm.id);
 
-            // If enabled and has future trigger, schedule it
-            if (alarm.enabled && alarm.nextTrigger && alarm.nextTrigger > Date.now()) {
-                await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger, alarm.soundUri);
-                this.scheduledIds.add(alarm.id);
-            } else {
-                // If disabled or expired, ensure it's not scheduled
-                // (Optimisation: only cancel if we think it's scheduled)
-                if (this.scheduledIds.has(alarm.id)) {
-                    await this.cancelNativeAlarm(alarm.id);
-                    this.scheduledIds.delete(alarm.id);
-                }
-            }
-        }
+			// If enabled and has future trigger, schedule it
+			if (alarm.enabled && alarm.nextTrigger && alarm.nextTrigger > Date.now()) {
+				await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger, alarm.soundUri);
+				this.scheduledIds.add(alarm.id);
+			} else {
+				// If disabled or expired, ensure it's not scheduled
+				// (Optimisation: only cancel if we think it's scheduled)
+				if (this.scheduledIds.has(alarm.id)) {
+					await this.cancelNativeAlarm(alarm.id);
+					this.scheduledIds.delete(alarm.id);
+				}
+			}
+		}
 
-        // Identify deleted alarms (present in scheduledIds but not in current alarms)
-        const toCancel = [...this.scheduledIds].filter(id => !currentIds.has(id));
-        for (const id of toCancel) {
-            console.log(`[AlarmManager] Alarm ${id} removed, cancelling native schedule.`);
-            await this.cancelNativeAlarm(id);
-            this.scheduledIds.delete(id);
-        }
-    }
+		// Identify deleted alarms (present in scheduledIds but not in current alarms)
+		const toCancel = [...this.scheduledIds].filter((id) => !currentIds.has(id));
+		for (const id of toCancel) {
+			console.log(`[AlarmManager] Alarm ${id} removed, cancelling native schedule.`);
+			await this.cancelNativeAlarm(id);
+			this.scheduledIds.delete(id);
+		}
+	}
 
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
 	private async checkImports() {
@@ -272,34 +276,20 @@ export class AlarmManagerService {
 	}
 
 	async toggleAlarm(alarm: Alarm, enabled: boolean) {
-        // Use AlarmService
-        await AlarmService.toggle(alarm.id, enabled);
-        // Sync handled by listener
+		// Use AlarmService
+		await AlarmService.toggle(alarm.id, enabled);
+		// Sync handled by listener
 	}
 
 	async saveAndSchedule(alarm: AlarmInput) {
-        // Use AlarmService
-        // Map to AlarmInput compatible object
-        const input: AlarmInput = {
-            id: alarm.id,
-            label: alarm.label,
-            enabled: alarm.enabled,
-            mode: alarm.mode,
-            fixedTime: alarm.fixedTime,
-            windowStart: alarm.windowStart,
-            windowEnd: alarm.windowEnd,
-            activeDays: alarm.activeDays,
-            soundUri: alarm.soundUri,
-            soundTitle: alarm.soundTitle
-        };
-        const saved = await AlarmService.save(input);
-        // Sync handled by listener
-        return saved.id;
+		const saved = await AlarmService.save(alarm);
+		// Sync handled by listener
+		return saved.id;
 	}
 
 	async deleteAlarm(id: number) {
-        await AlarmService.delete(id);
-        // Sync handled by listener
+		await AlarmService.delete(id);
+		// Sync handled by listener
 	}
 
 	private async scheduleNativeAlarm(id: number, timestamp: number, soundUri?: string | null) {
@@ -376,8 +366,8 @@ export class AlarmManagerService {
 		// 3. Auto-Reschedule (Calculate next trigger)
 		console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
 		// Use AlarmService to dismiss/reschedule
-        // Note: dismiss_alarm in Rust recalculates next trigger.
-        await AlarmService.dismiss(id);
+		// Note: dismiss_alarm in Rust recalculates next trigger.
+		await AlarmService.dismiss(id);
 	}
 
 	async stopRinging() {

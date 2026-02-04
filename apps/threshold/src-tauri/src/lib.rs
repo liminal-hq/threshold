@@ -51,6 +51,8 @@ fn configure_linux_env() {
     );
 }
 
+mod event_logs;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "linux")]
@@ -63,6 +65,17 @@ pub fn run() {
     {
         builder = builder.plugin(tauri_plugin_window_state::Builder::new().build());
     }
+
+    builder = builder.invoke_handler(tauri::generate_handler![
+        event_logs::export_event_logs,
+        event_logs::get_event_logs,
+        commands::get_alarms,
+        commands::get_alarm,
+        commands::save_alarm,
+        commands::toggle_alarm,
+        commands::delete_alarm,
+        commands::dismiss_alarm,
+    ]);
 
     builder
         .plugin(
@@ -77,24 +90,41 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![
-            commands::get_alarms,
-            commands::get_alarm,
-            commands::save_alarm,
-            commands::toggle_alarm,
-            commands::delete_alarm,
-            commands::dismiss_alarm,
-        ])
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_app_management::init())
         .setup(|app| {
             #[cfg(mobile)]
             app.handle().plugin(tauri_plugin_app_events::init())?;
 
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Trace)
-                        .build(),
-                )?;
+            let log_level = if cfg!(debug_assertions) {
+                log::LevelFilter::Trace
+            } else {
+                log::LevelFilter::Info
+            };
+
+            let log_builder = tauri_plugin_log::Builder::default()
+                .level(log_level)
+                .level_for("jni", log::LevelFilter::Warn)
+                .level_for("tao", log::LevelFilter::Info);
+
+            #[cfg(mobile)]
+            {
+                let log_builder = log_builder.format(|out, message, record| {
+                    out.finish(format_args!(
+                        "[{}][{}] {}",
+                        record.level(),
+                        record.target(),
+                        message
+                    ))
+                });
+
+                app.handle().plugin(log_builder.build())?;
+            }
+
+            #[cfg(not(mobile))]
+            {
+                app.handle().plugin(log_builder.build())?;
             }
 
             // Initialize database and coordinator

@@ -6,7 +6,8 @@
 		"jsx": "react-jsx",
 		"noEmit": true,
 		"allowImportingTsExtensions": true,
-        "customConditions": ["source"]
+		"customConditions": ["source"],
+		"types": ["vitest/globals", "@testing-library/jest-dom"]
 	},
 	"include": ["src"],
 	"references": [{ "path": "./tsconfig.node.json" }]

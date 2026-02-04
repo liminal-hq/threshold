@@ -1,10 +1,14 @@
 {
-  "$schema": "../gen/schemas/mobile-schema.json",
-  "identifier": "mobile",
-  "description": "Capability for mobile platform",
-  "windows": ["*"],
-  "platforms": ["android", "iOS"],
-  "permissions": [
-    "app-events:default"
-  ]
+	"$schema": "../gen/schemas/mobile-schema.json",
+	"identifier": "mobile",
+	"description": "Capability for mobile platform",
+	"windows": ["*"],
+	"platforms": ["android", "iOS"],
+	"permissions": [
+		"app-events:default",
+		"dialog:default",
+		"fs:default",
+		"fs:allow-write-text-file",
+		"app-management:default"
+	]
 }

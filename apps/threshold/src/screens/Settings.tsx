@@ -4,6 +4,7 @@ import {
     List,
     ListItem,
     ListItemText,
+    ListItemButton,
     Switch,
     FormControl,
     InputLabel,
@@ -13,15 +14,20 @@ import {
     Container,
     ListSubheader,
     Paper,
-    Typography
+    Typography,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    CircularProgress
 } from '@mui/material';
 import { MobileToolbar } from '../components/MobileToolbar';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon, FileDownload as FileDownloadIcon } from '@mui/icons-material';
 import { useNavigate } from '@tanstack/react-router';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SettingsService, Theme } from '../services/SettingsService';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { eventLogService } from '../services/EventLogService';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
@@ -34,6 +40,12 @@ const Settings: React.FC = () => {
     const [isMobile, setIsMobile] = useState(false);
     const [isAndroid, setIsAndroid] = useState(false);
 
+    // New Settings State
+    const [silenceAfter, setSilenceAfter] = useState<number>(SettingsService.getSilenceAfter());
+    const [snoozeLength, setSnoozeLength] = useState<number>(SettingsService.getSnoozeLength());
+    const [snoozeDialogOpen, setSnoozeDialogOpen] = useState(false);
+    const [isExportingLogs, setIsExportingLogs] = useState(false);
+
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
         setIsAndroid(PlatformUtils.getPlatform() === 'android');
@@ -42,6 +54,16 @@ const Settings: React.FC = () => {
     const handleTimeFormatChange = (enabled: boolean) => {
         setIs24h(enabled);
         SettingsService.setIs24h(enabled);
+    };
+
+    const handleExportLogs = async () => {
+        if (isExportingLogs) return;
+        setIsExportingLogs(true);
+        try {
+            await eventLogService.downloadEventLogs();
+        } finally {
+            setIsExportingLogs(false);
+        }
     };
 
     return (
@@ -117,6 +139,38 @@ const Settings: React.FC = () => {
                                     onChange={(e) => setForceDark(e.target.checked)}
                                 />
                             </ListItem>
+                        </List>
+
+                        <List subheader={<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Alarm Settings</ListSubheader>}>
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="silence-after-label">Silence After</InputLabel>
+                                    <Select
+                                        labelId="silence-after-label"
+                                        value={silenceAfter}
+                                        label="Silence After"
+                                        onChange={(e) => {
+                                            const val = Number(e.target.value);
+                                            SettingsService.setSilenceAfter(val);
+                                            setSilenceAfter(val);
+                                        }}
+                                    >
+                                        <MenuItem value={1}>1 minute</MenuItem>
+                                        <MenuItem value={5}>5 minutes</MenuItem>
+                                        <MenuItem value={10}>10 minutes</MenuItem>
+                                        <MenuItem value={15}>15 minutes</MenuItem>
+                                        <MenuItem value={20}>20 minutes</MenuItem>
+                                        <MenuItem value={-1}>Never</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </ListItem>
+
+                            <ListItemButton onClick={() => setSnoozeDialogOpen(true)} sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="Snooze Length"
+                                    secondary={`${snoozeLength} minute${snoozeLength > 1 ? 's' : ''}`}
+                                />
+                            </ListItemButton>
                         </List>
 
                         <List subheader={<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>General</ListSubheader>}>
@@ -215,9 +269,55 @@ const Settings: React.FC = () => {
                                     <span style={{ fontSize: '1.2rem' }}>📩</span>
                                 </IconButton>
                             </ListItem>
+
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="Download Event Logs"
+                                    secondary="Save event logs to send to the developer"
+                                />
+                                <IconButton
+                                    edge="end"
+                                    onClick={handleExportLogs}
+                                    disabled={isExportingLogs}
+                                    sx={{
+                                        bgcolor: 'info.main',
+                                        color: 'info.contrastText',
+                                        '&:hover': {
+                                            bgcolor: 'info.dark',
+                                        }
+                                    }}
+                                >
+                                    {isExportingLogs ? (
+                                        <CircularProgress size={20} color="inherit" />
+                                    ) : (
+                                        <FileDownloadIcon />
+                                    )}
+                                </IconButton>
+                            </ListItem>
                         </List>
                     </Paper>
                 </Container>
+
+                <Dialog open={snoozeDialogOpen} onClose={() => setSnoozeDialogOpen(false)}>
+                    <DialogTitle>Snooze Length</DialogTitle>
+                    <DialogContent dividers>
+                        <List>
+                            {Array.from({ length: 30 }, (_, i) => i + 1).map((min) => (
+                                <ListItemButton
+                                    key={min}
+                                    onClick={() => {
+                                        SettingsService.setSnoozeLength(min);
+                                        setSnoozeLength(min);
+                                        setSnoozeDialogOpen(false);
+                                    }}
+                                    selected={snoozeLength === min}
+                                >
+                                    <ListItemText primary={`${min} minute${min > 1 ? 's' : ''}`} />
+                                </ListItemButton>
+                            ))}
+                        </List>
+                    </DialogContent>
+                </Dialog>
             </Box>
         </Box>
     );

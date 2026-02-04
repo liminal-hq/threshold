@@ -13,7 +13,7 @@
 
 ## Localization and Spelling
 
-**REQUIREMENT:** All UI strings, code variables, comments, commit messages, and documentation MUST use **Canadian English** spelling.
+**REQUIREMENT:** All UI strings, code variables, comments, commit messages, pull request descriptions, and documentation MUST use **Canadian English** spelling.
 
 Examples:
 
@@ -25,14 +25,21 @@ Examples:
 
 ## Commit Messages
 
-**Format:** Use Conventional Commits format (e.g., `feat: ...`, `fix: ...`, `docs: ...`).
+**Format:** Use Conventional Commits format (e.g., `feat: ...`, `fix: ...`, `docs: ...`, `test: ...`).
+
+- Use `test:` for test-related changes, including fixes to tests themselves (do not use `fix:` unless it fixes application code).
 
 **Body Requirements:**
+
 - Explain what and why (not how)
 - Use markdown: **bold**, _italics_, `code`, bullet lists
 - **NO markdown headings** - use **bold labels** for sections (not always required)
 
 **Specific Updates**: Each commit message should reflect the specific changes made in that commit. Do not just recap the entire project history or scope. Focus on the now.
+
+## Git Workflow
+
+**REQUIREMENT:** Do not push changes (especially force pushes) to the repository unless explicitly requested by the user.
 
 ## Application Protocol
 
@@ -52,6 +59,7 @@ Examples:
 ## Best Practices
 
 - **NO BARREL FILES:** Do not use `index.ts` files to re-export modules. Import directly from the specific file.
+- **USE HELPERS:** Always check for existing helper utilities before implementing manual logic. For example, use `PlatformUtils` (e.g., `isMobile()`, `isDesktop()`) instead of manual platform checks.
 
 ## Plugin Development
 
@@ -65,6 +73,7 @@ When creating or modifying Threshold plugins with Android support:
 - **AI Agent Guide:** `/docs/guides/AI_AGENT_USAGE_GUIDE.md`
 
 **Android Manifest Injection (Required):**
+
 - Plugins MUST own their Android permissions via build-time injection
 - Use `tauri_plugin::mobile::update_android_manifest()` in `build.rs`
 - Block identifier format: `tauri-plugin-{plugin-name}.permissions`
@@ -72,6 +81,7 @@ When creating or modifying Threshold plugins with Android support:
 - Never require users to manually edit manifests
 
 **Example:**
+
 ```rust
 // plugins/your-plugin/build.rs
 const COMMANDS: &[&str] = &["command1", "command2"];
@@ -99,6 +109,7 @@ See quickstart guide for complete implementation steps.
 **Reference Implementation:** See `plugins/alarm-manager/build.rs` for a complete working example.
 
 **See Also:**
+
 - `/docs/ALARM_MANAGER.md` - Alarm manager implementation details
 - `/docs/ANDROID_INTENTS.md` - Android intent handling
 
@@ -124,19 +135,21 @@ This project uses **Tauri v2** with native mobile support (iOS/Android).
 Use `@tauri-apps/plugin-os` for reliable platform detection across all targets.
 
 **Key points:**
+
 - The `platform()` function is **synchronous** and determined at compile time
 - Returns: `'linux' | 'macos' | 'ios' | 'freebsd' | 'dragonfly' | 'netbsd' | 'openbsd' | 'solaris' | 'android' | 'windows'`
 - Use this for conditional UI rendering (e.g., mobile vs desktop layouts)
 
 **Example:**
+
 ```tsx
 import { platform } from '@tauri-apps/plugin-os';
 
 const [isMobile, setIsMobile] = useState(false);
 
 useEffect(() => {
-  const os = platform();
-  setIsMobile(os === 'ios' || os === 'android');
+	const os = platform();
+	setIsMobile(os === 'ios' || os === 'android');
 }, []);
 ```
 
@@ -157,6 +170,7 @@ useEffect(() => {
 Because many online resources refer to Tauri v1, older patterns may inadvertently be suggested. Use this reference to avoid v1 patterns.
 
 **Configuration (`tauri.conf.json`) Differences:**
+
 - `tauri` → `app` (top-level rename)
 - `build.distDir` → `frontendDist`
 - `build.devPath` → `devUrl` (now only accepts URLs, not paths)
@@ -165,6 +179,7 @@ Because many online resources refer to Tauri v1, older patterns may inadvertentl
 - `tauri.bundle` → moved to top-level
 
 **JavaScript API Changes:**
+
 - `@tauri-apps/api` now only exports: `core`, `path`, `event`, `window`
 - All other modules moved to plugins: `@tauri-apps/plugin-*`
   - `@tauri-apps/api/fs` → `@tauri-apps/plugin-fs`
@@ -174,6 +189,7 @@ Because many online resources refer to Tauri v1, older patterns may inadvertentl
   - etc.
 
 **Permissions & Capabilities (Critical!):**
+
 - v1's `allowlist` replaced by **capabilities** system (ACL-based)
 - Create capability files in `src-tauri/capabilities/` directory
 - Must explicitly grant permissions per plugin (e.g., `fs:allow-read-text-file`)
@@ -181,8 +197,7 @@ Because many online resources refer to Tauri v1, older patterns may inadvertentl
 - See [Tauri Security Docs](https://v2.tauri.app/security/) for details
 
 **Rust Changes:**
+
 - Many `tauri::api` modules moved to separate plugins
 - Use `std::fs` or `tauri_plugin_fs` instead of `tauri::api::file`
 - Menu and tray APIs moved to separate crates
-
-

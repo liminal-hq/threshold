@@ -19,6 +19,7 @@ import './theme/transitions.css';
 import { routeTransitions } from './utils/RouteTransitions';
 import { SettingsService } from './services/SettingsService';
 import { alarmManagerService } from './services/AlarmManagerService';
+import { ROUTES } from './constants';
 
 const App: React.FC = () => {
 	console.log('📦 [threshold] App rendering, pathname:', window.location.pathname);
@@ -117,6 +118,12 @@ const App: React.FC = () => {
 					const { onBackKeyDown } = await import('tauri-plugin-app-events-api');
 
 					onBackKeyDown(() => {
+						// Disable back button on Ringing screen
+						const currentPath = router.state.location.pathname;
+						if (currentPath.startsWith(ROUTES.RINGING)) {
+							return false; // Prevent default (do nothing)
+						}
+
 						// Check if we can go back.
 						// window.history.length > 1 is the standard browser way to check history depth.
 						if (window.history.length > 1) {

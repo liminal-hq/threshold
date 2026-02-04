@@ -17,11 +17,15 @@
 		"core:window:default",
 		"core:window:allow-start-dragging",
 		"log:default",
+		"fs:default",
+		"fs:allow-write-text-file",
 		"core:window:allow-show",
 		"core:window:allow-set-focus",
 		"core:window:allow-maximize",
+		"core:window:allow-unmaximize",
 		"core:window:allow-toggle-maximize",
 		"core:window:allow-minimize",
+		"core:window:allow-unminimize",
 		"core:window:allow-close",
 		"core:window:allow-hide",
 		"core:window:allow-set-always-on-top",
@@ -29,6 +33,7 @@
 		"core:window:allow-set-decorations",
 		"alarm-manager:default",
 		"time-prefs:default",
-		"theme-utils:default"
+		"theme-utils:default",
+		"dialog:default"
 	]
 }

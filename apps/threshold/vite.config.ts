@@ -4,12 +4,16 @@ import path from 'path';
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
+const coreMode = process.env.THRESHOLD_CORE_MODE ?? 'source';
+const useCoreSource = coreMode !== 'dist';
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
 	plugins: [react()],
 	resolve: {
-        conditions: ['source', 'import', 'module', 'browser', 'default'],
+		conditions: useCoreSource
+			? ['source', 'import', 'module', 'browser', 'default']
+			: ['import', 'module', 'browser', 'default'],
 		alias: {
 			history: path.resolve(__dirname, 'node_modules/history/index.js'), // Force resolution to CJS entry point
 		},

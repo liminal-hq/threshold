@@ -7,6 +7,14 @@ vi.mock('@tauri-apps/api/core', () => ({
 	invoke: vi.fn(),
 }));
 
+// Mock PlatformUtils to avoid window not defined error from @tauri-apps/plugin-os
+vi.mock('../utils/PlatformUtils', () => ({
+	PlatformUtils: {
+		isDesktop: vi.fn().mockReturnValue(false),
+		isMobile: vi.fn().mockReturnValue(true),
+	},
+}));
+
 describe('AlarmSoundPickerService', () => {
 	beforeEach(() => {
 		vi.resetAllMocks();

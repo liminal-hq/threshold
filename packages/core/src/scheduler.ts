@@ -9,6 +9,7 @@ import {
 	isAfter,
 	getDay,
 	addSeconds,
+	addMinutes,
 	subDays,
 } from 'date-fns';
 
@@ -106,6 +107,15 @@ function getRandomWindowTrigger(alarm: Alarm, date: Date, now: Date): number | n
 		windowEnd = addDays(windowEnd, 1);
 	}
 
+	// One-shot default: if the window already fired, skip scheduling within it.
+	// TODO: Add a future continuousWindow flag to allow re-arming within the same window.
+	if (wasLastFiredInWindow(alarm, windowStart, windowEnd)) {
+		console.log(
+			`[Scheduler] Skipping window (already fired). lastFiredAt=${alarm.lastFiredAt} windowStart=${windowStart.toISOString()} windowEnd=${windowEnd.toISOString()}`,
+		);
+		return null;
+	}
+
 	// Determine the effective sampling range [sampleStart, windowEnd]
 	let sampleStart = windowStart;
 
@@ -128,12 +138,21 @@ function getRandomWindowTrigger(alarm: Alarm, date: Date, now: Date): number | n
 	}
 	// Else: We are strictly before the window (now <= windowStart). sampleStart remains windowStart.
 
-	// Random sampling
-	const startMillis = sampleStart.getTime();
-	const endMillis = windowEnd.getTime();
+	// Random sampling (top-of-minute only)
+	const sampleStartMinute = ceilToMinute(sampleStart);
+	const windowEndExclusive = new Date(windowEnd.getTime() - 1);
+	const windowEndMinute = floorToMinute(windowEndExclusive);
 
-	const randomOffset = Math.random() * (endMillis - startMillis);
-	return Math.floor(startMillis + randomOffset);
+	if (isAfter(sampleStartMinute, windowEndMinute)) {
+		return null;
+	}
+
+	const startMillis = sampleStartMinute.getTime();
+	const endMillis = windowEndMinute.getTime();
+	const minuteSpan = Math.floor((endMillis - startMillis) / 60000);
+	const randomMinuteOffset = Math.floor(Math.random() * (minuteSpan + 1));
+
+	return startMillis + randomMinuteOffset * 60000;
 }
 
 // Helpers
@@ -149,4 +168,29 @@ function setTime(date: Date, hours: number, minutes: number): Date {
 	d = setSeconds(d, 0);
 	d = setMilliseconds(d, 0);
 	return d;
+}
+
+function wasLastFiredInWindow(alarm: Alarm, windowStart: Date, windowEnd: Date): boolean {
+	if (!alarm.lastFiredAt) return false;
+
+	const lastFired = new Date(alarm.lastFiredAt);
+	const lastFiredMillis = lastFired.getTime();
+
+	console.log(
+		`[Scheduler] lastFiredAt check: lastFired=${lastFired.toISOString()} windowStart=${windowStart.toISOString()} windowEnd=${windowEnd.toISOString()}`,
+	);
+	return lastFiredMillis >= windowStart.getTime() && lastFiredMillis < windowEnd.getTime();
+}
+
+function floorToMinute(date: Date): Date {
+	const floored = setSeconds(setMilliseconds(date, 0), 0);
+	return floored;
+}
+
+function ceilToMinute(date: Date): Date {
+	let ceiled = floorToMinute(date);
+	if (ceiled.getTime() < date.getTime()) {
+		ceiled = addMinutes(ceiled, 1);
+	}
+	return ceiled;
 }
