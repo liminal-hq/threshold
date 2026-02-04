@@ -9,6 +9,7 @@ import {
 	isAfter,
 	getDay,
 	addSeconds,
+	addMinutes,
 	subDays,
 } from 'date-fns';
 
@@ -137,12 +138,21 @@ function getRandomWindowTrigger(alarm: Alarm, date: Date, now: Date): number | n
 	}
 	// Else: We are strictly before the window (now <= windowStart). sampleStart remains windowStart.
 
-	// Random sampling
-	const startMillis = sampleStart.getTime();
-	const endMillis = windowEnd.getTime();
+	// Random sampling (top-of-minute only)
+	const sampleStartMinute = ceilToMinute(sampleStart);
+	const windowEndExclusive = new Date(windowEnd.getTime() - 1);
+	const windowEndMinute = floorToMinute(windowEndExclusive);
 
-	const randomOffset = Math.random() * (endMillis - startMillis);
-	return Math.floor(startMillis + randomOffset);
+	if (isAfter(sampleStartMinute, windowEndMinute)) {
+		return null;
+	}
+
+	const startMillis = sampleStartMinute.getTime();
+	const endMillis = windowEndMinute.getTime();
+	const minuteSpan = Math.floor((endMillis - startMillis) / 60000);
+	const randomMinuteOffset = Math.floor(Math.random() * (minuteSpan + 1));
+
+	return startMillis + randomMinuteOffset * 60000;
 }
 
 // Helpers
@@ -170,4 +180,17 @@ function wasLastFiredInWindow(alarm: Alarm, windowStart: Date, windowEnd: Date):
 		`[Scheduler] lastFiredAt check: lastFired=${lastFired.toISOString()} windowStart=${windowStart.toISOString()} windowEnd=${windowEnd.toISOString()}`,
 	);
 	return lastFiredMillis >= windowStart.getTime() && lastFiredMillis < windowEnd.getTime();
+}
+
+function floorToMinute(date: Date): Date {
+	const floored = setSeconds(setMilliseconds(date, 0), 0);
+	return floored;
+}
+
+function ceilToMinute(date: Date): Date {
+	let ceiled = floorToMinute(date);
+	if (ceiled.getTime() < date.getTime()) {
+		ceiled = addMinutes(ceiled, 1);
+	}
+	return ceiled;
 }
