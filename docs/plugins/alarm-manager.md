@@ -1,8 +1,14 @@
-# Alarm Manager Specification
+# Alarm Manager Plugin (`alarm-manager`)
+
+**Plugin location:** `plugins/alarm-manager/`
+**Status:** Active — Milestones A-C complete
+**Platforms:** Android (native), Desktop (tokio fallback)
+
+> This document describes the `alarm-manager` Tauri plugin, which bridges the Tauri webview to the native Android `AlarmManager` API. For plugin development patterns, see [Plugin Manifest Pattern](plugin-manifest-pattern.md). For the event system that drives this plugin, see [Event Architecture](../architecture/event-architecture.md).
 
 ## Overview
 
-The Threshold application requires a robust alarm management system on Android that supports per-alarm sound selection and reliable ringing behaviour. This specification details the implementation of the "native-like" alarm system, which includes:
+The alarm-manager plugin provides reliable, exact alarm scheduling on Android that wakes the device from Doze mode — something standard Web APIs cannot do. It includes:
 
 1.  **Android Alarm Sound Picker**: Allowing users to select system alarm tones.
 2.  **Per-Alarm Sound Persistence**: Storing the selected sound URI with the alarm.
@@ -82,7 +88,7 @@ The `alarms` table in `alarms.db` is updated with new columns:
 *   `sound_title` (TEXT, nullable)
 
 **Migration Strategy**:
-On app init, the Rust alarm database layer checks for the existence of these columns and executes `ALTER TABLE` if they are missing.
+Schema migrations are handled by the Rust core (`AlarmDatabase`) at startup via the `sqlx` migration system.
 
 ### SharedPreferences (Android Native)
 
@@ -93,12 +99,15 @@ To support boot rescheduling and independent ringing, the native plugin stores a
 
 ## Scheduling Flows
 
+### Current Architecture (Event-Driven)
+
+The Rust core (`AlarmCoordinator`) is the single owner of scheduling. The plugin listens for events emitted by the coordinator and drives native scheduling accordingly.
+
 1.  **Create/Update**:
-    *   TS: `AlarmManagerService.saveAndSchedule(alarm)` saves to DB.
-    *   TS: Invokes `plugin:alarm-manager|schedule` with payload `{ id, triggerAt, soundUri }`.
-    *   Kotlin: `AlarmManagerPlugin` calls `AlarmUtils.scheduleAlarm`.
-    *   Kotlin: `AlarmUtils` stores `triggerAt` and `soundUri` in SharedPreferences.
-    *   Kotlin: Sets `AlarmManager` with a `PendingIntent` targeting `AlarmReceiver`.
+    *   UI calls `AlarmService.save()` → Rust `AlarmCoordinator` saves to SQLite, calculates `next_trigger`.
+    *   Coordinator emits `alarm:scheduled` event with `{ id, triggerAt, soundUri }`.
+    *   Plugin (Rust listener) receives event → calls into Kotlin via Tauri command bridge.
+    *   Kotlin: `AlarmUtils.scheduleAlarm` stores metadata in SharedPreferences and sets `AlarmManager` with a `PendingIntent` targeting `AlarmReceiver`.
 
 2.  **Boot Reschedule**:
     *   Kotlin: `BootReceiver` triggers on device boot.
@@ -107,8 +116,11 @@ To support boot rescheduling and independent ringing, the native plugin stores a
     *   Kotlin: Re-schedules valid future alarms via `AlarmManager`.
 
 3.  **Cancel**:
-    *   TS: Invokes `plugin:alarm-manager|cancel`.
+    *   Coordinator emits `alarm:cancelled` event with `{ id }`.
+    *   Plugin receives event → calls Kotlin `AlarmUtils.cancelAlarm`.
     *   Kotlin: Cancels `PendingIntent` and removes entries from SharedPreferences.
+
+> **Note:** The event system that drives these flows is defined in [event-architecture.md](../architecture/event-architecture.md). Once the Level 3 Granular Event System (issue #112) is implemented, this plugin will subscribe to `alarm:scheduled` and `alarm:cancelled` events with full revision tracking.
 
 ## Ringing Flows
 

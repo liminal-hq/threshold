@@ -1,7 +1,7 @@
-# Threshold Wear OS - Implementation Roadmap
+# Threshold — Implementation Roadmap
 
-**Project:** Threshold Wear OS Companion  
-**Duration:** 5 Milestones (~6-8 weeks with AI tooling)  
+**Project:** Threshold
+**Duration:** 5 Milestones (~6-8 weeks with AI tooling)
 **Architecture:** Rust-Core Event-Driven
 
 ---
@@ -828,14 +828,306 @@ cargo test
 
 ### Milestone A Completion Checklist
 
-- [ ] All files created in `src-tauri/src/alarm/`
-- [ ] Dependencies added to `Cargo.toml`
-- [ ] Commands exposed in `main.rs`
-- [ ] Unit tests passing
-- [ ] Commands callable from TypeScript (test with DevTools console)
-- [ ] No regressions (app still builds and runs)
+- [x] All files created in `src-tauri/src/alarm/`
+- [x] Dependencies added to `Cargo.toml`
+- [x] Commands exposed in `main.rs`
+- [x] Unit tests passing
+- [x] Commands callable from TypeScript (test with DevTools console)
+- [x] No regressions (app still builds and runs)
 
-**Next:** Milestone B (Migrate TypeScript to use Rust commands)
+**Status:** ✅ COMPLETE
+
+**Next:** Milestone A.5 (Event System Implementation) - **CRITICAL FOR MILESTONE D**
+
+---
+
+## Milestone A.5: Event System Implementation
+
+**Duration:** 10-12 hours
+**Status:** ❌ NOT STARTED
+**CRITICAL:** This milestone BLOCKS Milestone D (wear-sync plugin)
+
+**Goal:** Implement the Level 3 Granular Event System with Monotonic Revision Tracking
+**Deliverables:**
+- Database migration v2 (revision tables, tombstones)
+- Event structs (11 events across 4 categories)
+- AlarmCoordinator event emission
+- Incremental sync support
+- Unit + integration tests
+
+**Reference:** See [event-architecture.md](event-architecture.md) for complete specification
+
+**Why This Is Critical:**
+Without this system:
+- ❌ wear-sync plugin cannot detect conflicts (no revision comparison)
+- ❌ Incremental sync impossible (no "changes since revision X" queries)
+- ❌ Deleted alarms reappear on watch after phone restart (no tombstones)
+- ❌ alarm-manager SharedPreferences become stale on crash (no heal-on-launch)
+
+---
+
+### A.5.1: Add Revision System (3-4 hours)
+
+**Files to modify:**
+- [apps/threshold/src-tauri/src/alarm/models.rs](../../apps/threshold/src-tauri/src/alarm/models.rs)
+- [apps/threshold/src-tauri/src/alarm/database.rs](../../apps/threshold/src-tauri/src/alarm/database.rs)
+- [apps/threshold/src-tauri/src/alarm/mod.rs](../../apps/threshold/src-tauri/src/alarm/mod.rs)
+
+**Database Migration v2:**
+
+Create new migration in `apps/threshold/src-tauri/src/alarm/database.rs`:
+
+```rust
+Migration {
+    version: 2,
+    description: "add_revision_tracking",
+    sql: r#"
+        -- Global revision counter
+        CREATE TABLE IF NOT EXISTS state_revision (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            current_revision INTEGER NOT NULL DEFAULT 0
+        );
+        INSERT INTO state_revision (id, current_revision) VALUES (1, 0);
+
+        -- Add revision to alarms
+        ALTER TABLE alarms ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;
+
+        -- Tombstones for deleted alarms
+        CREATE TABLE IF NOT EXISTS alarm_tombstones (
+            alarm_id INTEGER PRIMARY KEY,
+            deleted_at_revision INTEGER NOT NULL,
+            deleted_at_timestamp INTEGER NOT NULL,
+            label TEXT
+        );
+
+        -- Indexes for incremental sync
+        CREATE INDEX IF NOT EXISTS idx_alarms_revision ON alarms(revision);
+        CREATE INDEX IF NOT EXISTS idx_tombstones_revision ON alarm_tombstones(deleted_at_revision);
+    "#,
+    kind: MigrationKind::Up,
+},
+```
+
+**Update AlarmRecord model:**
+
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmRecord {
+    // ... existing fields ...
+    pub revision: i64,  // ← ADD THIS
+}
+```
+
+**Add revision methods to AlarmDatabase:**
+
+See [event-architecture.md](event-architecture.md) section 2.3 for complete implementations:
+- `next_revision()` - Atomically increment and return next revision
+- `current_revision()` - Get current revision without incrementing
+- `get_alarms_since_revision()` - Get alarms changed since revision
+- `get_deleted_since_revision()` - Get deleted alarm IDs since revision
+- `delete_with_revision()` - Delete alarm and create tombstone
+- `cleanup_tombstones_older_than_days()` - Clean up old tombstones (30-day retention)
+
+**Update AlarmCoordinator to use revisions:**
+
+```rust
+pub async fn save_alarm<R: Runtime>(
+    &self,
+    app: &AppHandle<R>,
+    input: AlarmInput,
+) -> Result<AlarmRecord> {
+    // Get next revision BEFORE save
+    let revision = self.db.next_revision().await?;
+
+    // ... existing trigger calculation ...
+
+    // Save with revision stamp
+    let alarm = self.db.save(input, next_trigger, revision).await?;
+
+    // Events will be added in A.5.2
+
+    Ok(alarm)
+}
+```
+
+**Testing:**
+```bash
+cargo test
+pnpm tauri dev
+# In browser console:
+await window.__TAURI__.core.invoke('get_alarms')
+// Should see revision: 1 on all alarms
+```
+
+---
+
+### A.5.2: Implement Event Structs (2-3 hours)
+
+**File:** [apps/threshold/src-tauri/src/alarm/events.rs](../../apps/threshold/src-tauri/src/alarm/events.rs) (currently empty)
+
+Populate with 11 event types across 4 categories. See [event-architecture.md](event-architecture.md) section 4 for complete definitions.
+
+**Event Categories:**
+
+1. **CRUD Events** (3): `alarm:created`, `alarm:updated`, `alarm:deleted`
+2. **Scheduling Events** (2): `alarm:scheduled`, `alarm:cancelled`
+3. **Lifecycle Events** (3): `alarm:fired`, `alarm:dismissed`, `alarm:snoozed`
+4. **Batch Events** (2): `alarms:batch:updated`, `alarms:sync:needed`
+
+**Key Benefits:**
+- Payload sizes: 40-220 bytes (vs 1200 bytes for old snapshot event)
+- No diffing needed (subscribers get exact action)
+- Enables batching (wear-sync buffers 5 edits → 1 sync)
+
+**Testing:**
+```typescript
+// In browser DevTools console
+import { listen } from '@tauri-apps/api/event';
+
+await listen('alarm:created', (event) => {
+    console.log('Created:', event.payload);
+});
+
+await window.__TAURI__.core.invoke('save_alarm', {
+    alarm: { enabled: true, mode: 'FIXED', fixedTime: '09:00', activeDays: [1,2,3,4,5] }
+});
+// Should see event logged with revision
+```
+
+---
+
+### A.5.3: Integrate Event Emission (3-4 hours)
+
+**File:** [apps/threshold/src-tauri/src/alarm/mod.rs](../../apps/threshold/src-tauri/src/alarm/mod.rs)
+
+Update `save_alarm()` to emit events in order:
+
+1. CRUD event (`alarm:created` or `alarm:updated`)
+2. Scheduling events (`alarm:scheduled` and/or `alarm:cancelled`)
+3. Batch event (`alarms:batch:updated`)
+
+See [event-architecture.md](event-architecture.md) section 5 for complete implementation with emit helper methods.
+
+**Add Critical Lifecycle Fixes:**
+
+Update [apps/threshold/src-tauri/src/lib.rs](../../apps/threshold/src-tauri/src/lib.rs) to add heal-on-launch and maintenance:
+
+```rust
+.setup(|app| {
+    let db = tauri::async_runtime::block_on(async {
+        AlarmDatabase::new(app.handle()).await
+    })?;
+
+    let coordinator = AlarmCoordinator::new(db);
+
+    // CRITICAL FIX #2: Heal-on-launch (prevents boot recovery split brain)
+    tauri::async_runtime::block_on(async {
+        coordinator.heal_on_launch(app.handle()).await
+    })?;
+
+    // CRITICAL FIX #1: Cleanup old tombstones (prevents zombie alarms)
+    tauri::async_runtime::block_on(async {
+        coordinator.run_maintenance().await
+    }).ok();
+
+    // Schedule daily maintenance
+    let app_handle = app.handle().clone();
+    tauri::async_runtime::spawn(async move {
+        let mut interval = tokio::time::interval(
+            tokio::time::Duration::from_secs(86400)
+        );
+        loop {
+            interval.tick().await;
+            if let Ok(coord) = app_handle.try_state::<AlarmCoordinator>() {
+                coord.run_maintenance().await.ok();
+            }
+        }
+    });
+
+    app.manage(coordinator);
+    Ok(())
+})
+```
+
+---
+
+### A.5.4: Testing (2-3 hours)
+
+**Unit Tests:**
+
+```rust
+#[cfg(test)]
+mod tests {
+    #[tokio::test]
+    async fn test_revision_increments() {
+        let db = create_test_db().await;
+        let rev1 = db.next_revision().await.unwrap();
+        let rev2 = db.next_revision().await.unwrap();
+        assert_eq!(rev2, rev1 + 1);
+    }
+
+    #[tokio::test]
+    async fn test_alarm_stamped_with_revision() {
+        let db = create_test_db().await;
+        let rev = db.next_revision().await.unwrap();
+        let input = AlarmInput::default();
+        let alarm = db.save(input, Some(123456), rev).await.unwrap();
+        assert_eq!(alarm.revision, rev);
+    }
+
+    #[tokio::test]
+    async fn test_incremental_sync() {
+        let db = create_test_db().await;
+
+        let rev1 = db.next_revision().await.unwrap();
+        db.save(input1, None, rev1).await.unwrap();
+
+        let rev2 = db.next_revision().await.unwrap();
+        db.save(input2, None, rev2).await.unwrap();
+
+        let changed = db.get_alarms_since_revision(1).await.unwrap();
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].revision, 2);
+    }
+}
+```
+
+**Integration Tests:**
+
+1. **Event Emission Test:**
+   - Create alarm via `invoke('save_alarm')`
+   - Verify `alarm:created`, `alarm:scheduled`, `alarms:batch:updated` events fired
+
+2. **Toggle Test:**
+   - Toggle alarm off
+   - Verify `alarm:updated` and `alarm:cancelled` events fired
+
+3. **Incremental Sync Test:**
+   - Create 3 alarms (rev 1, 2, 3)
+   - Query `get_alarms_since_revision(1)`
+   - Verify returns 2 alarms
+
+---
+
+### Milestone A.5 Completion Checklist
+
+- [ ] Database migration v2 applied
+- [ ] AlarmRecord has revision field
+- [ ] events.rs populated with 11 event types
+- [ ] AlarmCoordinator emits granular events on every mutation
+- [ ] heal-on-launch integrated in lib.rs
+- [ ] Daily tombstone maintenance scheduled
+- [ ] Unit tests passing
+- [ ] Integration tests passing
+- [ ] DevTools console shows granular events (not snapshot)
+- [ ] No regressions (app still works)
+
+**🔴 CRITICAL:** Milestone D cannot proceed until this checklist is complete.
+
+**Tracked In:** GitHub Issue [#113](https://github.com/liminal-hq/threshold/issues/113)
+
+**Next:** Milestone B (TypeScript Migration) - Can proceed in parallel with A.5
 
 ---
 
@@ -1459,15 +1751,27 @@ class BootReceiver : BroadcastReceiver() {
 
 ## Milestone D: wear-sync Plugin
 
-**Duration:** 3-4 days  
-**Goal:** Wear Data Layer synchronization  
+**Duration:** 3-4 days
+**Status:** 🔴 BLOCKED - Waiting for Milestone A.5 (Event System)
+**Prerequisite:** Milestone A.5 MUST be complete before starting
+
+**Goal:** Wear Data Layer synchronization with granular event system
 **Deliverables:**
 - wear-sync plugin scaffolding
-- Event listener for `alarms:changed`
-- Data Layer publishing (phone → watch)
-- Message handling (watch → phone)
+- Batch collector pattern (500ms debounce)
+- Event listeners for granular events (not snapshot)
+- Incremental sync protocol with revision checks
+- Data Layer publishing (phone ↔ watch)
+- Conflict detection (reject stale updates)
 
-See `data-architecture.md` for detailed data schemas.
+**Key Changes from Original Design:**
+- ❌ OLD: Listen to `alarms:changed` snapshot event
+- ✅ NEW: Listen to `alarms:batch:updated` and debounce changes
+- ✅ NEW: Use revision system for incremental sync
+- ✅ NEW: Implement conflict detection for watch edits
+
+See [event-architecture.md](event-architecture.md) sections 5-6 for complete protocol.
+See [data-architecture.md](data-architecture.md) for detailed data schemas.
 
 **Key Files:**
 - `plugins/wear-sync/src/lib.rs`

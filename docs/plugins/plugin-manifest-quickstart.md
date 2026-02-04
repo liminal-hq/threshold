@@ -159,7 +159,7 @@ tauri-plugin-your-plugin = { version = "1.0", features = ["camera-access"] }
 
 See the full implementation in `plugins/alarm-manager/build.rs`.
 
-For complete documentation, read `THRESHOLD_PLUGIN_MANIFEST_PATTERN.md`.
+For complete documentation, read `plugin-manifest-pattern.md`.
 
 ---
 
