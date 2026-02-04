@@ -3,13 +3,7 @@ const COMMANDS: &[&str] = &["minimize_app"];
 fn main() {
   tauri_plugin::Builder::new(COMMANDS)
     .android_path("android")
-    .ios_path("ios")
     .build();
-
-  #[cfg(target_os = "macos")] // Only run on host where we might build (but actually this runs on build machine, checking target_os might be wrong if cross compiling, but standard pattern is usually just calls)
-  {
-      // no-op
-  }
   
   inject_android_permissions().expect("Failed to inject Android permissions");
 }
