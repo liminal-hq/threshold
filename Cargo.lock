@@ -4629,6 +4629,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-app-management"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "tauri-plugin-deep-link"
 version = "2.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5015,6 +5026,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-alarm-manager",
  "tauri-plugin-app-events",
+ "tauri-plugin-app-management",
  "tauri-plugin-deep-link",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
