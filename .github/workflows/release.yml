@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-24.04
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  build-android:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/liminal-hq/threshold/ci-base:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Provision Signing Keys
+        run: |
+          mkdir -p /keys
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /keys/upload-keystore.jks
+          echo "${{ secrets.KEYSTORE_PROPERTIES }}" > /keys/keystore.properties
+
+      - name: Build Android Release
+        run: ./scripts/build-release-devcontainer.sh
+
+      - name: Upload AAB
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release-please.outputs.upload_url }}
+          asset_path: ./release/app-release-universalRelease-v${{ needs.release-please.outputs.tag_name }}.aab
+          asset_name: threshold-android-${{ needs.release-please.outputs.tag_name }}.aab
+          asset_content_type: application/vnd.android.package-archive
+        # Note: The exact filename depends on how build-release-devcontainer.sh names it.
+        # The script outputs to release/${AAB_FILENAME}${VERSION_SUFFIX}.aab
+        # We might need a wildcard upload or a step to find the file name.
+
+      - name: Find and Upload Artifacts
+        if: always() # Run even if previous specific upload fails, to try wildcard approach if needed
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.aab
+            release/*.zip
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-desktop:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/liminal-hq/threshold/ci-base:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Build Desktop Release
+        run: |
+          pnpm build:desktop
+
+      - name: Upload Desktop Artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/threshold/src-tauri/target/release/bundle/deb/*.deb
+            apps/threshold/src-tauri/target/release/bundle/appimage/*.AppImage
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
