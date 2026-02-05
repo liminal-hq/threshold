@@ -29,7 +29,13 @@ impl AlarmDatabase {
         Ok(Self { pool })
     }
 
-    /// Atomically increment and return next revision
+    /// Atomically increment and return next revision.
+    ///
+    /// This uses a singleton table (`state_revision`) to maintain a global monotonic counter (logical clock).
+    /// This is a standard pattern for synchronization systems to track state changes across the entire dataset,
+    /// allowing clients (like the Wear OS app) to request "changes since revision X".
+    ///
+    /// The transaction ensures atomicity: no two operations can claim the same revision number.
     pub async fn next_revision(&self) -> Result<i64> {
         let mut tx = self.pool.begin().await?;
 
