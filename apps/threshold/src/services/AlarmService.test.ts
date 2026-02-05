@@ -33,21 +33,22 @@ describe('AlarmService', () => {
     };
 
     describe('subscribe', () => {
-        it('should setup event listener', async () => {
+        it('should setup batch update listener and fetch alarms', async () => {
             const mockUnlisten = vi.fn();
             (listen as any).mockResolvedValue(mockUnlisten);
             const callback = vi.fn();
+            (invoke as any).mockResolvedValue([mockAlarm]);
 
             const unlisten = await AlarmService.subscribe(callback);
 
-            expect(listen).toHaveBeenCalledWith('alarms:changed', expect.any(Function));
-            expect(unlisten).toBe(mockUnlisten);
+            expect(listen).toHaveBeenCalledWith('alarms:batch:updated', expect.any(Function));
+            expect(unlisten).toEqual(expect.any(Function));
 
-            // Simulate event
             const eventHandler = (listen as any).mock.calls[0][1];
-            const eventPayload = [mockAlarm];
-            eventHandler({ payload: eventPayload });
-            expect(callback).toHaveBeenCalledWith(eventPayload);
+            await eventHandler({ payload: { updatedIds: [1], revision: 2, timestamp: 123 } });
+
+            expect(invoke).toHaveBeenCalledWith('get_alarms');
+            expect(callback).toHaveBeenCalledWith([mockAlarm]);
         });
     });
 
@@ -63,9 +64,7 @@ describe('AlarmService', () => {
         });
 
         it('should do nothing if not subscribed', async () => {
-            // No mock setup needed as subscribe wasn't called
             await AlarmService.unsubscribe();
-            // Should just not throw
         });
     });
 
@@ -135,6 +134,16 @@ describe('AlarmService', () => {
             await AlarmService.dismiss(1);
 
             expect(invoke).toHaveBeenCalledWith('dismiss_alarm', { id: 1 });
+        });
+    });
+
+    describe('reportFired', () => {
+        it('should invoke report_alarm_fired', async () => {
+            (invoke as any).mockResolvedValue(undefined);
+
+            await AlarmService.reportFired(1, 123456);
+
+            expect(invoke).toHaveBeenCalledWith('report_alarm_fired', { id: 1, actualFiredAt: 123456 });
         });
     });
 });

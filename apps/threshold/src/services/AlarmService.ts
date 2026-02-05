@@ -3,25 +3,32 @@ import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import type { AlarmRecord, AlarmInput } from '../types/alarm';
 
 export class AlarmService {
-    private static unlistenFn: UnlistenFn | null = null;
+    private static unlistenFns: UnlistenFn[] = [];
 
     /**
      * Subscribe to alarm changes
      */
     static async subscribe(callback: (alarms: AlarmRecord[]) => void): Promise<UnlistenFn> {
-        this.unlistenFn = await listen<AlarmRecord[]>('alarms:changed', (event) => {
-            callback(event.payload);
+        const unlisten = await listen('alarms:batch:updated', async () => {
+            const alarms = await this.getAll();
+            callback(alarms);
         });
-        return this.unlistenFn;
+
+        this.unlistenFns = [unlisten];
+
+        return () => {
+            this.unlistenFns.forEach((fn) => fn());
+            this.unlistenFns = [];
+        };
     }
 
     /**
      * Unsubscribe from alarm changes
      */
     static async unsubscribe() {
-        if (this.unlistenFn) {
-            this.unlistenFn();
-            this.unlistenFn = null;
+        if (this.unlistenFns.length > 0) {
+            this.unlistenFns.forEach((fn) => fn());
+            this.unlistenFns = [];
         }
     }
 
@@ -65,5 +72,12 @@ export class AlarmService {
      */
     static async dismiss(id: number): Promise<void> {
         await invoke('dismiss_alarm', { id });
+    }
+
+    /**
+     * Report a fired alarm (lifecycle event)
+     */
+    static async reportFired(id: number, actualFiredAt: number): Promise<void> {
+        await invoke('report_alarm_fired', { id, actualFiredAt });
     }
 }
