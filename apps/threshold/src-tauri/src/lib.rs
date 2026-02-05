@@ -88,6 +88,7 @@ pub fn run() {
         .plugin(tauri_plugin_theme_utils::init())
         .plugin(tauri_plugin_alarm_manager::init())
         .plugin(tauri_plugin_time_prefs::init())
+        .plugin(tauri_plugin_wear_sync::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
