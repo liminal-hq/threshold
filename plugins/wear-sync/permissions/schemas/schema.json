@@ -295,10 +295,22 @@
       "type": "string",
       "oneOf": [
         {
-          "description": "Default permissions for the wear-sync plugin",
+          "description": "Default permissions for the wear-sync plugin\n#### This default permission set includes:\n\n- `allow-event-listeners`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the wear-sync plugin"
+          "markdownDescription": "Default permissions for the wear-sync plugin\n#### This default permission set includes:\n\n- `allow-event-listeners`"
+        },
+        {
+          "description": "Allows wear-sync to receive alarm batch and sync events",
+          "type": "string",
+          "const": "allow-event-listeners",
+          "markdownDescription": "Allows wear-sync to receive alarm batch and sync events"
+        },
+        {
+          "description": "Denies wear-sync access to alarm batch and sync events",
+          "type": "string",
+          "const": "deny-event-listeners",
+          "markdownDescription": "Denies wear-sync access to alarm batch and sync events"
         }
       ]
     }
