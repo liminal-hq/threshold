@@ -27,4 +27,17 @@ Allows wear-sync to receive alarm batch and sync events
 
 </td>
 </tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-event-listeners`
+
+</td>
+<td>
+
+Denies wear-sync access to alarm batch and sync events
+
+</td>
+</tr>
 </table>

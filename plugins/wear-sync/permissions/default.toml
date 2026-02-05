@@ -5,3 +5,7 @@ permissions = ["allow-event-listeners"]
 [[permission]]
 identifier = "allow-event-listeners"
 description = "Allows wear-sync to receive alarm batch and sync events"
+
+[[permission]]
+identifier = "deny-event-listeners"
+description = "Denies wear-sync access to alarm batch and sync events"
