@@ -323,7 +323,7 @@ pub fn migrations() -> Vec<Migration> {
                     id INTEGER PRIMARY KEY CHECK (id = 1),
                     current_revision INTEGER NOT NULL DEFAULT 0
                 );
-                INSERT INTO state_revision (id, current_revision) VALUES (1, 0);
+                INSERT INTO state_revision (id, current_revision) VALUES (1, 1);
 
                 -- Add revision to alarms
                 ALTER TABLE alarms ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;
