@@ -55,6 +55,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                                     ids.len(),
                                     revision
                                 );
+                                sync_publisher.publish_batch(ids, revision);
                             }
 
                             sync_publisher.publish_immediate(&payload.reason, payload.revision);
