@@ -22,3 +22,6 @@ tauri-plugin = { version = "2.0.0", features = ["build"] }
 
 [features]
 default = []
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt", "time", "test-util"] }

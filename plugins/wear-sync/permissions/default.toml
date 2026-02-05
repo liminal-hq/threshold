@@ -1,3 +1,7 @@
 [default]
 description = "Default permissions for the wear-sync plugin"
-permissions = []
+permissions = ["allow-event-listeners"]
+
+[[permission]]
+identifier = "allow-event-listeners"
+description = "Allows wear-sync to receive alarm batch and sync events"

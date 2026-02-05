@@ -7,9 +7,11 @@ use tauri::{
 
 mod batch_collector;
 mod models;
+mod publisher;
 
-use batch_collector::{BatchCollector, BatchPublish};
-use models::{AlarmsBatchUpdated, AlarmsSyncNeeded};
+use batch_collector::BatchCollector;
+use models::{AlarmsBatchUpdated, AlarmsSyncNeeded, SyncReason};
+use publisher::WearSyncPublisher;
 
 const BATCH_DEBOUNCE_MS: u64 = 500;
 
@@ -17,16 +19,8 @@ const BATCH_DEBOUNCE_MS: u64 = 500;
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("wear-sync")
         .setup(|app, _api| {
-            let publish: BatchPublish = Arc::new(|ids, revision| {
-                log::info!(
-                    "wear-sync: batch ready for publish ({} alarms, revision {})",
-                    ids.len(),
-                    revision
-                );
-                // TODO: Publish to Wear Data Layer.
-            });
-
-            let batch_collector = Arc::new(BatchCollector::new(BATCH_DEBOUNCE_MS, publish));
+            let publisher: Arc<dyn WearSyncPublisher> = Arc::new(LogPublisher);
+            let batch_collector = Arc::new(BatchCollector::new(BATCH_DEBOUNCE_MS, Arc::clone(&publisher)));
 
             let batch_listener = Arc::clone(&batch_collector);
             app.listen("alarms:batch:updated", move |event| {
@@ -35,7 +29,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                         let batch_listener = Arc::clone(&batch_listener);
                         tauri::async_runtime::spawn(async move {
                             batch_listener
-                                .push(payload.updated_ids, payload.revision)
+                                .add(payload.updated_ids, payload.revision)
                                 .await;
                         });
                     }
@@ -48,10 +42,12 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             });
 
             let sync_listener = Arc::clone(&batch_collector);
+            let sync_publisher = Arc::clone(&publisher);
             app.listen("alarms:sync:needed", move |event| {
                 match serde_json::from_str::<AlarmsSyncNeeded>(event.payload()) {
                     Ok(payload) => {
                         let sync_listener = Arc::clone(&sync_listener);
+                        let sync_publisher = Arc::clone(&sync_publisher);
                         tauri::async_runtime::spawn(async move {
                             if let Some((ids, revision)) = sync_listener.flush().await {
                                 log::info!(
@@ -61,7 +57,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                                 );
                             }
 
-                            publish_immediate_sync(&payload);
+                            sync_publisher.publish_immediate(&payload.reason, payload.revision);
                         });
                     }
                     Err(error) => {
@@ -77,11 +73,24 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .build()
 }
 
-fn publish_immediate_sync(payload: &AlarmsSyncNeeded) {
-    log::info!(
-        "wear-sync: immediate sync requested ({:?}) at revision {}",
-        payload.reason,
-        payload.revision
-    );
-    // TODO: Publish to Wear Data Layer.
+struct LogPublisher;
+
+impl WearSyncPublisher for LogPublisher {
+    fn publish_batch(&self, ids: Vec<i32>, revision: i64) {
+        log::info!(
+            "wear-sync: batch ready for publish ({} alarms, revision {})",
+            ids.len(),
+            revision
+        );
+        // TODO: Publish to Wear Data Layer.
+    }
+
+    fn publish_immediate(&self, reason: &SyncReason, revision: i64) {
+        log::info!(
+            "wear-sync: immediate sync requested ({:?}) at revision {}",
+            reason,
+            revision
+        );
+        // TODO: Publish to Wear Data Layer.
+    }
 }

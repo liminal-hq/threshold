@@ -2,6 +2,10 @@
 
 Default permissions for the wear-sync plugin
 
+#### This default permission set includes the following:
+
+- `allow-event-listeners`
+
 ## Permission Table
 
 <table>
@@ -10,4 +14,17 @@ Default permissions for the wear-sync plugin
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`wear-sync:allow-event-listeners`
+
+</td>
+<td>
+
+Allows wear-sync to receive alarm batch and sync events
+
+</td>
+</tr>
 </table>

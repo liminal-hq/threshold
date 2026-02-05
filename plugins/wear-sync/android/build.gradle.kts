@@ -29,4 +29,5 @@ android {
 dependencies {
     compileOnly(project(":tauri-android"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+    implementation("com.google.android.gms:play-services-wearable:18.1.0")
 }
