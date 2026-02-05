@@ -2,6 +2,7 @@ use tauri::{AppHandle, Runtime, Manager};
 use tauri_plugin_sql::{Migration, MigrationKind};
 use crate::alarm::{models::*, error::{Result, Error}};
 use sqlx::sqlite::SqlitePool;
+use sqlx::Row;
 
 pub struct AlarmDatabase {
     pool: SqlitePool,
@@ -25,6 +26,8 @@ impl AlarmDatabase {
                     .create_if_missing(true)
             )
             .await?;
+
+        Self::ensure_schema(&pool).await?;
 
         Ok(Self { pool })
     }
@@ -159,6 +162,24 @@ impl AlarmDatabase {
         Ok(())
     }
 
+    pub async fn update_next_trigger(
+        &self,
+        id: i32,
+        next_trigger: Option<i64>,
+        revision: i64,
+    ) -> Result<AlarmRecord> {
+        sqlx::query(
+            "UPDATE alarms SET next_trigger = ?, revision = ? WHERE id = ?"
+        )
+        .bind(next_trigger)
+        .bind(revision)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        self.get_by_id(id).await
+    }
+
     /// Delete alarm and create tombstone
     pub async fn delete_with_revision(&self, id: i32, revision: i64) -> Result<()> {
         let mut tx = self.pool.begin().await?;
@@ -230,6 +251,107 @@ impl AlarmDatabase {
             .await?;
 
         Ok(())
+    }
+
+    async fn ensure_schema(pool: &SqlitePool) -> Result<()> {
+        let alarms_exists = Self::table_exists(pool, "alarms").await?;
+        if !alarms_exists {
+            sqlx::query(
+                r#"
+                    CREATE TABLE IF NOT EXISTS alarms (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        label TEXT,
+                        enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0, 1)),
+                        mode TEXT NOT NULL,
+                        fixed_time TEXT,
+                        window_start TEXT,
+                        window_end TEXT,
+                        active_days TEXT NOT NULL,
+                        next_trigger INTEGER,
+                        sound_uri TEXT,
+                        sound_title TEXT
+                    )
+                "#
+            )
+            .execute(pool)
+            .await?;
+        }
+
+        let revision_column_exists = if alarms_exists {
+            Self::column_exists(pool, "alarms", "revision").await?
+        } else {
+            false
+        };
+
+        if !revision_column_exists {
+            sqlx::query("ALTER TABLE alarms ADD COLUMN revision INTEGER NOT NULL DEFAULT 1")
+                .execute(pool)
+                .await?;
+        }
+
+        if !Self::table_exists(pool, "state_revision").await? {
+            sqlx::query(
+                r#"
+                    CREATE TABLE IF NOT EXISTS state_revision (
+                        id INTEGER PRIMARY KEY CHECK (id = 1),
+                        current_revision INTEGER NOT NULL DEFAULT 0
+                    )
+                "#
+            )
+            .execute(pool)
+            .await?;
+        }
+
+        sqlx::query("INSERT OR IGNORE INTO state_revision (id, current_revision) VALUES (1, 1)")
+            .execute(pool)
+            .await?;
+
+        if !Self::table_exists(pool, "alarm_tombstones").await? {
+            sqlx::query(
+                r#"
+                    CREATE TABLE IF NOT EXISTS alarm_tombstones (
+                        alarm_id INTEGER PRIMARY KEY,
+                        deleted_at_revision INTEGER NOT NULL,
+                        deleted_at_timestamp INTEGER NOT NULL,
+                        label TEXT
+                    )
+                "#
+            )
+            .execute(pool)
+            .await?;
+        }
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_alarms_revision ON alarms(revision)")
+            .execute(pool)
+            .await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_tombstones_revision ON alarm_tombstones(deleted_at_revision)")
+            .execute(pool)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn table_exists(pool: &SqlitePool, name: &str) -> Result<bool> {
+        let exists: Option<(i64,)> = sqlx::query_as(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
+        )
+        .bind(name)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(exists.is_some())
+    }
+
+    async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<bool> {
+        let rows = sqlx::query(&format!("PRAGMA table_info({})", table))
+            .fetch_all(pool)
+            .await?;
+
+        Ok(rows.into_iter().any(|row| {
+            row.try_get::<String, _>("name")
+                .map(|name| name == column)
+                .unwrap_or(false)
+        }))
     }
 }
 

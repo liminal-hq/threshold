@@ -105,6 +105,25 @@ pub async fn dismiss_alarm<R: Runtime>(
 }
 
 #[tauri::command]
+/// Snooze a ringing alarm and emit lifecycle events.
+///
+/// - `app`: app handle for command context.
+/// - `coordinator`: alarm coordinator state.
+/// - `id`: alarm identifier.
+/// - `minutes`: snooze duration in minutes.
+pub async fn snooze_alarm<R: Runtime>(
+    app: AppHandle<R>,
+    coordinator: State<'_, AlarmCoordinator>,
+    id: i32,
+    minutes: i64,
+) -> Result<(), String> {
+    coordinator
+        .snooze_alarm(&app, id, minutes)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 /// Report a native alarm firing without mutating alarm state.
 ///
 /// - `app`: app handle for command context.
