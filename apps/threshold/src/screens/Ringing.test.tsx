@@ -220,4 +220,46 @@ describe('Ringing Screen Logic', () => {
 		});
 		expect(mockWindow.minimize).not.toHaveBeenCalled();
 	});
+
+	it('should snooze and close window on desktop', async () => {
+		// Arrange
+		(PlatformUtils.isDesktop as any).mockReturnValue(true);
+		(PlatformUtils.isMobile as any).mockReturnValue(false);
+
+		// Act
+		renderWithTheme(<Ringing />);
+
+		const snoozeBtn = await screen.findByRole('button', { name: /snooze/i });
+		fireEvent.click(snoozeBtn);
+
+		// Assert
+		await waitFor(() => {
+			expect(alarmManagerService.snoozeAlarm).toHaveBeenCalledWith(1, 10);
+			expect(mockWindow.close).toHaveBeenCalled();
+		});
+		expect(appManagementService.minimizeApp).not.toHaveBeenCalled();
+	});
+
+	it('should snooze and minimise window on mobile', async () => {
+		// Arrange
+		(PlatformUtils.isDesktop as any).mockReturnValue(false);
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+
+		// Act
+		renderWithTheme(<Ringing />);
+
+		const snoozeBtn = await screen.findByRole('button', { name: /snooze/i });
+		fireEvent.click(snoozeBtn);
+
+		// Assert
+		await waitFor(() => {
+			expect(alarmManagerService.snoozeAlarm).toHaveBeenCalledWith(1, 10);
+			expect(appManagementService.minimizeApp).toHaveBeenCalled();
+		});
+		expect(mockWindow.close).not.toHaveBeenCalled();
+
+		await waitFor(() => {
+			expect(mockNavigate).toHaveBeenCalledWith({ to: ROUTES.HOME, replace: true });
+		});
+	});
 });
