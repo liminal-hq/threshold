@@ -49,16 +49,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                         let sync_listener = Arc::clone(&sync_listener);
                         let sync_publisher = Arc::clone(&sync_publisher);
                         tauri::async_runtime::spawn(async move {
-                            if let Some((ids, revision)) = sync_listener.flush().await {
-                                log::info!(
-                                    "wear-sync: flushing {} pending alarms at revision {} before immediate sync",
-                                    ids.len(),
-                                    revision
-                                );
-                                sync_publisher.publish_batch(ids, revision);
-                            }
-
-                            sync_publisher.publish_immediate(&payload.reason, payload.revision);
+                            handle_sync_needed(sync_publisher, sync_listener, payload).await;
                         });
                     }
                     Err(error) => {
@@ -72,6 +63,23 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             Ok(())
         })
         .build()
+}
+
+async fn handle_sync_needed(
+    publisher: Arc<dyn WearSyncPublisher>,
+    collector: Arc<BatchCollector>,
+    payload: AlarmsSyncNeeded,
+) {
+    if let Some((ids, revision)) = collector.flush().await {
+        log::info!(
+            "wear-sync: flushing {} pending alarms at revision {} before immediate sync",
+            ids.len(),
+            revision
+        );
+        publisher.publish_batch(ids, revision);
+    }
+
+    publisher.publish_immediate(&payload.reason, payload.revision);
 }
 
 struct LogPublisher;
@@ -93,5 +101,65 @@ impl WearSyncPublisher for LogPublisher {
             revision
         );
         // TODO: Publish to Wear Data Layer.
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::publisher::WearSyncPublisher;
+    use std::sync::{Arc, Mutex};
+
+    #[derive(Clone, Debug)]
+    enum PublishCall {
+        Batch(Vec<i32>, i64),
+        Immediate(SyncReason, i64),
+    }
+
+    #[derive(Default)]
+    struct TestPublisher {
+        calls: Arc<Mutex<Vec<PublishCall>>>,
+    }
+
+    impl WearSyncPublisher for TestPublisher {
+        fn publish_batch(&self, ids: Vec<i32>, revision: i64) {
+            self.calls.lock().unwrap().push(PublishCall::Batch(ids, revision));
+        }
+
+        fn publish_immediate(&self, reason: &SyncReason, revision: i64) {
+            self.calls
+                .lock()
+                .unwrap()
+                .push(PublishCall::Immediate(reason.clone(), revision));
+        }
+    }
+
+    #[tokio::test]
+    async fn sync_needed_flushes_before_immediate() {
+        let publisher = Arc::new(TestPublisher::default());
+        let collector = Arc::new(BatchCollector::new(500, publisher.clone()));
+
+        collector.add(vec![9, 10], 40).await;
+
+        let payload = AlarmsSyncNeeded {
+            reason: SyncReason::ForceSync,
+            revision: 41,
+        };
+
+        handle_sync_needed(publisher.clone(), collector, payload).await;
+
+        let calls = publisher.calls.lock().unwrap();
+        assert_eq!(calls.len(), 2);
+        match (&calls[0], &calls[1]) {
+            (PublishCall::Batch(ids, revision), PublishCall::Immediate(reason, immediate_rev)) => {
+                let mut ids = ids.clone();
+                ids.sort_unstable();
+                assert_eq!(ids, vec![9, 10]);
+                assert_eq!(*revision, 40);
+                assert_eq!(*reason, SyncReason::ForceSync);
+                assert_eq!(*immediate_rev, 41);
+            }
+            _ => panic!("unexpected publish order"),
+        }
     }
 }

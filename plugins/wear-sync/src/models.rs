@@ -15,7 +15,7 @@ pub struct AlarmsSyncNeeded {
     pub revision: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum SyncReason {
     BatchComplete,
