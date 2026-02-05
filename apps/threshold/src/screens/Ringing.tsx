@@ -78,17 +78,7 @@ const Ringing: React.FC = () => {
 	const [audioError, setAudioError] = useState<string | null>(null);
 	const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
 
-	const handleDismiss = useCallback(async () => {
-		console.log('[Ringing] Dismissing Alarm', id);
-		await alarmManagerService.stopRinging();
-
-        // Notify backend to dismiss (reschedule)
-        try {
-            await AlarmService.dismiss(parseInt(id));
-        } catch (e) {
-            console.error('Failed to dismiss alarm in backend', e);
-        }
-
+	const closeRingingWindow = useCallback(async () => {
 		// Check platform and close window if desktop
 		if (PlatformUtils.isDesktop()) {
 			try {
@@ -119,11 +109,25 @@ const Ringing: React.FC = () => {
 		}
 	}, [navigate, id]);
 
+	const handleDismiss = useCallback(async () => {
+		console.log('[Ringing] Dismissing Alarm', id);
+		await alarmManagerService.stopRinging();
+
+		// Notify backend to dismiss (reschedule)
+		try {
+			await AlarmService.dismiss(parseInt(id));
+		} catch (e) {
+			console.error('Failed to dismiss alarm in backend', e);
+		}
+
+		await closeRingingWindow();
+	}, [closeRingingWindow, id]);
+
 	const handleSnooze = async () => {
 		const alarmId = parseInt(id);
 		console.log('Snoozing Alarm', alarmId, 'for', snoozeLength, 'minutes');
 		await alarmManagerService.snoozeAlarm(alarmId, snoozeLength);
-		handleDismiss();
+		await closeRingingWindow();
 	};
 
 	// Silence After Timer

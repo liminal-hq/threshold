@@ -21,6 +21,7 @@ tauri-plugin-alarm-manager = { path = "../../../plugins/alarm-manager" }
 tauri-plugin-time-prefs = { path = "../../../plugins/time-prefs" }
 tauri-plugin-theme-utils = { path = "../../../plugins/theme-utils" }
 tauri-plugin-app-management = { path = "../../../plugins/app-management" }
+tauri-plugin-wear-sync = { path = "../../../plugins/wear-sync" }
 tauri-plugin-deep-link = { version = "2.0.0", features = [] }
 tauri-plugin-log = { version = "2.0.0", features = [] }
 tauri-plugin-notification = { version = "2.0.0", features = [] }

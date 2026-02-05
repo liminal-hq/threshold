@@ -75,6 +75,13 @@ export class AlarmService {
     }
 
     /**
+     * Snooze ringing alarm
+     */
+    static async snooze(id: number, minutes: number): Promise<void> {
+        await invoke('snooze_alarm', { id, minutes });
+    }
+
+    /**
      * Report a fired alarm (lifecycle event)
      */
     static async reportFired(id: number, actualFiredAt: number): Promise<void> {

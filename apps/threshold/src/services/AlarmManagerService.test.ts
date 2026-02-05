@@ -9,6 +9,7 @@ import { sendNotification, registerActionTypes, onAction } from '@tauri-apps/plu
 vi.mock('./AlarmService', () => ({
 	AlarmService: {
 		getAll: vi.fn(),
+		snooze: vi.fn(),
 	},
 }));
 
@@ -38,6 +39,7 @@ describe('AlarmManagerService', () => {
 		vi.resetAllMocks();
 
 		(AlarmService.getAll as any).mockResolvedValue([]);
+		(AlarmService.snooze as any).mockResolvedValue(undefined);
 
 		(listen as any).mockResolvedValue(undefined);
 		(emit as any).mockResolvedValue(undefined);
@@ -114,5 +116,14 @@ describe('AlarmManagerService', () => {
 		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel', {
 			payload: { id: 7 },
 		});
+	});
+
+	it('snoozes alarms and stops the current ring', async () => {
+		const service = new AlarmManagerService();
+
+		await service.snoozeAlarm(42, 10);
+
+		expect(AlarmService.snooze).toHaveBeenCalledWith(42, 10);
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
 	});
 });

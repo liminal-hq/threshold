@@ -75,6 +75,7 @@ pub fn run() {
         commands::toggle_alarm,
         commands::delete_alarm,
         commands::dismiss_alarm,
+        commands::snooze_alarm,
         commands::report_alarm_fired,
         commands::request_alarm_sync,
     ]);
@@ -88,6 +89,7 @@ pub fn run() {
         .plugin(tauri_plugin_theme_utils::init())
         .plugin(tauri_plugin_alarm_manager::init())
         .plugin(tauri_plugin_time_prefs::init())
+        .plugin(tauri_plugin_wear_sync::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())

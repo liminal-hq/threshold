@@ -293,6 +293,12 @@ export class AlarmManagerService {
 		// Sync handled by listener
 	}
 
+	async snoozeAlarm(id: number, minutes: number) {
+		console.log(`[AlarmManager] Snoozing alarm ${id} for ${minutes} minutes`);
+		await AlarmService.snooze(id, minutes);
+		await this.stopRinging();
+	}
+
 	private async scheduleNativeAlarm(id: number, timestamp: number, soundUri?: string | null) {
 		console.log(`Scheduling alarm ${id} for ${new Date(timestamp).toLocaleString()}`);
 		try {

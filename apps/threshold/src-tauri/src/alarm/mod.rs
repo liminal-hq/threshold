@@ -203,6 +203,39 @@ impl AlarmCoordinator {
         Ok(())
     }
 
+    /// Snooze a ringing alarm by setting the next trigger to an explicit timestamp.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `id`: alarm identifier.
+    /// - `minutes`: snooze duration in minutes.
+    pub async fn snooze_alarm<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        id: i32,
+        minutes: i64,
+    ) -> Result<()> {
+        let alarm = self.db.get_by_id(id).await?;
+        let now = chrono::Utc::now().timestamp_millis();
+        let original_trigger = alarm.next_trigger.unwrap_or(now);
+        let snoozed_until = now + minutes * 60 * 1000;
+
+        let revision = self.db.next_revision().await?;
+        let updated = self.db.update_next_trigger(id, Some(snoozed_until), revision).await?;
+
+        let event = AlarmSnoozed {
+            id,
+            original_trigger,
+            snoozed_until,
+            revision,
+        };
+        app.emit("alarm:snoozed", &event)?;
+
+        self.emit_scheduling_events(app, &updated, Some(&alarm), revision).await?;
+        self.emit_batch_update(app, vec![id], revision).await?;
+
+        Ok(())
+    }
+
     /// Report that an alarm fired (lifecycle event only).
     ///
     /// - `app`: app handle for event emission.

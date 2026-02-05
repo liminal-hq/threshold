@@ -7,7 +7,7 @@
 	"permissions": [
 		"window-state:default",
 		"core:webview:allow-create-webview-window",
-		"core:window:allow-destroy"
-
+		"core:window:allow-destroy",
+		"core:window:allow-set-size"
 	]
 }

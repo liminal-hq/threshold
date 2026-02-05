@@ -137,6 +137,16 @@ describe('AlarmService', () => {
         });
     });
 
+    describe('snooze', () => {
+        it('should invoke snooze_alarm with minutes', async () => {
+            (invoke as any).mockResolvedValue(undefined);
+
+            await AlarmService.snooze(1, 10);
+
+            expect(invoke).toHaveBeenCalledWith('snooze_alarm', { id: 1, minutes: 10 });
+        });
+    });
+
     describe('reportFired', () => {
         it('should invoke report_alarm_fired', async () => {
             (invoke as any).mockResolvedValue(undefined);
