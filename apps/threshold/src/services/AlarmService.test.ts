@@ -146,4 +146,14 @@ describe('AlarmService', () => {
             expect(invoke).toHaveBeenCalledWith('report_alarm_fired', { id: 1, actualFiredAt: 123456 });
         });
     });
+
+    describe('requestSync', () => {
+        it('should invoke request_alarm_sync', async () => {
+            (invoke as any).mockResolvedValue(undefined);
+
+            await AlarmService.requestSync('FORCE_SYNC');
+
+            expect(invoke).toHaveBeenCalledWith('request_alarm_sync', { reason: 'FORCE_SYNC' });
+        });
+    });
 });

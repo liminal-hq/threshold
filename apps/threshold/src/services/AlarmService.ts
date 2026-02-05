@@ -80,4 +80,13 @@ export class AlarmService {
     static async reportFired(id: number, actualFiredAt: number): Promise<void> {
         await invoke('report_alarm_fired', { id, actualFiredAt });
     }
+
+    /**
+     * Request an explicit alarm sync.
+     */
+    static async requestSync(
+        reason: 'BATCH_COMPLETE' | 'INITIALIZE' | 'RECONNECT' | 'FORCE_SYNC',
+    ): Promise<void> {
+        await invoke('request_alarm_sync', { reason });
+    }
 }

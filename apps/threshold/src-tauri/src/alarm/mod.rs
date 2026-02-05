@@ -17,11 +17,16 @@ pub struct AlarmCoordinator {
 }
 
 impl AlarmCoordinator {
+    /// Create a new coordinator.
+    ///
+    /// - `db`: backing alarm database for persistence and revisions.
     pub fn new(db: AlarmDatabase) -> Self {
         Self { db }
     }
 
-    /// Get all alarms
+    /// Get all alarms.
+    ///
+    /// - `_app`: app handle for event context (unused here).
     pub async fn get_all_alarms<R: Runtime>(
         &self,
         _app: &AppHandle<R>,
@@ -29,7 +34,10 @@ impl AlarmCoordinator {
         self.db.get_all().await
     }
 
-    /// Get single alarm by ID
+    /// Get a single alarm by id.
+    ///
+    /// - `_app`: app handle for event context (unused here).
+    /// - `id`: alarm identifier.
     pub async fn get_alarm<R: Runtime>(
         &self,
         _app: &AppHandle<R>,
@@ -38,7 +46,10 @@ impl AlarmCoordinator {
         self.db.get_by_id(id).await
     }
 
-    /// Create or update alarm
+    /// Create or update an alarm and emit granular events.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `input`: alarm payload to save.
     pub async fn save_alarm<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -84,7 +95,11 @@ impl AlarmCoordinator {
         Ok(alarm)
     }
 
-    /// Toggle alarm on/off
+    /// Toggle an alarm on or off via a full save path.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `id`: alarm identifier.
+    /// - `enabled`: desired enabled state.
     pub async fn toggle_alarm<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -109,7 +124,10 @@ impl AlarmCoordinator {
         self.save_alarm(app, input).await
     }
 
-    /// Delete alarm
+    /// Delete an alarm, create a tombstone, and emit deletion events.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `id`: alarm identifier.
     pub async fn delete_alarm<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -130,7 +148,10 @@ impl AlarmCoordinator {
         Ok(())
     }
 
-    /// Dismiss ringing alarm and calculate next occurrence
+    /// Dismiss a ringing alarm and calculate the next occurrence.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `id`: alarm identifier.
     pub async fn dismiss_alarm<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -182,7 +203,11 @@ impl AlarmCoordinator {
         Ok(())
     }
 
-    /// Report that an alarm fired (lifecycle event only)
+    /// Report that an alarm fired (lifecycle event only).
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `id`: alarm identifier.
+    /// - `actual_fired_at`: wall-clock firing time in epoch milliseconds.
     pub async fn report_alarm_fired<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -205,7 +230,10 @@ impl AlarmCoordinator {
         Ok(())
     }
 
-    /// Emit explicit sync request (wear-sync)
+    /// Emit an explicit sync request (wear-sync).
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `reason`: sync trigger reason.
     pub async fn emit_sync_needed<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -221,7 +249,9 @@ impl AlarmCoordinator {
     // Maintenance & Recovery
     // =========================================================================
 
-    /// Initialize coordinator and heal any inconsistencies
+    /// Initialise the coordinator and heal any inconsistencies.
+    ///
+    /// - `app`: app handle for event emission.
     pub async fn heal_on_launch<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
         log::info!("🔧 Starting heal-on-launch: syncing alarm-manager cache with DB");
 
@@ -244,7 +274,7 @@ impl AlarmCoordinator {
         Ok(())
     }
 
-    /// Run periodic maintenance (tombstone cleanup)
+    /// Run periodic maintenance (tombstone cleanup).
     pub async fn run_maintenance(&self) -> Result<()> {
         // Keep tombstones for 30 days
         self.db.cleanup_tombstones_older_than_days(30).await?;
@@ -255,6 +285,11 @@ impl AlarmCoordinator {
     // Event Emission Helpers
     // =========================================================================
 
+    /// Emit an alarm created event.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `alarm`: alarm record to include.
+    /// - `revision`: revision stamped on the mutation.
     async fn emit_alarm_created<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -269,6 +304,12 @@ impl AlarmCoordinator {
         Ok(())
     }
 
+    /// Emit an alarm updated event with an optional snapshot.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `alarm`: updated alarm record.
+    /// - `previous`: optional snapshot of the prior state.
+    /// - `revision`: revision stamped on the mutation.
     async fn emit_alarm_updated<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -285,6 +326,12 @@ impl AlarmCoordinator {
         Ok(())
     }
 
+    /// Emit an alarm deleted event.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `id`: deleted alarm identifier.
+    /// - `label`: optional label for UI display.
+    /// - `revision`: revision stamped on the mutation.
     async fn emit_alarm_deleted<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -301,6 +348,12 @@ impl AlarmCoordinator {
         Ok(())
     }
 
+    /// Emit scheduling events based on the previous and next state.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `alarm`: updated alarm record.
+    /// - `previous`: prior alarm record (if any).
+    /// - `revision`: revision stamped on the mutation.
     async fn emit_scheduling_events<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -345,6 +398,11 @@ impl AlarmCoordinator {
         Ok(())
     }
 
+    /// Emit an alarm scheduled event.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `alarm`: alarm record to schedule.
+    /// - `revision`: revision stamped on the mutation.
     async fn emit_alarm_scheduled<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -365,6 +423,12 @@ impl AlarmCoordinator {
         Ok(())
     }
 
+    /// Emit an alarm cancelled event.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `id`: alarm identifier.
+    /// - `reason`: cancellation reason.
+    /// - `revision`: revision stamped on the mutation.
     async fn emit_alarm_cancelled<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -381,6 +445,11 @@ impl AlarmCoordinator {
         Ok(())
     }
 
+    /// Emit a batch updated event for sync collectors.
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `updated_ids`: alarm ids included in this batch.
+    /// - `revision`: revision stamped on the mutation.
     async fn emit_batch_update<R: Runtime>(
         &self,
         app: &AppHandle<R>,

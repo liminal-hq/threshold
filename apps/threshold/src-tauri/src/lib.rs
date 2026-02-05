@@ -76,6 +76,7 @@ pub fn run() {
         commands::delete_alarm,
         commands::dismiss_alarm,
         commands::report_alarm_fired,
+        commands::request_alarm_sync,
     ]);
 
     builder
