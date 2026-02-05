@@ -133,7 +133,32 @@ pub fn run() {
             })?;
 
             let coordinator = AlarmCoordinator::new(db);
+
+            // Heal-on-launch
+            tauri::async_runtime::block_on(async {
+                coordinator.heal_on_launch(app.handle()).await
+            })?;
+
+            // Run maintenance
+            tauri::async_runtime::block_on(async {
+                coordinator.run_maintenance().await
+            }).ok();
+
             app.manage(coordinator);
+
+            // Schedule daily maintenance
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let mut interval = tokio::time::interval(
+                    tokio::time::Duration::from_secs(86400) // 24 hours
+                );
+                loop {
+                    interval.tick().await;
+                    if let Some(coord) = app_handle.try_state::<AlarmCoordinator>() {
+                        coord.run_maintenance().await.ok();
+                    }
+                }
+            });
 
             Ok(())
         })

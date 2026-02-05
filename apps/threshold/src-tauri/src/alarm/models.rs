@@ -15,6 +15,7 @@ pub struct AlarmRecord {
     pub next_trigger: Option<i64>,         // Epoch millis
     pub sound_uri: Option<String>,
     pub sound_title: Option<String>,
+    pub revision: i64,
 }
 
 /// Input for creating/updating alarms (from TypeScript)

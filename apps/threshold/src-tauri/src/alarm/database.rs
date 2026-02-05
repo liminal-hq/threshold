@@ -29,6 +29,37 @@ impl AlarmDatabase {
         Ok(Self { pool })
     }
 
+    /// Atomically increment and return next revision
+    pub async fn next_revision(&self) -> Result<i64> {
+        let mut tx = self.pool.begin().await?;
+
+        // Atomic increment
+        sqlx::query("UPDATE state_revision SET current_revision = current_revision + 1 WHERE id = 1")
+            .execute(&mut *tx)
+            .await?;
+
+        // Fetch new value
+        let (rev,): (i64,) = sqlx::query_as(
+            "SELECT current_revision FROM state_revision WHERE id = 1"
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(rev)
+    }
+
+    /// Get current revision without incrementing
+    pub async fn current_revision(&self) -> Result<i64> {
+        let (rev,): (i64,) = sqlx::query_as(
+            "SELECT current_revision FROM state_revision WHERE id = 1"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(rev)
+    }
+
     pub async fn get_all(&self) -> Result<Vec<AlarmRecord>> {
         let rows = sqlx::query_as::<_, AlarmRow>("SELECT * FROM alarms ORDER BY id")
             .fetch_all(&self.pool)
@@ -52,6 +83,7 @@ impl AlarmDatabase {
         &self,
         input: AlarmInput,
         next_trigger: Option<i64>,
+        revision: i64,
     ) -> Result<AlarmRecord> {
         let active_days_json = serde_json::to_string(&input.active_days)?;
 
@@ -67,7 +99,8 @@ impl AlarmDatabase {
             sqlx::query(
                 "UPDATE alarms SET
                     label=?, enabled=?, mode=?, fixed_time=?, window_start=?,
-                    window_end=?, active_days=?, next_trigger=?, sound_uri=?, sound_title=?
+                    window_end=?, active_days=?, next_trigger=?, sound_uri=?, sound_title=?,
+                    revision=?
                 WHERE id=?"
             )
             .bind(input.label)
@@ -80,6 +113,7 @@ impl AlarmDatabase {
             .bind(next_trigger)
             .bind(input.sound_uri)
             .bind(input.sound_title)
+            .bind(revision)
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -90,8 +124,8 @@ impl AlarmDatabase {
             let result = sqlx::query(
                 "INSERT INTO alarms
                     (label, enabled, mode, fixed_time, window_start, window_end,
-                     active_days, next_trigger, sound_uri, sound_title)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                     active_days, next_trigger, sound_uri, sound_title, revision)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )
             .bind(input.label)
             .bind(enabled_int)
@@ -103,6 +137,7 @@ impl AlarmDatabase {
             .bind(next_trigger)
             .bind(input.sound_uri)
             .bind(input.sound_title)
+            .bind(revision)
             .execute(&self.pool)
             .await?;
 
@@ -115,6 +150,79 @@ impl AlarmDatabase {
             .bind(id)
             .execute(&self.pool)
             .await?;
+        Ok(())
+    }
+
+    /// Delete alarm and create tombstone
+    pub async fn delete_with_revision(&self, id: i32, revision: i64) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        // Get label before deleting
+        let label: Option<(Option<String>,)> = sqlx::query_as(
+            "SELECT label FROM alarms WHERE id = ?"
+        )
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        // Delete alarm
+        sqlx::query("DELETE FROM alarms WHERE id = ?")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+
+        // Create tombstone
+        sqlx::query(
+            "INSERT INTO alarm_tombstones (alarm_id, deleted_at_revision, deleted_at_timestamp, label)
+             VALUES (?, ?, ?, ?)"
+        )
+        .bind(id)
+        .bind(revision)
+        .bind(chrono::Utc::now().timestamp_millis())
+        .bind(label.and_then(|l| l.0))
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Get alarms changed since revision (for incremental sync)
+    pub async fn get_alarms_since_revision(&self, since: i64) -> Result<Vec<AlarmRecord>> {
+        let rows = sqlx::query_as::<_, AlarmRow>(
+            "SELECT * FROM alarms WHERE revision > ? ORDER BY id"
+        )
+        .bind(since)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| r.into()).collect())
+    }
+
+    /// Get deleted alarm IDs since revision (for incremental sync)
+    pub async fn get_deleted_since_revision(&self, since: i64) -> Result<Vec<i32>> {
+        let rows: Vec<(i32,)> = sqlx::query_as(
+            "SELECT alarm_id FROM alarm_tombstones WHERE deleted_at_revision > ?"
+        )
+        .bind(since)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    /// Clean up old tombstones (time-based retention: 30 days)
+    pub async fn cleanup_tombstones_older_than_days(&self, days: i64) -> Result<()> {
+        let cutoff_timestamp = chrono::Utc::now()
+            .checked_sub_signed(chrono::Duration::days(days))
+            .unwrap()
+            .timestamp_millis();
+
+        sqlx::query("DELETE FROM alarm_tombstones WHERE deleted_at_timestamp < ?")
+            .bind(cutoff_timestamp)
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 }
@@ -133,6 +241,7 @@ struct AlarmRow {
     next_trigger: Option<i64>,
     sound_uri: Option<String>,
     sound_title: Option<String>,
+    revision: i64,
 }
 
 impl From<AlarmRow> for AlarmRecord {
@@ -164,6 +273,7 @@ impl From<AlarmRow> for AlarmRecord {
             next_trigger: row.next_trigger,
             sound_uri: row.sound_uri,
             sound_title: row.sound_title,
+            revision: row.revision,
         }
     }
 }
@@ -198,6 +308,34 @@ pub fn migrations() -> Vec<Migration> {
             "#,
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 2,
+            description: "add_revision_tracking",
+            sql: r#"
+                -- Global revision counter
+                CREATE TABLE IF NOT EXISTS state_revision (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    current_revision INTEGER NOT NULL DEFAULT 0
+                );
+                INSERT INTO state_revision (id, current_revision) VALUES (1, 0);
+
+                -- Add revision to alarms
+                ALTER TABLE alarms ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;
+
+                -- Tombstones for deleted alarms
+                CREATE TABLE IF NOT EXISTS alarm_tombstones (
+                    alarm_id INTEGER PRIMARY KEY,
+                    deleted_at_revision INTEGER NOT NULL,
+                    deleted_at_timestamp INTEGER NOT NULL,
+                    label TEXT
+                );
+
+                -- Indexes for incremental sync
+                CREATE INDEX IF NOT EXISTS idx_alarms_revision ON alarms(revision);
+                CREATE INDEX IF NOT EXISTS idx_tombstones_revision ON alarm_tombstones(deleted_at_revision);
+            "#,
+            kind: MigrationKind::Up,
+        },
     ]
 }
 
@@ -215,11 +353,12 @@ mod tests {
             .expect("Failed to create in-memory database");
 
         // Run migrations
-        let migration = &migrations()[0];
-        sqlx::query(migration.sql)
-            .execute(&pool)
-            .await
-            .expect("Failed to run migrations");
+        for migration in migrations() {
+            sqlx::query(migration.sql)
+                .execute(&pool)
+                .await
+                .expect("Failed to run migrations");
+        }
 
         AlarmDatabase { pool }
     }
@@ -241,7 +380,7 @@ mod tests {
             sound_title: None,
         };
 
-        let result = db.save(input.clone(), Some(1234567890)).await.unwrap();
+        let result = db.save(input.clone(), Some(1234567890), 1).await.unwrap();
 
         assert_eq!(result.id, 1); // First insert gets ID 1
         assert_eq!(result.label, Some("Morning Alarm".to_string()));
@@ -250,6 +389,7 @@ mod tests {
         assert_eq!(result.fixed_time, Some("07:00".to_string()));
         assert_eq!(result.active_days, vec![1, 2, 3, 4, 5]);
         assert_eq!(result.next_trigger, Some(1234567890));
+        assert_eq!(result.revision, 1);
     }
 
     #[tokio::test]
@@ -269,7 +409,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let created = db.save(input, None).await.unwrap();
+        let created = db.save(input, None, 1).await.unwrap();
 
         // Update the alarm
         let update_input = AlarmInput {
@@ -284,7 +424,7 @@ mod tests {
             sound_uri: Some("custom.mp3".to_string()),
             sound_title: Some("Custom Sound".to_string()),
         };
-        let updated = db.save(update_input, Some(9876543210)).await.unwrap();
+        let updated = db.save(update_input, Some(9876543210), 2).await.unwrap();
 
         assert_eq!(updated.id, created.id); // ID should remain the same
         assert_eq!(updated.label, Some("Updated".to_string()));
@@ -295,6 +435,7 @@ mod tests {
         assert_eq!(updated.active_days, vec![0, 6]);
         assert_eq!(updated.sound_uri, Some("custom.mp3".to_string()));
         assert_eq!(updated.next_trigger, Some(9876543210));
+        assert_eq!(updated.revision, 2);
     }
 
     #[tokio::test]
@@ -322,7 +463,7 @@ mod tests {
                 sound_uri: None,
                 sound_title: None,
             };
-            db.save(input, None).await.unwrap();
+            db.save(input, None, i as i64).await.unwrap();
         }
 
         let alarms = db.get_all().await.unwrap();
@@ -348,7 +489,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let created = db.save(input, None).await.unwrap();
+        let created = db.save(input, None, 1).await.unwrap();
 
         let fetched = db.get_by_id(created.id).await.unwrap();
         assert_eq!(fetched.id, created.id);
@@ -386,7 +527,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let created = db.save(input, None).await.unwrap();
+        let created = db.save(input, None, 1).await.unwrap();
 
         // Delete it
         db.delete(created.id).await.unwrap();
@@ -413,7 +554,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let enabled_alarm = db.save(input_enabled, None).await.unwrap();
+        let enabled_alarm = db.save(input_enabled, None, 1).await.unwrap();
         assert_eq!(enabled_alarm.enabled, true);
 
         // Test enabled = false
@@ -429,7 +570,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let disabled_alarm = db.save(input_disabled, None).await.unwrap();
+        let disabled_alarm = db.save(input_disabled, None, 2).await.unwrap();
         assert_eq!(disabled_alarm.enabled, false);
 
         // Verify by fetching
@@ -454,7 +595,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let fixed_alarm = db.save(fixed_input, None).await.unwrap();
+        let fixed_alarm = db.save(fixed_input, None, 1).await.unwrap();
         assert_eq!(fixed_alarm.mode, AlarmMode::Fixed);
 
         // Test WINDOW mode
@@ -470,7 +611,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let window_alarm = db.save(window_input, None).await.unwrap();
+        let window_alarm = db.save(window_input, None, 2).await.unwrap();
         assert_eq!(window_alarm.mode, AlarmMode::Window);
     }
 
@@ -490,7 +631,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let alarm = db.save(input, None).await.unwrap();
+        let alarm = db.save(input, None, 1).await.unwrap();
         
         assert_eq!(alarm.active_days, vec![0, 2, 4, 6]);
 
@@ -515,7 +656,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let alarm = db.save(input, None).await.unwrap();
+        let alarm = db.save(input, None, 1).await.unwrap();
         
         assert_eq!(alarm.active_days, Vec::<i32>::new());
 
@@ -539,7 +680,7 @@ mod tests {
             sound_uri: None,
             sound_title: None,
         };
-        let alarm = db.save(input, None).await.unwrap();
+        let alarm = db.save(input, None, 1).await.unwrap();
         
         assert_eq!(alarm.label, None);
         assert_eq!(alarm.sound_uri, None);
@@ -556,12 +697,13 @@ mod tests {
 
         // Manually insert an alarm with invalid mode
         sqlx::query(
-            "INSERT INTO alarms (label, enabled, mode, active_days) VALUES (?, ?, ?, ?)"
+            "INSERT INTO alarms (label, enabled, mode, active_days, revision) VALUES (?, ?, ?, ?, ?)"
         )
         .bind("Invalid Mode Test")
         .bind(1)
         .bind("INVALID_MODE")
         .bind("[]")
+        .bind(1)
         .execute(&db.pool)
         .await
         .unwrap();
@@ -577,12 +719,13 @@ mod tests {
 
         // Manually insert an alarm with invalid JSON
         sqlx::query(
-            "INSERT INTO alarms (label, enabled, mode, active_days) VALUES (?, ?, ?, ?)"
+            "INSERT INTO alarms (label, enabled, mode, active_days, revision) VALUES (?, ?, ?, ?, ?)"
         )
         .bind("Invalid JSON Test")
         .bind(1)
         .bind("FIXED")
         .bind("not valid json")
+        .bind(1)
         .execute(&db.pool)
         .await
         .unwrap();
@@ -599,12 +742,13 @@ mod tests {
         // Try to insert with invalid enabled value (2)
         // Should fail due to CHECK(enabled IN (0, 1))
         let result = sqlx::query(
-            "INSERT INTO alarms (label, enabled, mode, active_days) VALUES (?, ?, ?, ?)"
+            "INSERT INTO alarms (label, enabled, mode, active_days, revision) VALUES (?, ?, ?, ?, ?)"
         )
         .bind("Constraint Test")
         .bind(2) // Invalid value
         .bind("FIXED")
         .bind("[]")
+        .bind(1)
         .execute(&db.pool)
         .await;
 
@@ -614,5 +758,57 @@ mod tests {
         let msg = err.to_string();
         // SQLite constraint error message usually contains "CHECK constraint failed"
         assert!(msg.contains("CHECK constraint failed") || msg.contains("constraint"));
+    }
+
+    #[tokio::test]
+    async fn test_revision_increments() {
+        let db = setup_test_db().await;
+        let rev1 = db.next_revision().await.unwrap();
+        let rev2 = db.next_revision().await.unwrap();
+        assert_eq!(rev2, rev1 + 1);
+    }
+
+    #[tokio::test]
+    async fn test_alarm_stamped_with_revision() {
+        let db = setup_test_db().await;
+        let rev = db.next_revision().await.unwrap();
+        let input = AlarmInput::default();
+        let alarm = db.save(input, Some(123456), rev).await.unwrap();
+        assert_eq!(alarm.revision, rev);
+    }
+
+    #[tokio::test]
+    async fn test_incremental_sync() {
+        let db = setup_test_db().await;
+
+        let input1 = AlarmInput { label: Some("A".into()), ..Default::default() };
+        let input2 = AlarmInput { label: Some("B".into()), ..Default::default() };
+
+        let rev1 = db.next_revision().await.unwrap();
+        db.save(input1, None, rev1).await.unwrap();
+
+        let rev2 = db.next_revision().await.unwrap();
+        db.save(input2, None, rev2).await.unwrap();
+
+        // Get changes since rev 1
+        let changed = db.get_alarms_since_revision(1).await.unwrap();
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].revision, 2);
+    }
+
+    #[tokio::test]
+    async fn test_delete_with_tombstone() {
+        let db = setup_test_db().await;
+
+        let input = AlarmInput { label: Some("To Delete".into()), ..Default::default() };
+        let rev1 = db.next_revision().await.unwrap();
+        let alarm = db.save(input, None, rev1).await.unwrap();
+
+        let rev2 = db.next_revision().await.unwrap();
+        db.delete_with_revision(alarm.id, rev2).await.unwrap();
+
+        let deleted_ids = db.get_deleted_since_revision(rev1).await.unwrap();
+        assert_eq!(deleted_ids.len(), 1);
+        assert_eq!(deleted_ids[0], alarm.id);
     }
 }

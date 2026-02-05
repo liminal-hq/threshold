@@ -6,6 +6,7 @@ pub mod error;
 
 pub use models::*;
 pub use error::{Error, Result};
+use events::*;
 
 use tauri::{AppHandle, Emitter, Runtime};
 use database::AlarmDatabase;
@@ -23,9 +24,6 @@ impl AlarmCoordinator {
     /// Get all alarms
     pub async fn get_all_alarms<R: Runtime>(
         &self,
-        // app handle might be needed for db access if db wasn't self-contained,
-        // but AlarmDatabase uses sqlx pool internally so it might not strictly need app handle for queries
-        // assuming standard pattern where db methods take &self
         _app: &AppHandle<R>,
     ) -> Result<Vec<AlarmRecord>> {
         self.db.get_all().await
@@ -46,6 +44,14 @@ impl AlarmCoordinator {
         app: &AppHandle<R>,
         input: AlarmInput,
     ) -> Result<AlarmRecord> {
+        // Fetch previous state if updating (for event diffing)
+        let is_new = input.id.is_none();
+        let previous = if let Some(id) = input.id {
+            self.db.get_by_id(id).await.ok()
+        } else {
+            None
+        };
+
         // Calculate next trigger using scheduler
         let next_trigger = if input.enabled {
             scheduler::calculate_next_trigger(&input)?
@@ -53,11 +59,27 @@ impl AlarmCoordinator {
             None
         };
 
-        // Save to database
-        let alarm = self.db.save(input, next_trigger).await?;
+        // Get next revision
+        let revision = self.db.next_revision().await?;
 
-        // Emit event to all listeners
-        self.emit_alarms_changed(app).await?;
+        // Save to database
+        let alarm = self.db.save(input, next_trigger, revision).await?;
+
+        // Emit events IN ORDER:
+
+        // 1. CRUD event
+        if is_new {
+            self.emit_alarm_created(app, &alarm, revision).await?;
+        } else {
+            let snapshot = previous.as_ref().map(|p| AlarmSnapshot::from_alarm(p));
+            self.emit_alarm_updated(app, &alarm, snapshot, revision).await?;
+        }
+
+        // 2. Scheduling events
+        self.emit_scheduling_events(app, &alarm, previous.as_ref(), revision).await?;
+
+        // 3. Batch event
+        self.emit_batch_update(app, vec![alarm.id], revision).await?;
 
         Ok(alarm)
     }
@@ -93,8 +115,18 @@ impl AlarmCoordinator {
         app: &AppHandle<R>,
         id: i32,
     ) -> Result<()> {
-        self.db.delete(id).await?;
-        self.emit_alarms_changed(app).await?;
+        let revision = self.db.next_revision().await?;
+
+        // Get alarm info before delete (for label)
+        let alarm = self.db.get_by_id(id).await.ok();
+
+        self.db.delete_with_revision(id, revision).await?;
+
+        // Emit events
+        self.emit_alarm_deleted(app, id, alarm.as_ref().and_then(|a| a.label.clone()), revision).await?;
+        self.emit_alarm_cancelled(app, id, CancelReason::Deleted, revision).await?;
+        self.emit_batch_update(app, vec![id], revision).await?;
+
         Ok(())
     }
 
@@ -105,6 +137,21 @@ impl AlarmCoordinator {
         id: i32,
     ) -> Result<()> {
         let alarm = self.db.get_by_id(id).await?;
+
+        // Emit dismissed event
+        // Note: We need a revision for this event.
+        // Technically dismiss changes state (next_trigger), so save_alarm will generate a revision.
+        // But we want to emit 'dismissed' as a lifecycle event.
+        // However, save_alarm will emit 'updated' + 'scheduled'/'cancelled'.
+
+        // Let's rely on save_alarm for the state change events.
+        // We can emit 'dismissed' here using the current revision or a new one?
+        // Ideally lifecycle events also have revisions.
+        // Let's grab the current revision for the dismissed event, as it relates to the *act* of dismissing.
+        // Or better, save_alarm will produce a new revision.
+
+        let dismissed_at = chrono::Utc::now().timestamp_millis();
+        let fired_at = dismissed_at; // Approximation if not tracking exact fire time
 
         // Recalculate next occurrence
         let input = AlarmInput {
@@ -120,14 +167,197 @@ impl AlarmCoordinator {
             sound_title: alarm.sound_title,
         };
 
-        self.save_alarm(app, input).await?;
+        let new_alarm = self.save_alarm(app, input).await?;
+
+        // Emit dismissed event
+        let event = AlarmDismissed {
+            id,
+            fired_at,
+            dismissed_at,
+            next_trigger: new_alarm.next_trigger,
+            revision: new_alarm.revision,
+        };
+        app.emit("alarm:dismissed", &event)?;
+
         Ok(())
     }
 
-    /// Emit alarms:changed event
-    async fn emit_alarms_changed<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
-        let alarms = self.db.get_all().await?;
-        app.emit("alarms:changed", &alarms)?;
+    // =========================================================================
+    // Maintenance & Recovery
+    // =========================================================================
+
+    /// Initialize coordinator and heal any inconsistencies
+    pub async fn heal_on_launch<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
+        log::info!("🔧 Starting heal-on-launch: syncing alarm-manager cache with DB");
+
+        let alarms = self.get_all_alarms(app).await?;
+        let enabled_count = alarms.iter()
+            .filter(|a| a.enabled && a.next_trigger.is_some())
+            .count();
+
+        log::info!("Found {} enabled alarms, re-emitting scheduling events", enabled_count);
+
+        for alarm in alarms {
+            if alarm.enabled && alarm.next_trigger.is_some() {
+                // Re-emit scheduling event to heal SharedPreferences cache
+                // We use the alarm's *current* revision because we aren't changing it, just re-syncing
+                self.emit_alarm_scheduled(app, &alarm, alarm.revision).await?;
+            }
+        }
+
+        log::info!("✅ Heal-on-launch complete");
+        Ok(())
+    }
+
+    /// Run periodic maintenance (tombstone cleanup)
+    pub async fn run_maintenance(&self) -> Result<()> {
+        // Keep tombstones for 30 days
+        self.db.cleanup_tombstones_older_than_days(30).await?;
+        Ok(())
+    }
+
+    // =========================================================================
+    // Event Emission Helpers
+    // =========================================================================
+
+    async fn emit_alarm_created<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        alarm: &AlarmRecord,
+        revision: i64,
+    ) -> Result<()> {
+        let event = AlarmCreated {
+            alarm: alarm.clone(),
+            revision,
+        };
+        app.emit("alarm:created", &event)?;
+        Ok(())
+    }
+
+    async fn emit_alarm_updated<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        alarm: &AlarmRecord,
+        previous: Option<AlarmSnapshot>,
+        revision: i64,
+    ) -> Result<()> {
+        let event = AlarmUpdated {
+            alarm: alarm.clone(),
+            previous,
+            revision,
+        };
+        app.emit("alarm:updated", &event)?;
+        Ok(())
+    }
+
+    async fn emit_alarm_deleted<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        id: i32,
+        label: Option<String>,
+        revision: i64,
+    ) -> Result<()> {
+        let event = AlarmDeleted {
+            id,
+            label,
+            revision,
+        };
+        app.emit("alarm:deleted", &event)?;
+        Ok(())
+    }
+
+    async fn emit_scheduling_events<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        alarm: &AlarmRecord,
+        previous: Option<&AlarmRecord>,
+        revision: i64,
+    ) -> Result<()> {
+        let was_scheduled = previous
+            .map(|p| p.enabled && p.next_trigger.is_some())
+            .unwrap_or(false);
+
+        let should_schedule = alarm.enabled && alarm.next_trigger.is_some();
+
+        match (was_scheduled, should_schedule) {
+            (false, true) => {
+                // Schedule
+                self.emit_alarm_scheduled(app, alarm, revision).await?;
+            },
+            (true, false) => {
+                // Cancel
+                let reason = if alarm.enabled {
+                    CancelReason::Updated
+                } else {
+                    CancelReason::Disabled
+                };
+                self.emit_alarm_cancelled(app, alarm.id, reason, revision).await?;
+            },
+            (true, true) => {
+                // Check if trigger changed
+                let trigger_changed = previous
+                    .map(|p| p.next_trigger != alarm.next_trigger)
+                    .unwrap_or(false);
+
+                if trigger_changed {
+                    self.emit_alarm_cancelled(app, alarm.id, CancelReason::Updated, revision).await?;
+                    self.emit_alarm_scheduled(app, alarm, revision).await?;
+                }
+            },
+            (false, false) => {},
+        }
+
+        Ok(())
+    }
+
+    async fn emit_alarm_scheduled<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        alarm: &AlarmRecord,
+        revision: i64,
+    ) -> Result<()> {
+        if let Some(trigger) = alarm.next_trigger {
+            let event = AlarmScheduled {
+                id: alarm.id,
+                trigger_at: trigger,
+                sound_uri: alarm.sound_uri.clone(),
+                label: alarm.label.clone(),
+                mode: alarm.mode.clone(),
+                revision,
+            };
+            app.emit("alarm:scheduled", &event)?;
+        }
+        Ok(())
+    }
+
+    async fn emit_alarm_cancelled<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        id: i32,
+        reason: CancelReason,
+        revision: i64,
+    ) -> Result<()> {
+        let event = AlarmCancelled {
+            id,
+            reason,
+            revision,
+        };
+        app.emit("alarm:cancelled", &event)?;
+        Ok(())
+    }
+
+    async fn emit_batch_update<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        updated_ids: Vec<i32>,
+        revision: i64,
+    ) -> Result<()> {
+        let event = AlarmsBatchUpdated {
+            updated_ids,
+            revision,
+            timestamp: chrono::Utc::now().timestamp_millis(),
+        };
+        app.emit("alarms:batch:updated", &event)?;
         Ok(())
     }
 }
