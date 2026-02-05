@@ -2,6 +2,7 @@
 members = [
     "apps/threshold/src-tauri",
     "plugins/alarm-manager",
+    "plugins/wear-sync",
     "plugins/theme-utils",
     "plugins/time-prefs",
 ]
