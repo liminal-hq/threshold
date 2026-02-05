@@ -72,3 +72,16 @@ pub async fn dismiss_alarm<R: Runtime>(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn report_alarm_fired<R: Runtime>(
+    app: AppHandle<R>,
+    coordinator: State<'_, AlarmCoordinator>,
+    id: i32,
+    actual_fired_at: i64,
+) -> Result<(), String> {
+    coordinator
+        .report_alarm_fired(&app, id, actual_fired_at)
+        .await
+        .map_err(|e| e.to_string())
+}

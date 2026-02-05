@@ -182,6 +182,41 @@ impl AlarmCoordinator {
         Ok(())
     }
 
+    /// Report that an alarm fired (lifecycle event only)
+    pub async fn report_alarm_fired<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        id: i32,
+        actual_fired_at: i64,
+    ) -> Result<()> {
+        let alarm = self.db.get_by_id(id).await?;
+        let revision = self.db.current_revision().await?;
+        let trigger_at = alarm.next_trigger.unwrap_or(actual_fired_at);
+
+        let event = AlarmFired {
+            id,
+            trigger_at,
+            actual_fired_at,
+            label: alarm.label.clone(),
+            revision,
+        };
+        app.emit("alarm:fired", &event)?;
+
+        Ok(())
+    }
+
+    /// Emit explicit sync request (wear-sync)
+    pub async fn emit_sync_needed<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        reason: SyncReason,
+    ) -> Result<()> {
+        let revision = self.db.current_revision().await?;
+        let event = AlarmsSyncNeeded { reason, revision };
+        app.emit("alarms:sync:needed", &event)?;
+        Ok(())
+    }
+
     // =========================================================================
     // Maintenance & Recovery
     // =========================================================================
