@@ -794,12 +794,14 @@ mod tests {
         db.save(input1, None, rev1).await.unwrap();
 
         let rev2 = db.next_revision().await.unwrap();
-        db.save(input2, None, rev2).await.unwrap();
+        let alarm2 = db.save(input2, None, rev2).await.unwrap();
 
-        // Get changes since rev 1
-        let changed = db.get_alarms_since_revision(1).await.unwrap();
+        // Get changes since rev 1 (inclusive of later revisions)
+        // If rev1=2, rev2=3. querying > 2 should give alarm 2.
+        let changed = db.get_alarms_since_revision(rev1).await.unwrap();
         assert_eq!(changed.len(), 1);
-        assert_eq!(changed[0].revision, 2);
+        assert_eq!(changed[0].id, alarm2.id);
+        assert_eq!(changed[0].revision, rev2);
     }
 
     #[tokio::test]
