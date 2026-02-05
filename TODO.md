@@ -10,6 +10,8 @@
 
 ## Technical Debt
 
+- [ ] **Immediate:** Align alarm architecture so `AlarmService` owns state mutations and `AlarmManagerService` only handles native side effects. Restore full snooze behaviour in a dedicated follow-up PR.
+
 - [ ] Migrate SQLite database to use explicit `appDataDir()` path instead of default path
   - Currently uses `Database.load('sqlite:alarms.db')` with default location
   - Should use `appDataDir()` for explicit platform-specific path control
