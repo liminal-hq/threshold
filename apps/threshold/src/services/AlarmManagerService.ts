@@ -33,7 +33,7 @@ export class AlarmManagerService {
 
 		this.initPromise = (async () => {
 			try {
-				console.log('[AlarmManager] Starting service initialization...');
+				console.log('[AlarmManager] Starting service initialisation...');
 
 				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
 				// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
@@ -60,11 +60,12 @@ export class AlarmManagerService {
 					);
 				}
 
-				console.log('[AlarmManager] Setting up event listener 3/3: alarms:changed...');
-				// Listen for global alarm changes (from Rust/UI)
-				await listen<AlarmRecord[]>('alarms:changed', (event) => {
-					console.log('[AlarmManager] Received alarms:changed event', event.payload?.length);
-					this.syncNativeAlarms(event.payload);
+				console.log('[AlarmManager] Setting up event listener 3/3: alarms:batch:updated...');
+				// Listen for batch events and refresh native schedule
+				await listen('alarms:batch:updated', async () => {
+					console.log('[AlarmManager] Received alarms:batch:updated event');
+					const alarms = await AlarmService.getAll();
+					this.syncNativeAlarms(alarms);
 				});
 				console.log('[AlarmManager] Event listener 3/3 registered.');
 
@@ -78,7 +79,7 @@ export class AlarmManagerService {
 				await this.syncNativeAlarms(alarms);
 				console.log('[AlarmManager] Reschedule complete.');
 
-				console.log('[AlarmManager] Service initialization complete.');
+				console.log('[AlarmManager] Service initialisation complete.');
 
 				// Check if app was launched by an alarm notification (do this AFTER init completes)
 				console.log('[AlarmManager] Checking for active alarm...');
@@ -178,7 +179,7 @@ export class AlarmManagerService {
 				if (this.router) {
 					this.router.navigate({ to: '/ringing/$id', params: { id: result.alarmId.toString() } });
 				} else {
-					console.error('[AlarmManager] Router not initialized, cannot navigate to ringing screen');
+					console.error('[AlarmManager] Router not initialised, cannot navigate to ringing screen');
 				}
 			}
 		} catch (e) {
@@ -312,7 +313,14 @@ export class AlarmManagerService {
 			actionTypeId: isMobile ? 'alarm_trigger' : undefined,
 		});
 
-		// 2. Open Floating Window (Singleton)
+		// 2. Emit lifecycle event (fired)
+		try {
+			await AlarmService.reportFired(id, Date.now());
+		} catch (e) {
+			console.error('[AlarmManager] Failed to report alarm fired', e);
+		}
+
+		// 3. Open Floating Window (Singleton)
 		try {
 			const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
 			const isMobile = PlatformUtils.isMobile();
@@ -322,7 +330,7 @@ export class AlarmManagerService {
 				if (this.router) {
 					this.router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
 				} else {
-					console.error('[AlarmManager] Router not initialized, cannot navigate to ringing screen');
+					console.error('[AlarmManager] Router not initialised, cannot navigate to ringing screen');
 				}
 				return;
 			}
@@ -363,11 +371,7 @@ export class AlarmManagerService {
 			console.error('Failed to open alarm window', err);
 		}
 
-		// 3. Auto-Reschedule (Calculate next trigger)
-		console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
-		// Use AlarmService to dismiss/reschedule
-		// Note: dismiss_alarm in Rust recalculates next trigger.
-		await AlarmService.dismiss(id);
+		// 4. Wait for user action to dismiss/snooze.
 	}
 
 	async stopRinging() {

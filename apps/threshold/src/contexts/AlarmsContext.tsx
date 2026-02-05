@@ -32,7 +32,7 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         // Subscribe to changes
         const unlistenPromise = AlarmService.subscribe((updatedAlarms) => {
-            console.log('[AlarmsContext] Received alarms:changed event', updatedAlarms);
+            console.log('[AlarmsContext] Received alarms:batch:updated event', updatedAlarms);
             setAlarms(updatedAlarms);
         });
 

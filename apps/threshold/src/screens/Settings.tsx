@@ -26,6 +26,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SettingsService, Theme } from '../services/SettingsService';
 import { alarmManagerService } from '../services/AlarmManagerService';
+import { AlarmService } from '../services/AlarmService';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { eventLogService } from '../services/EventLogService';
 
@@ -267,6 +268,32 @@ const Settings: React.FC = () => {
                                     }}
                                 >
                                     <span style={{ fontSize: '1.2rem' }}>📩</span>
+                                </IconButton>
+                            </ListItem>
+
+                            <ListItem sx={{ px: isMobile ? 2 : 0 }}>
+                                <ListItemText
+                                    primary="Force Synchronise"
+                                    secondary="Request an immediate watch sync"
+                                />
+                                <IconButton
+                                    edge="end"
+                                    onClick={async () => {
+                                        try {
+                                            await AlarmService.requestSync('FORCE_SYNC');
+                                        } catch (e) {
+                                            console.error('Failed to request sync:', e);
+                                        }
+                                    }}
+                                    sx={{
+                                        bgcolor: 'secondary.main',
+                                        color: 'secondary.contrastText',
+                                        '&:hover': {
+                                            bgcolor: 'secondary.dark',
+                                        }
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.1rem' }}>🔄</span>
                                 </IconButton>
                             </ListItem>
 
