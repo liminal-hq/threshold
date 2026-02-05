@@ -33,7 +33,7 @@ export class AlarmManagerService {
 
 		this.initPromise = (async () => {
 			try {
-				console.log('[AlarmManager] Starting service initialization...');
+				console.log('[AlarmManager] Starting service initialisation...');
 
 				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
 				// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
@@ -79,7 +79,7 @@ export class AlarmManagerService {
 				await this.syncNativeAlarms(alarms);
 				console.log('[AlarmManager] Reschedule complete.');
 
-				console.log('[AlarmManager] Service initialization complete.');
+				console.log('[AlarmManager] Service initialisation complete.');
 
 				// Check if app was launched by an alarm notification (do this AFTER init completes)
 				console.log('[AlarmManager] Checking for active alarm...');
@@ -179,7 +179,7 @@ export class AlarmManagerService {
 				if (this.router) {
 					this.router.navigate({ to: '/ringing/$id', params: { id: result.alarmId.toString() } });
 				} else {
-					console.error('[AlarmManager] Router not initialized, cannot navigate to ringing screen');
+					console.error('[AlarmManager] Router not initialised, cannot navigate to ringing screen');
 				}
 			}
 		} catch (e) {
@@ -330,7 +330,7 @@ export class AlarmManagerService {
 				if (this.router) {
 					this.router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
 				} else {
-					console.error('[AlarmManager] Router not initialized, cannot navigate to ringing screen');
+					console.error('[AlarmManager] Router not initialised, cannot navigate to ringing screen');
 				}
 				return;
 			}

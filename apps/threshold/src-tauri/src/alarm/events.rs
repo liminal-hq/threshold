@@ -7,6 +7,7 @@ use crate::alarm::models::{AlarmRecord, AlarmMode};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when a new alarm is created.
 pub struct AlarmCreated {
     pub alarm: AlarmRecord,
     pub revision: i64,
@@ -14,6 +15,7 @@ pub struct AlarmCreated {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when an existing alarm is updated, with an optional snapshot of the prior state.
 pub struct AlarmUpdated {
     pub alarm: AlarmRecord,
     pub previous: Option<AlarmSnapshot>,
@@ -22,6 +24,8 @@ pub struct AlarmUpdated {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Snapshot of an alarm's key fields for change comparison.
+/// A snapshot is a minimal, read-only copy of state captured at a point in time.
 pub struct AlarmSnapshot {
     pub id: i32,
     pub enabled: bool,
@@ -30,6 +34,7 @@ pub struct AlarmSnapshot {
 }
 
 impl AlarmSnapshot {
+    /// Builds a minimal snapshot of an alarm for update comparisons.
     pub fn from_alarm(alarm: &AlarmRecord) -> Self {
         Self {
             id: alarm.id,
@@ -42,6 +47,7 @@ impl AlarmSnapshot {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when an alarm is deleted.
 pub struct AlarmDeleted {
     pub id: i32,
     pub label: Option<String>,
@@ -54,6 +60,7 @@ pub struct AlarmDeleted {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when an alarm is scheduled with the native alarm manager.
 pub struct AlarmScheduled {
     pub id: i32,
     pub trigger_at: i64,
@@ -65,6 +72,7 @@ pub struct AlarmScheduled {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when a scheduled alarm is cancelled.
 pub struct AlarmCancelled {
     pub id: i32,
     pub reason: CancelReason,
@@ -73,6 +81,7 @@ pub struct AlarmCancelled {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+/// Enumerates why a scheduled alarm was cancelled.
 pub enum CancelReason {
     Disabled,   // User toggled off
     Deleted,    // User deleted alarm
@@ -86,6 +95,7 @@ pub enum CancelReason {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when a native alarm fires.
 pub struct AlarmFired {
     pub id: i32,
     pub trigger_at: i64,
@@ -96,6 +106,7 @@ pub struct AlarmFired {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when a user dismisses a ringing alarm.
 pub struct AlarmDismissed {
     pub id: i32,
     pub fired_at: i64,
@@ -106,6 +117,7 @@ pub struct AlarmDismissed {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when a user snoozes a ringing alarm.
 pub struct AlarmSnoozed {
     pub id: i32,
     pub original_trigger: i64,
@@ -119,6 +131,7 @@ pub struct AlarmSnoozed {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when one or more alarms change to enable batched sync.
 pub struct AlarmsBatchUpdated {
     pub updated_ids: Vec<i32>,
     pub revision: i64,
@@ -137,6 +150,7 @@ impl AlarmsBatchUpdated {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Emitted when an explicit sync is required.
 pub struct AlarmsSyncNeeded {
     pub reason: SyncReason,
     pub revision: i64,
@@ -144,6 +158,7 @@ pub struct AlarmsSyncNeeded {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+/// Enumerates why an explicit sync was requested.
 pub enum SyncReason {
     BatchComplete,  // Debounce timer expired
     Initialize,     // App startup
