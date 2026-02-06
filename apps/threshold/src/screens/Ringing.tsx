@@ -12,6 +12,7 @@ import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { ROUTES, SPECIAL_ALARM_IDS } from '../constants';
 import { SettingsService } from '../services/SettingsService';
 import { appManagementService } from '../services/AppManagementService';
+import ThresholdIndicator from './ThresholdIndicator';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
@@ -317,80 +318,61 @@ const Ringing: React.FC = () => {
 		<Box
 			className={`ringing-page ${PlatformUtils.isDesktop() ? 'desktop-mode' : ''}`}
 			onClick={() => setIsAudioUnlocked(true)}
-			sx={{
-				height: '100%',
-				display: 'flex',
-				flexDirection: 'column',
-				userSelect: 'none', // Disable text selection
-			}}
 		>
-			<Box sx={{ flexGrow: 1 }}>
-				<div className="ringing-container" data-tauri-drag-region="true">
-					<Typography
-						variant="h1"
-						className="ringing-time"
-						sx={{ fontSize: '5rem', fontWeight: 800 }}
-					>
+			<div className="ringing-container" data-tauri-drag-region="true">
+				{/* Time Display with Breathing Rings */}
+				<div className="time-display-container">
+					<div className="breathing-ring ring-1"></div>
+					<div className="breathing-ring ring-2"></div>
+					<div className="breathing-ring ring-3"></div>
+
+					<Typography variant="h1" className="ringing-time">
 						{timeStr}
 					</Typography>
-					<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>
-						{alarm?.label}
-					</Typography>
-
-					<div className="ringing-actions">
-						<Button
-							variant="contained"
-							fullWidth
-							size="large"
-							sx={{
-								bgcolor: 'secondary.contrastText', // Matches the clock text colour (White in Light, Dark in Dark)
-								color: 'secondary.main', // Matches the page background colour
-								borderRadius: '50px',
-								fontWeight: 'bold',
-								height: '56px',
-								'&:hover': {
-									bgcolor: 'secondary.contrastText',
-									filter: 'brightness(0.9)',
-								},
-								textTransform: 'none',
-								fontSize: '1.2rem',
-								boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-							}}
-							onClick={handleDismiss}
-						>
-							Stop Alarm
-						</Button>
-						<Button
-							variant="outlined"
-							fullWidth
-							size="large"
-							sx={{
-								color: 'inherit', // Inherit from theme instead of hardcoded white
-								borderColor: 'currentColor',
-								borderRadius: '50px',
-								fontWeight: '600',
-								mt: 1,
-								'&:hover': { borderColor: 'currentColor', bgcolor: 'rgba(255,255,255,0.1)' },
-								textTransform: 'none',
-							}}
-							onClick={handleSnooze}
-						>
-							Snooze ({snoozeLength}m)
-						</Button>
-
-						{audioError && !isAudioUnlocked && (
-							<Button
-								variant="text"
-								fullWidth
-								onClick={() => setIsAudioUnlocked(true)}
-								sx={{ mt: 2, color: 'rgba(255,255,255,0.8)', textDecoration: 'underline' }}
-							>
-								Click to unlock sound
-							</Button>
-						)}
-					</div>
 				</div>
-			</Box>
+
+				<Typography variant="h4" className="ringing-label">
+					{alarm?.label || 'Wake up!'}
+				</Typography>
+
+				{/* Threshold Indicator (Sleep -> Wake) */}
+				<div className="threshold-indicator-container">
+					<ThresholdIndicator />
+				</div>
+
+				<div className="ringing-actions">
+					<Button
+						variant="contained"
+						fullWidth
+						className="ringing-btn-stop"
+						onClick={handleDismiss}
+					>
+						Stop Alarm
+					</Button>
+
+					<Button
+						variant="outlined"
+						fullWidth
+						className="ringing-btn-snooze"
+						onClick={handleSnooze}
+					>
+						Snooze ({snoozeLength}m)
+					</Button>
+
+					{audioError && !isAudioUnlocked && (
+						<Button
+							variant="text"
+							fullWidth
+							onClick={() => setIsAudioUnlocked(true)}
+							sx={{ mt: 2, color: 'rgba(255,255,255,0.8)', textDecoration: 'underline' }}
+						>
+							Click to unlock sound
+						</Button>
+					)}
+				</div>
+
+				<Typography className="ringing-liminal-note">gentle transition</Typography>
+			</div>
 		</Box>
 	);
 };

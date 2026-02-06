@@ -1,4 +1,4 @@
-/* Ringing Screen Styles - Clean rebuild without 100vh issues */
+/* Ringing Screen Styles - Hybrid Material Liminal */
 
 .ringing-page,
 .ringing-page * {
@@ -21,8 +21,12 @@ body.dark-mode .ringing-page {
 }
 
 .ringing-page {
-	/* Transparent background for window transparency */
-	background: transparent;
+	/* Hybrid Material Background: Secondary Tint -> Secondary */
+	background: linear-gradient(
+		to bottom,
+		var(--app-colour-secondary-tint),
+		var(--app-colour-secondary)
+	);
 	overflow: hidden;
 	/* Fill the entire available space */
 	position: absolute;
@@ -32,104 +36,249 @@ body.dark-mode .ringing-page {
 	bottom: 0;
 	width: 100%;
 	height: 100%;
+
+	/* Horizon Glow Container */
+	&::before {
+		content: '';
+		position: absolute;
+		bottom: -20%;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 150vw; /* Make it wide enough to look like a horizon */
+		height: 60vh;
+		background: radial-gradient(
+			circle at center bottom,
+			var(--app-colour-primary) 0%,
+			transparent 70%
+		);
+		opacity: 0.2; /* Subtle Liminal glow */
+		pointer-events: none;
+		z-index: 0;
+	}
 }
 
-.ringing-container {
-	/* Fill the entire page with small margin for rounded corners */
-	position: absolute;
-	top: 2px;
-	left: 2px;
-	right: 2px;
-	bottom: 2px;
-	
-	/* Flexbox layout for centering content */
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 32px;
-	text-align: center;
-	
-	/* Visual styling - secondary colour gradient */
-	background: radial-gradient(circle at center, var(--app-colour-secondary-tint), var(--app-colour-secondary));
-	color: var(--app-colour-secondary-contrast); /* Use secondary-contrast for proper contrast in all themes */
-	animation: pulse-bg 4s infinite alternate;
-	
-	/* Rounded corners for floating card effect */
-	border-radius: 24px;
-	box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 20px 50px rgba(0,0,0,0.5);
-	
-	/* Clip inner content (like breathing animation) to border radius */
-	overflow: hidden;
-}
-
-/* Remove box-shadow on desktop to prevent transparency artifacts */
-.ringing-page.desktop-mode .ringing-container {
-	box-shadow: none;
-}
-
-/* Breathing animation overlay - placed above background, below content */
-.ringing-container::after {
+/* Threshold Dots Pattern Overlay */
+.ringing-page::after {
 	content: '';
 	position: absolute;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	/* Increased opacity for maximum intensity */
-	background: radial-gradient(circle at center, color-mix(in srgb, var(--app-colour-secondary-contrast), transparent 60%), transparent 70%);
-	/* Faster animation for more urgency? No, keep it rhythmic but deep */
-	animation: breathe 4s ease-in-out infinite;
+	background-image: radial-gradient(var(--app-colour-secondary-contrast) 1px, transparent 1px);
+	background-size: 40px 40px;
+	opacity: 0.12;
 	pointer-events: none;
-	border-radius: 24px;
-	z-index: 0; /* Ensure it stays behind content if content is z-indexed */
+	z-index: 0;
 }
 
-@keyframes breathe {
-	0%, 100% {
-		opacity: 0.2;
-		transform: scale(0.95);
+.ringing-container {
+	/* Fill the entire page with small margin for rounded corners */
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+
+	/* Flexbox layout for centering content */
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-start; /* Align from top, using padding to position */
+	padding-top: 260px; /* Match SVG positioning roughly */
+	text-align: center;
+
+	color: var(--app-colour-secondary-contrast);
+
+	/* Removed container border/shadow/radius from previous design to match full-screen mobile design */
+	overflow: visible;
+	z-index: 1;
+}
+
+/* Desktop Mode Adaptations */
+.ringing-page.desktop-mode .ringing-container {
+	justify-content: center;
+	padding-top: 0;
+	/* Restore card-like feel for desktop window if transparent */
+}
+
+/* Time Display Container & Breathing Animation */
+.time-display-container {
+	position: relative;
+	margin-bottom: 24px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.breathing-ring {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	border: 1px solid var(--app-colour-secondary-contrast);
+	opacity: 0;
+	pointer-events: none;
+}
+
+.breathing-ring.ring-1 {
+	width: 260px;
+	height: 260px;
+	animation: breathe-ring-1 4s infinite;
+}
+
+.breathing-ring.ring-2 {
+	width: 220px;
+	height: 220px;
+	animation: breathe-ring-2 4s infinite 1s; /* delayed start */
+}
+
+.breathing-ring.ring-3 {
+	width: 190px;
+	height: 190px;
+	animation: breathe-ring-3 4s infinite 2s; /* delayed start */
+}
+
+@keyframes breathe-ring-1 {
+	0% {
+		opacity: 0.15;
+		transform: translate(-50%, -50%) scale(1);
 	}
 	50% {
-		opacity: 0.7; /* Balanced visibility */
-		transform: scale(1.1);
+		opacity: 0.08;
+		transform: translate(-50%, -50%) scale(1.11);
+	}
+	100% {
+		opacity: 0.15;
+		transform: translate(-50%, -50%) scale(1);
 	}
 }
 
-@keyframes pulse-bg {
-	0% { filter: brightness(1); }
-	100% { filter: brightness(1.1); }
+@keyframes breathe-ring-2 {
+	0% {
+		opacity: 0.2;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	50% {
+		opacity: 0.08;
+		transform: translate(-50%, -50%) scale(1.13);
+	}
+	100% {
+		opacity: 0.2;
+		transform: translate(-50%, -50%) scale(1);
+	}
+}
+
+@keyframes breathe-ring-3 {
+	0% {
+		opacity: 0.1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	50% {
+		opacity: 0.05;
+		transform: translate(-50%, -50%) scale(1.1);
+	}
+	100% {
+		opacity: 0.1;
+		transform: translate(-50%, -50%) scale(1);
+	}
 }
 
 .ringing-time {
-	font-size: 5rem;
-	font-weight: 800;
-	margin-bottom: 16px;
-	text-shadow: 0 4px 12px rgba(0,0,0,0.2);
+	font-size: 6rem; /* 96px is roughly 6rem */
+	font-weight: 300;
+	letter-spacing: -4px;
+	margin: 0;
+	text-shadow: 0 0 16px rgba(255, 255, 255, 0.4); /* Material Glow */
 	font-variant-numeric: tabular-nums;
 	line-height: 1;
-	/* Inherit color from parent instead of hardcoding */
 	position: relative;
-	z-index: 2; /* Ensure text sits above the intense breathing animation */
+	z-index: 2;
 }
 
 .ringing-label {
-	font-size: 2rem;
-	font-weight: 500;
-	margin-bottom: 48px;
-	opacity: 0.9;
-	/* Inherit color from parent instead of hardcoding */
+	font-size: 1.5rem; /* 24px */
+	font-weight: 400;
+	margin-top: 16px;
+	margin-bottom: 40px; /* Space for Threshold Indicator */
+	opacity: 0.95;
 	position: relative;
 	z-index: 2;
+}
+
+.threshold-indicator-container {
+	margin-bottom: 24px;
+	width: 100%;
+	display: flex;
+	justify-content: center;
 }
 
 .ringing-actions {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: 24px; /* Increased gap */
 	width: 100%;
-	max-width: 320px;
-	position: relative;
+	max-width: 290px; /* Match SVG button width */
+	position: absolute;
+	bottom: 80px; /* SVG y position approx */
 	z-index: 2;
 }
 
+/* Desktop: Center actions */
+.ringing-page.desktop-mode .ringing-actions {
+	position: relative;
+	bottom: auto;
+	margin-top: 48px;
+}
+
+/* Button Overrides */
+.ringing-btn-stop {
+	background-color: #1a1a2e !important; /* Keep the dark distinct button from SVG */
+	color: #ffffff !important;
+	height: 56px;
+	border-radius: 28px !important;
+	font-size: 1.125rem !important; /* 18px */
+	font-weight: 600 !important;
+	text-transform: none !important;
+	box-shadow: none !important;
+	position: relative;
+}
+
+/* Inner highlight for Stop button */
+.ringing-btn-stop::after {
+	content: '';
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	right: 2px;
+	height: 26px;
+	border-radius: 28px;
+	background: rgba(255, 255, 255, 0.05); /* Subtle depth */
+	pointer-events: none;
+}
+
+.ringing-btn-snooze {
+	background-color: transparent !important;
+	border: 2px solid rgba(255, 255, 255, 0.6) !important;
+	color: rgba(255, 255, 255, 0.9) !important;
+	height: 56px;
+	border-radius: 28px !important;
+	font-size: 1.125rem !important; /* 18px */
+	font-weight: 500 !important;
+	text-transform: none !important;
+}
+
+.ringing-liminal-note {
+	position: absolute;
+	bottom: 24px;
+	font-size: 0.7rem; /* 11px */
+	font-weight: 300;
+	letter-spacing: 1px;
+	opacity: 0.5;
+}
+
+/* Desktop hide liminal note if space is tight */
+.ringing-page.desktop-mode .ringing-liminal-note {
+	display: none;
+}
