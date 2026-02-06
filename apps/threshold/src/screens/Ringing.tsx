@@ -4,6 +4,7 @@ import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { Alarm } from '../services/DatabaseService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { listen } from '@tauri-apps/api/event';
@@ -21,19 +22,51 @@ const Ringing: React.FC = () => {
 	const navigate = useNavigate();
 
 	// Settings state
-	const [snoozeLength] = useState<number>(SettingsService.getSnoozeLength());
-	const [silenceAfter] = useState<number>(SettingsService.getSilenceAfter());
+	const [snoozeLength, setSnoozeLength] = useState<number>(SettingsService.getSnoozeLength());
+	const [silenceAfter, setSilenceAfter] = useState<number>(SettingsService.getSilenceAfter());
+	const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
 
 	// Listen for Alarm Updates (Singleton pattern)
 	// Note: Theme changes are handled globally by App.tsx -> ThemeContextProvider
 	useEffect(() => {
+		// Enforce fixed window size for Ringing Screen on Desktop
+		// This ensures consistency between "Test Alarm" (dynamic label) and real "Alarm" (static label)
+		if (PlatformUtils.getPlatform() !== 'android' && PlatformUtils.getPlatform() !== 'ios') {
+			const enforceWindowSize = async () => {
+				const win = getCurrentWindow();
+				// Use LogicalSize to handle DPI scaling correctly
+				// Use LogicalSize to handle DPI scaling correctly (<-- now imported statically)
+				// Intended size: 400x500 (matches creation config in AlarmManagerService/Settings)
+				await win.setSize(new LogicalSize(400, 500));
+				await win.center();
+			};
+			enforceWindowSize();
+		}
 		const unlistenUpdate = listen<{ id: number }>('alarm-update', (event) => {
 			console.log('Ringing window received update:', event.payload);
 			navigate({ to: '/ringing/$id', params: { id: event.payload.id.toString() } });
 		});
 
+		// Listen for settings changes (24h, snooze, silence)
+		const unlistenSettings = listen<{ key: string; value: any }>('settings-changed', (event) => {
+			console.log('Ringing window received setting update:', event.payload);
+			const { key, value } = event.payload;
+			switch (key) {
+				case 'is24h':
+					setIs24h(Boolean(value));
+					break;
+				case 'snoozeLength':
+					setSnoozeLength(Number(value));
+					break;
+				case 'silenceAfter':
+					setSilenceAfter(Number(value));
+					break;
+			}
+		});
+
 		return () => {
 			unlistenUpdate.then((fn) => fn());
+			unlistenSettings.then((fn) => fn());
 		};
 	}, [navigate]);
 
@@ -72,12 +105,12 @@ const Ringing: React.FC = () => {
 		// Update clock every second
 		const updateTime = () => {
 			const now = new Date();
-			setTimeStr(TimeFormatHelper.format(now.getTime(), true)); // Force 24h for now, or fetch settings
+			setTimeStr(TimeFormatHelper.format(now.getTime(), is24h));
 		};
 		updateTime();
 		const interval = setInterval(updateTime, 1000);
 		return () => clearInterval(interval);
-	}, [id]);
+	}, [id, is24h]);
 
 	/**
 	 * Handles alarm dismissal with platform-specific behaviour.
@@ -326,9 +359,18 @@ const Ringing: React.FC = () => {
 					<div className="breathing-ring ring-2" data-tauri-drag-region="true"></div>
 					<div className="breathing-ring ring-3" data-tauri-drag-region="true"></div>
 
-					<Typography variant="h1" className="ringing-time">
-						{timeStr}
-					</Typography>
+					<div className="digital-clock-container" data-tauri-drag-region="true">
+						<Typography variant="h1" className="ringing-time digits" data-tauri-drag-region="true">
+							{is24h ? timeStr : timeStr.split(' ')[0]}
+						</Typography>
+
+						{!is24h && (
+							<div className="ampm-stack" data-tauri-drag-region="true">
+								<span className={`ampm-label ${timeStr.includes('AM') ? 'active' : ''}`}>AM</span>
+								<span className={`ampm-label ${timeStr.includes('PM') ? 'active' : ''}`}>PM</span>
+							</div>
+						)}
+					</div>
 				</div>
 
 				<Typography variant="h4" className="ringing-label" data-tauri-drag-region="true">
