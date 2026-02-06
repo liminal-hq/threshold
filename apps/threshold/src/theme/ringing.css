@@ -99,7 +99,34 @@ body.dark-mode .ringing-page {
 .ringing-page.desktop-mode .ringing-container {
 	justify-content: center;
 	padding-top: 0;
-	/* Restore card-like feel for desktop window if transparent */
+	/* Restore rounded corners for desktop window */
+	border-radius: 24px;
+	overflow: hidden;
+	/* Ensure background gradient is clipped */
+	mask-image: radial-gradient(white, black);
+
+	/* Disable text selection on Desktop */
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+/* Ensure buttons are clickable and not draggable */
+.ringing-page.desktop-mode button,
+.ringing-page.desktop-mode .ringing-actions {
+	-webkit-app-region: no-drag;
+}
+
+/* 
+   Actually, looking at previous implementation, ringing-container was the card.
+   Now ringing-page is the full background.
+   On Desktop, we likely want the ringing-page itself (which fills the body) to be rounded 
+   IF the window is transparent. 
+   
+   However, typically on Linux/Windows, transparent windows are rectangular but contents are rounded.
+   Let's round the whole .ringing-page for desktop mode
+*/
+.ringing-page.desktop-mode {
+	border-radius: 24px;
 }
 
 /* Time Display Container & Breathing Animation */

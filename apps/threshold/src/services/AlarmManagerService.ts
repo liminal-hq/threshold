@@ -20,6 +20,7 @@ export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
 	private router: any = null;
 	private pendingFiredAlarm: { id: number; firedAt: number } | null = null;
+	private isHandlingAlarmRing = false;
 
 	public setRouter(router: any) {
 		this.router = router;
@@ -38,18 +39,24 @@ export class AlarmManagerService {
 				await databaseService.init();
 				console.log('[AlarmManager] Database service ready.');
 
-				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
-				// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
-				await listen<{ id: number }>('alarm-ring', (event) => {
-					console.log(`========== FRONTEND EVENT RECEIVED: alarm-ring ==========`);
-					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
-					console.log(`[AlarmManager] Event details:`, event);
-					this.handleAlarmRing(event.payload.id);
-					console.log(`========== FRONTEND EVENT HANDLER CALLED ==========`);
-				});
-				console.log('[AlarmManager] Event listener 1/3 registered.');
-
-				console.log('[AlarmManager] Event listener 1/3 registered.');
+				// Only the main window (controller) should listen for alarm rings and spawn windows.
+				// If we are already in a Ringing Window, we shouldn't spawn new ones recursively.
+				if (this.getRingingAlarmIdFromPath() === null) {
+					console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
+					// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
+					await listen<{ id: number }>('alarm-ring', (event) => {
+						console.log(`========== FRONTEND EVENT RECEIVED: alarm-ring ==========`);
+						console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
+						console.log(`[AlarmManager] Event details:`, event);
+						this.handleAlarmRing(event.payload.id);
+						console.log(`========== FRONTEND EVENT HANDLER CALLED ==========`);
+					});
+					console.log('[AlarmManager] Event listener 1/3 registered.');
+				} else {
+					console.log(
+						'[AlarmManager] Skipping alarm-ring listener registration (this is a Ringing Window)',
+					);
+				}
 
 				console.log('[AlarmManager] Setting up event listener 3/3: global-alarms-changed...');
 				// Listen for global alarm changes (from other windows)
@@ -67,7 +74,9 @@ export class AlarmManagerService {
 				if (ringingAlarmId !== null) {
 					const firedAt = Date.now();
 					this.pendingFiredAlarm = { id: ringingAlarmId, firedAt };
-					console.log(`[AlarmManager] Ringing route detected on init. Marking alarm ${ringingAlarmId} as fired.`);
+					console.log(
+						`[AlarmManager] Ringing route detected on init. Marking alarm ${ringingAlarmId} as fired.`,
+					);
 					await this.markAlarmFired(ringingAlarmId, firedAt);
 				}
 
@@ -248,7 +257,9 @@ export class AlarmManagerService {
 			return;
 		}
 
-		console.log(`[AlarmManager] Marking alarm ${id} as fired at ${new Date(firedAt).toLocaleString()}`);
+		console.log(
+			`[AlarmManager] Marking alarm ${id} as fired at ${new Date(firedAt).toLocaleString()}`,
+		);
 		await databaseService.saveAlarm({
 			...alarm,
 			lastFiredAt: firedAt,
@@ -458,74 +469,99 @@ export class AlarmManagerService {
 	}
 
 	private async handleAlarmRing(id: number) {
-		const firedAt = Date.now();
-		console.log(`[AlarmManager] Alarm ring received for ${id} at ${new Date(firedAt).toLocaleString()}`);
-
-		// 1. Send Notification
-		const isMobile = PlatformUtils.isMobile();
-		sendNotification({
-			title: APP_NAME,
-			body: 'Your alarm is ringing!',
-			actionTypeId: isMobile ? 'alarm_trigger' : undefined,
-		});
-
-		// 2. Open Floating Window (Singleton)
-		try {
-			const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-			const isMobile = PlatformUtils.isMobile();
-
-			if (isMobile) {
-				console.log('[AlarmManager] Mobile detected. Navigating current window to ringing screen.');
-				if (this.router) {
-					this.router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
-				} else {
-					console.error('[AlarmManager] Router not initialized, cannot navigate to ringing screen');
-				}
-				return;
-			}
-
-			const label = 'ringing-window'; // Fixed label to ensure singleton
-
-			const existing = await WebviewWindow.getByLabel(label);
-
-			if (existing) {
-				console.log('Ringing window already exists. Updating content and focusing...');
-				await emit('alarm-update', { id });
-				await existing.setFocus();
-				return;
-			}
-
-			const webview = new WebviewWindow(label, {
-				url: `/ringing/${id}`,
-				title: 'Alarm',
-				width: 400,
-				height: 500,
-				resizable: false,
-				alwaysOnTop: true,
-				center: true,
-				skipTaskbar: false,
-				decorations: false,
-				transparent: true,
-				focus: true,
-			});
-
-			webview.once('tauri://created', function () {
-				console.log('Alarm window created');
-			});
-
-			webview.once('tauri://error', function (e) {
-				console.error('Alarm window creation error', e);
-			});
-		} catch (err) {
-			console.error('Failed to open alarm window', err);
+		if (this.isHandlingAlarmRing) {
+			console.warn('[AlarmManager] Already handling alarm ring. Skipping duplicate event.');
+			return;
 		}
+		this.isHandlingAlarmRing = true;
 
-		// 3. Auto-Reschedule (Calculate next trigger)
-		console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
-		const alarms = await databaseService.getAllAlarms();
-		const alarm = alarms.find((a) => a.id === id);
-		if (alarm) {
-			await this.saveAndSchedule({ ...alarm, lastFiredAt: firedAt });
+		try {
+			const firedAt = Date.now();
+			console.log(
+				`[AlarmManager] Alarm ring received for ${id} at ${new Date(firedAt).toLocaleString()}`,
+			);
+
+			// 1. Send Notification
+			const isMobile = PlatformUtils.isMobile();
+			sendNotification({
+				title: APP_NAME,
+				body: 'Your alarm is ringing!',
+				actionTypeId: isMobile ? 'alarm_trigger' : undefined,
+			});
+
+			// 2. Open Floating Window (Singleton-ish: ensure only one is open by closing others)
+			try {
+				const { WebviewWindow, getAllWebviewWindows } =
+					await import('@tauri-apps/api/webviewWindow');
+				const isMobile = PlatformUtils.isMobile();
+
+				if (isMobile) {
+					console.log(
+						'[AlarmManager] Mobile detected. Navigating current window to ringing screen.',
+					);
+					if (this.router) {
+						this.router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
+					} else {
+						console.error(
+							'[AlarmManager] Router not initialized, cannot navigate to ringing screen',
+						);
+					}
+					return;
+				}
+
+				// START DYNAMIC LABEL LOGIC
+				// Close any existing ringing windows to ensure we get a fresh window (fixing caching/sizing issues)
+				const allWindows = await getAllWebviewWindows();
+				const existingRingingWindows = allWindows.filter((w: any) =>
+					w.label.startsWith('ringing-window-'),
+				);
+
+				for (const w of existingRingingWindows) {
+					console.log(`[AlarmManager] Closing existing ringing window: ${w.label}`);
+					try {
+						await w.close();
+					} catch (e) {
+						console.warn(`[AlarmManager] Failed to close window ${w.label}`, e);
+					}
+				}
+
+				// Generate dynamic label
+				const label = `ringing-window-${Date.now()}`;
+
+				const webview = new WebviewWindow(label, {
+					url: `/ringing/${id}`,
+					title: 'Alarm',
+					width: 400,
+					height: 500,
+					resizable: false,
+					alwaysOnTop: true,
+					center: true,
+					skipTaskbar: false,
+					decorations: false,
+					transparent: true,
+					focus: true,
+				});
+
+				webview.once('tauri://created', function () {
+					console.log('Alarm window created');
+				});
+
+				webview.once('tauri://error', function (e) {
+					console.error('Alarm window creation error', e);
+				});
+			} catch (err) {
+				console.error('Failed to open alarm window', err);
+			}
+
+			// 3. Auto-Reschedule (Calculate next trigger)
+			console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
+			const alarms = await databaseService.getAllAlarms();
+			const alarm = alarms.find((a) => a.id === id);
+			if (alarm) {
+				await this.saveAndSchedule({ ...alarm, lastFiredAt: firedAt });
+			}
+		} finally {
+			this.isHandlingAlarmRing = false;
 		}
 	}
 

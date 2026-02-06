@@ -321,22 +321,22 @@ const Ringing: React.FC = () => {
 		>
 			<div className="ringing-container" data-tauri-drag-region="true">
 				{/* Time Display with Breathing Rings */}
-				<div className="time-display-container">
-					<div className="breathing-ring ring-1"></div>
-					<div className="breathing-ring ring-2"></div>
-					<div className="breathing-ring ring-3"></div>
+				<div className="time-display-container" data-tauri-drag-region="true">
+					<div className="breathing-ring ring-1" data-tauri-drag-region="true"></div>
+					<div className="breathing-ring ring-2" data-tauri-drag-region="true"></div>
+					<div className="breathing-ring ring-3" data-tauri-drag-region="true"></div>
 
 					<Typography variant="h1" className="ringing-time">
 						{timeStr}
 					</Typography>
 				</div>
 
-				<Typography variant="h4" className="ringing-label">
-					{alarm?.label || 'Wake up!'}
+				<Typography variant="h4" className="ringing-label" data-tauri-drag-region="true">
+					{alarm?.label}
 				</Typography>
 
 				{/* Threshold Indicator (Sleep -> Wake) */}
-				<div className="threshold-indicator-container">
+				<div className="threshold-indicator-container" data-tauri-drag-region="true">
 					<ThresholdIndicator />
 				</div>
 
@@ -371,7 +371,9 @@ const Ringing: React.FC = () => {
 					)}
 				</div>
 
-				<Typography className="ringing-liminal-note">gentle transition</Typography>
+				<Typography className="ringing-liminal-note" data-tauri-drag-region="true">
+					gentle transition
+				</Typography>
 			</div>
 		</Box>
 	);
