@@ -37,6 +37,7 @@ vi.mock('../services/SettingsService', () => ({
 		getSilenceAfter: vi.fn(() => 20),
 		getTheme: vi.fn(() => 'boring-dark'),
 		getForceDark: vi.fn(() => false),
+		getIs24h: vi.fn(() => true), // Mock 24h preference
 	},
 }));
 
@@ -94,6 +95,8 @@ describe('Ringing Screen Logic', () => {
 	const mockWindow = {
 		close: vi.fn(),
 		minimize: vi.fn(),
+		setSize: vi.fn(),
+		center: vi.fn(),
 	};
 
 	beforeEach(async () => {
