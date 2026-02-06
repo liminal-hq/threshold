@@ -197,6 +197,42 @@ body.dark-mode .ringing-page {
 	z-index: 2;
 }
 
+/* Desktop override to keep original size */
+.ringing-page.desktop-mode .ringing-time {
+	font-size: 6rem;
+}
+/* Digital Clock Layout for AM/PM */
+.digital-clock-container {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	z-index: 2;
+	position: relative;
+	/* Ensure drag region propagates */
+	-webkit-app-region: drag;
+}
+
+.ampm-stack {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	height: 5rem; /* Match roughly the height of the digits */
+	padding-top: 0.5rem;
+}
+
+.ampm-label {
+	font-size: 1.25rem; /* 20px */
+	font-weight: 600;
+	line-height: 1.2;
+	color: #ffffff;
+	opacity: 0.25; /* Dim inactive */
+	user-select: none;
+}
+
+.ampm-label.active {
+	opacity: 1; /* Bright active */
+}
 .ringing-label {
 	font-size: 1.5rem; /* 24px */
 	font-weight: 400;
