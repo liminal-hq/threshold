@@ -123,17 +123,23 @@
             const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
             useEffect(() => {
-                // Check system preference
+                const storedTheme = localStorage.getItem('theme');
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                setDarkMode(prefersDark);
-                if (prefersDark) {
-                    document.documentElement.classList.add('dark');
-                }
+                const shouldUseDark = storedTheme ? storedTheme === 'dark' : prefersDark;
+
+                setDarkMode(shouldUseDark);
+                document.documentElement.classList.toggle('dark', shouldUseDark);
             }, []);
 
             const toggleDarkMode = () => {
-                setDarkMode(!darkMode);
-                document.documentElement.classList.toggle('dark');
+                const nextMode = !darkMode;
+                setDarkMode(nextMode);
+                document.documentElement.classList.toggle('dark', nextMode);
+                localStorage.setItem('theme', nextMode ? 'dark' : 'light');
+            };
+
+            const handleNavClick = () => {
+                setMobileMenuOpen(false);
             };
 
             return (
@@ -172,9 +178,9 @@
                             {/* Mobile Menu Dropdown */}
                             {mobileMenuOpen && (
                                 <div className="md:hidden mt-6 pb-6 space-y-4">
-                                    <a href="#features" className="block text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium">Features</a>
-                                    <a href="#how-it-works" className="block text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium">How it Works</a>
-                                    <a href="https://github.com/liminal-hq/threshold" className="block text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium">GitHub</a>
+                                    <a href="#features" onClick={handleNavClick} className="block text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium">Features</a>
+                                    <a href="#how-it-works" onClick={handleNavClick} className="block text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium">How it Works</a>
+                                    <a href="https://github.com/liminal-hq/threshold" onClick={handleNavClick} className="block text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium">GitHub</a>
                                 </div>
                             )}
                         </div>
@@ -187,7 +193,7 @@
                                 {/* Left Column - Text */}
                                 <div>
                                     <h1 className="text-5xl md:text-7xl font-bold text-slate-900 dark:text-slate-100 mb-8 leading-tight tracking-tight">
-                                        Flexible alarms and timers <span className="text-slate-400 text-3xl md:text-4xl">(coming soon)</span> built around you.
+                                        Flexible alarms and timers built around you.
                                     </h1>
                                     <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed font-light">
                                         About, not at. Wake up <em>around</em> 7:00—not at the stroke of 7:00. Because life is gradient, not binary. Transitions are spaces, not switches.
