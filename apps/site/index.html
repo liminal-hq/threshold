@@ -7,7 +7,7 @@
     <!-- Primary Meta Tags -->
     <title>Threshold: Flexible Alarm Clock</title>
     <link rel="icon" type="image/svg+xml" href="assets/app-icon.svg">
-    <meta name="description" content="About, not at. Threshold is a flexible alarm clock that embraces approximation over precision. Wake up around 7:00, not exactly at 7:00. Local-first, privacy-respecting, calm computing." />
+    <meta name="description" content="About, not at. Threshold is a flexible alarm clock that embraces approximation over precision. Wake up around 7:00, not exactly at 7:00." />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -41,11 +41,109 @@
         }
     </script>
     <style>
-        /* Smooth scrolling */
         html { scroll-behavior: smooth; }
-        /* Hide scrollbar for clean UI in phone mockups */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Chaos elements */
+        .rotate-slight { transform: rotate(-1.5deg); }
+        .rotate-slight-opposite { transform: rotate(1.2deg); }
+        .skew-slight { transform: skewY(-1deg); }
+        
+        /* Playful animations */
+        @keyframes float-subtle {
+            0%, 100% { transform: translateY(0px) rotate(-1.5deg); }
+            50% { transform: translateY(-10px) rotate(-1.5deg); }
+        }
+        .float-subtle { animation: float-subtle 6s ease-in-out infinite; }
+        
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(1deg); }
+            75% { transform: rotate(-1deg); }
+        }
+        .hover-wiggle:hover { animation: wiggle 0.3s ease-in-out; }
+        
+        /* Liminal space animations */
+        @keyframes pulse-glow-center {
+            0%, 100% { 
+                opacity: 0.7;
+                filter: blur(1px);
+                box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+            }
+            50% { 
+                opacity: 1;
+                filter: blur(0.5px);
+                box-shadow: 0 0 30px rgba(251, 191, 36, 0.5);
+            }
+        }
+        
+        @keyframes pulse-glow-outer {
+            0%, 100% { 
+                opacity: 0.6;
+                filter: blur(1.5px);
+                box-shadow: 0 0 18px rgba(251, 191, 36, 0.25);
+            }
+            50% { 
+                opacity: 0.85;
+                filter: blur(1px);
+                box-shadow: 0 0 25px rgba(251, 191, 36, 0.4);
+            }
+        }
+        
+        @keyframes float-particle {
+            0% { 
+                transform: translateX(-100%) translateY(0) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.6;
+                transform: translateX(-80%) translateY(-2px) scale(1);
+            }
+            90% {
+                opacity: 0.6;
+                transform: translateX(80%) translateY(2px) scale(1);
+            }
+            100% { 
+                transform: translateX(100%) translateY(0) scale(0);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes sway {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(0.5deg); }
+        }
+        
+        .liminal-line-center {
+            animation: pulse-glow-center 2.5s ease-in-out infinite;
+        }
+        
+        .liminal-line-outer {
+            animation: pulse-glow-outer 6s ease-in-out infinite;
+        }
+        
+        .liminal-pillar {
+            animation: sway 8s ease-in-out infinite;
+            transform-origin: center bottom;
+        }
+        
+        .liminal-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(251, 191, 36, 0.6);
+            border-radius: 50%;
+            animation: float-particle 8s ease-in-out infinite;
+            top: 50%;
+            left: 0;
+            pointer-events: none;
+        }
+        
+        .liminal-particle:nth-child(1) { animation-delay: 0s; }
+        .liminal-particle:nth-child(2) { animation-delay: 2s; }
+        .liminal-particle:nth-child(3) { animation-delay: 4s; }
+        .liminal-particle:nth-child(4) { animation-delay: 6s; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
@@ -54,7 +152,6 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Simple Icon Components to avoid external dependencies in single-file HTML
         const Icons = {
             Clock: ({ size = 24, className = "" }) => (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -68,12 +165,6 @@
             Sun: ({ size = 24, className = "" }) => (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
             ),
-            Smartphone: ({ size = 24, className = "" }) => (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
-            ),
-            Wind: ({ size = 24, className = "" }) => (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
-            ),
             Download: ({ size = 24, className = "" }) => (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
             ),
@@ -83,17 +174,11 @@
             X: ({ size = 24, className = "" }) => (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>
             ),
-            ArrowRight: ({ size = 24, className = "" }) => (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            Github: ({ size = 24, className = "" }) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
             ),
             Check: ({ size = 24, className = "" }) => (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"/></svg>
-            ),
-            Activity: ({ size = 24, className = "" }) => (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            ),
-            Coffee: ({ size = 24, className = "" }) => (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>
             ),
             Brain: ({ size = 24, className = "" }) => (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
@@ -110,15 +195,15 @@
             Bell: ({ size = 24, className = "" }) => (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
             ),
-            Github: ({ size = 24, className = "" }) => (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+            Activity: ({ size = 24, className = "" }) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             ),
-            Timer: ({ size = 24, className = "" }) => (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>
+            Wind: ({ size = 24, className = "" }) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
             ),
         };
 
-        const ThresholdWebsite = () => {
+        const ThresholdLiminal = () => {
             const [darkMode, setDarkMode] = useState(false);
             const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -126,7 +211,6 @@
                 const storedTheme = localStorage.getItem('theme');
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 const shouldUseDark = storedTheme ? storedTheme === 'dark' : prefersDark;
-
                 setDarkMode(shouldUseDark);
                 document.documentElement.classList.toggle('dark', shouldUseDark);
             }, []);
@@ -144,17 +228,15 @@
 
             return (
                 <div className="min-h-screen">
-                    {/* Navigation */}
+                    {/* Navigation - structured */}
                     <nav className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-lg border-b border-slate-100 dark:border-slate-900 sticky top-0 z-50 transition-colors duration-300">
                         <div className="container mx-auto px-6 py-4">
                             <div className="flex items-center justify-between">
-                                {/* Logo */}
                                 <div className="flex items-center gap-3">
-                                    <img src="assets/app-icon.svg" alt="Threshold" className="w-10 h-10 rounded-lg shadow-md" />
+                                    <img src="assets/app-icon.svg" alt="Threshold" className="w-10 h-10 rounded-lg shadow-md hover-wiggle" />
                                     <span className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Threshold</span>
                                 </div>
 
-                                {/* Desktop Menu */}
                                 <div className="hidden md:flex items-center gap-10">
                                     <a href="#features" className="text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium">Features</a>
                                     <a href="#how-it-works" className="text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium">How it Works</a>
@@ -164,7 +246,6 @@
                                     </button>
                                 </div>
 
-                                {/* Mobile Menu Button */}
                                 <div className="md:hidden flex items-center gap-4">
                                     <button onClick={toggleDarkMode} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                                         {darkMode ? <Icons.Sun size={20} /> : <Icons.Moon size={20} />}
@@ -175,7 +256,6 @@
                                 </div>
                             </div>
 
-                            {/* Mobile Menu Dropdown */}
                             {mobileMenuOpen && (
                                 <div className="md:hidden mt-6 pb-6 space-y-4">
                                     <a href="#features" onClick={handleNavClick} className="block text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium">Features</a>
@@ -186,11 +266,10 @@
                         </div>
                     </nav>
 
-                    {/* Hero Section */}
+                    {/* Hero - Structured but asymmetric */}
                     <section className="pt-24 pb-32 px-6 bg-gradient-to-b from-white to-slate-50 dark:from-slate-950 dark:to-slate-900 transition-colors duration-300">
                         <div className="container mx-auto max-w-7xl">
                             <div className="grid lg:grid-cols-2 gap-16 items-center">
-                                {/* Left Column - Text */}
                                 <div>
                                     <h1 className="text-5xl md:text-7xl font-bold text-slate-900 dark:text-slate-100 mb-8 leading-tight tracking-tight">
                                         Flexible alarms and timers built around you.
@@ -199,7 +278,6 @@
                                         About, not at. Wake up <em>around</em> 7:00—not at the stroke of 7:00. Because life is gradient, not binary. Transitions are spaces, not switches.
                                     </p>
                                     
-                                    {/* CTA Buttons */}
                                     <div className="flex flex-col sm:flex-row gap-4">
                                         <button className="bg-amber-400 hover:bg-amber-300 text-slate-900 px-8 py-4 rounded-2xl font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 inline-flex items-center justify-center gap-3 text-lg group">
                                             <Icons.Download size={24} className="group-hover:animate-bounce" />
@@ -227,22 +305,19 @@
                                     </div>
                                 </div>
 
-                                {/* Right Column - Phone Mockup */}
+                                {/* Phone mockup - slightly rotated for chaos */}
                                 <div className="relative">
-                                    <div className="relative mx-auto max-w-sm">
-                                        {/* Floating badge */}
+                                    <div className="relative mx-auto max-w-sm rotate-slight float-subtle">
                                         <div className="absolute -top-6 -right-6 bg-amber-400 text-slate-900 px-6 py-3 rounded-2xl font-bold shadow-xl z-10 rotate-6">
-                                            v0.1.4
+                                            v0.1.5
                                         </div>
                                         
-                                        {/* Phone frame */}
                                         <div className="relative bg-slate-900 rounded-[3rem] p-3 shadow-2xl">
                                             <div className="bg-slate-800 rounded-[2.5rem] overflow-hidden">
                                                 <img src="assets/app-mobile-sample.png" alt="Threshold App" className="w-full" />
                                             </div>
                                         </div>
 
-                                        {/* Decorative elements */}
                                         <div className="absolute -z-10 top-20 -left-20 w-72 h-72 bg-amber-400 dark:bg-amber-600 rounded-full opacity-10 blur-3xl"></div>
                                         <div className="absolute -z-10 bottom-20 -right-20 w-80 h-80 bg-slate-400 dark:bg-slate-600 rounded-full opacity-10 blur-3xl"></div>
                                     </div>
@@ -251,133 +326,125 @@
                         </div>
                     </section>
 
-                    {/* Features Section */}
+                    {/* Features - Clean grid BUT with playful cards */}
                     <section id="features" className="py-24 px-6 bg-white dark:bg-slate-950 transition-colors duration-300">
                         <div className="container mx-auto max-w-7xl">
                             <div className="text-center mb-20">
                                 <h2 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6 tracking-tight">Built for flexibility</h2>
                                 <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto font-light leading-relaxed">
-                                    Threshold respects your time without demanding precision. Wake up naturally, transition smoothly, and reduce decision fatigue.
+                                    Threshold respects your time without demanding precision
                                 </p>
                             </div>
 
                             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {/* Feature 1 */}
-                                <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl hover:shadow-xl transition-all dark:border dark:border-slate-800">
+                                {/* Some cards rotated slightly for visual interest */}
+                                <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl hover:shadow-xl transition-all dark:border dark:border-slate-800 rotate-slight-opposite">
                                     <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
                                         <Icons.Clock size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">Random Window Mode</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        Set a time range (e.g., 7:00–7:30 AM) and let Threshold pick a random moment within it. Reduces morning anxiety and promotes natural wake-up patterns.
+                                        Set a time range (e.g., 7:00–7:30 AM) and let Threshold pick a random moment within it.
                                     </p>
                                 </div>
 
-                                {/* Feature 2 */}
                                 <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl hover:shadow-xl transition-all dark:border dark:border-slate-800">
                                     <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
                                         <Icons.Repeat size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">Fixed Alarms</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        Need precision? Traditional fixed-time alarms are supported with full recurring schedule options for specific days of the week.
+                                        Traditional fixed-time alarms with full recurring schedule options.
                                     </p>
                                 </div>
 
-                                {/* Feature 3 */}
-                                <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl hover:shadow-xl transition-all dark:border dark:border-slate-800">
+                                <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl hover:shadow-xl transition-all dark:border dark:border-slate-800 rotate-slight">
                                     <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/20 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 mb-4">
                                         <Icons.Music size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">Custom Alarm Sounds</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        Wake up to your favourite sounds. Pick custom audio files from your device to personalise your alarm experience.
+                                        Wake up to your favourite sounds. Pick custom audio files from your device.
                                     </p>
                                 </div>
 
-                                {/* Feature 4 */}
                                 <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl hover:shadow-xl transition-all dark:border dark:border-slate-800">
                                     <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-xl flex items-center justify-center text-green-600 dark:text-green-400 mb-4">
                                         <Icons.Bell size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">Smart Snooze</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        Snooze with countdown notifications that keep you informed. Tap the notification to return to your alarm anytime.
+                                        Snooze with countdown notifications that keep you informed.
                                     </p>
                                 </div>
 
-                                {/* Feature 5 */}
-                                <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl hover:shadow-xl transition-all dark:border dark:border-slate-800">
+                                <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl hover:shadow-xl transition-all dark:border dark:border-slate-800 rotate-slight-opposite">
                                     <div className="w-12 h-12 bg-pink-50 dark:bg-pink-900/20 rounded-xl flex items-center justify-center text-pink-600 dark:text-pink-400 mb-4">
                                         <Icons.Palette size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">Material You Theming</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        Seamlessly integrates with your system colours. Dynamic theming adapts to your wallpaper and preferences on Android 12+.
+                                        Dynamic theming adapts to your wallpaper and preferences on Android 12+.
                                     </p>
                                 </div>
 
-                                {/* Feature 6 */}
                                 <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl hover:shadow-xl transition-all dark:border dark:border-slate-800">
                                     <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-400 mb-4">
                                         <Icons.Shield size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">Privacy First</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        All data stays on your device. No accounts, no cloud sync, no analytics. Open source and transparent.
+                                        All data stays on your device. No accounts, no cloud sync, no analytics.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    {/* How It Works Section */}
+                    {/* How It Works - Structured BUT with asymmetric training card */}
                     <section id="how-it-works" className="py-24 px-6 bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
                         <div className="container mx-auto max-w-7xl">
                             <div className="text-center mb-20">
                                 <h2 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6 tracking-tight">About, not at.</h2>
                                 <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto font-light leading-relaxed">
-                                    Traditional alarms demand precision: 7:00 AM sharp. Threshold embraces flexibility: wake up <em>around</em> 7:00 AM, within a window that feels natural.
+                                    Traditional alarms demand precision: 7:00 AM sharp. Threshold embraces flexibility.
                                 </p>
                             </div>
 
                             <div className="grid md:grid-cols-3 gap-12 mb-16">
-                                {/* Step 1 */}
                                 <div className="text-center">
                                     <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 mb-6 mx-auto">
                                         <span className="text-2xl font-bold">1</span>
                                     </div>
                                     <h3 className="font-bold text-xl text-slate-800 dark:text-slate-200 mb-4">Set Your Window</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        Choose a time range that works for you. Maybe 7:00–7:30 AM on weekdays, or 9:00–10:00 AM on weekends.
+                                        Choose a time range. Maybe 7:00–7:30 AM on weekdays.
                                     </p>
                                 </div>
 
-                                {/* Step 2 */}
                                 <div className="text-center">
                                     <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 mx-auto">
                                         <span className="text-2xl font-bold">2</span>
                                     </div>
                                     <h3 className="font-bold text-xl text-slate-800 dark:text-slate-200 mb-4">Random Time Selected</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        The app randomly selects a moment within your window. You'll see the exact time—maybe 7:12 today, 7:19 tomorrow.
+                                        The app picks a moment. Maybe 7:12 today, 7:19 tomorrow.
                                     </p>
                                 </div>
 
-                                {/* Step 3 */}
                                 <div className="text-center">
                                     <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center text-green-600 dark:text-green-400 mb-6 mx-auto">
                                         <span className="text-2xl font-bold">3</span>
                                     </div>
                                     <h3 className="font-bold text-xl text-slate-800 dark:text-slate-200 mb-4">Your Body Learns</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        After a few weeks, your body learns the window. You start stirring naturally around 7-ish. The alarm becomes confirmation, not interruption.
+                                        After a few weeks, you start stirring naturally around 7-ish.
                                     </p>
                                 </div>
                             </div>
 
-                            {/* The Training Effect */}
-                            <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 md:p-12 shadow-xl border border-slate-100 dark:border-slate-700 max-w-4xl mx-auto">
+                            {/* Training effect - skewed for visual interest */}
+                            <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 md:p-12 shadow-xl border border-slate-100 dark:border-slate-700 max-w-4xl mx-auto skew-slight">
                                 <div className="flex items-start gap-4 mb-6">
                                     <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0">
                                         <Icons.Brain size={24} />
@@ -390,37 +457,44 @@
                                 
                                 <div className="space-y-4 text-slate-600 dark:text-slate-400 leading-relaxed">
                                     <p>
-                                        <strong className="text-slate-800 dark:text-slate-200">Week 1:</strong> The alarm rings at different times each day. Your brain stays engaged—it can't predict the exact moment.
+                                        <strong className="text-slate-800 dark:text-slate-200">Week 1:</strong> The alarm rings at different times. Your brain stays engaged.
                                     </p>
                                     <p>
-                                        <strong className="text-slate-800 dark:text-slate-200">Week 4:</strong> Your body learns the window. You start stirring naturally around 7:00-ish, even before the alarm.
+                                        <strong className="text-slate-800 dark:text-slate-200">Week 4:</strong> Your body learns the window. You start stirring naturally around 7:00-ish.
                                     </p>
                                     <p>
-                                        <strong className="text-slate-800 dark:text-slate-200">Week 8:</strong> When the alarm rings at 7:14, you're already in transition. It's a gentle nudge, not a jarring interruption.
+                                        <strong className="text-slate-800 dark:text-slate-200">Week 8:</strong> When it rings at 7:14, you're already transitioning. It's gentle.
                                     </p>
                                     <p className="text-amber-600 dark:text-amber-400 font-medium pt-4">
-                                        No more alarm blindness. No more hitting snooze on autopilot. Just natural, gentle mornings.
+                                        No more alarm blindness. Just natural, gentle mornings.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    {/* Philosophy Section */}
+                    {/* Philosophy - Dark section with liminal graphic */}
                     <section id="philosophy" className="py-24 bg-slate-900 dark:bg-black text-white px-6 transition-colors duration-300">
                         <div className="container mx-auto flex flex-col md:flex-row items-center gap-16 max-w-7xl">
                             <div className="md:w-1/2">
                                 <div className="relative rounded-3xl overflow-hidden border border-slate-700 dark:border-slate-800 aspect-video bg-slate-800 dark:bg-slate-900 flex items-center justify-center shadow-2xl">
                                     <div className="absolute inset-0 bg-gradient-to-tr from-slate-900 via-transparent to-amber-900/20"></div>
+                                    
+                                    {/* Floating particles */}
+                                    <div className="liminal-particle"></div>
+                                    <div className="liminal-particle"></div>
+                                    <div className="liminal-particle"></div>
+                                    <div className="liminal-particle"></div>
+                                    
                                     <div className="text-center p-8 relative z-10">
                                         <div className="flex justify-center items-center gap-6 mb-8">
-                                            <div className="w-1 h-20 bg-slate-600 rounded-full"></div>
+                                            <div className="w-1 h-20 bg-slate-600 rounded-full liminal-pillar"></div>
                                             <div className="flex flex-col gap-2">
-                                                <div className="w-24 h-1 bg-amber-500 rounded-full blur-[2px] opacity-70"></div>
-                                                <div className="w-32 h-1 bg-amber-500 rounded-full blur-[1px]"></div>
-                                                <div className="w-24 h-1 bg-amber-500 rounded-full blur-[2px] opacity-70"></div>
+                                                <div className="w-24 h-1 bg-amber-500 rounded-full liminal-line-outer"></div>
+                                                <div className="w-32 h-1 bg-amber-500 rounded-full liminal-line-center"></div>
+                                                <div className="w-24 h-1 bg-amber-500 rounded-full liminal-line-outer"></div>
                                             </div>
-                                            <div className="w-1 h-20 bg-slate-600 rounded-full"></div>
+                                            <div className="w-1 h-20 bg-slate-600 rounded-full liminal-pillar" style={{animationDelay: '4s'}}></div>
                                         </div>
                                         <p className="text-slate-400 text-sm font-mono tracking-[0.2em] uppercase">Liminal Space</p>
                                     </div>
@@ -439,16 +513,16 @@
 
                                 <div className="space-y-6 text-slate-300 text-lg leading-relaxed">
                                     <p>
-                                        Traditional alarms demand <span className="text-white font-medium">exactness</span> where humans need <span className="text-amber-400 font-medium">flexibility</span>. "Wake me at 7:00" creates anxiety. "Wake me about 7:00" creates space.
+                                        Traditional alarms demand <span className="text-white font-medium">exactness</span> where humans need <span className="text-amber-400 font-medium">flexibility</span>.
                                     </p>
                                     <p>
-                                        Life isn't binary. <span className="text-amber-400">Reality is gradient</span>. Waking is a process, not a moment. Threshold honours the in-between.
+                                        Life isn't binary. <span className="text-amber-400">Reality is gradient</span>. Waking is a process, not a moment.
                                     </p>
                                     
                                     <div className="border-l-2 border-amber-400/30 pl-6 my-8">
                                         <p className="text-slate-400 italic text-base">
                                             "Variance breaks habituation. Your brain can't predict exactly when the alarm will ring, so it stays engaged. 
-                                            After a few weeks, your body learns the window. The alarm becomes confirmation, not interruption."
+                                            The alarm becomes confirmation, not interruption."
                                         </p>
                                     </div>
                                 </div>
@@ -456,75 +530,70 @@
                         </div>
                     </section>
 
-                    {/* Who It's For Section */}
+                    {/* Who It's For - Asymmetric layout */}
                     <section className="py-24 px-6 bg-amber-50/50 dark:bg-slate-900 transition-colors duration-300">
                         <div className="container mx-auto max-w-7xl">
                             <div className="text-center mb-16">
                                 <h2 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6 tracking-tight">Perfect for...</h2>
                                 <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto font-light leading-relaxed">
-                                    People who need reminders, not interruptions.
+                                    People who need reminders, not interruptions
                                 </p>
                             </div>
 
                             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                {/* Card 1 */}
-                                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all dark:border dark:border-slate-700/50">
+                                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all dark:border dark:border-slate-700/50 rotate-slight-opposite">
                                     <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center justify-center text-amber-700 dark:text-amber-400 mb-4">
                                         <Icons.Brain size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">ADHD Friendly</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        Flexible reminders that don't overwhelm or trigger "demand avoidance."
+                                        Flexible reminders that don't overwhelm.
                                     </p>
                                 </div>
                                 
-                                {/* Card 2 */}
                                 <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all dark:border dark:border-slate-700/50">
                                     <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-300 mb-4">
                                         <Icons.Moon size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">Serial Snoozers</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        Set multiple random alarms in one go without the manual setup fatigue.
+                                        Set multiple random alarms in one go.
                                     </p>
                                 </div>
                                 
-                                {/* Card 3 */}
-                                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all dark:border dark:border-slate-700/50">
+                                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all dark:border dark:border-slate-700/50 rotate-slight">
                                     <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-700 dark:text-blue-400 mb-4">
                                         <Icons.Activity size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">Remote Work</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        Create natural breaks and task transitions throughout your day.
+                                        Natural breaks and task transitions.
                                     </p>
                                 </div>
                                 
-                                {/* Card 4 */}
                                 <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all dark:border dark:border-slate-700/50">
                                     <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-xl flex items-center justify-center text-green-700 dark:text-green-400 mb-4">
                                         <Icons.Wind size={24} />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 mb-2">Calm Computing</h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                        For anyone who values thoughtful, respectful software design.
+                                        Thoughtful, respectful software design.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    {/* CTA Section */}
+                    {/* CTA - Structured */}
                     <section className="py-24 px-6 transition-colors duration-300">
                         <div className="container mx-auto max-w-5xl bg-slate-800 dark:bg-slate-900 rounded-[3rem] p-12 md:p-24 text-center relative overflow-hidden shadow-2xl dark:shadow-black/50 border border-transparent dark:border-slate-800">
-                            {/* Decorative circles */}
                             <div className="absolute top-0 left-0 w-96 h-96 bg-slate-700 dark:bg-slate-800 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-30 blur-3xl"></div>
                             <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-amber-500 dark:bg-amber-600 rounded-full translate-x-1/3 translate-y-1/3 opacity-10 blur-3xl"></div>
                             
                             <div className="relative z-10">
                                 <h2 className="text-3xl md:text-6xl font-bold text-white mb-8 tracking-tight">Ready to try Threshold?</h2>
                                 <p className="text-xl md:text-2xl text-slate-300 mb-12 max-w-3xl mx-auto font-light">
-                                    Give yourself permission to be flexible. <br/>Available now on Android and Desktop.
+                                    Give yourself permission to be flexible. <br/>Available now on Android. Desktop builds are available from source.
                                 </p>
                                 
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -537,18 +606,17 @@
                                         View on GitHub
                                     </a>
                                 </div>
-                                <p className="mt-8 text-sm text-slate-400 font-medium">v0.1.4 • Free • No Ads • Open Source</p>
+                                <p className="mt-8 text-sm text-slate-400 font-medium">v0.1.5 • Free • No Ads • Open Source</p>
                             </div>
                         </div>
                     </section>
 
-                    {/* Footer */}
+                    {/* Footer - Clean */}
                     <footer className="bg-white dark:bg-slate-950 pt-24 pb-12 px-6 border-t border-slate-100 dark:border-slate-900 transition-colors duration-300">
                         <div className="container mx-auto">
                             <div className="grid md:grid-cols-4 gap-12 mb-16">
                                 <div className="col-span-1 md:col-span-2">
                                     <div className="flex items-center gap-3 mb-6">
-                                        {/* Liminal HQ Logo SVG */}
                                         <img src="assets/liminal-logo.svg" alt="Liminal HQ" className="w-10 h-10 rounded-lg shadow-md" />
                                         <span className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Liminal HQ</span>
                                     </div>
@@ -596,7 +664,7 @@
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ThresholdWebsite />);
+        root.render(<ThresholdLiminal />);
     </script>
 </body>
 </html>
