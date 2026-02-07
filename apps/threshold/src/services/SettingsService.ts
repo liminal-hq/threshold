@@ -22,7 +22,7 @@ export const SettingsService = {
 		localStorage.setItem(KEY_THEME, theme);
 		// applyTheme is now handled by ThemeProvider listening to state changes
 		// But we emit event for other windows
-		emit('theme-changed', { theme, forceDark: SettingsService.getForceDark() });
+		emit('settings-changed', { key: 'theme', value: theme });
 	},
 
 	getSystemTimeFormat: async () => {
@@ -38,10 +38,7 @@ export const SettingsService = {
 
 	setUseMaterialYou: (enabled: boolean) => {
 		localStorage.setItem(KEY_USE_MATERIAL_YOU, String(enabled));
-		emit('theme-changed', {
-			theme: SettingsService.getTheme(),
-			forceDark: SettingsService.getForceDark(),
-		});
+		emit('settings-changed', { key: 'useMaterialYou', value: enabled });
 	},
 
 	getIs24h: (): boolean => {
@@ -50,6 +47,7 @@ export const SettingsService = {
 
 	setIs24h: (is24h: boolean) => {
 		localStorage.setItem(KEY_24H, String(is24h));
+		emit('settings-changed', { key: 'is24h', value: is24h });
 	},
 
 	getForceDark: (): boolean => {
@@ -59,7 +57,7 @@ export const SettingsService = {
 	setForceDark: (enabled: boolean) => {
 		localStorage.setItem(KEY_FORCE_DARK, String(enabled));
 		// Emit event for other windows
-		emit('theme-changed', { theme: SettingsService.getTheme(), forceDark: enabled });
+		emit('settings-changed', { key: 'forceDark', value: enabled });
 	},
 
 	getSilenceAfter: (): number => {
@@ -69,6 +67,7 @@ export const SettingsService = {
 
 	setSilenceAfter: (minutes: number) => {
 		localStorage.setItem(KEY_SILENCE_AFTER, String(minutes));
+		emit('settings-changed', { key: 'silenceAfter', value: minutes });
 	},
 
 	getSnoozeLength: (): number => {
@@ -78,6 +77,7 @@ export const SettingsService = {
 
 	setSnoozeLength: (minutes: number) => {
 		localStorage.setItem(KEY_SNOOZE_LENGTH, String(minutes));
+		emit('settings-changed', { key: 'snoozeLength', value: minutes });
 	},
 
 	// Deprecated: Logic moved to ThemeProvider

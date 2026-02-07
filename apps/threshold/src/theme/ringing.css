@@ -1,4 +1,4 @@
-/* Ringing Screen Styles - Clean rebuild without 100vh issues */
+/* Ringing Screen Styles - Hybrid Material Liminal */
 
 .ringing-page,
 .ringing-page * {
@@ -15,14 +15,19 @@ html {
 	height: 100% !important;
 }
 
-/* Dark mode support for ringing window */
+/* Dark mode support - REMOVED override to keep gradient consistent
 body.dark-mode .ringing-page {
-	background: #121212;
+	background: #121212; 
 }
+*/
 
 .ringing-page {
-	/* Transparent background for window transparency */
-	background: transparent;
+	/* Hybrid Material Background: Secondary Tint -> Secondary */
+	background: linear-gradient(
+		to bottom,
+		var(--app-colour-secondary-tint),
+		var(--app-colour-secondary)
+	);
 	overflow: hidden;
 	/* Fill the entire available space */
 	position: absolute;
@@ -34,102 +39,380 @@ body.dark-mode .ringing-page {
 	height: 100%;
 }
 
-.ringing-container {
-	/* Fill the entire page with small margin for rounded corners */
+/* Horizon Glow Container */
+.ringing-page::before {
+	content: '';
 	position: absolute;
-	top: 2px;
-	left: 2px;
-	right: 2px;
-	bottom: 2px;
-	
-	/* Flexbox layout for centering content */
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 32px;
-	text-align: center;
-	
-	/* Visual styling - secondary colour gradient */
-	background: radial-gradient(circle at center, var(--app-colour-secondary-tint), var(--app-colour-secondary));
-	color: var(--app-colour-secondary-contrast); /* Use secondary-contrast for proper contrast in all themes */
-	animation: pulse-bg 4s infinite alternate;
-	
-	/* Rounded corners for floating card effect */
-	border-radius: 24px;
-	box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 20px 50px rgba(0,0,0,0.5);
-	
-	/* Clip inner content (like breathing animation) to border radius */
-	overflow: hidden;
+	bottom: -20%;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 150vw; /* Make it wide enough to look like a horizon */
+	height: 60vh;
+	background: radial-gradient(
+		circle at center bottom,
+		var(--app-colour-primary) 0%,
+		transparent 70%
+	);
+	opacity: 0.2; /* Subtle Liminal glow */
+	pointer-events: none;
+	z-index: 0;
 }
 
-/* Remove box-shadow on desktop to prevent transparency artifacts */
-.ringing-page.desktop-mode .ringing-container {
-	box-shadow: none;
-}
-
-/* Breathing animation overlay - placed above background, below content */
-.ringing-container::after {
+/* Threshold Dots Pattern Overlay */
+.ringing-page::after {
 	content: '';
 	position: absolute;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	/* Increased opacity for maximum intensity */
-	background: radial-gradient(circle at center, color-mix(in srgb, var(--app-colour-secondary-contrast), transparent 60%), transparent 70%);
-	/* Faster animation for more urgency? No, keep it rhythmic but deep */
-	animation: breathe 4s ease-in-out infinite;
+	/* Use explicit white for pattern to ensure visibility on dark gradients since secondary-contrast might flip */
+	background-image: radial-gradient(white 1px, transparent 1px);
+	background-size: 2.5rem 2.5rem;
+	opacity: 0.12;
 	pointer-events: none;
-	border-radius: 24px;
-	z-index: 0; /* Ensure it stays behind content if content is z-indexed */
+	z-index: 0;
 }
 
-@keyframes breathe {
-	0%, 100% {
-		opacity: 0.2;
-		transform: scale(0.95);
+.ringing-container {
+	/* Fill the entire page with small margin for rounded corners */
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+
+	/* Flexbox layout for centering content */
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-start; /* Move up from center */
+	padding-top: 25vh; /* Position time at approx 1/4 screen height */
+	text-align: center;
+
+	/* Enforce white text for contrast against the bold gradient background */
+	color: #ffffff;
+
+	/* Removed container border/shadow/radius from previous design to match full-screen mobile design */
+	overflow: visible;
+	z-index: 1;
+}
+
+/* Desktop Mode Adaptations */
+/* Desktop Mode Adaptations */
+.ringing-page.desktop-mode .ringing-container {
+	justify-content: center;
+	padding-top: 0;
+	/* Restore rounded corners for desktop window */
+	border-radius: 24px;
+	overflow: hidden;
+	/* Ensure background gradient is clipped */
+	mask-image: radial-gradient(white, black);
+
+	/* Disable text selection on Desktop */
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+/* Ensure buttons are clickable and not draggable */
+.ringing-page.desktop-mode button,
+.ringing-page.desktop-mode .ringing-actions {
+	-webkit-app-region: no-drag;
+}
+
+/* 
+   Actually, looking at previous implementation, ringing-container was the card.
+   Now ringing-page is the full background.
+   On Desktop, we likely want the ringing-page itself (which fills the body) to be rounded 
+   IF the window is transparent. 
+   
+   However, typically on Linux/Windows, transparent windows are rectangular but contents are rounded.
+   Let's round the whole .ringing-page for desktop mode
+*/
+.ringing-page.desktop-mode {
+	border-radius: 24px;
+}
+
+/* Time Display Container & Breathing Animation */
+.time-display-container {
+	position: relative;
+	margin-bottom: 1.5rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.breathing-ring {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	/* Use explicit white for rings */
+	border: 1px solid white;
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* Mobile: Use Viewport Width for massive rings */
+.breathing-ring.ring-1 {
+	width: 90vw;
+	height: 90vw;
+	max-width: 500px;
+	max-height: 500px;
+	animation: breathe-ring-1 4s infinite;
+}
+
+.breathing-ring.ring-2 {
+	width: 75vw;
+	height: 75vw;
+	max-width: 420px;
+	max-height: 420px;
+	animation: breathe-ring-2 4s infinite 1s; /* delayed start */
+}
+
+.breathing-ring.ring-3 {
+	width: 60vw;
+	height: 60vw;
+	max-width: 360px;
+	max-height: 360px;
+	animation: breathe-ring-3 4s infinite 2s; /* delayed start */
+}
+
+/* Desktop Override: Restore smaller fixed sizes */
+.ringing-page.desktop-mode .breathing-ring.ring-1 {
+	width: 260px;
+	height: 260px;
+}
+.ringing-page.desktop-mode .breathing-ring.ring-2 {
+	width: 220px;
+	height: 220px;
+}
+.ringing-page.desktop-mode .breathing-ring.ring-3 {
+	width: 190px;
+	height: 190px;
+}
+
+@keyframes breathe-ring-1 {
+	0% {
+		opacity: 0.15;
+		transform: translate(-50%, -50%) scale(1);
 	}
 	50% {
-		opacity: 0.7; /* Balanced visibility */
-		transform: scale(1.1);
+		opacity: 0.08;
+		transform: translate(-50%, -50%) scale(1.11);
+	}
+	100% {
+		opacity: 0.15;
+		transform: translate(-50%, -50%) scale(1);
 	}
 }
 
-@keyframes pulse-bg {
-	0% { filter: brightness(1); }
-	100% { filter: brightness(1.1); }
+@keyframes breathe-ring-2 {
+	0% {
+		opacity: 0.2;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	50% {
+		opacity: 0.08;
+		transform: translate(-50%, -50%) scale(1.13);
+	}
+	100% {
+		opacity: 0.2;
+		transform: translate(-50%, -50%) scale(1);
+	}
+}
+
+@keyframes breathe-ring-3 {
+	0% {
+		opacity: 0.1;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	50% {
+		opacity: 0.05;
+		transform: translate(-50%, -50%) scale(1.1);
+	}
+	100% {
+		opacity: 0.1;
+		transform: translate(-50%, -50%) scale(1);
+	}
 }
 
 .ringing-time {
-	font-size: 5rem;
-	font-weight: 800;
-	margin-bottom: 16px;
-	text-shadow: 0 4px 12px rgba(0,0,0,0.2);
+	font-size: 8.5rem; /* Increased for Mobile Scaling */
+	font-weight: 300;
+	letter-spacing: -4px;
+	margin: 0;
+	/* Enhanced Glow: Double layer for intensity */
+	text-shadow:
+		0 0 1.25rem rgba(255, 255, 255, 0.6),
+		0 0 2.5rem rgba(255, 255, 255, 0.3);
 	font-variant-numeric: tabular-nums;
 	line-height: 1;
-	/* Inherit color from parent instead of hardcoding */
-	position: relative;
-	z-index: 2; /* Ensure text sits above the intense breathing animation */
-}
-
-.ringing-label {
-	font-size: 2rem;
-	font-weight: 500;
-	margin-bottom: 48px;
-	opacity: 0.9;
-	/* Inherit color from parent instead of hardcoding */
 	position: relative;
 	z-index: 2;
+}
+
+/* Desktop override to keep original size */
+.ringing-page.desktop-mode .ringing-time {
+	font-size: 6rem;
+}
+/* Digital Clock Layout for AM/PM */
+.digital-clock-container {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	z-index: 2;
+	position: relative;
+	/* Ensure drag region propagates */
+	-webkit-app-region: drag;
+}
+
+.ampm-stack {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	height: 5rem; /* Match roughly the height of the digits */
+	padding-top: 0.5rem;
+}
+
+.ampm-label {
+	font-size: 1.25rem; /* 20px */
+	font-weight: 600;
+	line-height: 1.2;
+	color: #ffffff;
+	opacity: 0.25; /* Dim inactive */
+	user-select: none;
+}
+
+.ampm-label.active {
+	opacity: 1; /* Bright active */
+}
+.ringing-label {
+	font-size: 2rem; /* Increased for Mobile Scaling */
+	font-weight: 400;
+	margin-top: 1rem;
+	margin-bottom: 3rem;
+	opacity: 0.95;
+	position: relative;
+	z-index: 2;
+	/* Ensure long labels don't break layout */
+	max-width: 80%;
+	line-height: 1.3;
+}
+
+/* Desktop override to keep original size */
+.ringing-page.desktop-mode .ringing-label {
+	font-size: 1.5rem;
+	margin-bottom: 32px;
+}
+
+.threshold-indicator-container {
+	margin-bottom: 1.5rem;
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	/* Ensure the indicator's absolute labels don't get clipped or overlap if tight */
+	padding-top: 2.5rem; /* Increased padding top */
+	/* Scale up for Mobile */
+	transform: scale(1.4);
+	position: relative;
+	z-index: 1; /* Ensure it doesn't fight with label z-index */
+}
+
+/* Desktop override to keep original scale */
+.ringing-page.desktop-mode .threshold-indicator-container {
+	transform: scale(1);
 }
 
 .ringing-actions {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
-	width: 100%;
-	max-width: 320px;
-	position: relative;
+	gap: 1.5rem; /* Increased gap */
+	width: 85%; /* Wide buttons for Mobile */
+	max-width: 400px;
+	position: absolute;
+	bottom: 15vh; /* Move up a bit (was 80px) */
 	z-index: 2;
 }
 
+/* Desktop: Center actions and restrict width */
+.ringing-page.desktop-mode .ringing-actions {
+	position: relative;
+	bottom: auto;
+	margin-top: 16px; /* Reduced from 48px to tighten gap to threshold */
+	width: 100%;
+	max-width: 290px;
+}
+
+/* Button Overrides */
+.ringing-btn-stop {
+	background-color: #1a1a2e !important; /* Keep the dark distinct button from SVG */
+	color: #ffffff !important;
+	height: 4.5rem; /* 72px -> 4.5rem */
+	border-radius: 2.25rem !important; /* 36px -> 2.25rem */
+	font-size: 1.25rem !important; /* Larger text */
+	font-weight: 600 !important;
+	text-transform: none !important;
+	box-shadow: none !important;
+	position: relative;
+}
+
+/* Desktop override for button size */
+.ringing-page.desktop-mode .ringing-btn-stop {
+	height: 56px;
+	border-radius: 28px !important;
+	font-size: 1.125rem !important;
+}
+
+/* Inner highlight for Stop button */
+.ringing-btn-stop::after {
+	content: '';
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	right: 2px;
+	bottom: 2px;
+	border-radius: 2.25rem; /* Match button radius */
+	background: rgba(255, 255, 255, 0.05); /* Subtle depth */
+	pointer-events: none;
+}
+
+/* Desktop highlight override */
+.ringing-page.desktop-mode .ringing-btn-stop::after {
+	border-radius: 28px;
+	height: auto; /* Allow it to fill the smaller button */
+}
+
+.ringing-btn-snooze {
+	background-color: transparent !important;
+	border: 2px solid rgba(255, 255, 255, 0.6) !important;
+	color: rgba(255, 255, 255, 0.9) !important;
+	height: 4.5rem; /* 72px -> 4.5rem */
+	border-radius: 2.25rem !important;
+	font-size: 1.25rem !important;
+	font-weight: 500 !important;
+	text-transform: none !important;
+}
+
+/* Desktop override for snooze button */
+.ringing-page.desktop-mode .ringing-btn-snooze {
+	height: 56px;
+	border-radius: 28px !important;
+	font-size: 1.125rem !important;
+}
+
+.ringing-liminal-note {
+	position: absolute;
+	bottom: 1.5rem;
+	font-size: 0.7rem; /* 11px */
+	font-weight: 300;
+	letter-spacing: 1px;
+	opacity: 0.5;
+}
+
+/* Desktop hide liminal note if space is tight */
+.ringing-page.desktop-mode .ringing-liminal-note {
+	display: none;
+}

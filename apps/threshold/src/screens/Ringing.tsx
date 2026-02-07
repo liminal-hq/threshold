@@ -4,6 +4,7 @@ import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
 import { Alarm } from '../services/DatabaseService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { listen } from '@tauri-apps/api/event';
@@ -12,6 +13,7 @@ import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { ROUTES, SPECIAL_ALARM_IDS } from '../constants';
 import { SettingsService } from '../services/SettingsService';
 import { appManagementService } from '../services/AppManagementService';
+import ThresholdIndicator from './ThresholdIndicator';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
@@ -20,19 +22,51 @@ const Ringing: React.FC = () => {
 	const navigate = useNavigate();
 
 	// Settings state
-	const [snoozeLength] = useState<number>(SettingsService.getSnoozeLength());
-	const [silenceAfter] = useState<number>(SettingsService.getSilenceAfter());
+	const [snoozeLength, setSnoozeLength] = useState<number>(SettingsService.getSnoozeLength());
+	const [silenceAfter, setSilenceAfter] = useState<number>(SettingsService.getSilenceAfter());
+	const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
 
 	// Listen for Alarm Updates (Singleton pattern)
 	// Note: Theme changes are handled globally by App.tsx -> ThemeContextProvider
 	useEffect(() => {
+		// Enforce fixed window size for Ringing Screen on Desktop
+		// This ensures consistency between "Test Alarm" (dynamic label) and real "Alarm" (static label)
+		if (PlatformUtils.getPlatform() !== 'android' && PlatformUtils.getPlatform() !== 'ios') {
+			const enforceWindowSize = async () => {
+				const win = getCurrentWindow();
+				// Use LogicalSize to handle DPI scaling correctly
+				// Use LogicalSize to handle DPI scaling correctly (<-- now imported statically)
+				// Intended size: 400x500 (matches creation config in AlarmManagerService/Settings)
+				await win.setSize(new LogicalSize(400, 500));
+				await win.center();
+			};
+			enforceWindowSize();
+		}
 		const unlistenUpdate = listen<{ id: number }>('alarm-update', (event) => {
 			console.log('Ringing window received update:', event.payload);
 			navigate({ to: '/ringing/$id', params: { id: event.payload.id.toString() } });
 		});
 
+		// Listen for settings changes (24h, snooze, silence)
+		const unlistenSettings = listen<{ key: string; value: any }>('settings-changed', (event) => {
+			console.log('Ringing window received setting update:', event.payload);
+			const { key, value } = event.payload;
+			switch (key) {
+				case 'is24h':
+					setIs24h(Boolean(value));
+					break;
+				case 'snoozeLength':
+					setSnoozeLength(Number(value));
+					break;
+				case 'silenceAfter':
+					setSilenceAfter(Number(value));
+					break;
+			}
+		});
+
 		return () => {
 			unlistenUpdate.then((fn) => fn());
+			unlistenSettings.then((fn) => fn());
 		};
 	}, [navigate]);
 
@@ -71,12 +105,12 @@ const Ringing: React.FC = () => {
 		// Update clock every second
 		const updateTime = () => {
 			const now = new Date();
-			setTimeStr(TimeFormatHelper.format(now.getTime(), true)); // Force 24h for now, or fetch settings
+			setTimeStr(TimeFormatHelper.format(now.getTime(), is24h));
 		};
 		updateTime();
 		const interval = setInterval(updateTime, 1000);
 		return () => clearInterval(interval);
-	}, [id]);
+	}, [id, is24h]);
 
 	/**
 	 * Handles alarm dismissal with platform-specific behaviour.
@@ -317,80 +351,72 @@ const Ringing: React.FC = () => {
 		<Box
 			className={`ringing-page ${PlatformUtils.isDesktop() ? 'desktop-mode' : ''}`}
 			onClick={() => setIsAudioUnlocked(true)}
-			sx={{
-				height: '100%',
-				display: 'flex',
-				flexDirection: 'column',
-				userSelect: 'none', // Disable text selection
-			}}
 		>
-			<Box sx={{ flexGrow: 1 }}>
-				<div className="ringing-container" data-tauri-drag-region="true">
-					<Typography
-						variant="h1"
-						className="ringing-time"
-						sx={{ fontSize: '5rem', fontWeight: 800 }}
-					>
-						{timeStr}
-					</Typography>
-					<Typography variant="h4" className="ringing-label" sx={{ mb: 6 }}>
-						{alarm?.label}
-					</Typography>
+			<div className="ringing-container" data-tauri-drag-region="true">
+				{/* Time Display with Breathing Rings */}
+				<div className="time-display-container" data-tauri-drag-region="true">
+					<div className="breathing-ring ring-1" data-tauri-drag-region="true"></div>
+					<div className="breathing-ring ring-2" data-tauri-drag-region="true"></div>
+					<div className="breathing-ring ring-3" data-tauri-drag-region="true"></div>
 
-					<div className="ringing-actions">
-						<Button
-							variant="contained"
-							fullWidth
-							size="large"
-							sx={{
-								bgcolor: 'secondary.contrastText', // Matches the clock text colour (White in Light, Dark in Dark)
-								color: 'secondary.main', // Matches the page background colour
-								borderRadius: '50px',
-								fontWeight: 'bold',
-								height: '56px',
-								'&:hover': {
-									bgcolor: 'secondary.contrastText',
-									filter: 'brightness(0.9)',
-								},
-								textTransform: 'none',
-								fontSize: '1.2rem',
-								boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-							}}
-							onClick={handleDismiss}
-						>
-							Stop Alarm
-						</Button>
-						<Button
-							variant="outlined"
-							fullWidth
-							size="large"
-							sx={{
-								color: 'inherit', // Inherit from theme instead of hardcoded white
-								borderColor: 'currentColor',
-								borderRadius: '50px',
-								fontWeight: '600',
-								mt: 1,
-								'&:hover': { borderColor: 'currentColor', bgcolor: 'rgba(255,255,255,0.1)' },
-								textTransform: 'none',
-							}}
-							onClick={handleSnooze}
-						>
-							Snooze ({snoozeLength}m)
-						</Button>
+					<div className="digital-clock-container" data-tauri-drag-region="true">
+						<Typography variant="h1" className="ringing-time digits" data-tauri-drag-region="true">
+							{is24h ? timeStr : timeStr.split(' ')[0]}
+						</Typography>
 
-						{audioError && !isAudioUnlocked && (
-							<Button
-								variant="text"
-								fullWidth
-								onClick={() => setIsAudioUnlocked(true)}
-								sx={{ mt: 2, color: 'rgba(255,255,255,0.8)', textDecoration: 'underline' }}
-							>
-								Click to unlock sound
-							</Button>
+						{!is24h && (
+							<div className="ampm-stack" data-tauri-drag-region="true">
+								<span className={`ampm-label ${timeStr.includes('AM') ? 'active' : ''}`}>AM</span>
+								<span className={`ampm-label ${timeStr.includes('PM') ? 'active' : ''}`}>PM</span>
+							</div>
 						)}
 					</div>
 				</div>
-			</Box>
+
+				<Typography variant="h4" className="ringing-label" data-tauri-drag-region="true">
+					{alarm?.label}
+				</Typography>
+
+				{/* Threshold Indicator (Sleep -> Wake) */}
+				<div className="threshold-indicator-container" data-tauri-drag-region="true">
+					<ThresholdIndicator />
+				</div>
+
+				<div className="ringing-actions">
+					<Button
+						variant="contained"
+						fullWidth
+						className="ringing-btn-stop"
+						onClick={handleDismiss}
+					>
+						Stop Alarm
+					</Button>
+
+					<Button
+						variant="outlined"
+						fullWidth
+						className="ringing-btn-snooze"
+						onClick={handleSnooze}
+					>
+						Snooze ({snoozeLength}m)
+					</Button>
+
+					{audioError && !isAudioUnlocked && (
+						<Button
+							variant="text"
+							fullWidth
+							onClick={() => setIsAudioUnlocked(true)}
+							sx={{ mt: 2, color: 'rgba(255,255,255,0.8)', textDecoration: 'underline' }}
+						>
+							Click to unlock sound
+						</Button>
+					)}
+				</div>
+
+				<Typography className="ringing-liminal-note" data-tauri-drag-region="true">
+					gentle transition
+				</Typography>
+			</div>
 		</Box>
 	);
 };
