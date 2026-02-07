@@ -37,25 +37,25 @@ body.dark-mode .ringing-page {
 	bottom: 0;
 	width: 100%;
 	height: 100%;
+}
 
-	/* Horizon Glow Container */
-	&::before {
-		content: '';
-		position: absolute;
-		bottom: -20%;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 150vw; /* Make it wide enough to look like a horizon */
-		height: 60vh;
-		background: radial-gradient(
-			circle at center bottom,
-			var(--app-colour-primary) 0%,
-			transparent 70%
-		);
-		opacity: 0.2; /* Subtle Liminal glow */
-		pointer-events: none;
-		z-index: 0;
-	}
+/* Horizon Glow Container */
+.ringing-page::before {
+	content: '';
+	position: absolute;
+	bottom: -20%;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 150vw; /* Make it wide enough to look like a horizon */
+	height: 60vh;
+	background: radial-gradient(
+		circle at center bottom,
+		var(--app-colour-primary) 0%,
+		transparent 70%
+	);
+	opacity: 0.2; /* Subtle Liminal glow */
+	pointer-events: none;
+	z-index: 0;
 }
 
 /* Threshold Dots Pattern Overlay */

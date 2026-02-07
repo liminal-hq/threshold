@@ -21,6 +21,9 @@ export class AlarmManagerService {
 	private router: any = null;
 	private pendingFiredAlarm: { id: number; firedAt: number } | null = null;
 	private isHandlingAlarmRing = false;
+	private pendingAlarmRingIds: number[] = [];
+	private queuedAlarmRingIds = new Set<number>();
+	private handlingAlarmRingIds = new Set<number>();
 
 	public setRouter(router: any) {
 		this.router = router;
@@ -469,99 +472,120 @@ export class AlarmManagerService {
 	}
 
 	private async handleAlarmRing(id: number) {
-		if (this.isHandlingAlarmRing) {
-			console.warn('[AlarmManager] Already handling alarm ring. Skipping duplicate event.');
+		if (this.handlingAlarmRingIds.has(id) || this.queuedAlarmRingIds.has(id)) {
+			console.warn(`[AlarmManager] Alarm ${id} is already queued or being handled. Skipping duplicate event.`);
 			return;
 		}
-		this.isHandlingAlarmRing = true;
 
-		try {
-			const firedAt = Date.now();
-			console.log(
-				`[AlarmManager] Alarm ring received for ${id} at ${new Date(firedAt).toLocaleString()}`,
-			);
+		this.pendingAlarmRingIds.push(id);
+		this.queuedAlarmRingIds.add(id);
 
-			// 1. Send Notification
-			const isMobile = PlatformUtils.isMobile();
-			sendNotification({
-				title: APP_NAME,
-				body: 'Your alarm is ringing!',
-				actionTypeId: isMobile ? 'alarm_trigger' : undefined,
-			});
+		if (this.isHandlingAlarmRing) {
+			console.log(`[AlarmManager] Alarm ${id} queued while another alarm ring is being handled.`);
+			return;
+		}
 
-			// 2. Open Floating Window (Singleton-ish: ensure only one is open by closing others)
+		while (this.pendingAlarmRingIds.length > 0) {
+			const nextAlarmId = this.pendingAlarmRingIds.shift();
+			if (nextAlarmId === undefined) continue;
+
+			this.queuedAlarmRingIds.delete(nextAlarmId);
+			this.handlingAlarmRingIds.add(nextAlarmId);
+			this.isHandlingAlarmRing = true;
+
 			try {
-				const { WebviewWindow, getAllWebviewWindows } =
-					await import('@tauri-apps/api/webviewWindow');
-				const isMobile = PlatformUtils.isMobile();
-
-				if (isMobile) {
-					console.log(
-						'[AlarmManager] Mobile detected. Navigating current window to ringing screen.',
-					);
-					if (this.router) {
-						this.router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
-					} else {
-						console.error(
-							'[AlarmManager] Router not initialized, cannot navigate to ringing screen',
-						);
-					}
-					return;
-				}
-
-				// START DYNAMIC LABEL LOGIC
-				// Close any existing ringing windows to ensure we get a fresh window (fixing caching/sizing issues)
-				const allWindows = await getAllWebviewWindows();
-				const existingRingingWindows = allWindows.filter((w: any) =>
-					w.label.startsWith('ringing-window-'),
+				const firedAt = Date.now();
+				console.log(
+					`[AlarmManager] Alarm ring received for ${nextAlarmId} at ${new Date(firedAt).toLocaleString()}`,
 				);
 
-				for (const w of existingRingingWindows) {
-					console.log(`[AlarmManager] Closing existing ringing window: ${w.label}`);
-					try {
-						await w.close();
-					} catch (e) {
-						console.warn(`[AlarmManager] Failed to close window ${w.label}`, e);
+				// 1. Send Notification
+				const isMobile = PlatformUtils.isMobile();
+				sendNotification({
+					title: APP_NAME,
+					body: 'Your alarm is ringing!',
+					actionTypeId: isMobile ? 'alarm_trigger' : undefined,
+				});
+
+				// 2. Open Floating Window (Singleton-ish: ensure only one is open by closing others)
+				try {
+					const { WebviewWindow, getAllWebviewWindows } =
+						await import('@tauri-apps/api/webviewWindow');
+					const isMobile = PlatformUtils.isMobile();
+
+					if (isMobile) {
+						console.log(
+							'[AlarmManager] Mobile detected. Navigating current window to ringing screen.',
+						);
+						if (this.router) {
+							this.router.navigate({
+								to: '/ringing/$id',
+								params: { id: nextAlarmId.toString() },
+							});
+						} else {
+							console.error(
+								'[AlarmManager] Router not initialized, cannot navigate to ringing screen',
+							);
+						}
+					} else {
+						// START DYNAMIC LABEL LOGIC
+						// Close any existing ringing windows to ensure we get a fresh window (fixing caching/sizing issues)
+						const allWindows = await getAllWebviewWindows();
+						const existingRingingWindows = allWindows.filter((w: any) =>
+							w.label.startsWith('ringing-window-'),
+						);
+
+						for (const w of existingRingingWindows) {
+							console.log(`[AlarmManager] Closing existing ringing window: ${w.label}`);
+							try {
+								await w.close();
+							} catch (e) {
+								console.warn(`[AlarmManager] Failed to close window ${w.label}`, e);
+							}
+						}
+
+						// Generate dynamic label
+						const label = `ringing-window-${Date.now()}`;
+
+						const webview = new WebviewWindow(label, {
+							url: `/ringing/${nextAlarmId}`,
+							title: 'Alarm',
+							width: 400,
+							height: 500,
+							resizable: false,
+							alwaysOnTop: true,
+							center: true,
+							skipTaskbar: false,
+							decorations: false,
+							transparent: true,
+							focus: true,
+						});
+
+						webview.once('tauri://created', function () {
+							console.log('Alarm window created');
+						});
+
+						webview.once('tauri://error', function (e) {
+							console.error('Alarm window creation error', e);
+						});
 					}
+				} catch (err) {
+					console.error('Failed to open alarm window', err);
 				}
 
-				// Generate dynamic label
-				const label = `ringing-window-${Date.now()}`;
-
-				const webview = new WebviewWindow(label, {
-					url: `/ringing/${id}`,
-					title: 'Alarm',
-					width: 400,
-					height: 500,
-					resizable: false,
-					alwaysOnTop: true,
-					center: true,
-					skipTaskbar: false,
-					decorations: false,
-					transparent: true,
-					focus: true,
-				});
-
-				webview.once('tauri://created', function () {
-					console.log('Alarm window created');
-				});
-
-				webview.once('tauri://error', function (e) {
-					console.error('Alarm window creation error', e);
-				});
-			} catch (err) {
-				console.error('Failed to open alarm window', err);
+				// 3. Auto-Reschedule (Calculate next trigger)
+				console.log(
+					`[AlarmManager] Alarm ${nextAlarmId} fired. Rescheduling next occurrence...`,
+				);
+				const alarms = await databaseService.getAllAlarms();
+				const alarm = alarms.find((a) => a.id === nextAlarmId);
+				if (alarm) {
+					await this.saveAndSchedule({ ...alarm, lastFiredAt: firedAt });
+				}
+			} finally {
+				this.handlingAlarmRingIds.delete(nextAlarmId);
+				this.isHandlingAlarmRing = false;
 			}
-
-			// 3. Auto-Reschedule (Calculate next trigger)
-			console.log(`[AlarmManager] Alarm ${id} fired. Rescheduling next occurrence...`);
-			const alarms = await databaseService.getAllAlarms();
-			const alarm = alarms.find((a) => a.id === id);
-			if (alarm) {
-				await this.saveAndSchedule({ ...alarm, lastFiredAt: firedAt });
-			}
-		} finally {
-			this.isHandlingAlarmRing = false;
 		}
 	}
 
