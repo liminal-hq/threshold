@@ -37,6 +37,13 @@ Examples:
 
 **Specific Updates**: Each commit message should reflect the specific changes made in that commit. Do not just recap the entire project history or scope. Focus on the now.
 
+**Shell Interpolation Safety:**
+
+- Do not pass markdown-heavy commit bodies directly via `git commit -m "..."` when they include backticks, `$()`, or shell-sensitive characters.
+- Prefer writing the message to a file with a single-quoted heredoc and commit with `git commit -F <file>` to prevent shell expansion.
+- If using `-m`, escape shell-sensitive characters explicitly before running the command.
+- After committing, verify the stored message with `git log -1 --pretty=fuller` and amend immediately if interpolation altered content.
+
 ## Git Workflow
 
 **REQUIREMENT:** Do not push changes (especially force pushes) to the repository unless explicitly requested by the user.
