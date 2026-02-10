@@ -2,12 +2,15 @@ use tauri::{
   plugin::PluginApi,
   Runtime,
   Emitter,
+  Manager,
+  AppHandle,
 };
 use crate::models::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::task::JoinHandle;
 use tokio::time::{sleep_until, Instant, Duration};
+use serde_json::Value;
 
 pub fn init<R: Runtime>(
   app: &tauri::AppHandle<R>,
@@ -25,21 +28,31 @@ pub struct AlarmManager<R: Runtime> {
 }
 
 impl<R: Runtime> AlarmManager<R> {
-  pub fn schedule(&self, payload: ScheduleRequest) -> crate::Result<()> {
-    let id = payload.id;
-    let trigger_at = payload.trigger_at;
-    
+  pub fn update_alarms(&self, alarms: Vec<Value>) {
+      for alarm in alarms {
+        let id = alarm["id"].as_i64().unwrap_or(0) as i32;
+        let enabled = alarm["enabled"].as_bool().unwrap_or(false);
+        let next_trigger = alarm["nextTrigger"].as_i64();
+
+        if enabled && next_trigger.is_some() {
+            let trigger = next_trigger.unwrap();
+            self.schedule_internal(id, trigger);
+        } else {
+            self.cancel_internal(id);
+        }
+      }
+  }
+
+  fn schedule_internal(&self, id: i32, trigger_at: i64) {
     println!("Desktop: Schedule alarm {} for {}", id, trigger_at);
 
-    // Cancel existing alarm if any
-    self.cancel(CancelRequest { id })?;
+    // Cancel existing
+    self.cancel_internal(id);
 
     let app_handle = self.app.clone();
     let tasks_map = self.tasks.clone();
 
     let task = tokio::spawn(async move {
-        // Calculate duration until trigger
-        // We use system time to calculate the duration, then tokio::time::Instant for the sleep
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or(std::time::Duration::ZERO)
@@ -59,28 +72,23 @@ impl<R: Runtime> AlarmManager<R> {
              eprintln!("Failed to emit alarm-ring event: {}", e);
         }
 
-        // Cleanup task from map
+        // Cleanup
         let mut map = tasks_map.lock().unwrap();
         map.remove(&id);
     });
 
     let mut map = self.tasks.lock().unwrap();
     map.insert(id, task);
-
-    Ok(())
   }
 
-  pub fn cancel(&self, payload: CancelRequest) -> crate::Result<()> {
-    println!("Desktop: Cancel alarm {}", payload.id);
+  fn cancel_internal(&self, id: i32) {
     let mut map = self.tasks.lock().unwrap();
-    if let Some(task) = map.remove(&payload.id) {
+    if let Some(task) = map.remove(&id) {
         task.abort();
     }
-    Ok(())
   }
 
   pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
-    // Desktop doesn't support launch args / intent imports like Android
     Ok(vec![])
   }
 
@@ -98,4 +106,9 @@ impl<R: Runtime> AlarmManager<R> {
     println!("Desktop: Stop ringing request received");
     Ok(())
   }
+}
+
+pub fn handle_alarms_changed<R: Runtime>(app: &AppHandle<R>, alarms: Vec<Value>) {
+    let manager = app.state::<AlarmManager<R>>();
+    manager.update_alarms(alarms);
 }
