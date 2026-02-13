@@ -15,6 +15,7 @@ import { Alarm, AlarmMode, DayOfWeek } from '@threshold/core/types';
 import { calculateNextTrigger as calcTrigger } from '@threshold/core/scheduler';
 import { SettingsService } from './SettingsService';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
+import { showToast } from 'tauri-plugin-toast-api';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
 interface ImportedAlarm {
@@ -110,6 +111,9 @@ export class AlarmManagerService {
 				if (PlatformUtils.isMobile()) {
 					console.log('[AlarmManager] Registering notification actions...');
 					try {
+						const snoozeLength = SettingsService.getSnoozeLength();
+						const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
+
 						await registerActionTypes([
 							{
 								id: 'test_trigger',
@@ -129,7 +133,7 @@ export class AlarmManagerService {
 								actions: [
 									{
 										id: 'snooze',
-										title: 'Snooze',
+										title: snoozeActionTitle,
 										input: false,
 									},
 									{
@@ -167,6 +171,11 @@ export class AlarmManagerService {
 									{
 										id: 'dismiss_alarm',
 										title: 'Dismiss alarm',
+										foreground: false,
+									},
+									{
+										id: 'snooze_alarm',
+										title: snoozeActionTitle,
 										foreground: false,
 									},
 								],
@@ -241,6 +250,14 @@ export class AlarmManagerService {
 								if (actionId === 'dismiss_alarm') {
 									console.log('[AlarmManager] Action: Dismiss upcoming alarm', upcomingAlarmId);
 									await this.dismissNextOccurrence(upcomingAlarmId);
+								} else if (actionId === 'snooze_alarm') {
+									console.log('[AlarmManager] Action: Snooze upcoming alarm', upcomingAlarmId);
+									const snoozeLength = SettingsService.getSnoozeLength();
+									const newTrigger = await this.snoozeAlarm(upcomingAlarmId, snoozeLength, false);
+									const updatedAlarm = await this.getAlarm(upcomingAlarmId);
+									if (updatedAlarm && newTrigger) {
+										await this.showSnoozeToast(snoozeLength, newTrigger);
+									}
 								}
 								return;
 							}
@@ -374,6 +391,24 @@ export class AlarmManagerService {
 			...alarm,
 			lastFiredAt: alarm.nextTrigger,
 		});
+	}
+
+	private async showSnoozeToast(durationMinutes: number, nextTrigger: number): Promise<void> {
+		if (PlatformUtils.getPlatform() !== 'android') return;
+
+		const is24h = SettingsService.getIs24h();
+		const formattedTime = TimeFormatHelper.format(nextTrigger, is24h);
+		const message = `Alarm snoozed for ${durationMinutes} min and will go off at ${formattedTime}`;
+
+		try {
+			await showToast({
+				message,
+				duration: 'short',
+				position: 'bottom',
+			});
+		} catch (e) {
+			console.warn('[AlarmManager] Failed to show toast confirmation', e);
+		}
 	}
 
 	private async markAlarmFired(id: number, firedAt: number) {
@@ -717,14 +752,18 @@ export class AlarmManagerService {
 		}
 	}
 
-	async snoozeAlarm(id: number, durationMinutes: number) {
+	async snoozeAlarm(
+		id: number,
+		durationMinutes: number,
+		sendSnoozeReminderNotification: boolean = true,
+	): Promise<number | null> {
 		console.log(`[AlarmManager] Snoozing alarm ${id} for ${durationMinutes} minutes`);
 		const alarms = await databaseService.getAllAlarms();
 		const alarm = alarms.find((a) => a.id === id);
 
 		if (!alarm) {
 			console.error(`[AlarmManager] Cannot snooze: Alarm ${id} not found`);
-			return;
+			return null;
 		}
 
 		const nextTrigger = Date.now() + durationMinutes * 60 * 1000;
@@ -740,7 +779,7 @@ export class AlarmManagerService {
 		await this.scheduleUpcomingNotification(alarm, nextTrigger);
 
 		// Send persistent notification for mobile
-		if (PlatformUtils.isMobile()) {
+		if (sendSnoozeReminderNotification && PlatformUtils.isMobile()) {
 			try {
 				await sendNotification({
 					title: `Alarm Snoozed`,
@@ -755,6 +794,7 @@ export class AlarmManagerService {
 		}
 
 		this.notifyGlobalListeners();
+		return nextTrigger;
 	}
 
 	async stopRinging() {

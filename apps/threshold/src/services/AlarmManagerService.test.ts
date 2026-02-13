@@ -14,6 +14,10 @@ import {
 } from '@tauri-apps/plugin-notification';
 import { PlatformUtils } from '../utils/PlatformUtils';
 
+vi.mock('tauri-plugin-toast-api', () => ({
+	showToast: vi.fn(),
+}));
+
 vi.mock('./DatabaseService', () => ({
 	databaseService: {
 		init: vi.fn(),
@@ -242,5 +246,39 @@ describe('AlarmManagerService', () => {
 		});
 
 		expect(dismissSpy).toHaveBeenCalledWith(9);
+	});
+
+	it('routes upcoming snooze actions and shows toast confirmation', async () => {
+		const service = new AlarmManagerService();
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+		let actionCallback: ((notification: any) => Promise<void>) | null = null;
+
+		(onAction as any).mockImplementation(async (cb: (notification: any) => Promise<void>) => {
+			actionCallback = cb;
+			return undefined;
+		});
+
+		vi.spyOn(service as any, 'snoozeAlarm').mockResolvedValue(1_700_000_123_000);
+		vi.spyOn(service, 'getAlarm').mockResolvedValue({
+			id: 12,
+			enabled: true,
+			mode: AlarmMode.Fixed,
+			label: 'Standup',
+			fixedTime: '09:00',
+			activeDays: [1],
+		} as any);
+		const toastSpy = vi.spyOn(service as any, 'showSnoozeToast').mockResolvedValue(undefined);
+
+		await service.init();
+		expect(actionCallback).not.toBeNull();
+
+		await actionCallback!({
+			actionTypeId: 'upcoming_alarm',
+			actionId: 'snooze_alarm',
+			id: 1_000_012,
+		});
+
+		expect((service as any).snoozeAlarm).toHaveBeenCalledWith(12, 10, false);
+		expect(toastSpy).toHaveBeenCalled();
 	});
 });
