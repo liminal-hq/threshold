@@ -219,4 +219,28 @@ describe('AlarmManagerService', () => {
 			}),
 		);
 	});
+
+	it('routes upcoming dismiss actions to dismiss-next-occurrence handler', async () => {
+		const service = new AlarmManagerService();
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+		let actionCallback: ((notification: any) => Promise<void>) | null = null;
+
+		(onAction as any).mockImplementation(async (cb: (notification: any) => Promise<void>) => {
+			actionCallback = cb;
+			return undefined;
+		});
+
+		const dismissSpy = vi.spyOn(service as any, 'dismissNextOccurrence').mockResolvedValue(undefined);
+
+		await service.init();
+		expect(actionCallback).not.toBeNull();
+
+		await actionCallback!({
+			actionTypeId: 'upcoming_alarm',
+			actionId: 'dismiss_alarm',
+			id: 1_000_009,
+		});
+
+		expect(dismissSpy).toHaveBeenCalledWith(9);
+	});
 });
