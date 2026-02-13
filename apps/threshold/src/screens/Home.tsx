@@ -21,14 +21,29 @@ import { alarmManagerService } from '../services/AlarmManagerService';
 import { AlarmItem } from '../components/AlarmItem';
 import { SettingsService } from '../services/SettingsService';
 import { APP_NAME } from '../constants';
+import { listen } from '@tauri-apps/api/event';
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
     const [alarms, setAlarms] = useState<Alarm[]>([]);
     const [isMobile, setIsMobile] = useState(false);
-    const is24h = SettingsService.getIs24h();
+    const [is24h, setIs24h] = useState(() => SettingsService.getIs24h());
+
     useEffect(() => {
         setIsMobile(PlatformUtils.isMobile());
+    }, []);
+
+    // Listen for settings changes to update is24h
+    useEffect(() => {
+        const unlistenPromise = listen<any>('settings-changed', (event) => {
+            if (event.payload.key === 'is24h') {
+                setIs24h(event.payload.value);
+            }
+        });
+
+        return () => {
+            unlistenPromise.then((unlisten) => unlisten());
+        };
     }, []);
 
     const handleSettingsClick = () => {
