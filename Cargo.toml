@@ -4,6 +4,7 @@ members = [
     "plugins/alarm-manager",
     "plugins/theme-utils",
     "plugins/time-prefs",
+    "plugins/toast",
 ]
 resolver = "2"
 

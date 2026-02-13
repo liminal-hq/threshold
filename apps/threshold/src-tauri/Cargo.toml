@@ -12,7 +12,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.0.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0", features = [] }
+tauri = { version = "2.10.2", features = [] }
 log = "0.4"
 tauri-plugin-sql = { version = "2.0.0", features = ["sqlite"] }
 
@@ -21,9 +21,11 @@ tauri-plugin-alarm-manager = { path = "../../../plugins/alarm-manager" }
 tauri-plugin-time-prefs = { path = "../../../plugins/time-prefs" }
 tauri-plugin-theme-utils = { path = "../../../plugins/theme-utils" }
 tauri-plugin-app-management = { path = "../../../plugins/app-management" }
+tauri-plugin-toast = { path = "../../../plugins/toast" }
 tauri-plugin-deep-link = { version = "2.0.0", features = [] }
 tauri-plugin-log = { version = "2.0.0", features = [] }
-tauri-plugin-notification = { version = "2.0.0", features = [] }
+# tauri-plugin-notification = { version = "2.0.0", features = [] }
+tauri-plugin-notification = { git = "https://github.com/ScottMorris/tauri-plugins-workspace.git", branch = "notification-actions-fix" }
 tauri-plugin-os = { version = "2.0.0", features = [] }
 tauri-plugin-opener = { version = "2.0.0", features = [] }
 tauri-plugin-fs = { version = "2.0.0", features = [] }

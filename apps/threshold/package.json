@@ -34,7 +34,8 @@
 		"motion": "^12.27.0",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0",
-		"tauri-plugin-app-events-api": "^0.2.0"
+		"tauri-plugin-app-events-api": "^0.2.0",
+		"tauri-plugin-toast-api": "workspace:*"
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "^2",
