@@ -1,0 +1,10 @@
+[default]
+description = "Default permissions for the toast plugin"
+permissions = [
+    "allow-show",
+]
+
+[[permission]]
+identifier = "allow-show"
+description = "Enables the show command"
+commands.allow = ["show"]

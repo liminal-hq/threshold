@@ -65,7 +65,7 @@ pub fn run() {
         event_logs::get_event_logs
     ]);
 
-    builder
+    builder = builder
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_theme_utils::init())
         .plugin(tauri_plugin_alarm_manager::init())
@@ -76,7 +76,14 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_app_management::init())
+        .plugin(tauri_plugin_app_management::init());
+
+    #[cfg(target_os = "android")]
+    {
+        builder = builder.plugin(tauri_plugin_toast::init());
+    }
+
+    builder
         .setup(|app| {
             #[cfg(mobile)]
             app.handle().plugin(tauri_plugin_app_events::init())?;

@@ -35,6 +35,7 @@
 		"alarm-manager:default",
 		"time-prefs:default",
 		"theme-utils:default",
-		"dialog:default"
+		"dialog:default",
+		"toast:default"
 	]
 }
