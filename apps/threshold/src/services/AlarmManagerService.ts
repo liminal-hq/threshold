@@ -25,6 +25,8 @@ interface ImportedAlarm {
 	label: string;
 }
 
+// Reserve a separate numeric ID range for upcoming notifications so they do not
+// collide with alarm IDs used by other notification flows (e.g., snooze reminder).
 const UPCOMING_NOTIFICATION_ID_OFFSET = 1_000_000;
 const UPCOMING_NOTIFICATION_LEAD_MS = 10 * 60 * 1000;
 
