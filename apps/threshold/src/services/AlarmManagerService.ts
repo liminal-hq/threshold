@@ -159,6 +159,16 @@ export class AlarmManagerService {
 									},
 								],
 							},
+							{
+								id: 'upcoming_alarm',
+								actions: [
+									{
+										id: 'dismiss_alarm',
+										title: 'Dismiss alarm',
+										foreground: false,
+									},
+								],
+							},
 						]);
 
 						await onAction(async (notification) => {
@@ -208,6 +218,27 @@ export class AlarmManagerService {
 									const snoozeLength = SettingsService.getSnoozeLength();
 									// Snooze again
 									await this.snoozeAlarm(alarmId, snoozeLength);
+								}
+								return;
+							}
+
+							if (actionTypeId === 'upcoming_alarm') {
+								if (!alarmId) {
+									console.error('[AlarmManager] Upcoming action missing notification ID');
+									return;
+								}
+
+								const upcomingAlarmId = this.getAlarmIdFromUpcomingNotificationId(alarmId);
+								if (!upcomingAlarmId) {
+									console.error(
+										`[AlarmManager] Invalid upcoming notification ID received: ${alarmId}`,
+									);
+									return;
+								}
+
+								if (actionId === 'dismiss_alarm') {
+									console.log('[AlarmManager] Action: Dismiss upcoming alarm', upcomingAlarmId);
+									await this.dismissNextOccurrence(upcomingAlarmId);
 								}
 								return;
 							}
@@ -268,6 +299,11 @@ export class AlarmManagerService {
 		return UPCOMING_NOTIFICATION_ID_OFFSET + alarmId;
 	}
 
+	private getAlarmIdFromUpcomingNotificationId(notificationId: number): number | null {
+		const alarmId = notificationId - UPCOMING_NOTIFICATION_ID_OFFSET;
+		return alarmId > 0 ? alarmId : null;
+	}
+
 	private getUpcomingTitle(alarm: Alarm, is24h: boolean): string {
 		if (alarm.mode === AlarmMode.RandomWindow && alarm.windowStart && alarm.windowEnd) {
 			const start = TimeFormatHelper.formatTimeString(alarm.windowStart, is24h);
@@ -314,12 +350,28 @@ export class AlarmManagerService {
 				id: notificationId,
 				title: this.getUpcomingTitle(alarm, is24h),
 				body: this.getUpcomingBody(alarm, nextTrigger, is24h),
+				actionTypeId: 'upcoming_alarm',
 				autoCancel: true,
 				schedule: shouldSendImmediately ? undefined : Schedule.at(new Date(notifyAt), false, true),
 			});
 		} catch (e) {
 			console.error(`[AlarmManager] Failed to schedule upcoming notification for alarm ${alarm.id}`, e);
 		}
+	}
+
+	private async dismissNextOccurrence(alarmId: number): Promise<void> {
+		const alarm = await this.getAlarm(alarmId);
+		if (!alarm || !alarm.nextTrigger) {
+			console.error(`[AlarmManager] Cannot dismiss next occurrence for alarm ${alarmId}: not found`);
+			return;
+		}
+
+		await this.cancelNativeAlarm(alarmId);
+		await this.cancelUpcomingNotification(alarmId);
+		await this.saveAndSchedule({
+			...alarm,
+			lastFiredAt: alarm.nextTrigger,
+		});
 	}
 
 	private async markAlarmFired(id: number, firedAt: number) {
