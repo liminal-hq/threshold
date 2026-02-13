@@ -111,76 +111,86 @@ export class AlarmManagerService {
 				if (PlatformUtils.isMobile()) {
 					console.log('[AlarmManager] Registering notification actions...');
 					try {
-						const snoozeLength = SettingsService.getSnoozeLength();
-						const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
+						const registerMobileActions = async () => {
+							const snoozeLength = SettingsService.getSnoozeLength();
+							const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
 
-						await registerActionTypes([
-							{
-								id: 'test_trigger',
-								actions: [
-									{
-										id: 'test_action_1',
-										title: 'Test Action 1',
-									},
-									{
-										id: 'test_action_2',
-										title: 'Test Action 2',
-									},
-								],
-							},
-							{
-								id: 'alarm_trigger',
-								actions: [
-									{
-										id: 'snooze',
-										title: snoozeActionTitle,
-										input: false,
-									},
-									{
-										id: 'dismiss',
-										title: 'Dismiss',
-										destructive: true,
-										foreground: false, // Don't bring app to foreground for dismiss
-									},
-								],
-							},
-							{
-								id: 'snooze_reminder',
-								actions: [
-									{
-										id: 'clear_snooze',
-										title: 'Clear Snooze',
-										destructive: true,
-										foreground: false,
-									},
-									{
-										id: 'open_app',
-										title: 'Open App',
-										foreground: true,
-									},
-									{
-										id: 'snooze_again',
-										title: 'Snooze Again',
-										foreground: false,
-									},
-								],
-							},
-							{
-								id: 'upcoming_alarm',
-								actions: [
-									{
-										id: 'dismiss_alarm',
-										title: 'Dismiss alarm',
-										foreground: false,
-									},
-									{
-										id: 'snooze_alarm',
-										title: snoozeActionTitle,
-										foreground: false,
-									},
-								],
-							},
-						]);
+							await registerActionTypes([
+								{
+									id: 'test_trigger',
+									actions: [
+										{
+											id: 'test_action_1',
+											title: 'Test Action 1',
+										},
+										{
+											id: 'test_action_2',
+											title: 'Test Action 2',
+										},
+									],
+								},
+								{
+									id: 'alarm_trigger',
+									actions: [
+										{
+											id: 'snooze',
+											title: snoozeActionTitle,
+											input: false,
+										},
+										{
+											id: 'dismiss',
+											title: 'Dismiss',
+											destructive: true,
+											foreground: false, // Don't bring app to foreground for dismiss
+										},
+									],
+								},
+								{
+									id: 'snooze_reminder',
+									actions: [
+										{
+											id: 'clear_snooze',
+											title: 'Clear Snooze',
+											destructive: true,
+											foreground: false,
+										},
+										{
+											id: 'open_app',
+											title: 'Open App',
+											foreground: true,
+										},
+										{
+											id: 'snooze_again',
+											title: 'Snooze Again',
+											foreground: false,
+										},
+									],
+								},
+								{
+									id: 'upcoming_alarm',
+									actions: [
+										{
+											id: 'dismiss_alarm',
+											title: 'Dismiss alarm',
+											foreground: false,
+										},
+										{
+											id: 'snooze_alarm',
+											title: snoozeActionTitle,
+											foreground: false,
+										},
+									],
+								},
+							]);
+						};
+
+						await registerMobileActions();
+
+						await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
+							if (event.payload?.key === 'snoozeLength') {
+								await registerMobileActions();
+							}
+						});
 
 						await onAction(async (notification) => {
 							console.log('[AlarmManager] Action performed:', notification);
@@ -442,11 +452,15 @@ export class AlarmManagerService {
 						? { ...alarm, lastFiredAt: pendingFired.firedAt }
 						: alarm;
 
-				// If trigger is in the future, schedule it
-				if (alarm.nextTrigger > Date.now()) {
-					const nextTrigger = rescheduleAlarm.nextTrigger ?? alarm.nextTrigger;
-					await this.scheduleNativeAlarm(rescheduleAlarm.id, nextTrigger);
-				} else {
+					// If trigger is in the future, schedule it
+					if (alarm.nextTrigger > Date.now()) {
+						const nextTrigger = rescheduleAlarm.nextTrigger ?? alarm.nextTrigger;
+						await this.scheduleNativeAlarm(rescheduleAlarm.id, nextTrigger);
+						await this.scheduleUpcomingNotification(
+							{ ...rescheduleAlarm, id: rescheduleAlarm.id } as Alarm,
+							nextTrigger,
+						);
+					} else {
 					// Missed alarm? For now, maybe just calc next trigger
 					console.log(
 						`[AlarmManager] Alarm ${alarm.id} missed trigger at ${new Date(alarm.nextTrigger).toLocaleString()}. Rescheduling next.`,
