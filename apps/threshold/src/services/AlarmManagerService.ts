@@ -500,9 +500,12 @@ export class AlarmManagerService {
 			const imports = res?.imports || [];
 			if (imports.length > 0) {
 				console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
+
+				// Pre-fetch all alarms to avoid N+1 query inside the loop
+				const allAlarms = await databaseService.getAllAlarms();
+
 				for (const imp of imports) {
 					// Deduplication Check
-					const allAlarms = await databaseService.getAllAlarms();
 					const timeStr = `${imp.hour.toString().padStart(2, '0')}:${imp.minute.toString().padStart(2, '0')}`;
 
 					const duplicate = allAlarms.find(
@@ -526,6 +529,9 @@ export class AlarmManagerService {
 					};
 
 					await this.saveAndSchedule(newAlarm);
+
+					// Add to local list to catch duplicates later in the same batch
+					allAlarms.push({ ...newAlarm, id: 0 } as Alarm);
 				}
 			}
 		} catch (e) {
