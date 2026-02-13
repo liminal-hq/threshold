@@ -111,6 +111,9 @@ export class AlarmManagerService {
 				if (PlatformUtils.isMobile()) {
 					console.log('[AlarmManager] Registering notification actions...');
 					try {
+						const snoozeLength = SettingsService.getSnoozeLength();
+						const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
+
 						await registerActionTypes([
 							{
 								id: 'test_trigger',
@@ -130,7 +133,7 @@ export class AlarmManagerService {
 								actions: [
 									{
 										id: 'snooze',
-										title: 'Snooze',
+										title: snoozeActionTitle,
 										input: false,
 									},
 									{
@@ -172,7 +175,7 @@ export class AlarmManagerService {
 									},
 									{
 										id: 'snooze_alarm',
-										title: 'Snooze',
+										title: snoozeActionTitle,
 										foreground: false,
 									},
 								],
