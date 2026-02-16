@@ -6,8 +6,11 @@ use tauri::{
 };
 
 mod batch_collector;
+mod error;
 mod models;
 mod publisher;
+
+pub use error::{Error, Result};
 
 use batch_collector::BatchCollector;
 use models::{AlarmsBatchUpdated, AlarmsSyncNeeded, SyncReason};

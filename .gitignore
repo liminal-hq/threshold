@@ -51,3 +51,6 @@ rust-test-results/
 test-results/
 coverage/
 junit.xml
+
+# Claude journal
+.claude-journal.md
