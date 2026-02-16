@@ -57,6 +57,11 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
+    // Wear Tiles and Complications
+    implementation("androidx.wear.tiles:tiles:1.2.0")
+    implementation("androidx.wear.watchface:watchface-complications-data-source:1.2.0")
+    implementation("com.google.guava:guava:31.1-android")
+
     // Wear Data Layer
     implementation("com.google.android.gms:play-services-wearable:18.1.0")
 
