@@ -6,17 +6,30 @@ A standalone Wear OS app that displays and controls alarms from the Threshold ph
 
 Threshold-Wear is a **standalone Android Wear OS application** that runs on watch hardware. It is not a Tauri plugin — Tauri only runs on the phone. The two apps communicate over Bluetooth via the [Wear Data Layer API](https://developer.android.com/training/wearables/data-layer).
 
-```
-Phone (Tauri + Rust + Kotlin)          Watch (Pure Android/Kotlin)
-┌─────────────────────────┐            ┌─────────────────────────┐
-│ wear-sync plugin        │            │ threshold-wear app      │
-│  ├─ BatchCollector      │            │  ├─ AlarmRepository     │
-│  ├─ ChannelPublisher    │  Bluetooth │  ├─ WearDataLayerClient │
-│  ├─ WearSyncPlugin.kt ─┼────────────┼──┤ DataLayerListener    │
-│  └─ WearMessageService ─┼────────────┼──┤ AlarmListScreen      │
-└─────────────────────────┘            │  ├─ NextAlarmTile       │
-                                       │  └─ NextAlarmComplication│
-                                       └─────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Phone["Phone (Tauri + Rust + Kotlin)"]
+        WS[wear-sync plugin<br/>BatchCollector · ChannelPublisher]
+        WSP[WearSyncPlugin.kt]
+        WMS[WearMessageService.kt]
+        WS --> WSP
+        WMS --> WS
+    end
+
+    subgraph Watch["Watch (Pure Android/Kotlin)"]
+        DL[DataLayerListenerService]
+        AR[AlarmRepository]
+        UI[AlarmListScreen]
+        WDL[WearDataLayerClient]
+        Tile[NextAlarmTile]
+        Comp[NextAlarmComplication]
+        DL --> AR --> UI
+        AR --> Tile
+        AR --> Comp
+    end
+
+    WSP <-->|Bluetooth<br/>Wear Data Layer| DL
+    WDL <-->|Bluetooth<br/>Wear Data Layer| WMS
 ```
 
 ## Features
@@ -60,18 +73,39 @@ apps/threshold-wear/
 
 ### Receiving Alarm Data (Phone → Watch)
 
-1. Phone's `WearSyncPlugin.kt` writes a `PutDataMapRequest` to `/threshold/alarms`
-2. `DataLayerListenerService.onDataChanged()` receives the `DataItem`
-3. Parses `alarmsJson` and `revision` from the `DataMap`
-4. Updates `AlarmRepository` via `replaceAll()` (full sync) or `applyIncremental()` (delta)
-5. Compose UI observes `StateFlow<List<WatchAlarm>>` and redraws
+```mermaid
+sequenceDiagram
+    participant Phone as WearSyncPlugin.kt
+    participant BT as Bluetooth / Data Layer
+    participant DL as DataLayerListenerService
+    participant Repo as AlarmRepository
+    participant UI as AlarmListScreen
+
+    Phone->>BT: PutDataMapRequest(/threshold/alarms)
+    BT->>DL: onDataChanged()
+    DL->>DL: Parse alarmsJson + revision
+    DL->>Repo: replaceAll() or applyIncremental()
+    Repo-->>UI: StateFlow<List<WatchAlarm>>
+    UI->>UI: Recompose
+```
 
 ### Sending Commands (Watch → Phone)
 
-1. User taps alarm card → `WearDataLayerClient.sendSaveAlarm()` called
-2. Sends `MessageClient` message to `/threshold/save_alarm` with JSON payload
-3. Phone's `WearMessageService.kt` receives message
-4. Routes to `WearSyncPlugin.onWatchMessage()` → Tauri event → Rust handler
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant UI as AlarmListScreen
+    participant Client as WearDataLayerClient
+    participant BT as Bluetooth / Data Layer
+    participant WMS as WearMessageService.kt
+    participant WS as wear-sync (Rust)
+
+    User->>UI: Tap alarm card
+    UI->>Client: sendSaveAlarm(id, enabled)
+    Client->>BT: MessageClient → /threshold/save_alarm
+    BT->>WMS: onMessageReceived()
+    WMS->>WS: onWatchMessage() → Tauri event
+```
 
 ### Sync Request
 
@@ -109,29 +143,66 @@ Touch targets are 48dp minimum. Time is displayed at 24sp bold, labels at 13sp.
 - Google Play Services on both devices
 - `adb` available on your PATH
 
+### Devcontainer Setup (Recommended)
+
+The project devcontainer already includes the Android SDK, Java 17, and all required build tools. No additional setup is needed.
+
+```bash
+# Open the project in the devcontainer, then:
+cd apps/threshold-wear
+./gradlew assembleDebug
+```
+
+The devcontainer does not include a Wear OS emulator (emulators require KVM/hardware acceleration). To test on a real watch, connect it via USB and use `adb`:
+
+```bash
+adb devices                    # Verify watch is connected
+./gradlew installDebug         # Deploy to connected watch
+```
+
+To test with an emulator, run the emulator on the host machine and forward the ADB connection into the container:
+
+```bash
+# On the host (outside devcontainer):
+emulator -avd WearOS &
+
+# The devcontainer forwards ADB automatically via the host's adb server.
+# Inside the devcontainer:
+adb devices                    # Should show the emulator
+./gradlew installDebug
+```
+
 ### Command Line Setup (No Android Studio Required)
 
 You can build and deploy entirely from the command line using Gradle and `adb`.
 
-1. **Install Android SDK command line tools** (if you don't have Android Studio):
+1. **Install Android SDK command line tools:**
    ```bash
+   # Linux (Debian/Ubuntu)
+   sudo apt-get install -y openjdk-17-jdk
+   wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+   unzip commandlinetools-linux-11076708_latest.zip -d $HOME/Android/Sdk/cmdline-tools/latest
+   export ANDROID_HOME=$HOME/Android/Sdk
+   export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+
    # macOS (via Homebrew)
    brew install --cask android-commandlinetools
-
-   # Or download from https://developer.android.com/studio#command-line-tools-only
-   # Then set ANDROID_HOME:
-   export ANDROID_HOME=$HOME/Android/Sdk
+   export ANDROID_HOME=$HOME/Library/Android/sdk
    export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
    ```
 
 2. **Install required SDK packages:**
    ```bash
-   sdkmanager "platforms;android-34" "build-tools;34.0.0" "system-images;android-34;google_apis;x86_64" "system-images;android-wear-34;google_apis;x86_64"
+   sdkmanager "platforms;android-34" "build-tools;34.0.0" \
+     "system-images;android-34;google_apis;x86_64" \
+     "system-images;android-wear-34;google_apis;x86_64"
    ```
 
 3. **Create a Wear OS emulator:**
    ```bash
-   avdmanager create avd -n WearOS -k "system-images;android-wear-34;google_apis;x86_64" -d "wearos_large_round"
+   avdmanager create avd -n WearOS \
+     -k "system-images;android-wear-34;google_apis;x86_64" \
+     -d "wearos_large_round"
    emulator -avd WearOS &
    ```
 
@@ -219,3 +290,7 @@ For development with a watch emulator, pair a Wear OS emulator with a phone emul
 ## Distribution
 
 The watch app can be bundled in the same Play Store listing as the phone app so users get both with a single install, or published as a separate listing. Set `com.google.android.wearable.standalone` to `true` in the manifest if publishing independently.
+
+## Licence
+
+Apache-2.0 OR MIT
