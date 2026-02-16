@@ -1,3 +1,8 @@
+// Build script — generates Tauri command bindings and injects Android manifest permissions
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 const COMMANDS: &[&str] = &["publishToWatch", "requestSyncFromWatch"];
 
 fn main() {

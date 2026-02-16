@@ -1,3 +1,8 @@
+// Plugin entry point — event listeners, message routing, and background publish task
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use std::sync::Arc;
 
 use tauri::{

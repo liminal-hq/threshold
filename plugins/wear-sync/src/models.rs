@@ -1,3 +1,8 @@
+// Shared types — event payloads, bridge requests, and watch message models
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use serde::{Deserialize, Serialize};
 
 // ── Event payloads ───────────────────────────────────────────────────

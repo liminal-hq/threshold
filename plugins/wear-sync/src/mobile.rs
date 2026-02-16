@@ -1,3 +1,8 @@
+// Android platform bridge — calls Kotlin WearSyncPlugin via Tauri's auto-generated bridge
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use crate::models::{PublishRequest, SyncRequest};
 use tauri::{
     plugin::{PluginApi, PluginHandle},

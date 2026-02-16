@@ -1,3 +1,8 @@
+// Watch face complication providing next alarm time in short and long text
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package ca.liminalhq.threshold.wear.tile
 
 import android.util.Log

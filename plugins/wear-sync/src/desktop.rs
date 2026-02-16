@@ -1,3 +1,8 @@
+// Desktop no-op stubs — allows the plugin to compile on non-Android targets
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use crate::models::{PublishRequest, SyncRequest};
 use tauri::{plugin::PluginApi, AppHandle, Runtime};
 

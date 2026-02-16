@@ -1,3 +1,8 @@
+// Conflict detection — validates watch revision before applying edits from the watch
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use crate::error::{ConflictError, Result};
 
 /// Validate that the watch's revision is current enough to make changes.

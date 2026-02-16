@@ -1,3 +1,8 @@
+// Revision-based sync protocol — determines UpToDate, Incremental, or FullSync responses
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use serde::{Deserialize, Serialize};
 
 /// Maximum revision gap for an incremental (delta) sync.

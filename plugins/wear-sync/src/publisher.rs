@@ -1,3 +1,8 @@
+// Publisher trait and channel-based implementation for Wear Data Layer dispatch
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use crate::models::SyncReason;
 
 pub trait WearSyncPublisher: Send + Sync {

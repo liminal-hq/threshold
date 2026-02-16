@@ -1,3 +1,8 @@
+// Single-activity Compose host for the Wear OS app
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package ca.liminalhq.threshold.wear.presentation
 
 import android.os.Bundle

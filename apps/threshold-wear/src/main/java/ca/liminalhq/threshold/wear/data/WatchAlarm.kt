@@ -1,3 +1,8 @@
+// Watch-side alarm data class with JSON parsing from Wear Data Layer payloads
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package ca.liminalhq.threshold.wear.data
 
 import org.json.JSONObject
