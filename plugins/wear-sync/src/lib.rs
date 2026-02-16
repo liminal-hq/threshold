@@ -6,6 +6,7 @@ use tauri::{
 };
 
 mod batch_collector;
+mod conflict_detector;
 mod error;
 mod models;
 mod publisher;
