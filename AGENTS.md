@@ -4,6 +4,7 @@
 
 - [Localization and Spelling](#localization-and-spelling)
 - [Commit Messages](#commit-messages)
+- [Pull Request Titles](#pull-request-titles)
 - [Application Protocol](#application-protocol)
 - [Code Organization](#code-organization)
 - [Best Practices](#best-practices)
@@ -43,6 +44,19 @@ Examples:
 - Prefer writing the message to a file with a single-quoted heredoc and commit with `git commit -F <file>` to prevent shell expansion.
 - If using `-m`, escape shell-sensitive characters explicitly before running the command.
 - After committing, verify the stored message with `git log -1 --pretty=fuller` and amend immediately if interpolation altered content.
+
+## Pull Request Titles
+
+**REQUIREMENT:** PR titles MUST be human-readable summaries of the PR change.
+
+- Start with a capital letter.
+- Do not use Conventional Commit prefixes in PR titles (for example, no `feat:`, `fix:`, `chore:`).
+- Describe the outcome or behaviour change, not internal process language.
+- Ignore internal planning document notes in PR titles and descriptions unless they directly map to repository changes.
+- Keep title style consistent across every open PR in the same stack.
+- If one title in a stack is updated, update the rest of the open stack titles to match style and scope.
+- Do not rename merged PRs unless explicitly requested.
+- Keep linked issues and merge order aligned after any title changes in a stack.
 
 ## Git Workflow
 
