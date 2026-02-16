@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use tauri::{
     plugin::{PluginApi, PluginHandle},
-    AppHandle, Runtime,
+    AppHandle, Manager, Runtime,
 };
 
 // Initialize the plugin
@@ -32,18 +32,14 @@ pub struct AlarmManager<R: Runtime> {
 impl<R: Runtime> AlarmManager<R> {
     pub fn schedule(&self, payload: ScheduleRequest) -> crate::Result<()> {
         let id = payload.id;
-        self.handle
-            .run_mobile_plugin("schedule", payload)
-            .map_err(Into::into)?;
+        self.invoke_schedule(payload)?;
         self.scheduled_ids.lock().unwrap().insert(id);
         Ok(())
     }
 
     pub fn cancel(&self, payload: CancelRequest) -> crate::Result<()> {
         let id = payload.id;
-        self.handle
-            .run_mobile_plugin("cancel", payload)
-            .map_err(Into::into)?;
+        self.invoke_cancel(payload)?;
         self.scheduled_ids.lock().unwrap().remove(&id);
         Ok(())
     }
@@ -75,9 +71,10 @@ impl<R: Runtime> AlarmManager<R> {
             .map_err(Into::into)
     }
 
-    pub fn update_alarms(&self, app: &AppHandle<R>, alarms: Vec<Value>) {
+    pub fn update_alarms(&self, alarms: Vec<Value>) {
         #[cfg(target_os = "android")]
         {
+            let previous_ids = self.scheduled_ids.lock().unwrap().clone();
             let mut desired_ids = HashSet::new();
 
             for alarm in alarms {
@@ -93,133 +90,55 @@ impl<R: Runtime> AlarmManager<R> {
                 if enabled {
                     if let Some(trigger) = next_trigger {
                         desired_ids.insert(id);
-                        schedule_on_main_thread(app, id, trigger, sound_uri);
+                        let payload = ScheduleRequest {
+                            id,
+                            trigger_at: trigger,
+                            sound_uri,
+                        };
+                        if let Err(error) = self.invoke_schedule(payload) {
+                            log::error!("Failed to schedule alarm {}: {}", id, error);
+                        }
                     } else {
-                        cancel_on_main_thread(app, id);
+                        let payload = CancelRequest { id };
+                        if let Err(error) = self.invoke_cancel(payload) {
+                            log::error!("Failed to cancel alarm {}: {}", id, error);
+                        }
                     }
                 } else {
-                    cancel_on_main_thread(app, id);
+                    if previous_ids.contains(&id) {
+                        let payload = CancelRequest { id };
+                        if let Err(error) = self.invoke_cancel(payload) {
+                            log::error!("Failed to cancel alarm {}: {}", id, error);
+                        }
+                    }
                 }
             }
 
-            let previous_ids = self.scheduled_ids.lock().unwrap().clone();
             for removed_id in previous_ids.difference(&desired_ids) {
-                cancel_on_main_thread(app, *removed_id);
+                let payload = CancelRequest { id: *removed_id };
+                if let Err(error) = self.invoke_cancel(payload) {
+                    log::error!("Failed to cancel removed alarm {}: {}", removed_id, error);
+                }
             }
 
             *self.scheduled_ids.lock().unwrap() = desired_ids;
         }
     }
+
+    fn invoke_schedule(&self, payload: ScheduleRequest) -> crate::Result<()> {
+        self.handle
+            .run_mobile_plugin("schedule", payload)
+            .map_err(Into::into)
+    }
+
+    fn invoke_cancel(&self, payload: CancelRequest) -> crate::Result<()> {
+        self.handle
+            .run_mobile_plugin("cancel", payload)
+            .map_err(Into::into)
+    }
 }
 
 pub fn handle_alarms_changed<R: Runtime>(app: &AppHandle<R>, alarms: Vec<Value>) {
     let manager = app.state::<AlarmManager<R>>();
-    manager.update_alarms(app, alarms);
-}
-
-fn schedule_on_main_thread<R: Runtime>(
-    app: &AppHandle<R>,
-    id: i32,
-    trigger_at: i64,
-    sound_uri: Option<String>,
-) {
-    let app_handle = app.clone();
-    let _ = app.run_on_main_thread(move || {
-        if let Err(error) = schedule_native_alarm(&app_handle, id, trigger_at, sound_uri) {
-            log::error!("Failed to schedule alarm {}: {}", id, error);
-        }
-    });
-}
-
-fn cancel_on_main_thread<R: Runtime>(app: &AppHandle<R>, id: i32) {
-    let app_handle = app.clone();
-    let _ = app.run_on_main_thread(move || {
-        if let Err(error) = cancel_native_alarm(&app_handle, id) {
-            log::error!("Failed to cancel alarm {}: {}", id, error);
-        }
-    });
-}
-
-#[cfg(target_os = "android")]
-fn schedule_native_alarm<R: Runtime>(
-    app: &AppHandle<R>,
-    id: i32,
-    trigger_at: i64,
-    sound_uri: Option<String>,
-) -> crate::Result<()> {
-    use jni::objects::JValue;
-
-    app.run_on_android_context(move |env, _, context| {
-        let class = env.find_class("com/plugin/alarmmanager/AlarmUtils")?;
-
-        let method = env.get_static_method_id(
-            class,
-            "scheduleAlarm",
-            "(Landroid/content/Context;IJLjava/lang/String;)V",
-        )?;
-
-        let sound_uri_jstring = if let Some(s) = sound_uri {
-            Some(env.new_string(s)?)
-        } else {
-            None
-        };
-
-        let sound_uri_obj = match &sound_uri_jstring {
-            Some(s) => JValue::Object(s),
-            None => JValue::Object(&jni::objects::JObject::null()),
-        };
-
-        env.call_static_method_unchecked(
-            class,
-            method,
-            jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-            &[
-                JValue::Object(context),
-                JValue::Int(id),
-                JValue::Long(trigger_at),
-                sound_uri_obj,
-            ],
-        )?;
-
-        Ok(())
-    })
-    .map_err(|e| crate::Error::Runtime(e.to_string()))?;
-    Ok(())
-}
-
-#[cfg(not(target_os = "android"))]
-fn schedule_native_alarm<R: Runtime>(
-    _app: &AppHandle<R>,
-    _id: i32,
-    _trigger_at: i64,
-    _sound_uri: Option<String>,
-) -> crate::Result<()> {
-    Ok(())
-}
-
-#[cfg(target_os = "android")]
-fn cancel_native_alarm<R: Runtime>(app: &AppHandle<R>, id: i32) -> crate::Result<()> {
-    use jni::objects::JValue;
-
-    app.run_on_android_context(move |env, _, context| {
-        let class = env.find_class("com/plugin/alarmmanager/AlarmUtils")?;
-
-        let method =
-            env.get_static_method_id(class, "cancelAlarm", "(Landroid/content/Context;I)V")?;
-
-        env.call_static_method_unchecked(
-            class,
-            method,
-            jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-            &[JValue::Object(context), JValue::Int(id)],
-        )?;
-        Ok(())
-    })
-    .map_err(|e| crate::Error::Runtime(e.to_string()))?;
-    Ok(())
-}
-
-#[cfg(not(target_os = "android"))]
-fn cancel_native_alarm<R: Runtime>(_app: &AppHandle<R>, _id: i32) -> crate::Result<()> {
-    Ok(())
+    manager.update_alarms(alarms);
 }

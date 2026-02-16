@@ -10,7 +10,6 @@ object AlarmUtils {
     private const val PREFS_NAME = "ThresholdNative"
     private const val TAG = "AlarmUtils"
 
-    @JvmStatic
     fun scheduleAlarm(
         context: Context,
         id: Int,
@@ -45,7 +44,6 @@ object AlarmUtils {
         Log.d(TAG, "Alarm $id scheduled successfully")
     }
 
-    @JvmStatic
     fun cancelAlarm(context: Context, id: Int) {
         Log.d(TAG, "Cancelling alarm $id")
 
