@@ -353,7 +353,7 @@ app.listen("alarms:changed", move |event| {
 
 **Implementation:**
 ```kotlin
-// plugins/wear-sync/android/WearSyncService.kt
+// plugins/wear-sync/android/WearSyncPlugin.kt (publishToWatch command)
 fun publishState(alarms: List<AlarmRecord>) {
     val state = AlarmState(
         updatedAtMs = System.currentTimeMillis(),

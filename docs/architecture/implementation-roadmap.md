@@ -1752,8 +1752,8 @@ class BootReceiver : BroadcastReceiver() {
 ## Milestone D: wear-sync Plugin
 
 **Duration:** 3-4 days
-**Status:** 🔴 BLOCKED - Waiting for Milestone A.5 (Event System)
-**Prerequisite:** Milestone A.5 MUST be complete before starting
+**Status:** ✅ Complete
+**Prerequisite:** Milestone A.5 (Event System) — completed
 
 **Goal:** Wear Data Layer synchronization with granular event system
 **Deliverables:**
@@ -1775,14 +1775,15 @@ See [data-architecture.md](data-architecture.md) for detailed data schemas.
 
 **Key Files:**
 - `plugins/wear-sync/src/lib.rs`
-- `plugins/wear-sync/android/WearSyncService.kt`
+- `plugins/wear-sync/android/WearSyncPlugin.kt`
 - `plugins/wear-sync/android/WearMessageService.kt`
 
 ---
 
 ## Milestone E: Wear OS App
 
-**Duration:** 4-5 days  
+**Duration:** 4-5 days
+**Status:** ✅ Complete
 **Goal:** Companion watch app  
 **Deliverables:**
 - Wear OS Compose app
