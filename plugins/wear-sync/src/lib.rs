@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    Listener, Manager, Runtime,
+    AppHandle, Listener, Manager, Runtime,
 };
 
 mod batch_collector;
@@ -25,8 +25,8 @@ pub use desktop::WearSync;
 pub use mobile::WearSync;
 
 use batch_collector::BatchCollector;
-use models::{AlarmsBatchUpdated, AlarmsSyncNeeded, SyncReason};
-use publisher::WearSyncPublisher;
+use models::{AlarmsBatchUpdated, AlarmsSyncNeeded, PublishRequest};
+use publisher::{ChannelPublisher, PublishCommand, WearSyncPublisher};
 
 const BATCH_DEBOUNCE_MS: u64 = 500;
 
@@ -52,7 +52,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             let wear_sync = desktop::init(app, api)?;
             app.manage(wear_sync);
 
-            let publisher: Arc<dyn WearSyncPublisher> = Arc::new(LogPublisher);
+            // Create the publish channel and spawn the background task
+            let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<PublishCommand>();
+            spawn_publish_task(app.clone(), rx);
+
+            let publisher: Arc<dyn WearSyncPublisher> = Arc::new(ChannelPublisher::new(tx));
             let batch_collector =
                 Arc::new(BatchCollector::new(BATCH_DEBOUNCE_MS, Arc::clone(&publisher)));
 
@@ -99,6 +103,67 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .build()
 }
 
+/// Spawn a background task that receives publish commands from the
+/// `ChannelPublisher` and forwards them to the Wear Data Layer via
+/// the platform-specific `WearSync` bridge.
+///
+/// This task has access to the `AppHandle` so it can look up the
+/// `WearSync<R>` state to call into Kotlin on Android.
+fn spawn_publish_task<R: Runtime>(
+    app: AppHandle<R>,
+    mut rx: tokio::sync::mpsc::UnboundedReceiver<PublishCommand>,
+) {
+    tauri::async_runtime::spawn(async move {
+        while let Some(cmd) = rx.recv().await {
+            let wear_sync = app.state::<WearSync<R>>();
+
+            match cmd {
+                PublishCommand::Batch { ids, revision } => {
+                    log::info!(
+                        "wear-sync: publishing batch of {} alarm(s) at revision {}",
+                        ids.len(),
+                        revision
+                    );
+
+                    // Serialise the alarm IDs as JSON for the Kotlin side.
+                    // The full alarm data is fetched by the Kotlin plugin from
+                    // the Data Layer path, or we send the IDs for a targeted
+                    // publish. For now, send the IDs as the payload — the Kotlin
+                    // side can request full data via a sync response if needed.
+                    let alarms_json = serde_json::to_string(&ids).unwrap_or_default();
+                    let request = PublishRequest {
+                        alarms_json,
+                        revision,
+                    };
+                    if let Err(error) = wear_sync.publish_to_watch(request) {
+                        log::error!("wear-sync: failed to publish batch to watch: {error}");
+                    }
+                }
+                PublishCommand::Immediate { reason, revision } => {
+                    log::info!(
+                        "wear-sync: immediate publish ({:?}) at revision {}",
+                        reason,
+                        revision
+                    );
+
+                    // For immediate syncs, send the reason and revision.
+                    // The Kotlin side will build the full payload.
+                    let alarms_json =
+                        serde_json::to_string(&reason).unwrap_or_default();
+                    let request = PublishRequest {
+                        alarms_json,
+                        revision,
+                    };
+                    if let Err(error) = wear_sync.publish_to_watch(request) {
+                        log::error!("wear-sync: failed to publish immediate sync to watch: {error}");
+                    }
+                }
+            }
+        }
+        log::warn!("wear-sync: publish task channel closed, no more commands will be processed");
+    });
+}
+
 async fn handle_sync_needed(
     publisher: Arc<dyn WearSyncPublisher>,
     collector: Arc<BatchCollector>,
@@ -114,28 +179,6 @@ async fn handle_sync_needed(
     }
 
     publisher.publish_immediate(&payload.reason, payload.revision);
-}
-
-struct LogPublisher;
-
-impl WearSyncPublisher for LogPublisher {
-    fn publish_batch(&self, ids: Vec<i32>, revision: i64) {
-        log::info!(
-            "wear-sync: batch ready for publish ({} alarms, revision {})",
-            ids.len(),
-            revision
-        );
-        // TODO: Replace with channel-based DataLayerPublisher (step 5).
-    }
-
-    fn publish_immediate(&self, reason: &SyncReason, revision: i64) {
-        log::info!(
-            "wear-sync: immediate sync requested ({:?}) at revision {}",
-            reason,
-            revision
-        );
-        // TODO: Replace with channel-based DataLayerPublisher (step 5).
-    }
 }
 
 #[cfg(test)]
