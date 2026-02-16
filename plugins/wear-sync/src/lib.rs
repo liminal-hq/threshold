@@ -25,7 +25,10 @@ pub use desktop::WearSync;
 pub use mobile::WearSync;
 
 use batch_collector::BatchCollector;
-use models::{AlarmsBatchUpdated, AlarmsSyncNeeded, PublishRequest};
+use models::{
+    AlarmsBatchUpdated, AlarmsSyncNeeded, PublishRequest, WatchDeleteAlarm, WatchMessage,
+    WatchSaveAlarm, WatchSyncRequest,
+};
 use publisher::{ChannelPublisher, PublishCommand, WearSyncPublisher};
 
 const BATCH_DEBOUNCE_MS: u64 = 500;
@@ -98,6 +101,22 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                 }
             });
 
+            // Listen for messages from the watch (routed by Kotlin WearMessageService
+            // through WearSyncPlugin.trigger("wear:message:received", ...))
+            let watch_app = app.clone();
+            app.listen("wear:message:received", move |event| {
+                match serde_json::from_str::<WatchMessage>(event.payload()) {
+                    Ok(msg) => {
+                        handle_watch_message(&watch_app, msg);
+                    }
+                    Err(error) => {
+                        log::warn!(
+                            "wear-sync: failed to parse wear:message:received payload: {error}"
+                        );
+                    }
+                }
+            });
+
             Ok(())
         })
         .build()
@@ -164,6 +183,70 @@ fn spawn_publish_task<R: Runtime>(
     });
 }
 
+/// Route an incoming watch message to the appropriate handler.
+///
+/// The watch sends messages via `MessageClient` to the phone. The Kotlin
+/// `WearMessageService` receives them and triggers a `wear:message:received`
+/// Tauri event. This function parses the message path and re-emits a more
+/// specific event that the app layer can listen for.
+///
+/// This design keeps the plugin decoupled from the app crate — the plugin
+/// emits events, the app layer (which has access to `AlarmCoordinator`)
+/// handles them.
+fn handle_watch_message<R: Runtime>(app: &AppHandle<R>, msg: WatchMessage) {
+    use tauri::Emitter;
+
+    match msg.path.as_str() {
+        "/threshold/sync_request" => {
+            let watch_revision = msg.data.trim().parse::<i64>().unwrap_or(0);
+            log::info!("wear-sync: watch requested sync from revision {watch_revision}");
+
+            let request = WatchSyncRequest { watch_revision };
+            if let Err(error) = app.emit("wear:sync:request", &request) {
+                log::error!("wear-sync: failed to emit wear:sync:request event: {error}");
+            }
+        }
+        "/threshold/save_alarm" => {
+            match serde_json::from_str::<WatchSaveAlarm>(&msg.data) {
+                Ok(save_cmd) => {
+                    log::info!(
+                        "wear-sync: watch save alarm {} (enabled={}, revision={})",
+                        save_cmd.alarm_id,
+                        save_cmd.enabled,
+                        save_cmd.watch_revision
+                    );
+                    if let Err(error) = app.emit("wear:alarm:save", &save_cmd) {
+                        log::error!("wear-sync: failed to emit wear:alarm:save event: {error}");
+                    }
+                }
+                Err(error) => {
+                    log::warn!("wear-sync: invalid save_alarm payload: {error}");
+                }
+            }
+        }
+        "/threshold/delete_alarm" => {
+            match serde_json::from_str::<WatchDeleteAlarm>(&msg.data) {
+                Ok(delete_cmd) => {
+                    log::info!(
+                        "wear-sync: watch delete alarm {} (revision={})",
+                        delete_cmd.alarm_id,
+                        delete_cmd.watch_revision
+                    );
+                    if let Err(error) = app.emit("wear:alarm:delete", &delete_cmd) {
+                        log::error!("wear-sync: failed to emit wear:alarm:delete event: {error}");
+                    }
+                }
+                Err(error) => {
+                    log::warn!("wear-sync: invalid delete_alarm payload: {error}");
+                }
+            }
+        }
+        other => {
+            log::warn!("wear-sync: unknown watch message path: {other}");
+        }
+    }
+}
+
 async fn handle_sync_needed(
     publisher: Arc<dyn WearSyncPublisher>,
     collector: Arc<BatchCollector>,
@@ -184,6 +267,7 @@ async fn handle_sync_needed(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::SyncReason;
     use crate::publisher::WearSyncPublisher;
     use std::sync::{Arc, Mutex};
 

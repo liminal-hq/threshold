@@ -43,3 +43,36 @@ pub struct SyncRequest {
     /// The revision the watch should sync from.
     pub revision: i64,
 }
+
+// ── Watch message types (Kotlin → Rust via triggered events) ────────
+
+/// Payload from the Kotlin `trigger("wear:message:received", ...)` call.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatchMessage {
+    pub path: String,
+    pub data: String,
+}
+
+/// Watch-originated alarm save command.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchSaveAlarm {
+    pub alarm_id: i32,
+    pub enabled: bool,
+    pub watch_revision: i64,
+}
+
+/// Watch-originated alarm delete command.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchDeleteAlarm {
+    pub alarm_id: i32,
+    pub watch_revision: i64,
+}
+
+/// Watch-originated sync request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchSyncRequest {
+    pub watch_revision: i64,
+}
