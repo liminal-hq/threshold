@@ -5,11 +5,13 @@ use tauri::{command, AppHandle, Runtime};
 
 #[command]
 pub async fn schedule<R: Runtime>(app: AppHandle<R>, payload: ScheduleRequest) -> Result<()> {
+    // TODO: Remove this shim once UI scheduling uses only event-driven updates.
     app.alarm_manager().schedule(payload)
 }
 
 #[command]
 pub async fn cancel<R: Runtime>(app: AppHandle<R>, payload: CancelRequest) -> Result<()> {
+    // TODO: Remove this shim once UI cancellation uses only event-driven updates.
     app.alarm_manager().cancel(payload)
 }
 

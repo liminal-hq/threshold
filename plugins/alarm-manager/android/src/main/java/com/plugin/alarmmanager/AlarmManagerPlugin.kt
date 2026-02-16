@@ -23,6 +23,18 @@ import android.content.BroadcastReceiver
 import android.content.IntentFilter
 
 @InvokeArg
+class ScheduleRequest {
+    var id: Int = 0
+    var triggerAt: Long = 0
+    var soundUri: String? = null
+}
+
+@InvokeArg
+class CancelRequest {
+    var id: Int = 0
+}
+
+@InvokeArg
 class ImportedAlarm {
     var id: Int = 0
     var hour: Int = 0
@@ -44,6 +56,24 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     override fun load(webview: WebView) {
         super.load(webview)
         Log.d("AlarmManagerPlugin", "Plugin loaded.")
+    }
+
+    @Command
+    fun schedule(invoke: Invoke) {
+        val args = invoke.parseArgs(ScheduleRequest::class.java)
+
+        // TODO: Remove this compatibility command once scheduling is fully event-driven.
+        AlarmUtils.scheduleAlarm(activity, args.id, args.triggerAt, args.soundUri)
+        invoke.resolve()
+    }
+
+    @Command
+    fun cancel(invoke: Invoke) {
+        val args = invoke.parseArgs(CancelRequest::class.java)
+
+        // TODO: Remove this compatibility command once cancellation is fully event-driven.
+        AlarmUtils.cancelAlarm(activity, args.id)
+        invoke.resolve()
     }
 
     @Command
