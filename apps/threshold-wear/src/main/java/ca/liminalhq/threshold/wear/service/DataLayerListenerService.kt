@@ -25,7 +25,7 @@ private const val DATA_PATH_ALARMS = "/threshold/alarms"
  *
  * This service is started automatically by Google Play Services when:
  * - A [DataItem] at [DATA_PATH_ALARMS] is updated (phone published alarm data)
- * - A message is received at any `/threshold/*` path
+ * - A message is received at any `/threshold/` path
  *
  * It parses the incoming data and updates the [AlarmRepository] so the
  * watch UI reflects the latest alarm state.

@@ -5,7 +5,9 @@
 
 package ca.liminalhq.threshold.wear.presentation
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -129,6 +131,7 @@ private fun AlarmList(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AlarmCard(
     alarm: WatchAlarm,
@@ -137,14 +140,17 @@ private fun AlarmCard(
 ) {
     Card(
         onClick = onToggle,
-        onLongClick = onLongPress,
         backgroundPainter = CardDefaults.cardBackgroundPainter(
             startBackgroundColor = ThresholdSurface,
             endBackgroundColor = ThresholdSurface,
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 2.dp),
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .combinedClickable(
+                onClick = onToggle,
+                onLongClick = onLongPress,
+            ),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

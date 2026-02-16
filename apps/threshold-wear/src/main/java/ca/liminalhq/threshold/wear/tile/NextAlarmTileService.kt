@@ -6,14 +6,16 @@
 package ca.liminalhq.threshold.wear.tile
 
 import android.util.Log
+import androidx.wear.protolayout.ActionBuilders
+import androidx.wear.protolayout.DimensionBuilders
+import androidx.wear.protolayout.LayoutElementBuilders
+import androidx.wear.protolayout.ModifiersBuilders
+import androidx.wear.protolayout.ResourceBuilders
+import androidx.wear.protolayout.TimelineBuilders
 import androidx.wear.tiles.EventBuilders
-import androidx.wear.tiles.LayoutElementBuilders
-import androidx.wear.tiles.ModifiersBuilders
 import androidx.wear.tiles.RequestBuilders
-import androidx.wear.tiles.ResourceBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
-import androidx.wear.tiles.TimelineBuilders
 import ca.liminalhq.threshold.wear.ThresholdWearApp
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -88,7 +90,7 @@ class NextAlarmTileService : TileService() {
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
                             .setSize(
-                                LayoutElementBuilders.SpProp.Builder()
+                                DimensionBuilders.SpProp.Builder()
                                     .setValue(32f)
                                     .build()
                             )
@@ -105,7 +107,7 @@ class NextAlarmTileService : TileService() {
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
                             .setSize(
-                                LayoutElementBuilders.SpProp.Builder()
+                                DimensionBuilders.SpProp.Builder()
                                     .setValue(14f)
                                     .build()
                             )
@@ -124,9 +126,9 @@ class NextAlarmTileService : TileService() {
                     .setClickable(
                         ModifiersBuilders.Clickable.Builder()
                             .setOnClick(
-                                ModifiersBuilders.LaunchAction.Builder()
+                                ActionBuilders.LaunchAction.Builder()
                                     .setAndroidActivity(
-                                        ModifiersBuilders.AndroidActivity.Builder()
+                                        ActionBuilders.AndroidActivity.Builder()
                                             .setClassName("ca.liminalhq.threshold.wear.presentation.MainActivity")
                                             .setPackageName("ca.liminalhq.threshold.wear")
                                             .build()
@@ -152,7 +154,7 @@ class NextAlarmTileService : TileService() {
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
                             .setSize(
-                                LayoutElementBuilders.SpProp.Builder()
+                                DimensionBuilders.SpProp.Builder()
                                     .setValue(16f)
                                     .build()
                             )
