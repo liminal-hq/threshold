@@ -128,12 +128,14 @@ On app launch, the watch sends a sync request with its `lastSyncRevision` to `/t
 
 | Token | Value | Purpose |
 |-------|-------|---------|
-| Background | `#0A0A0A` | Deep black for OLED |
-| Surface | `#1A1A1A` | Card backgrounds |
-| Accent | `#4A9EFF` | Calm blue, enabled indicators |
+| Background | `#0A0A0A` | Deep black for OLED (always static) |
+| Surface | `#1A1A1A` | Card backgrounds (always static) |
+| Accent | Dynamic / `#4A9EFF` | Material You system accent on API 31+, calm blue fallback |
 | On Surface | `#E0E0E0` | Primary text |
 | Disabled | `#333333` | Disabled indicators |
 | Error | `#CF6679` | Error states |
+
+**Material You support:** On Wear OS 3.5+ (API 31+), the accent colour is pulled from the watch's system colour scheme (`system_accent1_200`). Background and surface remain deep black for OLED regardless of the system theme. On older watches, the static calm blue (`#4A9EFF`) is used.
 
 Touch targets are 48dp minimum. Time is displayed at 24sp bold, labels at 13sp.
 
