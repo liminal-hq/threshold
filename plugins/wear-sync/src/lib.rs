@@ -9,6 +9,7 @@ mod batch_collector;
 mod error;
 mod models;
 mod publisher;
+mod sync_protocol;
 
 pub use error::{Error, Result};
 
