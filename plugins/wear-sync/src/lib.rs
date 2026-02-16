@@ -329,4 +329,106 @@ mod tests {
             _ => panic!("unexpected publish order"),
         }
     }
+
+    #[tokio::test]
+    async fn sync_needed_skips_flush_when_nothing_pending() {
+        let publisher = Arc::new(TestPublisher::default());
+        let collector = Arc::new(BatchCollector::new(500, publisher.clone()));
+
+        let payload = AlarmsSyncNeeded {
+            reason: SyncReason::Initialize,
+            revision: 1,
+        };
+
+        handle_sync_needed(publisher.clone(), collector, payload).await;
+
+        let calls = publisher.calls.lock().unwrap();
+        assert_eq!(calls.len(), 1);
+        match &calls[0] {
+            PublishCall::Immediate(reason, rev) => {
+                assert_eq!(*reason, SyncReason::Initialize);
+                assert_eq!(*rev, 1);
+            }
+            _ => panic!("expected immediate publish only"),
+        }
+    }
+
+    #[tokio::test]
+    async fn sync_needed_handles_reconnect_reason() {
+        let publisher = Arc::new(TestPublisher::default());
+        let collector = Arc::new(BatchCollector::new(500, publisher.clone()));
+
+        collector.add(vec![1, 2, 3], 10).await;
+
+        let payload = AlarmsSyncNeeded {
+            reason: SyncReason::Reconnect,
+            revision: 11,
+        };
+
+        handle_sync_needed(publisher.clone(), collector, payload).await;
+
+        let calls = publisher.calls.lock().unwrap();
+        assert_eq!(calls.len(), 2);
+        match &calls[1] {
+            PublishCall::Immediate(reason, _) => {
+                assert_eq!(*reason, SyncReason::Reconnect);
+            }
+            _ => panic!("expected immediate publish as second call"),
+        }
+    }
+
+    #[tokio::test]
+    async fn channel_publisher_integration() {
+        use crate::publisher::ChannelPublisher;
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<PublishCommand>();
+        let publisher = ChannelPublisher::new(tx);
+
+        publisher.publish_batch(vec![1, 2], 5);
+        publisher.publish_immediate(&SyncReason::ForceSync, 6);
+
+        let cmd1 = rx.recv().await.unwrap();
+        match cmd1 {
+            PublishCommand::Batch { ids, revision } => {
+                assert_eq!(ids, vec![1, 2]);
+                assert_eq!(revision, 5);
+            }
+            _ => panic!("expected Batch command"),
+        }
+
+        let cmd2 = rx.recv().await.unwrap();
+        match cmd2 {
+            PublishCommand::Immediate { reason, revision } => {
+                assert_eq!(reason, SyncReason::ForceSync);
+                assert_eq!(revision, 6);
+            }
+            _ => panic!("expected Immediate command"),
+        }
+    }
+
+    #[tokio::test]
+    async fn batch_collector_with_channel_publisher_end_to_end() {
+        use crate::publisher::ChannelPublisher;
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<PublishCommand>();
+        let publisher: Arc<dyn WearSyncPublisher> = Arc::new(ChannelPublisher::new(tx));
+        let collector = Arc::new(BatchCollector::new(50, Arc::clone(&publisher)));
+
+        // Add items and immediately flush via sync_needed
+        collector.add(vec![100, 200], 50).await;
+
+        let payload = AlarmsSyncNeeded {
+            reason: SyncReason::BatchComplete,
+            revision: 51,
+        };
+
+        handle_sync_needed(publisher, collector, payload).await;
+
+        // Should get batch flush then immediate
+        let cmd1 = rx.recv().await.unwrap();
+        assert!(matches!(cmd1, PublishCommand::Batch { .. }));
+
+        let cmd2 = rx.recv().await.unwrap();
+        assert!(matches!(cmd2, PublishCommand::Immediate { .. }));
+    }
 }
