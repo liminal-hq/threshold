@@ -103,42 +103,71 @@ Touch targets are 48dp minimum. Time is displayed at 24sp bold, labels at 13sp.
 
 ### Prerequisites
 
-- Android Studio (Arctic Fox or later) with Wear OS support
+- Android SDK (command line tools or Android Studio)
 - A Wear OS watch or emulator (API 26+)
 - The Threshold phone app installed on a paired phone or emulator
 - Google Play Services on both devices
+- `adb` available on your PATH
 
-### Development Setup
+### Command Line Setup (No Android Studio Required)
 
-1. **Open in Android Studio:**
-   Open `apps/threshold-wear/` as a standalone Android project in Android Studio.
+You can build and deploy entirely from the command line using Gradle and `adb`.
 
-2. **Create a Wear OS emulator:**
-   In AVD Manager, create a Wear OS device (e.g. Wear OS Round, API 33).
-
-3. **Create a phone emulator (if not using a real device):**
-   Create a standard Android phone emulator (e.g. Pixel 7, API 34) with Google Play Services.
-
-4. **Pair the emulators:**
+1. **Install Android SDK command line tools** (if you don't have Android Studio):
    ```bash
-   # Start both emulators, then pair them
-   adb -s emulator-5554 forward tcp:5601 tcp:5601
-   # On the phone emulator, open the Wear OS companion app and pair
+   # macOS (via Homebrew)
+   brew install --cask android-commandlinetools
+
+   # Or download from https://developer.android.com/studio#command-line-tools-only
+   # Then set ANDROID_HOME:
+   export ANDROID_HOME=$HOME/Android/Sdk
+   export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
    ```
-   Alternatively, use Android Studio's Device Manager to pair them directly.
+
+2. **Install required SDK packages:**
+   ```bash
+   sdkmanager "platforms;android-34" "build-tools;34.0.0" "system-images;android-34;google_apis;x86_64" "system-images;android-wear-34;google_apis;x86_64"
+   ```
+
+3. **Create a Wear OS emulator:**
+   ```bash
+   avdmanager create avd -n WearOS -k "system-images;android-wear-34;google_apis;x86_64" -d "wearos_large_round"
+   emulator -avd WearOS &
+   ```
+
+4. **Pair with a phone** (emulator or real device):
+   ```bash
+   # If using two emulators, forward the pairing port:
+   adb -s emulator-5554 forward tcp:5601 tcp:5601
+   # Then pair via the Wear OS companion app on the phone
+   ```
+   For a real watch paired to a real phone over Bluetooth, no `adb` pairing is needed — they connect automatically via Google Play Services.
 
 5. **Build and deploy the watch app:**
    ```bash
    cd apps/threshold-wear
    ./gradlew installDebug
    ```
-   Or use the Run button in Android Studio with the Wear OS emulator selected.
 
 6. **Build and deploy the phone app:**
    ```bash
    cd apps/threshold
    pnpm tauri android dev
    ```
+
+7. **Launch the watch app:**
+   ```bash
+   adb -s <watch-serial> shell am start -n ca.liminalhq.threshold.wear/.presentation.MainActivity
+   ```
+
+### Android Studio Setup (Alternative)
+
+If you prefer an IDE:
+
+1. Open `apps/threshold-wear/` as a standalone Android project
+2. Create a Wear OS AVD in Device Manager
+3. Pair it with a phone emulator via Device Manager
+4. Run the app with the Wear OS emulator selected
 
 ### First Run
 
