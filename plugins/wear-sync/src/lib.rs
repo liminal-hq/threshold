@@ -2,17 +2,27 @@ use std::sync::Arc;
 
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    Listener, Runtime,
+    Listener, Manager, Runtime,
 };
 
 mod batch_collector;
 mod conflict_detector;
+#[cfg(desktop)]
+mod desktop;
 mod error;
+#[cfg(mobile)]
+mod mobile;
 mod models;
 mod publisher;
 mod sync_protocol;
 
 pub use error::{Error, Result};
+
+// Re-export the platform-specific WearSync type so the app can access it.
+#[cfg(desktop)]
+pub use desktop::WearSync;
+#[cfg(mobile)]
+pub use mobile::WearSync;
 
 use batch_collector::BatchCollector;
 use models::{AlarmsBatchUpdated, AlarmsSyncNeeded, SyncReason};
@@ -20,12 +30,31 @@ use publisher::WearSyncPublisher;
 
 const BATCH_DEBOUNCE_MS: u64 = 500;
 
+/// Extension trait for accessing the wear-sync APIs from any Tauri manager.
+pub trait WearSyncExt<R: Runtime> {
+    fn wear_sync(&self) -> &WearSync<R>;
+}
+
+impl<R: Runtime, T: Manager<R>> WearSyncExt<R> for T {
+    fn wear_sync(&self) -> &WearSync<R> {
+        self.state::<WearSync<R>>().inner()
+    }
+}
+
 /// Initialises the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("wear-sync")
-        .setup(|app, _api| {
+        .setup(|app, api| {
+            // Initialise platform backend
+            #[cfg(mobile)]
+            let wear_sync = mobile::init(app, api)?;
+            #[cfg(desktop)]
+            let wear_sync = desktop::init(app, api)?;
+            app.manage(wear_sync);
+
             let publisher: Arc<dyn WearSyncPublisher> = Arc::new(LogPublisher);
-            let batch_collector = Arc::new(BatchCollector::new(BATCH_DEBOUNCE_MS, Arc::clone(&publisher)));
+            let batch_collector =
+                Arc::new(BatchCollector::new(BATCH_DEBOUNCE_MS, Arc::clone(&publisher)));
 
             let batch_listener = Arc::clone(&batch_collector);
             app.listen("alarms:batch:updated", move |event| {
@@ -96,7 +125,7 @@ impl WearSyncPublisher for LogPublisher {
             ids.len(),
             revision
         );
-        // TODO: Publish to Wear Data Layer.
+        // TODO: Replace with channel-based DataLayerPublisher (step 5).
     }
 
     fn publish_immediate(&self, reason: &SyncReason, revision: i64) {
@@ -105,7 +134,7 @@ impl WearSyncPublisher for LogPublisher {
             reason,
             revision
         );
-        // TODO: Publish to Wear Data Layer.
+        // TODO: Replace with channel-based DataLayerPublisher (step 5).
     }
 }
 
@@ -128,7 +157,10 @@ mod tests {
 
     impl WearSyncPublisher for TestPublisher {
         fn publish_batch(&self, ids: Vec<i32>, revision: i64) {
-            self.calls.lock().unwrap().push(PublishCall::Batch(ids, revision));
+            self.calls
+                .lock()
+                .unwrap()
+                .push(PublishCall::Batch(ids, revision));
         }
 
         fn publish_immediate(&self, reason: &SyncReason, revision: i64) {
@@ -156,7 +188,10 @@ mod tests {
         let calls = publisher.calls.lock().unwrap();
         assert_eq!(calls.len(), 2);
         match (&calls[0], &calls[1]) {
-            (PublishCall::Batch(ids, revision), PublishCall::Immediate(reason, immediate_rev)) => {
+            (
+                PublishCall::Batch(ids, revision),
+                PublishCall::Immediate(reason, immediate_rev),
+            ) => {
                 let mut ids = ids.clone();
                 ids.sort_unstable();
                 assert_eq!(ids, vec![9, 10]);

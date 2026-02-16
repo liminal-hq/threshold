@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+// ── Event payloads ───────────────────────────────────────────────────
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlarmsBatchUpdated {
@@ -22,4 +24,22 @@ pub enum SyncReason {
     Initialize,
     Reconnect,
     ForceSync,
+}
+
+// ── Bridge request/response types (shared by mobile.rs and desktop.rs) ──
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublishRequest {
+    /// JSON-serialised array of alarm records.
+    pub alarms_json: String,
+    /// The phone's current revision at the time of publish.
+    pub revision: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncRequest {
+    /// The revision the watch should sync from.
+    pub revision: i64,
 }
