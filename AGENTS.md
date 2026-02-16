@@ -10,6 +10,7 @@
 - [Best Practices](#best-practices)
 - [Plugin Development](#plugin-development)
 - [UI Project Structure](#ui-project-structure)
+- [Licence and Copyright](#licence-and-copyright)
 - [Tauri v2](#tauri-v2)
 
 ## Localization and Spelling
@@ -146,6 +147,37 @@ Follow this directory structure for React/MUI applications:
 - **`src/context/`**: React Context providers.
 
 **See Also:** `/docs/ui/ui-task.md` for UI implementation details
+
+## Licence and Copyright
+
+**REQUIREMENT:** All source code files (Rust, Kotlin, TypeScript, etc.) MUST include a licence and copyright header as the first content in the file.
+
+**Header format:**
+
+For Rust (`.rs`) and Kotlin (`.kt`) files:
+```
+// Brief one-line summary of what this file does.
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+```
+
+For TypeScript/JavaScript (`.ts`, `.tsx`, `.js`) files:
+```
+// Brief one-line summary of what this file does.
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+```
+
+**Rules:**
+
+- The first line is a concise summary of the file's purpose (one sentence, no period)
+- Place the header before any `package`, `use`, `import`, or `mod` statements
+- Leave one blank line between the header and the first code line
+- Do not add headers to generated files, configuration files (`.toml`, `.json`, `.yml`), or documentation (`.md`)
+- When visiting an existing file that lacks a header, add one as part of the current change
+- Use `SPDX-License-Identifier` for machine-readable licence identification
 
 ## Tauri v2
 
