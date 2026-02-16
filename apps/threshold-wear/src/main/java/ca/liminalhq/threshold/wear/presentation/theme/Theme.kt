@@ -1,3 +1,8 @@
+// Wear OS theme — deep black OLED background with calm blue accent
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package ca.liminalhq.threshold.wear.presentation.theme
 
 import androidx.compose.runtime.Composable

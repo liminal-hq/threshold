@@ -1,3 +1,8 @@
+// Application class — initialises singleton AlarmRepository and WearDataLayerClient
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package ca.liminalhq.threshold.wear
 
 import android.app.Application
