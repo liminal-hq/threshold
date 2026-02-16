@@ -7,7 +7,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { LogicalSize } from '@tauri-apps/api/dpi';
+// import { LogicalSize } from '@tauri-apps/api/dpi';
 import { platform } from '@tauri-apps/plugin-os';
 import { isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
 
@@ -60,7 +60,7 @@ const App: React.FC = () => {
 					try {
 						await win.setDecorations(false); // Force removal of native title bar
 						await win.unmaximize();
-						await win.setSize(new LogicalSize(450, 800));
+						// await win.setSize(new LogicalSize(450, 800));
 						await win.center();
 					} catch (e) {
 						console.error('Failed to resize/decorate window:', e);

@@ -5,6 +5,7 @@ members = [
     "plugins/wear-sync",
     "plugins/theme-utils",
     "plugins/time-prefs",
+    "plugins/toast",
 ]
 resolver = "2"
 

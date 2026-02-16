@@ -7,10 +7,11 @@ Wear OS-specific design and UI documentation for Threshold.
 | Document | Description |
 |----------|-------------|
 | [ui-mockups](ui-mockups.md) | Wear OS watch app UI designs and layout specs |
+| [status/](status/) | Dated Wear OS status snapshots and execution plans |
 
 ## Status
 
-- **Milestone D (wear-sync plugin):** Blocked on event system implementation ([#113](https://github.com/liminal-hq/threshold/issues/113))
+- **Milestone D (wear-sync plugin):** Event system and batch collector landed; Data Layer and sync correctness work remains
 - **Milestone E (Wear OS app):** UI design complete
 
 ## Core Architecture

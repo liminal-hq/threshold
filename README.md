@@ -1,25 +1,29 @@
-# Threshold Monorepo
+# Threshold
 
-Welcome to the Threshold project! This is a minimalist alarm clock application designed for Android and Desktop (Tauri).
+**About, not at.** Threshold is a minimalist alarm clock for Android and Desktop that replaces rigid, to-the-minute alarms with flexible time windows. Its core feature, Random Window mode, lets you define a range (for example, 07:00-07:30) and rings at a random moment within it.
 
 ## Architecture
 
-This is a **monorepo** managed by `pnpm workspaces`.
+This repository is a `pnpm` workspace monorepo.
 
-- `apps/threshold`: The main Tauri v2 application (React + MUI).
-- `packages/core`: Shared Typescript logic (Scheduler, Recurrence rules).
-- `plugins/alarm-manager`: Custom Tauri Plugin for native Android AlarmManager integration.
-- `plugins/alarm-manager/android`: The native Android library code.
+- `apps/threshold`: Main Tauri v2 application (React + MUI)
+- `apps/site`: Static landing page
+- `packages/core`: Shared TypeScript scheduler/types
+- `plugins/alarm-manager`: Native alarm scheduling bridge
+- `plugins/app-management`: Mobile lifecycle/app-management helpers
+- `plugins/theme-utils`: System theme and Material You utilities
+- `plugins/time-prefs`: 12/24-hour time preference bridge
+- `plugins/wear-sync`: Wear OS sync integration plugin
+- `plugins/toast`: Android toast bridge plugin
 
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
 - Node.js 20+
-- pnpm
-- Rust (Stable)
-- Android Studio & SDK (for mobile build)
-- Linux dependencies (see `.devcontainer/Dockerfile` or Tauri docs)
+- `pnpm`
+- Rust (stable)
+- Android Studio + SDK (for mobile builds)
 
 ### Setup
 
@@ -27,27 +31,26 @@ This is a **monorepo** managed by `pnpm workspaces`.
 pnpm install
 ```
 
-### Running
-
-#### Desktop Dev
-
-You can run the desktop development server from the root:
+### Run
 
 ```bash
 pnpm dev:desktop
-```
-
-#### Android Dev
-
-You can run the android development server from the root:
-
-```bash
 pnpm dev:android
 ```
 
-## Debugging
+## Testing
 
-To capture logs from the Android device, use the following `adb` command. This filters specifically for the app's tags and saves the output to a file:
+```bash
+pnpm test
+```
+
+## Formatting
+
+```bash
+pnpm format
+```
+
+## Android logging
 
 ```bash
 adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* AlarmReceiver:* AlarmRingingService:* BootReceiver:* SetAlarmActivity:* AlarmService:* ThemeUtils:* TimePrefsPlugin:* chromium:I Tauri/Console:* *:E > logcat.log
@@ -55,6 +58,6 @@ adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* AlarmReceiver:* Al
 
 ## Documentation
 
-- [UI Task Description](docs/ui/ui-task.md)
-- [Agent Guidelines](AGENTS.md)
+- [Docs index](docs/README.md)
 - [Specification](SPEC.md)
+- [Agent guidelines](AGENTS.md)

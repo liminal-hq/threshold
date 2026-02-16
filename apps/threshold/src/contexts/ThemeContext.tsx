@@ -72,15 +72,23 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 		fetchColours();
 	}, []);
 
-	// Listen for theme changes from other windows
+	// Listen for theme/settings changes from other windows
 	useEffect(() => {
-		const unlisten = listen<{ theme: AppTheme; forceDark: boolean }>('theme-changed', (event) => {
-			console.log('Theme changed event received:', event.payload);
-			setThemeState(event.payload.theme);
-			setForceDarkState(event.payload.forceDark);
-			// We assume useMaterialYou is synced via localstorage or we should add it to the payload
-			// For now, let's refresh it from storage
-			setUseMaterialYouState(SettingsService.getUseMaterialYou() ?? false);
+		const unlisten = listen<{ key: string; value: any }>('settings-changed', (event) => {
+			console.log('ThemeContext received settings update:', event.payload);
+			const { key, value } = event.payload;
+
+			switch (key) {
+				case 'theme':
+					setThemeState(value as AppTheme);
+					break;
+				case 'forceDark':
+					setForceDarkState(Boolean(value));
+					break;
+				case 'useMaterialYou':
+					setUseMaterialYouState(Boolean(value));
+					break;
+			}
 		});
 
 		return () => {
