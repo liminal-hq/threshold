@@ -99,6 +99,83 @@ Touch targets are 48dp minimum. Time is displayed at 24sp bold, labels at 13sp.
 - **Data Layer**: `com.google.android.gms:play-services-wearable:18.1.0`
 - **Coroutines**: `org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3`
 
+## Getting Started
+
+### Prerequisites
+
+- Android Studio (Arctic Fox or later) with Wear OS support
+- A Wear OS watch or emulator (API 26+)
+- The Threshold phone app installed on a paired phone or emulator
+- Google Play Services on both devices
+
+### Development Setup
+
+1. **Open in Android Studio:**
+   Open `apps/threshold-wear/` as a standalone Android project in Android Studio.
+
+2. **Create a Wear OS emulator:**
+   In AVD Manager, create a Wear OS device (e.g. Wear OS Round, API 33).
+
+3. **Create a phone emulator (if not using a real device):**
+   Create a standard Android phone emulator (e.g. Pixel 7, API 34) with Google Play Services.
+
+4. **Pair the emulators:**
+   ```bash
+   # Start both emulators, then pair them
+   adb -s emulator-5554 forward tcp:5601 tcp:5601
+   # On the phone emulator, open the Wear OS companion app and pair
+   ```
+   Alternatively, use Android Studio's Device Manager to pair them directly.
+
+5. **Build and deploy the watch app:**
+   ```bash
+   cd apps/threshold-wear
+   ./gradlew installDebug
+   ```
+   Or use the Run button in Android Studio with the Wear OS emulator selected.
+
+6. **Build and deploy the phone app:**
+   ```bash
+   cd apps/threshold
+   pnpm tauri android dev
+   ```
+
+### First Run
+
+When the watch app launches for the first time:
+
+1. It sends a sync request to the phone with revision `0`
+2. The phone responds with a full sync containing all alarms
+3. The alarm list populates and the sync status changes from "Offline" to "Connected"
+
+If no alarms appear, check:
+- Both devices are paired (Wear OS companion app on phone shows connection)
+- The phone app is running (the wear-sync plugin needs to be active)
+- Logcat for `WearSyncPlugin` or `DataLayerListener` tags
+
+### User Guide
+
+**Viewing alarms:** Open the app on your watch. Alarms are listed by time with a coloured dot indicating enabled (blue) or disabled (grey) status.
+
+**Toggling an alarm:** Tap an alarm card to toggle its enabled state. The command is sent to the phone, which processes it and syncs the updated state back.
+
+**Deleting an alarm:** Long-press an alarm card to show a delete confirmation dialog. Tap "Delete" to remove it from both watch and phone.
+
+**Syncing:** The watch syncs automatically when the phone publishes alarm changes. To manually request a sync, tap the "Sync" button on the empty state screen, or relaunch the app.
+
+**Tile:** Add the Threshold tile to your tile carousel (swipe left from the watch face → "+" → Threshold). It shows the next upcoming alarm time.
+
+**Complication:** Add the Threshold complication to a compatible watch face. It provides the next alarm time in short or long text format.
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| "Offline" status permanently | Phone not paired or app not running | Check Wear OS pairing, launch phone app |
+| Alarms don't appear | Sync hasn't happened yet | Relaunch watch app to trigger sync request |
+| Toggle doesn't work | Phone app not processing messages | Check logcat for `WearMessageService` errors |
+| Tile shows "No alarms" | No enabled alarms, or tile not refreshed | Enable an alarm, then swipe away and back to tile |
+
 ## Building
 
 This is a standalone Android project. It can be built separately from the main Threshold app:
