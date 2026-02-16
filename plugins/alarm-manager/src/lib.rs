@@ -1,6 +1,6 @@
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    Manager, Runtime, AppHandle, Listener,
+    AppHandle, Listener, Manager, Runtime,
 };
 
 pub use models::*;
@@ -36,6 +36,8 @@ impl<R: Runtime, T: Manager<R>> AlarmManagerExt<R> for T {
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("alarm-manager")
         .invoke_handler(tauri::generate_handler![
+            commands::schedule,
+            commands::cancel,
             commands::get_launch_args,
             commands::pick_alarm_sound,
             commands::check_active_alarm,
