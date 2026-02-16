@@ -295,6 +295,30 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the publishToWatch command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-publishToWatch",
+          "markdownDescription": "Enables the publishToWatch command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the publishToWatch command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-publishToWatch",
+          "markdownDescription": "Denies the publishToWatch command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the requestSyncFromWatch command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-requestSyncFromWatch",
+          "markdownDescription": "Enables the requestSyncFromWatch command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the requestSyncFromWatch command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-requestSyncFromWatch",
+          "markdownDescription": "Denies the requestSyncFromWatch command without any pre-configured scope."
+        },
+        {
           "description": "Default permissions for the wear-sync plugin\n#### This default permission set includes:\n\n- `allow-event-listeners`",
           "type": "string",
           "const": "default",

@@ -18,6 +18,58 @@ Default permissions for the wear-sync plugin
 <tr>
 <td>
 
+`wear-sync:allow-publishToWatch`
+
+</td>
+<td>
+
+Enables the publishToWatch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-publishToWatch`
+
+</td>
+<td>
+
+Denies the publishToWatch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:allow-requestSyncFromWatch`
+
+</td>
+<td>
+
+Enables the requestSyncFromWatch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-requestSyncFromWatch`
+
+</td>
+<td>
+
+Denies the requestSyncFromWatch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `wear-sync:allow-event-listeners`
 
 </td>
