@@ -6,6 +6,19 @@ A standalone Wear OS app that displays and controls alarms from the Threshold ph
 
 Threshold-Wear is a **standalone Android Wear OS application** that runs on watch hardware. It is not a Tauri plugin — Tauri only runs on the phone. The two apps communicate over Bluetooth via the [Wear Data Layer API](https://developer.android.com/training/wearables/data-layer).
 
+```
+Phone (Tauri + Rust + Kotlin)          Watch (Pure Android/Kotlin)
+┌─────────────────────────┐            ┌─────────────────────────┐
+│ wear-sync plugin        │            │ threshold-wear app      │
+│  ├─ BatchCollector      │            │  ├─ AlarmRepository     │
+│  ├─ ChannelPublisher    │  Bluetooth │  ├─ WearDataLayerClient │
+│  ├─ WearSyncPlugin.kt ─┼────────────┼──┤ DataLayerListener    │
+│  └─ WearMessageService ─┼────────────┼──┤ AlarmListScreen      │
+└─────────────────────────┘            │  ├─ NextAlarmTile       │
+                                       │  └─ NextAlarmComplication│
+                                       └─────────────────────────┘
+```
+
 ```mermaid
 flowchart LR
     subgraph Phone["Phone (Tauri + Rust + Kotlin)"]
