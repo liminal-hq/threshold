@@ -58,16 +58,12 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         Log.d("AlarmManagerPlugin", "Plugin loaded.")
     }
 
-
-
     @Command
     fun schedule(invoke: Invoke) {
         val args = invoke.parseArgs(ScheduleRequest::class.java)
-        Log.d("AlarmManagerPlugin", "Scheduling alarm ${args.id} at ${args.triggerAt} with sound ${args.soundUri}")
 
+        // TODO: Remove this compatibility command once scheduling is fully event-driven.
         AlarmUtils.scheduleAlarm(activity, args.id, args.triggerAt, args.soundUri)
-        AlarmUtils.saveAlarmToPrefs(activity, args.id, args.triggerAt, args.soundUri)
-
         invoke.resolve()
     }
 
@@ -75,9 +71,8 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     fun cancel(invoke: Invoke) {
         val args = invoke.parseArgs(CancelRequest::class.java)
 
+        // TODO: Remove this compatibility command once cancellation is fully event-driven.
         AlarmUtils.cancelAlarm(activity, args.id)
-        AlarmUtils.removeAlarmFromPrefs(activity, args.id)
-
         invoke.resolve()
     }
 
