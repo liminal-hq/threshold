@@ -117,6 +117,22 @@ The sync protocol is revision-based. The watch sends its `last_sync_revision` an
 | >100 | `FullSync` | Send all alarms |
 | Negative (watch ahead) | `FullSync` | Anomaly — phone wins |
 
+### SyncResponse JSON Format
+
+The `SyncResponse` enum uses PascalCase type tags and camelCase field names to match the watch-side Kotlin parser:
+
+```json
+{"type":"FullSync","currentRevision":42,"allAlarms":[...]}
+{"type":"Incremental","currentRevision":50,"updatedAlarms":[...],"deletedAlarmIds":[...]}
+{"type":"UpToDate","currentRevision":42}
+```
+
+Rust serde: `#[serde(tag = "type", rename_all = "PascalCase")]` with per-field `#[serde(rename = "camelCase")]`.
+
+### Immediate Publish (FullSync)
+
+When `alarms:sync:needed` fires (app startup, force sync, reconnect), the `AlarmCoordinator` fetches all alarms from the DB and includes the pre-serialized JSON in the event payload (`allAlarmsJson`). The publish task wraps this in a `SyncResponse::FullSync` envelope before sending to the watch.
+
 ## Conflict Detection
 
 Watch edits are validated before applying:
@@ -125,6 +141,10 @@ Watch edits are validated before applying:
 - **`validate_alarm_update()`**: Rejects if specific alarm was modified after watch last synced
 
 On rejection, the watch receives a conflict error and should trigger a full sync before retrying.
+
+## Offline Sync
+
+For details on how sync works when the phone app is closed (SharedPreferences cache for reads, foreground service for writes), see [architecture/wear-os-companion.md](../architecture/wear-os-companion.md).
 
 ## Kotlin Commands
 

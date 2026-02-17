@@ -9,6 +9,7 @@ Wear OS-specific design and UI documentation for Threshold.
 | [ui-mockups](ui-mockups.md) | Wear OS watch app UI designs and layout specs |
 | [testing-guide](testing-guide.md) | Building, installing, ADB usage, log reading, and end-to-end testing |
 | [../plugins/wear-sync.md](../plugins/wear-sync.md) | wear-sync plugin implementation guide |
+| [../architecture/wear-os-companion.md](../architecture/wear-os-companion.md) | Companion architecture: sync protocol, offline reads, write-back patterns |
 
 ## Status
 
@@ -40,7 +41,8 @@ A standalone Android Wear OS app that runs on the watch hardware. Communicates w
 
 The core architecture that underpins the Wear OS companion lives in [architecture/](../architecture/):
 
+- **[Wear OS Companion](../architecture/wear-os-companion.md)** — Companion sync architecture, offline reads/writes, design decisions
 - **[Event Architecture](../architecture/event-architecture.md)** — Event system spec (drives wear-sync)
 - **[Implementation Roadmap](../architecture/implementation-roadmap.md)** — Milestones D and E cover Wear OS
-- **[Data Architecture](../architecture/data-architecture.md)** — Data models and sync protocol
+- **[Data Architecture](../architecture/data-architecture.md)** — Data models and storage strategy
 - **[Flow Diagrams](../architecture/flow-diagrams.md)** — Sequence diagrams including Wear sync flows

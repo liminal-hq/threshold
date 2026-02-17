@@ -12,6 +12,7 @@ Core application architecture for Threshold — event system, data models, and i
 | [flow-diagrams](flow-diagrams.md) | Sequence diagrams for alarm lifecycle and sync flows |
 | [getting-started](getting-started.md) | Quick start guide for contributors |
 | [implementation-roadmap](implementation-roadmap.md) | Step-by-step milestone plan (A through E) |
+| [wear-os-companion](wear-os-companion.md) | Wear OS companion architecture: sync protocol, offline reads/writes |
 
 ## Quick Navigation
 
