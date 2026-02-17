@@ -10,9 +10,7 @@ import {
 	onAction,
 	cancel,
 	removeActive,
-	Schedule,
 } from '@tauri-apps/plugin-notification';
-import { PlatformUtils } from '../utils/PlatformUtils';
 
 vi.mock('tauri-plugin-toast-api', () => ({
 	showToast: vi.fn(),
