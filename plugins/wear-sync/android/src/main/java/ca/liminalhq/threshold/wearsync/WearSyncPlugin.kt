@@ -73,6 +73,10 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
 
                 val dataItem = dataClient.putDataItem(request.asPutDataRequest()).await()
                 Log.d(TAG, "Published to watch: uri=${dataItem.uri}, revision=${args.revision}")
+
+                // Cache for offline sync (WearMessageService reads this when plugin isn't loaded)
+                WearSyncCache.write(activity, args.alarmsJson, args.revision)
+
                 invoke.resolve()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to publish to watch", e)
