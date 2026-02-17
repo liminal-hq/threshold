@@ -174,12 +174,21 @@ pub fn run() {
             app.handle().listen("wear:alarm:save", move |event| {
                 #[derive(serde::Deserialize)]
                 #[serde(rename_all = "camelCase")]
-                struct WatchSave { alarm_id: i32, enabled: bool }
+                struct WatchSave { alarm_id: i32, enabled: bool, watch_revision: i64 }
 
                 if let Ok(cmd) = serde_json::from_str::<WatchSave>(event.payload()) {
                     let handle = save_handle.clone();
                     tauri::async_runtime::spawn(async move {
                         if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            let phone_rev = coord.current_revision().await.unwrap_or(0);
+                            if cmd.watch_revision < phone_rev {
+                                log::warn!(
+                                    "watch: rejecting stale save for alarm {} (watch_rev={}, phone_rev={}) — requesting resync",
+                                    cmd.alarm_id, cmd.watch_revision, phone_rev
+                                );
+                                coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
+                                return;
+                            }
                             match coord.toggle_alarm(&handle, cmd.alarm_id, cmd.enabled).await {
                                 Ok(_) => log::info!("watch: toggled alarm {} to enabled={}", cmd.alarm_id, cmd.enabled),
                                 Err(e) => log::error!("watch: failed to toggle alarm {}: {e}", cmd.alarm_id),
@@ -194,12 +203,21 @@ pub fn run() {
             app.handle().listen("wear:alarm:delete", move |event| {
                 #[derive(serde::Deserialize)]
                 #[serde(rename_all = "camelCase")]
-                struct WatchDelete { alarm_id: i32 }
+                struct WatchDelete { alarm_id: i32, watch_revision: i64 }
 
                 if let Ok(cmd) = serde_json::from_str::<WatchDelete>(event.payload()) {
                     let handle = delete_handle.clone();
                     tauri::async_runtime::spawn(async move {
                         if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            let phone_rev = coord.current_revision().await.unwrap_or(0);
+                            if cmd.watch_revision < phone_rev {
+                                log::warn!(
+                                    "watch: rejecting stale delete for alarm {} (watch_rev={}, phone_rev={}) — requesting resync",
+                                    cmd.alarm_id, cmd.watch_revision, phone_rev
+                                );
+                                coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
+                                return;
+                            }
                             match coord.delete_alarm(&handle, cmd.alarm_id).await {
                                 Ok(_) => log::info!("watch: deleted alarm {}", cmd.alarm_id),
                                 Err(e) => log::error!("watch: failed to delete alarm {}: {e}", cmd.alarm_id),

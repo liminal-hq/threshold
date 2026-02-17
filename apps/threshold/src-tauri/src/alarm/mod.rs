@@ -24,6 +24,11 @@ impl AlarmCoordinator {
         Self { db }
     }
 
+    /// Get the phone's current revision number.
+    pub async fn current_revision(&self) -> Result<i64> {
+        self.db.current_revision().await
+    }
+
     /// Get all alarms.
     ///
     /// - `_app`: app handle for event context (unused here).
