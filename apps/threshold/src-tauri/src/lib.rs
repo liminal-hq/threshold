@@ -2,7 +2,7 @@ pub mod alarm;
 pub mod commands;
 
 use alarm::{database::AlarmDatabase, AlarmCoordinator};
-use tauri::Manager;
+use tauri::{Listener, Manager};
 
 #[cfg(target_os = "linux")]
 fn configure_linux_env() {
@@ -162,6 +162,74 @@ pub fn run() {
                 if let Some(coord) = app.handle().try_state::<AlarmCoordinator>() {
                     coord.emit_sync_needed(app.handle(), alarm::events::SyncReason::Initialize).await.ok();
                 }
+            });
+
+            // ── Watch event handlers ────────────────────────────────────
+            // These events are emitted by the wear-sync plugin when it
+            // receives messages from the watch.  The app crate handles
+            // them because it owns the AlarmCoordinator (single DB writer).
+
+            // Watch toggled an alarm on/off
+            let save_handle = app.handle().clone();
+            app.handle().listen("wear:alarm:save", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct WatchSave { alarm_id: i32, enabled: bool }
+
+                if let Ok(cmd) = serde_json::from_str::<WatchSave>(event.payload()) {
+                    let handle = save_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            match coord.toggle_alarm(&handle, cmd.alarm_id, cmd.enabled).await {
+                                Ok(_) => log::info!("watch: toggled alarm {} to enabled={}", cmd.alarm_id, cmd.enabled),
+                                Err(e) => log::error!("watch: failed to toggle alarm {}: {e}", cmd.alarm_id),
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Watch deleted an alarm
+            let delete_handle = app.handle().clone();
+            app.handle().listen("wear:alarm:delete", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct WatchDelete { alarm_id: i32 }
+
+                if let Ok(cmd) = serde_json::from_str::<WatchDelete>(event.payload()) {
+                    let handle = delete_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            match coord.delete_alarm(&handle, cmd.alarm_id).await {
+                                Ok(_) => log::info!("watch: deleted alarm {}", cmd.alarm_id),
+                                Err(e) => log::error!("watch: failed to delete alarm {}: {e}", cmd.alarm_id),
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Watch requested a full sync
+            let sync_handle = app.handle().clone();
+            app.handle().listen("wear:sync:request", move |_event| {
+                let handle = sync_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                        coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
+                    }
+                });
+            });
+
+            // Batch debounce completed — the wear-sync plugin needs all
+            // alarm data to build a FullSync payload.
+            let batch_handle = app.handle().clone();
+            app.handle().listen("wear:sync:batch_ready", move |_event| {
+                let handle = batch_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                        coord.emit_sync_needed(&handle, alarm::events::SyncReason::BatchComplete).await.ok();
+                    }
+                });
             });
 
             // Schedule daily maintenance

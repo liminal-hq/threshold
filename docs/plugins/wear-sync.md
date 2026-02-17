@@ -14,7 +14,7 @@ The `wear-sync` plugin synchronises alarm data between the Threshold phone app a
 - **Incremental Sync**: Syncs only changes since last known revision
 - **Conflict Detection**: Rejects stale watch updates using revision comparison
 - **Tombstone Tracking**: Handles deleted alarms correctly across restarts
-- **Efficient Payloads**: Uses granular events (40–220 bytes) instead of snapshots (1200 bytes)
+- **FullSync Payloads**: All publishes send complete alarm state (~200 bytes/alarm, well under 100 KB DataItem limit)
 - **No JNI**: Uses Tauri's auto-generated `@Command` / `@InvokeArg` bridge
 
 ## Architecture
@@ -78,7 +78,9 @@ plugins/wear-sync/
 │       ├── AndroidManifest.xml
 │       └── java/.../wearsync/
 │           ├── WearSyncPlugin.kt      # @TauriPlugin with @Command methods
-│           └── WearMessageService.kt  # WearableListenerService for incoming
+│           ├── WearMessageService.kt  # WearableListenerService for incoming
+│           ├── WearSyncService.kt     # Foreground service for offline writes
+│           └── WearSyncCache.kt       # SharedPreferences helper for offline reads
 ├── build.rs
 └── Cargo.toml
 ```
@@ -90,10 +92,14 @@ plugins/wear-sync/
 1. `AlarmCoordinator` emits `alarms:batch:updated` event
 2. `BatchCollector` buffers alarm IDs for 500ms
 3. On debounce expiry, `ChannelPublisher` sends `PublishCommand::Batch` via mpsc channel
-4. Background task receives command, calls `WearSync::publish_to_watch()`
-5. Tauri bridges to `WearSyncPlugin.publishToWatch()` (Kotlin)
-6. Kotlin writes `PutDataMapRequest` to `/threshold/alarms` via `DataClient`
-7. Watch `DataLayerListenerService` receives the `DataItem` change
+4. Background task emits `wear:sync:batch_ready` event
+5. App crate listener calls `AlarmCoordinator.emit_sync_needed(BatchComplete)` which fetches all alarms
+6. `alarms:sync:needed` fires with `allAlarmsJson` → `PublishCommand::Immediate` → `SyncResponse::FullSync`
+7. Tauri bridges to `WearSyncPlugin.publishToWatch()` (Kotlin)
+8. Kotlin writes `PutDataMapRequest` to `/threshold/alarms` via `DataClient`
+9. Watch `DataLayerListenerService` receives the `DataItem` change
+
+**Note:** Both batch and immediate paths produce a `FullSync` envelope with all alarm data. The batch collector still debounces rapid changes, but the final payload is always a complete snapshot. This is acceptable because alarm payloads are small (~200 bytes per alarm, <4 KB for 15 alarms, well under the 100 KB DataItem limit).
 
 ### Watch → Phone (Incoming)
 
@@ -104,7 +110,10 @@ plugins/wear-sync/
    - `/threshold/sync_request` → `wear:sync:request`
    - `/threshold/save_alarm` → `wear:alarm:save`
    - `/threshold/delete_alarm` → `wear:alarm:delete`
-5. App layer handles the event (has access to `AlarmCoordinator`)
+5. App crate listeners (`apps/threshold/src-tauri/src/lib.rs`) handle the event via `AlarmCoordinator`:
+   - `wear:alarm:save` → `toggle_alarm(id, enabled)` → saves + re-publishes to watch
+   - `wear:alarm:delete` → `delete_alarm(id)` → deletes + re-publishes to watch
+   - `wear:sync:request` → `emit_sync_needed(ForceSync)` → publishes FullSync to watch
 
 ## Sync Protocol
 
@@ -170,6 +179,18 @@ For details on how sync works when the phone app is closed (SharedPreferences ca
 | `wear:sync:request` | App layer | Watch wants sync data |
 | `wear:alarm:save` | App layer | Watch wants to toggle alarm |
 | `wear:alarm:delete` | App layer | Watch wants to delete alarm |
+| `wear:sync:batch_ready` | App layer | Batch debounce expired, needs full alarm data |
+
+### Handled by App Layer
+
+The app crate (`apps/threshold/src-tauri/src/lib.rs`) listens for the four events above and routes them through `AlarmCoordinator`:
+
+| Event | Handler |
+|-------|---------|
+| `wear:alarm:save` | `coordinator.toggle_alarm(id, enabled)` |
+| `wear:alarm:delete` | `coordinator.delete_alarm(id)` |
+| `wear:sync:request` | `coordinator.emit_sync_needed(ForceSync)` |
+| `wear:sync:batch_ready` | `coordinator.emit_sync_needed(BatchComplete)` |
 
 ## Tests
 

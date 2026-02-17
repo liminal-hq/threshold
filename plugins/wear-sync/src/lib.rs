@@ -146,23 +146,18 @@ fn spawn_publish_task<R: Runtime>(
             match cmd {
                 PublishCommand::Batch { ids, revision } => {
                     log::info!(
-                        "wear-sync: publishing batch of {} alarm(s) at revision {}",
+                        "wear-sync: batch of {} alarm(s) at revision {} — requesting full sync from app",
                         ids.len(),
                         revision
                     );
 
-                    // Serialise the alarm IDs as JSON for the Kotlin side.
-                    // The full alarm data is fetched by the Kotlin plugin from
-                    // the Data Layer path, or we send the IDs for a targeted
-                    // publish. For now, send the IDs as the payload — the Kotlin
-                    // side can request full data via a sync response if needed.
-                    let alarms_json = serde_json::to_string(&ids).unwrap_or_default();
-                    let request = PublishRequest {
-                        alarms_json,
-                        revision,
-                    };
-                    if let Err(error) = wear_sync.publish_to_watch(request) {
-                        log::error!("wear-sync: failed to publish batch to watch: {error}");
+                    // The batch collector only has alarm IDs, not the full data.
+                    // Emit wear:sync:batch_ready so the app crate can fetch all
+                    // alarms from the DB and re-emit alarms:sync:needed with the
+                    // full payload for a proper FullSync publish.
+                    use tauri::Emitter;
+                    if let Err(error) = app.emit("wear:sync:batch_ready", &revision) {
+                        log::error!("wear-sync: failed to emit batch_ready: {error}");
                     }
                 }
                 PublishCommand::Immediate { reason, revision, all_alarms_json } => {
@@ -268,11 +263,13 @@ async fn handle_sync_needed(
 ) {
     if let Some((ids, revision)) = collector.flush().await {
         log::info!(
-            "wear-sync: flushing {} pending alarms at revision {} before immediate sync",
+            "wear-sync: cancelled pending batch of {} alarm(s) at revision {} — superseded by immediate sync",
             ids.len(),
             revision
         );
-        publisher.publish_batch(ids, revision);
+        // Don't publish the batch separately — the immediate publish below
+        // sends a complete FullSync with all alarm data, which supersedes
+        // any partial batch of IDs.
     }
 
     publisher.publish_immediate(&payload.reason, payload.revision, payload.all_alarms_json);
@@ -286,6 +283,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     #[derive(Clone, Debug)]
+    #[allow(dead_code)]
     enum PublishCall {
         Batch(Vec<i32>, i64),
         Immediate(SyncReason, i64),
@@ -313,7 +311,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn sync_needed_flushes_before_immediate() {
+    async fn sync_needed_cancels_batch_before_immediate() {
         let publisher = Arc::new(TestPublisher::default());
         let collector = Arc::new(BatchCollector::new(500, publisher.clone()));
 
@@ -327,21 +325,16 @@ mod tests {
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
 
+        // The pending batch is cancelled (not published separately) because
+        // the immediate FullSync supersedes it with complete alarm data.
         let calls = publisher.calls.lock().unwrap();
-        assert_eq!(calls.len(), 2);
-        match (&calls[0], &calls[1]) {
-            (
-                PublishCall::Batch(ids, revision),
-                PublishCall::Immediate(reason, immediate_rev),
-            ) => {
-                let mut ids = ids.clone();
-                ids.sort_unstable();
-                assert_eq!(ids, vec![9, 10]);
-                assert_eq!(*revision, 40);
+        assert_eq!(calls.len(), 1);
+        match &calls[0] {
+            PublishCall::Immediate(reason, rev) => {
                 assert_eq!(*reason, SyncReason::ForceSync);
-                assert_eq!(*immediate_rev, 41);
+                assert_eq!(*rev, 41);
             }
-            _ => panic!("unexpected publish order"),
+            _ => panic!("expected immediate publish only"),
         }
     }
 
@@ -384,13 +377,14 @@ mod tests {
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
 
+        // Pending batch is cancelled, only immediate publish emitted
         let calls = publisher.calls.lock().unwrap();
-        assert_eq!(calls.len(), 2);
-        match &calls[1] {
+        assert_eq!(calls.len(), 1);
+        match &calls[0] {
             PublishCall::Immediate(reason, _) => {
                 assert_eq!(*reason, SyncReason::Reconnect);
             }
-            _ => panic!("expected immediate publish as second call"),
+            _ => panic!("expected immediate publish only"),
         }
     }
 
@@ -442,11 +436,8 @@ mod tests {
 
         handle_sync_needed(publisher, collector, payload).await;
 
-        // Should get batch flush then immediate
-        let cmd1 = rx.recv().await.unwrap();
-        assert!(matches!(cmd1, PublishCommand::Batch { .. }));
-
-        let cmd2 = rx.recv().await.unwrap();
-        assert!(matches!(cmd2, PublishCommand::Immediate { .. }));
+        // Pending batch is cancelled, only immediate FullSync is sent
+        let cmd = rx.recv().await.unwrap();
+        assert!(matches!(cmd, PublishCommand::Immediate { .. }));
     }
 }

@@ -31,7 +31,7 @@ private const val TAG = "WearSyncService"
  * 1. [WearMessageService] receives a save/delete message while plugin is null
  * 2. Starts this service with the message path and data as extras
  * 3. This service shows a brief "Syncing..." notification (required for fg service)
- * 4. Launches the main activity with [Intent.FLAG_ACTIVITY_NEW_TASK] to boot Tauri
+ * 4. Launches the main activity silently (no animation, moved to back) to boot Tauri
  * 5. Polls [WearSyncPlugin.instance] until it becomes available (~1 second)
  * 6. Replays the watch message through the normal plugin path
  * 7. Stops itself
@@ -114,12 +114,13 @@ class WearSyncService : Service() {
     private fun bootTauriAndReplay(path: String, data: String) {
         scope.launch {
             try {
-                // Launch the main activity to boot Tauri
+                // Launch the main activity to boot Tauri.
+                // FLAG_ACTIVITY_NO_ANIMATION prevents a visual flash.
                 val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
                 if (launchIntent != null) {
                     launchIntent.addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        Intent.FLAG_ACTIVITY_NO_ANIMATION
                     )
                     startActivity(launchIntent)
                     Log.d(TAG, "Launched main activity to boot Tauri runtime")

@@ -161,7 +161,12 @@ AlarmCoordinator.save_alarm()
   → emits alarms:batch:updated
   → BatchCollector buffers 500ms
   → ChannelPublisher sends PublishCommand::Batch
-  → spawn_publish_task receives command
+  → spawn_publish_task emits wear:sync:batch_ready
+  → App crate listener calls coordinator.emit_sync_needed(BatchComplete)
+  → Fetches all alarms from DB, serializes to JSON
+  → emits alarms:sync:needed (includes allAlarmsJson)
+  → ChannelPublisher sends PublishCommand::Immediate
+  → spawn_publish_task builds SyncResponse::FullSync
   → WearSync::publish_to_watch() → Kotlin bridge
   → WearSyncPlugin.publishToWatch()
     → DataClient.putDataItem() to /threshold/alarms
@@ -175,11 +180,13 @@ For immediate syncs (app startup, force sync, reconnect):
 AlarmCoordinator.emit_sync_needed(reason)
   → fetches all alarms from DB, serializes to JSON
   → emits alarms:sync:needed (includes allAlarmsJson)
-  → handle_sync_needed() flushes pending batch, then
+  → handle_sync_needed() cancels any pending batch, then
   → ChannelPublisher sends PublishCommand::Immediate
   → spawn_publish_task builds SyncResponse::FullSync
   → publishes via Kotlin bridge
 ```
+
+**All publishes produce FullSync payloads.** This is acceptable because alarm data is small (~200 bytes per alarm). Even 50 alarms would be ~12 KB, well under the 100 KB DataItem limit. The incremental sync protocol exists in code for future use but is not currently exercised.
 
 ### 4.2 Offline Read Path (App Closed, Watch Requests Sync)
 
@@ -348,6 +355,8 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 | `plugins/wear-sync/src/desktop.rs` | No-op stubs for desktop compilation |
 | `plugins/wear-sync/android/.../WearSyncPlugin.kt` | Kotlin @TauriPlugin with DataClient |
 | `plugins/wear-sync/android/.../WearMessageService.kt` | WearableListenerService for incoming messages |
+| `plugins/wear-sync/android/.../WearSyncService.kt` | Foreground service — boots Tauri for offline writes |
+| `plugins/wear-sync/android/.../WearSyncCache.kt` | SharedPreferences helper for offline sync cache |
 
 ### Watch-side (threshold-wear app)
 
@@ -363,6 +372,7 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 
 | File | Purpose |
 |------|---------|
+| `apps/threshold/src-tauri/src/lib.rs` | App setup — includes watch event listeners |
 | `apps/threshold/src-tauri/src/alarm/mod.rs` | AlarmCoordinator (sole DB writer) |
 | `apps/threshold/src-tauri/src/alarm/database.rs` | SQLite access, revision tracking |
 | `apps/threshold/src-tauri/src/alarm/events.rs` | Event payload types including AlarmsSyncNeeded |
@@ -375,12 +385,13 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 | Component | Status | Notes |
 |-----------|--------|-------|
 | SyncResponse serde alignment | Done | PascalCase tags, camelCase fields |
-| FullSync payload in Immediate publish | Done | allAlarmsJson carried through event |
+| FullSync payload in all publishes | Done | Both batch and immediate paths send FullSync envelope |
 | WatchAlarm.fromJson() AlarmRecord compat | Done | Parses fixedTime/activeDays |
-| WearMessageService log downgrade | Done | INFO instead of WARN for dropped messages |
-| SharedPreferences cache (reads) | Not started | §4.2 — write on publish, read on offline sync |
-| WearSyncService (foreground, writes) | Not started | §4.3 — boot Tauri for watch commands |
-| heal-on-launch wear-sync integration | Not started | Re-publish on app open |
+| WearMessageService offline routing | Done | Cache reads + foreground service writes |
+| SharedPreferences cache (reads) | Done | §4.2 — write on publish, read on offline sync |
+| WearSyncService (foreground, writes) | Done | §4.3 — boots Tauri silently (no UI flash) |
+| Watch event handlers in app crate | Done | wear:alarm:save/delete, wear:sync:request/batch_ready |
+| heal-on-launch wear-sync integration | Done | emit_sync_needed(Initialize) on startup |
 
 ---
 

@@ -81,16 +81,17 @@ fn calculate_window_trigger(
                 .earliest()
             {
                 if window_start > now {
-                    // Calculate random offset within window
-                    let window_duration_secs = end_time
+                    // Pick a random minute within the window so the alarm
+                    // always fires at the top of the minute (:00 seconds).
+                    let window_duration_mins = end_time
                         .signed_duration_since(start_time)
-                        .num_seconds();
+                        .num_minutes();
 
-                    let random_offset_secs = rand::thread_rng()
-                        .gen_range(0..window_duration_secs);
+                    let random_offset_mins = rand::thread_rng()
+                        .gen_range(0..window_duration_mins);
 
                     let trigger = window_start
-                        + chrono::Duration::seconds(random_offset_secs);
+                        + chrono::Duration::minutes(random_offset_mins);
 
                     return Ok(Some(trigger.timestamp_millis()));
                 }
