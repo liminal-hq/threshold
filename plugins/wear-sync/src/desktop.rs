@@ -15,7 +15,7 @@ pub fn init<R: Runtime>(
     _api: PluginApi<R, ()>,
 ) -> crate::Result<WearSync<R>> {
     Ok(WearSync {
-        app: app.clone(),
+        _app: app.clone(),
     })
 }
 
@@ -24,7 +24,7 @@ pub fn init<R: Runtime>(
 /// All methods succeed silently so the plugin can be registered on
 /// desktop builds without feature-gating every call site.
 pub struct WearSync<R: Runtime> {
-    app: AppHandle<R>,
+    _app: AppHandle<R>,
 }
 
 impl<R: Runtime> WearSync<R> {

@@ -11,6 +11,7 @@ use tauri::{
 };
 
 mod batch_collector;
+#[allow(dead_code)]
 mod conflict_detector;
 #[cfg(desktop)]
 mod desktop;
@@ -19,6 +20,7 @@ mod error;
 mod mobile;
 mod models;
 mod publisher;
+#[allow(dead_code)]
 mod sync_protocol;
 
 pub use error::{Error, Result};
