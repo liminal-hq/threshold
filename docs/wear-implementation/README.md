@@ -7,6 +7,7 @@ Wear OS-specific design and UI documentation for Threshold.
 | Document | Description |
 |----------|-------------|
 | [ui-mockups](ui-mockups.md) | Wear OS watch app UI designs and layout specs |
+| [testing-guide](testing-guide.md) | Building, installing, ADB usage, log reading, and end-to-end testing |
 | [../plugins/wear-sync.md](../plugins/wear-sync.md) | wear-sync plugin implementation guide |
 
 ## Status
