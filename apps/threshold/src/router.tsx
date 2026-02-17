@@ -9,7 +9,6 @@ import {
 import { TitleBar } from './components/TitleBar';
 import { NotFound } from './components/NotFound';
 import { PlatformUtils } from './utils/PlatformUtils';
-import { useEffect, useState } from 'react';
 import Home from './screens/Home';
 import EditAlarm from './screens/EditAlarm';
 import Ringing from './screens/Ringing';
@@ -19,12 +18,8 @@ import { routeTransitions } from './utils/RouteTransitions';
 // Root layout component
 const RootLayout = () => {
 	console.log('🚀 [threshold] RootLayout rendering, path:', window.location.pathname);
-	const [isMobile, setIsMobile] = useState(false);
+	const isMobile = PlatformUtils.isMobile();
 	const location = useLocation();
-
-	useEffect(() => {
-		setIsMobile(PlatformUtils.isMobile());
-	}, []);
 
 	// Don't show TitleBar for ringing window (it's a separate floating window)
 	const isRingingWindow = location.pathname.startsWith('/ringing');
