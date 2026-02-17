@@ -180,14 +180,16 @@ pub fn run() {
                     let handle = save_handle.clone();
                     tauri::async_runtime::spawn(async move {
                         if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
-                            let phone_rev = coord.current_revision().await.unwrap_or(0);
-                            if cmd.watch_revision < phone_rev {
-                                log::warn!(
-                                    "watch: rejecting stale save for alarm {} (watch_rev={}, phone_rev={}) — requesting resync",
-                                    cmd.alarm_id, cmd.watch_revision, phone_rev
-                                );
-                                coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
-                                return;
+                            // Reject if this alarm was modified after the watch last synced
+                            if let Ok(alarm) = coord.get_alarm(&handle, cmd.alarm_id).await {
+                                if cmd.watch_revision < alarm.revision {
+                                    log::warn!(
+                                        "watch: rejecting stale save for alarm {} (watch_rev={}, alarm_rev={}) — requesting resync",
+                                        cmd.alarm_id, cmd.watch_revision, alarm.revision
+                                    );
+                                    coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
+                                    return;
+                                }
                             }
                             match coord.toggle_alarm(&handle, cmd.alarm_id, cmd.enabled).await {
                                 Ok(_) => log::info!("watch: toggled alarm {} to enabled={}", cmd.alarm_id, cmd.enabled),
@@ -209,14 +211,16 @@ pub fn run() {
                     let handle = delete_handle.clone();
                     tauri::async_runtime::spawn(async move {
                         if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
-                            let phone_rev = coord.current_revision().await.unwrap_or(0);
-                            if cmd.watch_revision < phone_rev {
-                                log::warn!(
-                                    "watch: rejecting stale delete for alarm {} (watch_rev={}, phone_rev={}) — requesting resync",
-                                    cmd.alarm_id, cmd.watch_revision, phone_rev
-                                );
-                                coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
-                                return;
+                            // Reject if this alarm was modified after the watch last synced
+                            if let Ok(alarm) = coord.get_alarm(&handle, cmd.alarm_id).await {
+                                if cmd.watch_revision < alarm.revision {
+                                    log::warn!(
+                                        "watch: rejecting stale delete for alarm {} (watch_rev={}, alarm_rev={}) — requesting resync",
+                                        cmd.alarm_id, cmd.watch_revision, alarm.revision
+                                    );
+                                    coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
+                                    return;
+                                }
                             }
                             match coord.delete_alarm(&handle, cmd.alarm_id).await {
                                 Ok(_) => log::info!("watch: deleted alarm {}", cmd.alarm_id),
