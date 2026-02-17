@@ -50,6 +50,9 @@
                 android:resource="@xml/file_paths" />
         </provider>
     </application>
+    <!-- tauri-plugin-time-prefs.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
+    
+    <!-- tauri-plugin-time-prefs.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
     <!-- tauri-plugin-alarm-manager.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
@@ -65,9 +68,6 @@
     <!-- tauri-plugin-wear-sync.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
     
     <!-- tauri-plugin-wear-sync.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
-    <!-- tauri-plugin-time-prefs.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
-    
-    <!-- tauri-plugin-time-prefs.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
     <!-- tauri-plugin-toast.permissions. AUTO-GENERATED. DO NOT REMOVE. -->
     
     <!-- tauri-plugin-toast.permissions. AUTO-GENERATED. DO NOT REMOVE. -->

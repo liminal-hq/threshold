@@ -8,7 +8,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "ca.liminalhq.threshold.wear"
+        applicationId = "ca.liminalhq.threshold"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
