@@ -27,17 +27,41 @@ data class WatchAlarm(
 
     companion object {
         fun fromJson(json: JSONObject): WatchAlarm {
-            val days = if (json.has("daysOfWeek")) {
-                val arr = json.getJSONArray("daysOfWeek")
-                (0 until arr.length()).map { arr.getInt(it) }
+            val days = when {
+                json.has("daysOfWeek") -> {
+                    val arr = json.getJSONArray("daysOfWeek")
+                    (0 until arr.length()).map { arr.getInt(it) }
+                }
+                json.has("activeDays") -> {
+                    val arr = json.getJSONArray("activeDays")
+                    (0 until arr.length()).map { arr.getInt(it) }
+                }
+                else -> emptyList()
+            }
+
+            // Parse hour/minute from either explicit fields or fixedTime "HH:MM" string
+            val hour: Int
+            val minute: Int
+            if (json.has("hour") && json.has("minute")) {
+                hour = json.getInt("hour")
+                minute = json.getInt("minute")
+            } else if (json.has("fixedTime") && !json.isNull("fixedTime")) {
+                val parts = json.getString("fixedTime").split(":")
+                hour = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+            } else if (json.has("windowStart") && !json.isNull("windowStart")) {
+                val parts = json.getString("windowStart").split(":")
+                hour = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
             } else {
-                emptyList()
+                hour = 0
+                minute = 0
             }
 
             return WatchAlarm(
                 id = json.getInt("id"),
-                hour = json.getInt("hour"),
-                minute = json.getInt("minute"),
+                hour = hour,
+                minute = minute,
                 label = json.optString("label", ""),
                 enabled = json.getBoolean("enabled"),
                 daysOfWeek = days,

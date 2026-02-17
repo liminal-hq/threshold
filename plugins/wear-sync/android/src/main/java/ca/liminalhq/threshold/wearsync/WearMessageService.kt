@@ -36,7 +36,7 @@ class WearMessageService : WearableListenerService() {
 
         val plugin = WearSyncPlugin.instance
         if (plugin == null) {
-            Log.w(TAG, "WearSyncPlugin instance not available — message dropped: $path")
+            Log.i(TAG, "WearSyncPlugin not yet loaded — message dropped: $path (startup sync will cover this)")
             return
         }
 

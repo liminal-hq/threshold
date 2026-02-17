@@ -113,7 +113,7 @@ mod tests {
             self.batches.lock().unwrap().push((ids, revision));
         }
 
-        fn publish_immediate(&self, reason: &SyncReason, revision: i64) {
+        fn publish_immediate(&self, reason: &SyncReason, revision: i64, _all_alarms_json: Option<String>) {
             self.immediate
                 .lock()
                 .unwrap()

@@ -165,17 +165,24 @@ fn spawn_publish_task<R: Runtime>(
                         log::error!("wear-sync: failed to publish batch to watch: {error}");
                     }
                 }
-                PublishCommand::Immediate { reason, revision } => {
+                PublishCommand::Immediate { reason, revision, all_alarms_json } => {
                     log::info!(
                         "wear-sync: immediate publish ({:?}) at revision {}",
                         reason,
                         revision
                     );
 
-                    // For immediate syncs, send the reason and revision.
-                    // The Kotlin side will build the full payload.
-                    let alarms_json =
-                        serde_json::to_string(&reason).unwrap_or_default();
+                    // Build a FullSync response with the real alarm data.
+                    let all_alarms: Vec<serde_json::Value> = all_alarms_json
+                        .and_then(|json| serde_json::from_str(&json).ok())
+                        .unwrap_or_default();
+
+                    let response = sync_protocol::SyncResponse::FullSync {
+                        current_revision: revision,
+                        all_alarms,
+                    };
+                    let alarms_json = serde_json::to_string(&response).unwrap_or_default();
+
                     let request = PublishRequest {
                         alarms_json,
                         revision,
@@ -268,7 +275,7 @@ async fn handle_sync_needed(
         publisher.publish_batch(ids, revision);
     }
 
-    publisher.publish_immediate(&payload.reason, payload.revision);
+    publisher.publish_immediate(&payload.reason, payload.revision, payload.all_alarms_json);
 }
 
 #[cfg(test)]
@@ -297,7 +304,7 @@ mod tests {
                 .push(PublishCall::Batch(ids, revision));
         }
 
-        fn publish_immediate(&self, reason: &SyncReason, revision: i64) {
+        fn publish_immediate(&self, reason: &SyncReason, revision: i64, _all_alarms_json: Option<String>) {
             self.calls
                 .lock()
                 .unwrap()
@@ -315,6 +322,7 @@ mod tests {
         let payload = AlarmsSyncNeeded {
             reason: SyncReason::ForceSync,
             revision: 41,
+            all_alarms_json: None,
         };
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
@@ -345,6 +353,7 @@ mod tests {
         let payload = AlarmsSyncNeeded {
             reason: SyncReason::Initialize,
             revision: 1,
+            all_alarms_json: None,
         };
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
@@ -370,6 +379,7 @@ mod tests {
         let payload = AlarmsSyncNeeded {
             reason: SyncReason::Reconnect,
             revision: 11,
+            all_alarms_json: None,
         };
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
@@ -392,7 +402,7 @@ mod tests {
         let publisher = ChannelPublisher::new(tx);
 
         publisher.publish_batch(vec![1, 2], 5);
-        publisher.publish_immediate(&SyncReason::ForceSync, 6);
+        publisher.publish_immediate(&SyncReason::ForceSync, 6, None);
 
         let cmd1 = rx.recv().await.unwrap();
         match cmd1 {
@@ -405,7 +415,7 @@ mod tests {
 
         let cmd2 = rx.recv().await.unwrap();
         match cmd2 {
-            PublishCommand::Immediate { reason, revision } => {
+            PublishCommand::Immediate { reason, revision, .. } => {
                 assert_eq!(reason, SyncReason::ForceSync);
                 assert_eq!(revision, 6);
             }
@@ -427,6 +437,7 @@ mod tests {
         let payload = AlarmsSyncNeeded {
             reason: SyncReason::BatchComplete,
             revision: 51,
+            all_alarms_json: None,
         };
 
         handle_sync_needed(publisher, collector, payload).await;

@@ -7,7 +7,7 @@ use crate::models::SyncReason;
 
 pub trait WearSyncPublisher: Send + Sync {
     fn publish_batch(&self, ids: Vec<i32>, revision: i64);
-    fn publish_immediate(&self, reason: &SyncReason, revision: i64);
+    fn publish_immediate(&self, reason: &SyncReason, revision: i64, all_alarms_json: Option<String>);
 }
 
 // ── Channel-based publisher ──────────────────────────────────────────
@@ -19,7 +19,12 @@ pub enum PublishCommand {
     /// Publish a batch of changed alarm IDs at the given revision.
     Batch { ids: Vec<i32>, revision: i64 },
     /// Publish an immediate full sync for the given reason.
-    Immediate { reason: SyncReason, revision: i64 },
+    Immediate {
+        reason: SyncReason,
+        revision: i64,
+        /// Pre-serialised JSON array of all alarms (from the app crate).
+        all_alarms_json: Option<String>,
+    },
 }
 
 /// A publisher that sends commands through a `tokio::sync::mpsc` channel
@@ -46,10 +51,11 @@ impl WearSyncPublisher for ChannelPublisher {
         }
     }
 
-    fn publish_immediate(&self, reason: &SyncReason, revision: i64) {
+    fn publish_immediate(&self, reason: &SyncReason, revision: i64, all_alarms_json: Option<String>) {
         if let Err(error) = self.tx.send(PublishCommand::Immediate {
             reason: reason.clone(),
             revision,
+            all_alarms_json,
         }) {
             log::error!("wear-sync: failed to send immediate publish command: {error}");
         }
@@ -82,13 +88,14 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         let publisher = ChannelPublisher::new(tx);
 
-        publisher.publish_immediate(&SyncReason::ForceSync, 100);
+        publisher.publish_immediate(&SyncReason::ForceSync, 100, Some("[{\"id\":1}]".into()));
 
         let cmd = rx.try_recv().unwrap();
         match cmd {
-            PublishCommand::Immediate { reason, revision } => {
+            PublishCommand::Immediate { reason, revision, all_alarms_json } => {
                 assert_eq!(reason, SyncReason::ForceSync);
                 assert_eq!(revision, 100);
+                assert_eq!(all_alarms_json, Some("[{\"id\":1}]".into()));
             }
             _ => panic!("Expected Immediate command"),
         }
@@ -102,6 +109,6 @@ mod tests {
 
         // Should not panic, just log an error
         publisher.publish_batch(vec![1], 1);
-        publisher.publish_immediate(&SyncReason::Initialize, 1);
+        publisher.publish_immediate(&SyncReason::Initialize, 1, None);
     }
 }

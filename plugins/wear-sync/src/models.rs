@@ -20,6 +20,9 @@ pub struct AlarmsBatchUpdated {
 pub struct AlarmsSyncNeeded {
     pub reason: SyncReason,
     pub revision: i64,
+    /// Pre-serialised JSON array of all alarms (populated by the app crate).
+    #[serde(default)]
+    pub all_alarms_json: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

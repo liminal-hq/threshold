@@ -44,21 +44,27 @@ pub fn determine_sync_type(watch_revision: i64, current_revision: i64) -> SyncTy
 
 /// The response payload sent to the watch after a sync request.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(tag = "type", rename_all = "PascalCase")]
 pub enum SyncResponse {
     /// Watch is already at the latest revision.
     UpToDate {
+        #[serde(rename = "currentRevision")]
         current_revision: i64,
     },
     /// Delta update: only the alarms that changed plus deleted IDs.
     Incremental {
+        #[serde(rename = "currentRevision")]
         current_revision: i64,
+        #[serde(rename = "updatedAlarms")]
         updated_alarms: Vec<serde_json::Value>,
+        #[serde(rename = "deletedAlarmIds")]
         deleted_alarm_ids: Vec<i32>,
     },
     /// Complete replacement: all active alarms.
     FullSync {
+        #[serde(rename = "currentRevision")]
         current_revision: i64,
+        #[serde(rename = "allAlarms")]
         all_alarms: Vec<serde_json::Value>,
     },
 }
@@ -112,8 +118,8 @@ mod tests {
     fn sync_response_serialises_up_to_date() {
         let response = SyncResponse::UpToDate { current_revision: 42 };
         let json = serde_json::to_string(&response).unwrap();
-        assert!(json.contains("\"type\":\"UP_TO_DATE\""));
-        assert!(json.contains("\"current_revision\":42"));
+        assert!(json.contains("\"type\":\"UpToDate\""));
+        assert!(json.contains("\"currentRevision\":42"));
     }
 
     #[test]
@@ -124,8 +130,8 @@ mod tests {
             deleted_alarm_ids: vec![3, 7],
         };
         let json = serde_json::to_string(&response).unwrap();
-        assert!(json.contains("\"type\":\"INCREMENTAL\""));
-        assert!(json.contains("\"deleted_alarm_ids\":[3,7]"));
+        assert!(json.contains("\"type\":\"Incremental\""));
+        assert!(json.contains("\"deletedAlarmIds\":[3,7]"));
     }
 
     #[test]
@@ -135,8 +141,8 @@ mod tests {
             all_alarms: vec![],
         };
         let json = serde_json::to_string(&response).unwrap();
-        assert!(json.contains("\"type\":\"FULL_SYNC\""));
-        assert!(json.contains("\"all_alarms\":[]"));
+        assert!(json.contains("\"type\":\"FullSync\""));
+        assert!(json.contains("\"allAlarms\":[]"));
     }
 
     #[test]

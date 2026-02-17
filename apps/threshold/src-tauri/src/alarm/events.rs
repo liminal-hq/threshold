@@ -154,6 +154,9 @@ impl AlarmsBatchUpdated {
 pub struct AlarmsSyncNeeded {
     pub reason: SyncReason,
     pub revision: i64,
+    /// Pre-serialised JSON array of all alarms for wear sync.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub all_alarms_json: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
