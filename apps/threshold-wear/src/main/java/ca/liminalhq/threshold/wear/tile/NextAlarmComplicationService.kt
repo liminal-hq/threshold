@@ -14,6 +14,7 @@ import androidx.wear.watchface.complications.data.ShortTextComplicationData
 import androidx.wear.watchface.complications.datasource.ComplicationDataSourceService
 import androidx.wear.watchface.complications.datasource.ComplicationRequest
 import ca.liminalhq.threshold.wear.ThresholdWearApp
+import ca.liminalhq.threshold.wear.data.findNextUpcomingAlarm
 
 private const val TAG = "NextAlarmComplication"
 
@@ -51,9 +52,7 @@ class NextAlarmComplicationService : ComplicationDataSourceService() {
         val app = application as? ThresholdWearApp
         val alarms = app?.alarmRepository?.alarms?.value ?: emptyList()
 
-        val nextAlarm = alarms
-            .filter { it.enabled }
-            .minByOrNull { it.hour * 60 + it.minute }
+        val nextAlarm = findNextUpcomingAlarm(alarms)
 
         val data = when (request.complicationType) {
             ComplicationType.SHORT_TEXT -> {

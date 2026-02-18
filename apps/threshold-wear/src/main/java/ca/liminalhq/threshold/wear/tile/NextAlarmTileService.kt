@@ -17,6 +17,7 @@ import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
 import ca.liminalhq.threshold.wear.ThresholdWearApp
+import ca.liminalhq.threshold.wear.data.findNextUpcomingAlarm
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
@@ -36,9 +37,7 @@ class NextAlarmTileService : TileService() {
         val app = application as? ThresholdWearApp
         val alarms = app?.alarmRepository?.alarms?.value ?: emptyList()
 
-        val nextAlarm = alarms
-            .filter { it.enabled }
-            .minByOrNull { it.hour * 60 + it.minute }
+        val nextAlarm = findNextUpcomingAlarm(alarms)
 
         val layout = if (nextAlarm != null) {
             buildAlarmLayout(nextAlarm.timeDisplay, nextAlarm.label)
