@@ -195,7 +195,18 @@ pub fn run() {
                             }
                             match coord.toggle_alarm(&handle, cmd.alarm_id, cmd.enabled).await {
                                 Ok(_) => log::info!("watch: toggled alarm {} to enabled={}", cmd.alarm_id, cmd.enabled),
-                                Err(e) => log::error!("watch: failed to toggle alarm {}: {e}", cmd.alarm_id),
+                                Err(e) => {
+                                    log::error!("watch: failed to toggle alarm {}: {e} — requesting resync", cmd.alarm_id);
+                                    if let Err(sync_error) = coord
+                                        .emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync)
+                                        .await
+                                    {
+                                        log::error!(
+                                            "watch: failed to emit ForceSync after toggle error for alarm {}: {sync_error}",
+                                            cmd.alarm_id
+                                        );
+                                    }
+                                }
                             }
                         }
                     });

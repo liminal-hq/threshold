@@ -129,7 +129,7 @@ class NextAlarmTileService : TileService() {
                                     .setAndroidActivity(
                                         ActionBuilders.AndroidActivity.Builder()
                                             .setClassName("ca.liminalhq.threshold.wear.presentation.MainActivity")
-                                            .setPackageName("ca.liminalhq.threshold.wear")
+                                            .setPackageName(packageName)
                                             .build()
                                     )
                                     .build()
