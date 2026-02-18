@@ -1,4 +1,4 @@
-// Foreground service — boots Tauri runtime to process watch-initiated writes
+// Foreground service — boots Tauri runtime headlessly to process watch-initiated writes
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -31,10 +31,11 @@ private const val TAG = "WearSyncService"
  * 1. [WearMessageService] receives a save/delete message while plugin is null
  * 2. Starts this service with the message path and data as extras
  * 3. This service shows a brief "Syncing..." notification (required for fg service)
- * 4. Launches the main activity silently (no animation, moved to back) to boot Tauri
- * 5. Polls [WearSyncPlugin.instance] until it becomes available (~1 second)
- * 6. Replays the watch message through the normal plugin path
- * 7. Stops itself
+ * 4. Launches the main activity silently (no animation) to boot Tauri
+ * 5. Immediately moves the task to the back so the user doesn't see it
+ * 6. Polls [WearSyncPlugin.instance] until it becomes available (~1 second)
+ * 7. Replays the watch message through the normal plugin Channel
+ * 8. Stops itself
  *
  * ## Why a foreground service?
  *
@@ -108,8 +109,9 @@ class WearSyncService : Service() {
     }
 
     /**
-     * Launch the main Tauri activity headlessly and wait for the plugin
-     * to become available, then replay the watch message.
+     * Launch the main Tauri activity headlessly, move it to the back
+     * immediately, and wait for the plugin to become available. Then
+     * replay the watch message.
      */
     private fun bootTauriAndReplay(path: String, data: String) {
         scope.launch {
@@ -130,19 +132,26 @@ class WearSyncService : Service() {
                     return@launch
                 }
 
-                // Poll for plugin availability (timeout after 15 seconds)
+                // Poll until plugin is loaded AND Channel is registered
+                // (Channel is set by Rust's run_mobile_plugin right after load)
                 val maxWaitMs = 15_000L
                 val pollIntervalMs = 200L
                 var waited = 0L
 
-                while (WearSyncPlugin.instance == null && waited < maxWaitMs) {
+                while (waited < maxWaitMs) {
+                    val plugin = WearSyncPlugin.instance
+                    if (plugin != null && plugin.isChannelReady) break
                     delay(pollIntervalMs)
                     waited += pollIntervalMs
                 }
 
                 val plugin = WearSyncPlugin.instance
-                if (plugin != null) {
-                    Log.i(TAG, "Plugin available after ${waited}ms, replaying message: $path")
+                if (plugin != null && plugin.isChannelReady) {
+                    Log.i(TAG, "Plugin ready after ${waited}ms, replaying message: $path")
+
+                    // Move the activity to the back so the user doesn't see it.
+                    plugin.moveActivityToBack()
+
                     plugin.onWatchMessage(path, data)
                 } else {
                     Log.e(TAG, "Plugin not available after ${waited}ms, giving up on: $path")

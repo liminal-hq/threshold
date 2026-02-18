@@ -223,30 +223,59 @@ adb shell pm list packages | grep com.google.android.gms
 
 ### Filtered Logcat (Recommended)
 
-Filter by the tags used in the Threshold codebase:
+Filter by the tags used in the Threshold codebase. Use `-s` to silence
+all other tags.
 
 ```bash
-# Watch app logs
-adb logcat -s DataLayerListener:* WearDataLayer:* NextAlarmTile:* NextAlarmComplication:* ThresholdWearApp:*
+# Phone — full filter (app + plugins + wear-sync + errors from any tag)
+adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* \
+  AlarmReceiver:* AlarmRingingService:* BootReceiver:* \
+  SetAlarmActivity:* AlarmService:* ThemeUtils:* TimePrefsPlugin:* \
+  chromium:I Tauri/Console:* *:E \
+  WearSyncPlugin:* WearMessageService:* WearSyncService:* \
+  WearSyncCache:* BatchCollector:*
 
-# Phone-side wear-sync plugin logs
-adb logcat -s WearSyncPlugin:* WearMessageService:* BatchCollector:*
-
-# Both at once (if one device)
-adb logcat -s DataLayerListener:* WearDataLayer:* WearSyncPlugin:* WearMessageService:*
+# Watch — full filter
+adb logcat -s DataLayerListener:* WearDataLayer:* \
+  WearDataLayerClient:* NextAlarmTile:* \
+  NextAlarmComplication:* ThresholdWearApp:*
 ```
+
+When two devices are connected via ADB, target them with `-s <serial>`:
+
+```bash
+adb -s <phone-serial> logcat -s WearSyncPlugin:* WearMessageService:* ...
+adb -s <watch-serial> logcat -s DataLayerListener:* WearDataLayer:* ...
+```
+
+Run `adb devices` to list serials.
 
 ### Tag Reference
 
 | Tag | Source | What It Logs |
 |-----|--------|-------------|
-| `DataLayerListener` | Watch: `DataLayerListenerService.kt` | Incoming data changes, sync payloads, parse errors |
-| `WearDataLayer` | Watch: `WearDataLayerClient.kt` | Outgoing messages (toggle, delete, sync requests) |
-| `ThresholdWearApp` | Watch: `ThresholdWearApp.kt` | App initialisation |
-| `NextAlarmTile` | Watch: `NextAlarmTileService.kt` | Tile render events |
-| `NextAlarmComplication` | Watch: `NextAlarmComplicationService.kt` | Complication updates |
-| `WearSyncPlugin` | Phone: `WearSyncPlugin.kt` | Data Layer publishes, connected nodes |
-| `WearMessageService` | Phone: `WearMessageService.kt` | Incoming watch messages |
+| **Watch** | | |
+| `DataLayerListener` | `DataLayerListenerService.kt` | Incoming data changes, sync payloads, parse errors |
+| `WearDataLayer` | `WearDataLayerClient.kt` | Outgoing messages (toggle, delete, sync requests) |
+| `WearDataLayerClient` | `WearDataLayerClient.kt` | Node resolution, message send results |
+| `ThresholdWearApp` | `ThresholdWearApp.kt` | App initialisation |
+| `NextAlarmTile` | `NextAlarmTileService.kt` | Tile render events |
+| `NextAlarmComplication` | `NextAlarmComplicationService.kt` | Complication updates |
+| **Phone — Wear Sync** | | |
+| `WearSyncPlugin` | `WearSyncPlugin.kt` | Data Layer publishes, connected nodes |
+| `WearMessageService` | `WearMessageService.kt` | Incoming watch messages, offline cache writes |
+| `WearSyncService` | `WearSyncService.kt` | Foreground service boot, cached message replay |
+| `WearSyncCache` | `WearSyncCache.kt` | SharedPreferences read/write for offline sync |
+| `BatchCollector` | `BatchCollector` (Rust log) | Batch debounce events |
+| **Phone — App** | | |
+| `threshold` | Tauri Rust runtime | General app-level Rust logs |
+| `AlarmManager` | Android system | System alarm scheduling |
+| `AlarmManagerPlugin` | `AlarmManagerPlugin.kt` | Plugin bridge calls |
+| `AlarmReceiver` | `AlarmReceiver.kt` | Alarm fired broadcast |
+| `AlarmRingingService` | `AlarmRingingService.kt` | Ring/vibrate/dismiss |
+| `BootReceiver` | `BootReceiver.kt` | Boot recovery scheduling |
+| `Tauri/Console` | WebView console | JS `console.log` from the UI |
+| `chromium` | WebView engine | WebView internals (use `:I` for info only) |
 
 ### Logcat with Timestamps
 

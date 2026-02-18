@@ -3,18 +3,29 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::models::{PublishRequest, SyncRequest};
+use serde::Serialize;
+
+use crate::models::{PublishRequest, SyncRequest, WatchMessage};
 use tauri::{
+    ipc::{Channel, InvokeResponseBody},
     plugin::{PluginApi, PluginHandle},
-    AppHandle, Runtime,
+    AppHandle, Emitter, Runtime,
 };
+
+/// Payload sent to the Kotlin side to register the watch message channel.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WatchMessageHandler {
+    handler: Channel,
+}
 
 /// Initialise the mobile backend for the wear-sync plugin.
 ///
 /// Registers the Kotlin `WearSyncPlugin` via the Tauri auto-generated bridge
-/// so that Rust can invoke `@Command` methods on the Android side.
+/// and sets up a [Channel] so Kotlin can send watch messages directly to Rust
+/// without going through the WebView/JS layer.
 pub fn init<R: Runtime>(
-    _app: &AppHandle<R>,
+    app: &AppHandle<R>,
     api: PluginApi<R, ()>,
 ) -> crate::Result<WearSync<R>> {
     #[cfg(target_os = "android")]
@@ -30,6 +41,35 @@ pub fn init<R: Runtime>(
         let _ = api;
         unreachable!("wear-sync mobile plugin is only supported on Android")
     };
+
+    // Register a Channel with the Kotlin side so it can send watch messages
+    // directly to Rust via JNI, bypassing the WebView/JS layer entirely.
+    let app_handle = app.clone();
+    handle.run_mobile_plugin::<()>(
+        "setWatchMessageHandler",
+        WatchMessageHandler {
+            handler: Channel::new(move |event| {
+                let msg = match event {
+                    InvokeResponseBody::Json(payload) => {
+                        serde_json::from_str::<WatchMessage>(&payload).ok()
+                    }
+                    _ => None,
+                };
+
+                if let Some(msg) = msg {
+                    log::debug!(
+                        "wear-sync: received watch message via channel: path={}",
+                        msg.path
+                    );
+                    let _ = app_handle.emit("wear:message:received", &msg);
+                } else {
+                    log::warn!("wear-sync: failed to parse watch message from channel");
+                }
+
+                Ok(())
+            }),
+        },
+    )?;
 
     Ok(WearSync { handle })
 }
@@ -61,4 +101,3 @@ impl<R: Runtime> WearSync<R> {
             .map_err(Into::into)
     }
 }
-

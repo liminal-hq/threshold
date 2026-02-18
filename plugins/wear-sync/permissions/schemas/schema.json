@@ -319,10 +319,22 @@
           "markdownDescription": "Denies the requestSyncFromWatch command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the wear-sync plugin\n#### This default permission set includes:\n\n- `allow-event-listeners`",
+          "description": "Enables the setWatchMessageHandler command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-setWatchMessageHandler",
+          "markdownDescription": "Enables the setWatchMessageHandler command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the setWatchMessageHandler command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-setWatchMessageHandler",
+          "markdownDescription": "Denies the setWatchMessageHandler command without any pre-configured scope."
+        },
+        {
+          "description": "Default permissions for the wear-sync plugin\n#### This default permission set includes:\n\n- `allow-event-listeners`\n- `allow-setWatchMessageHandler`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the wear-sync plugin\n#### This default permission set includes:\n\n- `allow-event-listeners`"
+          "markdownDescription": "Default permissions for the wear-sync plugin\n#### This default permission set includes:\n\n- `allow-event-listeners`\n- `allow-setWatchMessageHandler`"
         },
         {
           "description": "Allows wear-sync to receive alarm batch and sync events",

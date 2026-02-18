@@ -162,7 +162,7 @@ private fun AlarmCard(
     onLongPress: () -> Unit,
 ) {
     Card(
-        onClick = onToggle,
+        onClick = {},
         backgroundPainter = CardDefaults.cardBackgroundPainter(
             startBackgroundColor = ThresholdSurface,
             endBackgroundColor = ThresholdSurface,

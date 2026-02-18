@@ -109,7 +109,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             });
 
             // Listen for messages from the watch (routed by Kotlin WearMessageService
-            // through WearSyncPlugin.trigger("wear:message:received", ...))
+            // through WearSyncPlugin → Channel → app.emit("wear:message:received"))
             let watch_app = app.clone();
             app.listen("wear:message:received", move |event| {
                 match serde_json::from_str::<WatchMessage>(event.payload()) {

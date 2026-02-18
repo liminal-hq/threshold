@@ -5,6 +5,7 @@ Default permissions for the wear-sync plugin
 #### This default permission set includes the following:
 
 - `allow-event-listeners`
+- `allow-setWatchMessageHandler`
 
 ## Permission Table
 
@@ -63,6 +64,32 @@ Enables the requestSyncFromWatch command without any pre-configured scope.
 <td>
 
 Denies the requestSyncFromWatch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:allow-setWatchMessageHandler`
+
+</td>
+<td>
+
+Enables the setWatchMessageHandler command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-setWatchMessageHandler`
+
+</td>
+<td>
+
+Denies the setWatchMessageHandler command without any pre-configured scope.
 
 </td>
 </tr>

@@ -6,12 +6,12 @@
 package ca.liminalhq.threshold.wearsync
 
 import android.app.Activity
-import android.net.Uri
 import android.util.Log
 import android.webkit.WebView
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
+import app.tauri.plugin.Channel
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
@@ -38,6 +38,11 @@ class SyncRequest {
     var revision: Long = 0
 }
 
+@InvokeArg
+class WatchMessageHandlerArgs {
+    lateinit var handler: Channel
+}
+
 @TauriPlugin
 class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
 
@@ -45,6 +50,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     private val dataClient by lazy { Wearable.getDataClient(activity) }
     private val messageClient by lazy { Wearable.getMessageClient(activity) }
     private val nodeClient by lazy { Wearable.getNodeClient(activity) }
+    private var watchMessageChannel: Channel? = null
 
     override fun load(webview: WebView) {
         super.load(webview)
@@ -113,16 +119,66 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     /**
+     * Register a [Channel] for sending watch messages from Kotlin back to Rust.
+     *
+     * Called by the Rust plugin setup via `run_mobile_plugin("setWatchMessageHandler", ...)`.
+     * The channel is backed by JNI so data flows directly Kotlin → Rust without
+     * going through the WebView/JS layer.
+     */
+    @Command
+    fun setWatchMessageHandler(invoke: Invoke) {
+        val args = invoke.parseArgs(WatchMessageHandlerArgs::class.java)
+        watchMessageChannel = args.handler
+        Log.d(TAG, "Watch message handler channel registered")
+
+        // Drain any messages that were queued while the plugin wasn't loaded
+        val queued = WearSyncQueue.drainAll(activity)
+        if (queued.isNotEmpty()) {
+            Log.i(TAG, "Replaying ${queued.size} queued message(s)")
+            for ((path, data) in queued) {
+                onWatchMessage(path, data)
+            }
+        }
+
+        invoke.resolve()
+    }
+
+    /**
+     * Move the host activity to the back of the task stack.
+     *
+     * Called by [WearSyncService] after cold-booting the Tauri runtime so
+     * the user doesn't see the app flash to the foreground.
+     */
+    fun moveActivityToBack() {
+        activity.runOnUiThread {
+            val moved = activity.moveTaskToBack(true)
+            Log.d(TAG, "moveTaskToBack result: $moved")
+        }
+    }
+
+    /**
      * Called by [WearMessageService] when a message arrives from the watch.
-     * Triggers a Tauri event so the Rust side can process it.
+     *
+     * Sends the message to Rust via the [Channel] registered by
+     * [setWatchMessageHandler]. The Rust side receives the data directly
+     * through JNI without involving the WebView.
      */
     fun onWatchMessage(path: String, data: String) {
-        val payload = JSObject().apply {
-            put("path", path)
-            put("data", data)
+        val event = JSObject()
+        event.put("path", path)
+        event.put("data", data)
+
+        val channel = watchMessageChannel
+        if (channel != null) {
+            channel.send(event)
+            Log.d(TAG, "Sent watch message to Rust channel: path=$path")
+        } else {
+            Log.w(TAG, "Watch message channel not registered, cannot forward: path=$path")
         }
-        trigger("wear:message:received", payload)
     }
+
+    /** Whether the Kotlin→Rust Channel has been registered and is ready. */
+    val isChannelReady: Boolean get() = watchMessageChannel != null
 
     companion object {
         /**

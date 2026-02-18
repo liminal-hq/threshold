@@ -52,9 +52,9 @@ pub struct SyncRequest {
     pub revision: i64,
 }
 
-// ── Watch message types (Kotlin → Rust via triggered events) ────────
+// ── Watch message types (Kotlin → Rust via Channel) ─────────────────
 
-/// Payload from the Kotlin `trigger("wear:message:received", ...)` call.
+/// Watch message received from Kotlin via the JNI-backed Channel.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WatchMessage {
     pub path: String,
