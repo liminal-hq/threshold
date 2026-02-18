@@ -5,10 +5,9 @@
 
 package ca.liminalhq.threshold.wear.presentation
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -154,7 +154,6 @@ private fun AlarmList(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AlarmCard(
     alarm: WatchAlarm,
@@ -162,7 +161,7 @@ private fun AlarmCard(
     onLongPress: () -> Unit,
 ) {
     Card(
-        onClick = {},
+        onClick = onToggle,
         backgroundPainter = CardDefaults.cardBackgroundPainter(
             startBackgroundColor = ThresholdSurface,
             endBackgroundColor = ThresholdSurface,
@@ -170,10 +169,11 @@ private fun AlarmCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 2.dp)
-            .combinedClickable(
-                onClick = onToggle,
-                onLongClick = onLongPress,
-            ),
+            .pointerInput(onLongPress) {
+                detectTapGestures(
+                    onLongPress = { onLongPress() },
+                )
+            },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
