@@ -41,7 +41,7 @@ pub fn init<R: Runtime>(
         // directly to Rust via JNI, bypassing the WebView/JS layer entirely.
         let app_handle = app.clone();
         handle.run_mobile_plugin::<()>(
-            "setWatchMessageHandler",
+            "set_watch_message_handler",
             WatchMessageHandler {
                 handler: Channel::new(move |event| {
                     let msg = match event {
@@ -102,7 +102,7 @@ impl<R: Runtime> WearSync<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("publishToWatch", request)
+            .run_mobile_plugin("publish_to_watch", request)
             .map_err(Into::into)
     }
 
@@ -118,7 +118,7 @@ impl<R: Runtime> WearSync<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("requestSyncFromWatch", request)
+            .run_mobile_plugin("request_sync_from_watch", request)
             .map_err(Into::into)
     }
 
@@ -137,7 +137,7 @@ impl<R: Runtime> WearSync<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("markWatchPipelineReady", ())
+            .run_mobile_plugin("mark_watch_pipeline_ready", ())
             .map_err(Into::into)
     }
 }

@@ -5,8 +5,8 @@ Default permissions for the wear-sync plugin
 #### This default permission set includes the following:
 
 - `allow-event-listeners`
-- `allow-setWatchMessageHandler`
-- `allow-markWatchPipelineReady`
+- `allow-set-watch-message-handler`
+- `allow-mark-watch-pipeline-ready`
 
 ## Permission Table
 
@@ -20,25 +20,12 @@ Default permissions for the wear-sync plugin
 <tr>
 <td>
 
-`wear-sync:allow-markWatchPipelineReady`
+`wear-sync:allow-mark-watch-pipeline-ready`
 
 </td>
 <td>
 
-Enables the markWatchPipelineReady command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`wear-sync:deny-markWatchPipelineReady`
-
-</td>
-<td>
-
-Denies the markWatchPipelineReady command without any pre-configured scope.
+Enables the mark_watch_pipeline_ready command without any pre-configured scope.
 
 </td>
 </tr>
@@ -46,25 +33,12 @@ Denies the markWatchPipelineReady command without any pre-configured scope.
 <tr>
 <td>
 
-`wear-sync:allow-publishToWatch`
+`wear-sync:deny-mark-watch-pipeline-ready`
 
 </td>
 <td>
 
-Enables the publishToWatch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`wear-sync:deny-publishToWatch`
-
-</td>
-<td>
-
-Denies the publishToWatch command without any pre-configured scope.
+Denies the mark_watch_pipeline_ready command without any pre-configured scope.
 
 </td>
 </tr>
@@ -72,25 +46,12 @@ Denies the publishToWatch command without any pre-configured scope.
 <tr>
 <td>
 
-`wear-sync:allow-requestSyncFromWatch`
+`wear-sync:allow-publish-to-watch`
 
 </td>
 <td>
 
-Enables the requestSyncFromWatch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`wear-sync:deny-requestSyncFromWatch`
-
-</td>
-<td>
-
-Denies the requestSyncFromWatch command without any pre-configured scope.
+Enables the publish_to_watch command without any pre-configured scope.
 
 </td>
 </tr>
@@ -98,12 +59,12 @@ Denies the requestSyncFromWatch command without any pre-configured scope.
 <tr>
 <td>
 
-`wear-sync:allow-setWatchMessageHandler`
+`wear-sync:deny-publish-to-watch`
 
 </td>
 <td>
 
-Enables the setWatchMessageHandler command without any pre-configured scope.
+Denies the publish_to_watch command without any pre-configured scope.
 
 </td>
 </tr>
@@ -111,12 +72,51 @@ Enables the setWatchMessageHandler command without any pre-configured scope.
 <tr>
 <td>
 
-`wear-sync:deny-setWatchMessageHandler`
+`wear-sync:allow-request-sync-from-watch`
 
 </td>
 <td>
 
-Denies the setWatchMessageHandler command without any pre-configured scope.
+Enables the request_sync_from_watch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-request-sync-from-watch`
+
+</td>
+<td>
+
+Denies the request_sync_from_watch command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:allow-set-watch-message-handler`
+
+</td>
+<td>
+
+Enables the set_watch_message_handler command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-set-watch-message-handler`
+
+</td>
+<td>
+
+Denies the set_watch_message_handler command without any pre-configured scope.
 
 </td>
 </tr>

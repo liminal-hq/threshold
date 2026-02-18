@@ -16,7 +16,7 @@ private const val KEY_REVISION = "cached_revision"
 /**
  * Persistent cache of the last-published alarm sync payload.
  *
- * Written every time [WearSyncPlugin.publishToWatch] succeeds, read by
+ * Written every time [WearSyncPlugin.publish_to_watch] succeeds, read by
  * [WearMessageService] when a sync request arrives and the Tauri plugin
  * isn't loaded yet. This allows the phone to respond to watch sync
  * requests without booting the full Tauri runtime.

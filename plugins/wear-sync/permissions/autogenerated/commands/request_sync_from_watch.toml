@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-request-sync-from-watch"
+description = "Enables the request_sync_from_watch command without any pre-configured scope."
+commands.allow = ["request_sync_from_watch"]
+
+[[permission]]
+identifier = "deny-request-sync-from-watch"
+description = "Denies the request_sync_from_watch command without any pre-configured scope."
+commands.deny = ["request_sync_from_watch"]

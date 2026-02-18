@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 const COMMANDS: &[&str] = &[
-    "publishToWatch",
-    "requestSyncFromWatch",
-    "setWatchMessageHandler",
-    "markWatchPipelineReady",
+    "publish_to_watch",
+    "request_sync_from_watch",
+    "set_watch_message_handler",
+    "mark_watch_pipeline_ready",
 ];
 
 fn main() {

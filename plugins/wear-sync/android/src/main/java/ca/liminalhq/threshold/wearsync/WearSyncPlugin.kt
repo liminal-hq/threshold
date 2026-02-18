@@ -75,7 +75,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * receives it through its `WearableListenerService`.
      */
     @Command
-    fun publishToWatch(invoke: Invoke) {
+    fun publish_to_watch(invoke: Invoke) {
         val args = invoke.parseArgs(PublishRequest::class.java)
         scope.launch {
             try {
@@ -107,7 +107,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * node, prompting them to request a full or incremental sync.
      */
     @Command
-    fun requestSyncFromWatch(invoke: Invoke) {
+    fun request_sync_from_watch(invoke: Invoke) {
         val args = invoke.parseArgs(SyncRequest::class.java)
         scope.launch {
             try {
@@ -130,12 +130,12 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     /**
      * Register a [Channel] for sending watch messages from Kotlin back to Rust.
      *
-     * Called by the Rust plugin setup via `run_mobile_plugin("setWatchMessageHandler", ...)`.
+     * Called by the Rust plugin setup via `run_mobile_plugin("set_watch_message_handler", ...)`.
      * The channel is backed by JNI so data flows directly Kotlin → Rust without
      * going through the WebView/JS layer.
      */
     @Command
-    fun setWatchMessageHandler(invoke: Invoke) {
+    fun set_watch_message_handler(invoke: Invoke) {
         val args = invoke.parseArgs(WatchMessageHandlerArgs::class.java)
         watchMessageChannel = args.handler
         Log.d(TAG, "Watch message handler channel registered")
@@ -150,7 +150,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * Called by Rust after the app crate has registered watch event listeners.
      */
     @Command
-    fun markWatchPipelineReady(invoke: Invoke) {
+    fun mark_watch_pipeline_ready(invoke: Invoke) {
         watchPipelineReady = true
         Log.d(TAG, "Watch pipeline marked ready")
         drainQueuedMessages()
@@ -174,7 +174,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * Called by [WearMessageService] when a message arrives from the watch.
      *
      * Sends the message to Rust via the [Channel] registered by
-     * [setWatchMessageHandler]. The Rust side receives the data directly
+     * [set_watch_message_handler]. The Rust side receives the data directly
      * through JNI without involving the WebView.
      */
     fun onWatchMessage(path: String, data: String) {

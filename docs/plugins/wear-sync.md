@@ -96,7 +96,7 @@ plugins/wear-sync/
 4. Background task emits `wear:sync:batch_ready` event
 5. App crate listener calls `AlarmCoordinator.emit_sync_needed(BatchComplete)` which fetches all alarms
 6. `alarms:sync:needed` fires with `allAlarmsJson` → `PublishCommand::Immediate` → `SyncResponse::FullSync`
-7. Tauri bridges to `WearSyncPlugin.publishToWatch()` (Kotlin)
+7. Tauri bridges to `WearSyncPlugin.publish_to_watch()` (Kotlin)
 8. Kotlin writes `PutDataMapRequest` to `/threshold/alarms` via `DataClient`
 9. Watch `DataLayerListenerService` receives the `DataItem` change
 
@@ -159,8 +159,8 @@ When the app is closed:
 - **Offline reads (`/threshold/sync_request`)** are served directly from `WearSyncCache` without booting Tauri
 - **Offline writes (`/threshold/save_alarm`, `/threshold/delete_alarm`)** are persisted in `WearSyncQueue`, then `WearSyncService` boots the runtime and waits for readiness
 - Queue drain occurs only after:
-  - Channel registration (`setWatchMessageHandler`)
-  - Explicit readiness signal (`markWatchPipelineReady`) from the app crate after watch listeners are registered
+  - Channel registration (`set_watch_message_handler`)
+  - Explicit readiness signal (`mark_watch_pipeline_ready`) from the app crate after watch listeners are registered
 
 For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-os-companion.md).
 
@@ -168,10 +168,10 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 
 | Command | Description |
 |---------|-------------|
-| `publishToWatch` | Write alarm data to Wear Data Layer `DataItem` |
-| `requestSyncFromWatch` | Send sync request message to all connected watch nodes |
-| `setWatchMessageHandler` | Register Kotlin → Rust Channel handler |
-| `markWatchPipelineReady` | Mark app listener readiness and drain queued messages |
+| `publish_to_watch` | Write alarm data to Wear Data Layer `DataItem` |
+| `request_sync_from_watch` | Send sync request message to all connected watch nodes |
+| `set_watch_message_handler` | Register Kotlin → Rust Channel handler |
+| `mark_watch_pipeline_ready` | Mark app listener readiness and drain queued messages |
 
 ## Events
 

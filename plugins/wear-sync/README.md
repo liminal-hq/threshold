@@ -79,7 +79,7 @@ sequenceDiagram
     Note over BC: Reset timer
 
     BC-->>WS: timer expires → ChannelPublisher
-    WS->>KT: publishToWatch(alarmsJson, revision)
+    WS->>KT: publish_to_watch(alarmsJson, revision)
     KT->>Watch: PutDataMapRequest → /threshold/alarms
 ```
 
@@ -130,10 +130,10 @@ On rejection, the watch receives a conflict error and should trigger a full sync
 
 This plugin requires these permissions:
 
-- `allow-publishToWatch`: Grants access to `publishToWatch`
-- `allow-requestSyncFromWatch`: Grants access to `requestSyncFromWatch`
-- `allow-setWatchMessageHandler`: Registers Kotlin → Rust Channel handler
-- `allow-markWatchPipelineReady`: Marks watch pipeline readiness before queue drain
+- `allow-publish-to-watch`: Grants access to `publish_to_watch`
+- `allow-request-sync-from-watch`: Grants access to `request_sync_from_watch`
+- `allow-set-watch-message-handler`: Registers Kotlin → Rust Channel handler
+- `allow-mark-watch-pipeline-ready`: Marks watch pipeline readiness before queue drain
 
 ## Android Permissions
 
