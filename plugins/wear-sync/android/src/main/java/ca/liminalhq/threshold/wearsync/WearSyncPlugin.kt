@@ -55,8 +55,8 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     @Volatile
     private var watchPipelineReady: Boolean = false
 
-    override fun load(webview: WebView) {
-        super.load(webview)
+    override fun load(webView: WebView) {
+        super.load(webView)
         instance = this
         Log.d(TAG, "Initialised wear-sync plugin")
 
