@@ -217,15 +217,19 @@ When the watch sends a save/delete command and the Tauri runtime isn't loaded:
 Watch sends /threshold/save_alarm via MessageClient
   → GMS wakes phone process, delivers to WearMessageService
   → WearSyncPlugin.instance == null
+  → Persist message in WearSyncQueue (SharedPreferences)
   → Start WearSyncService (foreground service)
     → Shows brief "Syncing with watch..." notification
     → Boots Tauri runtime headlessly (~1 second to plugin ready)
     → WearSyncPlugin loads, sets instance
-    → Replays the queued message through normal path
+    → Waits for explicit watch pipeline readiness from Rust/app listeners
+    → Drains WearSyncQueue and forwards messages via Channel
     → AlarmCoordinator processes the write
     → Events propagate: alarm-manager schedules, wear-sync publishes
     → WearSyncService stops itself
 ```
+
+**Readiness handshake:** Queue drain is gated by both `setWatchMessageHandler` and `markWatchPipelineReady`. The app crate emits the ready signal after registering `wear:alarm:save`, `wear:alarm:delete`, and `wear:sync:request` listeners, preventing early-replay races during cold boot.
 
 **Why a foreground service?**
 - Android 12+ restricts background Activity launches

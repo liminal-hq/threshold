@@ -47,7 +47,7 @@ flowchart TD
         WS --> BC[BatchCollector<br/>500ms debounce]
         BC --> CP[ChannelPublisher]
         CP -->|Tauri bridge| KT[WearSyncPlugin.kt<br/>DataClient + MessageClient]
-        WMS[WearMessageService.kt] -->|trigger event| WS
+    WMS[WearMessageService.kt] -->|Channel send| WS
     end
 
     KT <-->|Bluetooth<br/>Wear Data Layer| Watch[Wear OS Watch]
@@ -95,7 +95,7 @@ sequenceDiagram
 
     Watch->>WMS: MessageClient message
     WMS->>KT: onWatchMessage(path, data)
-    KT-->>WS: trigger wear:message:received
+    KT-->>WS: Channel.send(path, data)
     WS->>WS: parse path
     alt /threshold/sync_request
         WS-->>App: emit wear:sync:request
@@ -132,6 +132,8 @@ This plugin requires these permissions:
 
 - `allow-publishToWatch`: Grants access to `publishToWatch`
 - `allow-requestSyncFromWatch`: Grants access to `requestSyncFromWatch`
+- `allow-setWatchMessageHandler`: Registers Kotlin → Rust Channel handler
+- `allow-markWatchPipelineReady`: Marks watch pipeline readiness before queue drain
 
 ## Android Permissions
 

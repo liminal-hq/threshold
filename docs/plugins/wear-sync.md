@@ -15,7 +15,7 @@ The `wear-sync` plugin synchronises alarm data between the Threshold phone app a
 - **Conflict Detection**: Rejects stale watch updates using revision comparison
 - **Tombstone Tracking**: Handles deleted alarms correctly across restarts
 - **FullSync Payloads**: All publishes send complete alarm state (~200 bytes/alarm, well under 100 KB DataItem limit)
-- **No JNI**: Uses Tauri's auto-generated `@Command` / `@InvokeArg` bridge
+- **No manual JNI**: Uses Tauri `@Command` / `@InvokeArg` plus `Channel` bridge
 
 ## Architecture
 
@@ -42,12 +42,13 @@ The `wear-sync` plugin synchronises alarm data between the Threshold phone app a
 │                           │  - DataClient (publish)      │  │
 │                           │  - MessageClient (request)   │  │
 │                           │  - NodeClient (discovery)    │  │
+│                           │  - WearSyncQueue (offline)   │  │
 │                           └──────────┬───────────────────┘  │
 │                                      │                       │
 │                           ┌──────────▼───────────────────┐  │
 │                           │ WearMessageService.kt        │  │
 │                           │  - Incoming watch messages   │  │
-│                           │  - Routes to plugin trigger  │  │
+│                           │  - Queues offline writes     │  │
 │                           └──────────┬───────────────────┘  │
 └──────────────────────────────────────┼──────────────────────┘
                                        │ Bluetooth
@@ -105,7 +106,7 @@ plugins/wear-sync/
 
 1. Watch sends `MessageClient` message to phone
 2. `WearMessageService.kt` receives message, routes by path
-3. Calls `WearSyncPlugin.onWatchMessage()` → triggers `wear:message:received` Tauri event
+3. Kotlin forwards via `Channel.send(...)` once pipeline readiness is confirmed
 4. Rust `handle_watch_message()` parses path and re-emits structured event:
    - `/threshold/sync_request` → `wear:sync:request`
    - `/threshold/save_alarm` → `wear:alarm:save`
@@ -153,7 +154,15 @@ On rejection, the watch receives a conflict error and should trigger a full sync
 
 ## Offline Sync
 
-For details on how sync works when the phone app is closed (SharedPreferences cache for reads, foreground service for writes), see [architecture/wear-os-companion.md](../architecture/wear-os-companion.md).
+When the app is closed:
+
+- **Offline reads (`/threshold/sync_request`)** are served directly from `WearSyncCache` without booting Tauri
+- **Offline writes (`/threshold/save_alarm`, `/threshold/delete_alarm`)** are persisted in `WearSyncQueue`, then `WearSyncService` boots the runtime and waits for readiness
+- Queue drain occurs only after:
+  - Channel registration (`setWatchMessageHandler`)
+  - Explicit readiness signal (`markWatchPipelineReady`) from the app crate after watch listeners are registered
+
+For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-os-companion.md).
 
 ## Kotlin Commands
 
@@ -161,6 +170,8 @@ For details on how sync works when the phone app is closed (SharedPreferences ca
 |---------|-------------|
 | `publishToWatch` | Write alarm data to Wear Data Layer `DataItem` |
 | `requestSyncFromWatch` | Send sync request message to all connected watch nodes |
+| `setWatchMessageHandler` | Register Kotlin → Rust Channel handler |
+| `markWatchPipelineReady` | Mark app listener readiness and drain queued messages |
 
 ## Events
 
