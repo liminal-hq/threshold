@@ -45,9 +45,26 @@ impl<R: Runtime> AlarmManager<R> {
     }
 
     pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
-        self.handle
+        let payload: serde_json::Value = self
+            .handle
             .run_mobile_plugin("get_launch_args", ())
-            .map_err(Into::into)
+            .map_err(Into::into)?;
+
+        // Compatibility: accept either direct array payloads or `{ value: [...] }`
+        // wrapper objects from the Android plugin.
+        let alarms_value = match payload {
+            serde_json::Value::Array(_) => payload,
+            serde_json::Value::Object(map) => map
+                .get("value")
+                .cloned()
+                .unwrap_or(serde_json::Value::Array(vec![])),
+            _ => serde_json::Value::Array(vec![]),
+        };
+
+        serde_json::from_value::<Vec<ImportedAlarm>>(alarms_value)
+            .map_err(|error| crate::Error::MobilePlugin(format!(
+                "failed to deserialize launch args payload: {error}"
+            )))
     }
 
     pub fn pick_alarm_sound(
