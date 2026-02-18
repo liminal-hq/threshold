@@ -26,6 +26,7 @@ import kotlinx.coroutines.tasks.await
 private const val TAG = "WearSyncPlugin"
 private const val DATA_PATH_ALARMS = "/threshold/alarms"
 private const val MSG_PATH_SYNC_REQUEST = "/threshold/sync_request"
+private const val EXTRA_HEADLESS_BOOT = "wear_sync_headless_boot"
 
 @InvokeArg
 class PublishRequest {
@@ -56,6 +57,12 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
         super.load(webview)
         instance = this
         Log.d(TAG, "Initialised wear-sync plugin")
+
+        // If the activity was launched for a wear-sync cold boot, push it to
+        // the background as early as possible to minimise visible flashing.
+        if (activity.intent?.getBooleanExtra(EXTRA_HEADLESS_BOOT, false) == true) {
+            moveActivityToBack()
+        }
     }
 
     /**

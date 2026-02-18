@@ -116,21 +116,16 @@ class WearSyncService : Service() {
     private fun bootTauriAndReplay(path: String, data: String) {
         scope.launch {
             try {
-                // Launch the main activity to boot Tauri.
-                // FLAG_ACTIVITY_NO_ANIMATION prevents a visual flash.
-                val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-                if (launchIntent != null) {
-                    launchIntent.addFlags(
+                // Launch a transparent bootstrap activity to minimise visible UI
+                // while the main Tauri activity is started.
+                val bootstrapIntent = Intent(this@WearSyncService, WearSyncBootstrapActivity::class.java).apply {
+                    addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_NO_ANIMATION
+                            Intent.FLAG_ACTIVITY_NO_ANIMATION
                     )
-                    startActivity(launchIntent)
-                    Log.d(TAG, "Launched main activity to boot Tauri runtime")
-                } else {
-                    Log.e(TAG, "Could not get launch intent for $packageName")
-                    stopSelf()
-                    return@launch
                 }
+                startActivity(bootstrapIntent)
+                Log.d(TAG, "Launched bootstrap activity to boot Tauri runtime")
 
                 // Poll until plugin is loaded AND Channel is registered
                 // (Channel is set by Rust's run_mobile_plugin right after load)
