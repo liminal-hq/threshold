@@ -48,7 +48,7 @@ impl<R: Runtime> AlarmManager<R> {
         let payload: serde_json::Value = self
             .handle
             .run_mobile_plugin("get_launch_args", ())
-            .map_err(Into::into)?;
+            .map_err(crate::Error::from)?;
 
         // Compatibility: accept either direct array payloads or `{ value: [...] }`
         // wrapper objects from the Android plugin.
