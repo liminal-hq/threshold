@@ -34,7 +34,7 @@ private const val TAG = "WearSyncService"
  * 4. Launches the main activity silently (no animation) to boot Tauri
  * 5. Immediately moves the task to the back so the user doesn't see it
  * 6. Polls [WearSyncPlugin.instance] until it becomes available (~1 second)
- * 7. Replays the watch message through the normal plugin Channel
+ * 7. Waits for the plugin Channel to become ready so queued messages can replay
  * 8. Stops itself
  *
  * ## Why a foreground service?
@@ -61,17 +61,10 @@ class WearSyncService : Service() {
             return START_NOT_STICKY
         }
 
-        val path = intent.getStringExtra(EXTRA_PATH)
-        val data = intent.getStringExtra(EXTRA_DATA)
-
-        if (path == null || data == null) {
-            Log.w(TAG, "Missing path or data extras, stopping")
-            stopSelf()
-            return START_NOT_STICKY
-        }
+        val path = intent.getStringExtra(EXTRA_PATH) ?: "unknown"
 
         startForegroundNotification()
-        bootTauriAndReplay(path, data)
+        bootTauriAndReplay(path)
 
         return START_NOT_STICKY
     }
@@ -113,7 +106,7 @@ class WearSyncService : Service() {
      * immediately, and wait for the plugin to become available. Then
      * replay the watch message.
      */
-    private fun bootTauriAndReplay(path: String, data: String) {
+    private fun bootTauriAndReplay(path: String) {
         scope.launch {
             try {
                 // Launch a transparent bootstrap activity to minimise visible UI
@@ -142,12 +135,10 @@ class WearSyncService : Service() {
 
                 val plugin = WearSyncPlugin.instance
                 if (plugin != null && plugin.isChannelReady) {
-                    Log.i(TAG, "Plugin ready after ${waited}ms, replaying message: $path")
+                    Log.i(TAG, "Plugin ready after ${waited}ms, queued messages should replay (trigger path: $path)")
 
                     // Move the activity to the back so the user doesn't see it.
                     plugin.moveActivityToBack()
-
-                    plugin.onWatchMessage(path, data)
                 } else {
                     Log.e(TAG, "Plugin not available after ${waited}ms, giving up on: $path")
                 }

@@ -121,6 +121,7 @@ class WearMessageService : WearableListenerService() {
      */
     private fun handleOfflineWrite(path: String, data: String) {
         Log.i(TAG, "Watch write received offline ($path), starting WearSyncService")
+        WearSyncQueue.enqueue(this, path, data)
 
         val serviceIntent = Intent(this, WearSyncService::class.java).apply {
             putExtra(WearSyncService.EXTRA_PATH, path)
