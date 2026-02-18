@@ -31,21 +31,12 @@ pub fn init<R: Runtime>(
     api: PluginApi<R, ()>,
 ) -> crate::Result<WearSync<R>> {
     #[cfg(target_os = "android")]
-    let handle = api.register_android_plugin(
-        "ca.liminalhq.threshold.wearsync",
-        "WearSyncPlugin",
-    )?;
-
-    #[cfg(not(target_os = "android"))]
     {
-        let _ = app;
-        let _ = api;
-        log::info!("wear-sync: mobile plugin initialised as no-op on non-Android target");
-        return Ok(WearSync {});
-    }
+        let handle = api.register_android_plugin(
+            "ca.liminalhq.threshold.wearsync",
+            "WearSyncPlugin",
+        )?;
 
-    #[cfg(target_os = "android")]
-    {
         // Register a Channel with the Kotlin side so it can send watch messages
         // directly to Rust via JNI, bypassing the WebView/JS layer entirely.
         let app_handle = app.clone();
@@ -78,8 +69,13 @@ pub fn init<R: Runtime>(
         return Ok(WearSync { handle });
     }
 
-    #[allow(unreachable_code)]
-    Ok(WearSync {})
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        let _ = api;
+        log::info!("wear-sync: mobile plugin initialised as no-op on non-Android target");
+        Ok(WearSync {})
+    }
 }
 
 /// Phone-side Wear Data Layer bridge.
