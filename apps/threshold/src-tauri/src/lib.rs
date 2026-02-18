@@ -244,7 +244,13 @@ pub fn run() {
                 }
             });
 
-            // Watch requested a full sync
+            // Watch requested a full sync.
+            //
+            // NOTE: The wear-sync plugin forwards watch revision in this event
+            // payload, but we intentionally force FullSync here. The current
+            // protocol prioritises reliability and simpler recovery semantics,
+            // and alarm payloads are small enough that full-state publishes are
+            // acceptable on the Data Layer.
             let sync_handle = app.handle().clone();
             app.handle().listen("wear:sync:request", move |_event| {
                 let handle = sync_handle.clone();
