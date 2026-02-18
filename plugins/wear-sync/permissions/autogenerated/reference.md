@@ -146,30 +146,4 @@ Denies wear-sync access to alarm batch and sync events
 
 </td>
 </tr>
-
-<tr>
-<td>
-
-`wear-sync:allow-markWatchPipelineReady`
-
-</td>
-<td>
-
-Enables the markWatchPipelineReady command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`wear-sync:deny-markWatchPipelineReady`
-
-</td>
-<td>
-
-Denies the markWatchPipelineReady command without any pre-configured scope.
-
-</td>
-</tr>
 </table>

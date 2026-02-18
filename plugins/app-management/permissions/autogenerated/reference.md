@@ -40,30 +40,4 @@ Denies the minimize_app command without any pre-configured scope.
 
 </td>
 </tr>
-
-<tr>
-<td>
-
-`app-management:allow-minimize-app`
-
-</td>
-<td>
-
-Enables the minimize_app command.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`app-management:deny-minimize-app`
-
-</td>
-<td>
-
-Denies the minimize_app command.
-
-</td>
-</tr>
 </table>

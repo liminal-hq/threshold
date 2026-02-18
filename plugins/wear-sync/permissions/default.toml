@@ -9,13 +9,3 @@ description = "Allows wear-sync to receive alarm batch and sync events"
 [[permission]]
 identifier = "deny-event-listeners"
 description = "Denies wear-sync access to alarm batch and sync events"
-
-[[permission]]
-identifier = "allow-markWatchPipelineReady"
-description = "Enables the markWatchPipelineReady command without any pre-configured scope."
-commands.allow = ["markWatchPipelineReady"]
-
-[[permission]]
-identifier = "deny-markWatchPipelineReady"
-description = "Denies the markWatchPipelineReady command without any pre-configured scope."
-commands.deny = ["markWatchPipelineReady"]

@@ -40,17 +40,4 @@ Denies the show command without any pre-configured scope.
 
 </td>
 </tr>
-
-<tr>
-<td>
-
-`toast:allow-show`
-
-</td>
-<td>
-
-Enables the show command
-
-</td>
-</tr>
 </table>

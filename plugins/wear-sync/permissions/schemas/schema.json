@@ -359,18 +359,6 @@
           "type": "string",
           "const": "deny-event-listeners",
           "markdownDescription": "Denies wear-sync access to alarm batch and sync events"
-        },
-        {
-          "description": "Enables the markWatchPipelineReady command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-markWatchPipelineReady",
-          "markdownDescription": "Enables the markWatchPipelineReady command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the markWatchPipelineReady command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-markWatchPipelineReady",
-          "markdownDescription": "Denies the markWatchPipelineReady command without any pre-configured scope."
         }
       ]
     }
