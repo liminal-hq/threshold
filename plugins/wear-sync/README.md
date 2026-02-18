@@ -135,6 +135,12 @@ This plugin requires these permissions:
 - `allow-set-watch-message-handler`: Registers Kotlin → Rust Channel handler
 - `allow-mark-watch-pipeline-ready`: Marks watch pipeline readiness before queue drain
 
+### Naming Conventions
+
+- Command identifiers use `snake_case` (for example, `publish_to_watch`).
+- Generated permission identifiers use `allow-`/`deny-` prefixes with dash-cased command names (for example, `allow-publish-to-watch`).
+- Custom non-command permissions keep plugin-specific names (for example, `allow-event-listeners`).
+
 ## Android Permissions
 
 This plugin currently requires no Android permissions. The manifest injection mechanism is in place for future use.

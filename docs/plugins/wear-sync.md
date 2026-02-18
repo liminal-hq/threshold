@@ -173,6 +173,12 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 | `set_watch_message_handler` | Register Kotlin → Rust Channel handler |
 | `mark_watch_pipeline_ready` | Mark app listener readiness and drain queued messages |
 
+## Naming Conventions
+
+- Command identifiers use `snake_case` (for example, `publish_to_watch`).
+- Generated permission identifiers use `allow-`/`deny-` prefixes with dash-cased command names (for example, `allow-publish-to-watch`).
+- Custom non-command permissions keep plugin-specific names (for example, `allow-event-listeners`).
+
 ## Events
 
 ### Listened
