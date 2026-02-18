@@ -3,6 +3,8 @@ pub mod commands;
 
 use alarm::{database::AlarmDatabase, AlarmCoordinator};
 use tauri::{Listener, Manager};
+#[cfg(mobile)]
+use tauri_plugin_wear_sync::WearSyncExt;
 
 #[cfg(target_os = "linux")]
 fn configure_linux_env() {
@@ -253,6 +255,11 @@ pub fn run() {
                     }
                 });
             });
+
+            #[cfg(mobile)]
+            if let Err(error) = app.handle().wear_sync().mark_watch_pipeline_ready() {
+                log::warn!("watch: failed to mark watch pipeline ready: {error}");
+            }
 
             // Schedule daily maintenance
             let app_handle = app.handle().clone();

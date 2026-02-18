@@ -52,6 +52,8 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     private val messageClient by lazy { Wearable.getMessageClient(activity) }
     private val nodeClient by lazy { Wearable.getNodeClient(activity) }
     private var watchMessageChannel: Channel? = null
+    @Volatile
+    private var watchPipelineReady: Boolean = false
 
     override fun load(webview: WebView) {
         super.load(webview)
@@ -137,16 +139,21 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
         val args = invoke.parseArgs(WatchMessageHandlerArgs::class.java)
         watchMessageChannel = args.handler
         Log.d(TAG, "Watch message handler channel registered")
+        drainQueuedMessages()
 
-        // Drain any messages that were queued while the plugin wasn't loaded
-        val queued = WearSyncQueue.drainAll(activity)
-        if (queued.isNotEmpty()) {
-            Log.i(TAG, "Replaying ${queued.size} queued message(s)")
-            for ((path, data) in queued) {
-                onWatchMessage(path, data)
-            }
-        }
+        invoke.resolve()
+    }
 
+    /**
+     * Mark the watch message pipeline as ready and drain queued messages.
+     *
+     * Called by Rust after the app crate has registered watch event listeners.
+     */
+    @Command
+    fun markWatchPipelineReady(invoke: Invoke) {
+        watchPipelineReady = true
+        Log.d(TAG, "Watch pipeline marked ready")
+        drainQueuedMessages()
         invoke.resolve()
     }
 
@@ -171,6 +178,12 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * through JNI without involving the WebView.
      */
     fun onWatchMessage(path: String, data: String) {
+        if (!watchPipelineReady) {
+            WearSyncQueue.enqueue(activity, path, data)
+            Log.i(TAG, "Watch pipeline not ready, queued message: path=$path")
+            return
+        }
+
         val event = JSObject()
         event.put("path", path)
         event.put("data", data)
@@ -180,7 +193,22 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
             channel.send(event)
             Log.d(TAG, "Sent watch message to Rust channel: path=$path")
         } else {
-            Log.w(TAG, "Watch message channel not registered, cannot forward: path=$path")
+            WearSyncQueue.enqueue(activity, path, data)
+            Log.w(TAG, "Watch message channel not registered, queued message: path=$path")
+        }
+    }
+
+    private fun drainQueuedMessages() {
+        if (!watchPipelineReady || watchMessageChannel == null) {
+            return
+        }
+
+        val queued = WearSyncQueue.drainAll(activity)
+        if (queued.isNotEmpty()) {
+            Log.i(TAG, "Replaying ${queued.size} queued message(s)")
+            for ((path, data) in queued) {
+                onWatchMessage(path, data)
+            }
         }
     }
 

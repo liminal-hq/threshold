@@ -100,4 +100,14 @@ impl<R: Runtime> WearSync<R> {
             .run_mobile_plugin("requestSyncFromWatch", request)
             .map_err(Into::into)
     }
+
+    /// Mark the watch message pipeline as ready on Kotlin side.
+    ///
+    /// Called after the app has registered its watch event listeners so the
+    /// Kotlin side can drain queued messages without racing app setup.
+    pub fn mark_watch_pipeline_ready(&self) -> crate::Result<()> {
+        self.handle
+            .run_mobile_plugin("markWatchPipelineReady", ())
+            .map_err(Into::into)
+    }
 }
