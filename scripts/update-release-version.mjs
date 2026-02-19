@@ -317,6 +317,12 @@ function deriveTauriVersionCode(version) {
   return parsed.major * 1_000_000 + parsed.minor * 1_000 + parsed.patch;
 }
 
+function deriveWearVersionCode(version) {
+  // Keep Wear version codes in a separate range to avoid Play collisions.
+  // watchVC = phoneVC + 1,000,000,000
+  return deriveTauriVersionCode(version) + 1_000_000_000;
+}
+
 async function ask(rl, question, defaultValue = "") {
   const suffix = defaultValue === "" ? "" : ` [${defaultValue}]`;
   const answer = (await rl.question(`${paint("?", COLOUR.cyan)} ${question}${suffix}: `)).trim();
@@ -673,22 +679,6 @@ async function showHelpScreen(rl) {
   await ask(rl, "Press Enter to return");
 }
 
-async function askVersionCode(rl, label, currentCode) {
-  while (true) {
-    const proposed = await ask(rl, label, String(currentCode + 1));
-    const parsed = Number.parseInt(proposed, 10);
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      console.log(paint("Version code must be a positive integer.", COLOUR.yellow));
-      continue;
-    }
-    if (parsed < currentCode) {
-      console.log(paint(`Version code should not decrease (current: ${currentCode}).`, COLOUR.yellow));
-      continue;
-    }
-    return parsed;
-  }
-}
-
 function tagExistsLocally(tagName) {
   const result = spawnSync("git", ["tag", "--list", tagName], { encoding: "utf8" });
   return result.status === 0 && result.stdout.trim() === tagName;
@@ -762,10 +752,6 @@ function updateWearGradle(gradleText, versionName, versionCode) {
     /versionCode\s*=\s*\d+/,
     `versionCode = ${versionCode}`,
   );
-
-  if (outputText === gradleText) {
-    throw new Error("No changes were applied to wear build.gradle.kts");
-  }
 
   return outputText;
 }
@@ -960,6 +946,8 @@ async function chooseTag(rl, currentState, draftState, defaultTag) {
 
     const localDate = localExists ? findLocalTagDate(tagName) : null;
     const location = `${localExists ? "local" : ""}${localExists && remoteExists ? " + " : ""}${remoteExists ? "origin" : ""}`;
+    // If only a local tag exists, default to updating it so Enter can progress.
+    const defaultConflictChoice = localExists && !remoteExists ? "2" : "1";
     const extras = [];
     if (localDate) {
       extras.push(`Local tag date: ${paint(localDate, COLOUR.yellow)}`);
@@ -982,7 +970,7 @@ async function chooseTag(rl, currentState, draftState, defaultTag) {
     const choice = await askWithChoices(
       rl,
       "Select option",
-      "1",
+      defaultConflictChoice,
       ["1", "2", "d", "u", "h", "?", "q"],
       "",
     );
@@ -1048,12 +1036,19 @@ function buildPreview(currentState, nextState) {
 }
 
 function applyChanges(nextState) {
+  const changedFiles = [];
+
   const tauriConf = readJson(PATHS.tauriConf);
+  const tauriBefore = JSON.stringify(tauriConf);
   tauriConf.version = nextState.versionName;
   if (tauriConf.bundle?.android?.versionCode != null) {
     tauriConf.bundle.android.versionCode = nextState.tauriDerivedVersionCode;
   }
-  writeJson(PATHS.tauriConf, tauriConf);
+  const tauriAfter = JSON.stringify(tauriConf);
+  if (tauriBefore !== tauriAfter) {
+    writeJson(PATHS.tauriConf, tauriConf);
+    changedFiles.push(PATHS.tauriConf);
+  }
 
   const wearGradle = readWearGradle(PATHS.wearGradle);
   const updatedWearGradle = updateWearGradle(
@@ -1061,13 +1056,23 @@ function applyChanges(nextState) {
     nextState.versionName,
     nextState.wearVersionCode,
   );
-  fs.writeFileSync(PATHS.wearGradle, updatedWearGradle, "utf8");
+  if (updatedWearGradle !== wearGradle) {
+    fs.writeFileSync(PATHS.wearGradle, updatedWearGradle, "utf8");
+    changedFiles.push(PATHS.wearGradle);
+  }
 
   if (nextState.updateWebVersion) {
     const webPackage = readJson(PATHS.webPackage);
+    const webBefore = JSON.stringify(webPackage);
     webPackage.version = nextState.versionName;
-    writeJson(PATHS.webPackage, webPackage);
+    const webAfter = JSON.stringify(webPackage);
+    if (webBefore !== webAfter) {
+      writeJson(PATHS.webPackage, webPackage);
+      changedFiles.push(PATHS.webPackage);
+    }
   }
+
+  return changedFiles;
 }
 
 async function maybeUpdateOrCreateTag(rl, currentState, draftState, tagName, updateExistingLocalTag) {
@@ -1141,6 +1146,7 @@ async function main() {
 
       draftState.versionName = await chooseVersionName(rl, currentState, draftState);
       draftState.tauriDerivedVersionCode = deriveTauriVersionCode(draftState.versionName);
+      draftState.wearVersionCode = deriveWearVersionCode(draftState.versionName);
 
       const tagSelection = await chooseTag(
         rl,
@@ -1154,12 +1160,7 @@ async function main() {
       renderStatusBoard(
         currentState,
         draftState,
-        `Derived phone android versionCode: ${draftState.tauriDerivedVersionCode}`,
-      );
-      draftState.wearVersionCode = await askVersionCode(
-        rl,
-        "Wear Android version code",
-        Math.max(currentState.wearVersionCode, draftState.tauriDerivedVersionCode - 1),
+        `Derived codes: phone ${draftState.tauriDerivedVersionCode}, wear ${draftState.wearVersionCode}`,
       );
 
       renderStatusBoard(currentState, draftState, "Optional web package version sync");
@@ -1221,8 +1222,12 @@ async function main() {
         continue;
       }
 
-      applyChanges(nextState);
-      console.log(paint("Version updates applied.", COLOUR.green));
+      const changedFiles = applyChanges(nextState);
+      if (changedFiles.length > 0) {
+        console.log(paint(`Version updates applied (${changedFiles.length} file${changedFiles.length === 1 ? "" : "s"}).`, COLOUR.green));
+      } else {
+        console.log(paint("No version file changes were needed; continuing with tag workflow.", COLOUR.yellow));
+      }
 
       await maybeUpdateOrCreateTag(
         rl,
