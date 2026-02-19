@@ -7,6 +7,7 @@
 		"test": "pnpm -r test",
 		"tauri": "pnpm --filter threshold tauri",
 		"version:release": "node scripts/update-release-version.mjs",
+		"build:release": "bash scripts/build-release-devcontainer.sh",
 		"prebuild:desktop": "pnpm -C packages/core build",
 		"prebuild:android": "pnpm -C packages/core build",
 		"build:desktop": "pnpm --filter threshold tauri build",
