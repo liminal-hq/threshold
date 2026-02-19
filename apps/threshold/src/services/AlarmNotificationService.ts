@@ -121,6 +121,10 @@ export class AlarmNotificationService {
 		await registerActionTypes([...deduplicatedById.values()]);
 	}
 
+	public async refreshActionTypes(): Promise<void> {
+		await this.refreshRegisteredActionTypes();
+	}
+
 	async initialiseMobileNotificationActions(handlers: NotificationActionHandlers): Promise<void> {
 		if (!PlatformUtils.isMobile()) return;
 

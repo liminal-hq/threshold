@@ -38,22 +38,9 @@ export class AlarmManagerService {
 		return this.initPromise !== null;
 	}
 
-	private registerNotificationOwners() {
+	private registerNotificationActionTypes() {
 		this.alarmNotificationService.registerActionTypeProvider(
-			'settings-test',
-			(): NotificationActionType[] => [
-				{
-					id: 'test_trigger',
-					actions: [
-						{ id: 'test_action_1', title: 'Test Action 1' },
-						{ id: 'test_action_2', title: 'Test Action 2' },
-					],
-				},
-			],
-		);
-
-		this.alarmNotificationService.registerActionTypeProvider(
-			'alarm-ringing',
+			'alarm_trigger',
 			(): NotificationActionType[] => {
 				const snoozeLength = SettingsService.getSnoozeLength();
 				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
@@ -79,7 +66,7 @@ export class AlarmManagerService {
 		);
 
 		this.alarmNotificationService.registerActionTypeProvider(
-			'alarm-upcoming',
+			'upcoming_alarm',
 			(): NotificationActionType[] => {
 				const snoozeLength = SettingsService.getSnoozeLength();
 				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
@@ -148,7 +135,7 @@ export class AlarmManagerService {
 				if (PlatformUtils.isMobile()) {
 					console.log('[AlarmManager] Registering notification actions...');
 					try {
-						this.registerNotificationOwners();
+						this.registerNotificationActionTypes();
 						await this.alarmNotificationService.initialiseMobileNotificationActions({
 							onDismissRinging: async () => {
 								console.log('[AlarmManager] Action: Dismiss');
@@ -322,6 +309,22 @@ export class AlarmManagerService {
 		console.log('[AlarmManager] Sending test notification...');
 		const isMobile = PlatformUtils.isMobile();
 		try {
+			if (isMobile) {
+				this.alarmNotificationService.registerActionTypeProvider(
+					'test_trigger',
+					(): NotificationActionType[] => [
+						{
+							id: 'test_trigger',
+							actions: [
+								{ id: 'test_action_1', title: 'Test Action 1' },
+								{ id: 'test_action_2', title: 'Test Action 2' },
+							],
+						},
+					],
+				);
+				await this.alarmNotificationService.refreshActionTypes();
+			}
+
 			await sendNotification({
 				title: 'Test Notification',
 				body: 'This is a test notification with actions',
