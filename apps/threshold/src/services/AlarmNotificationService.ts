@@ -166,6 +166,11 @@ export class AlarmNotificationService {
 			if (event.payload?.key === 'snoozeLength') {
 				await this.refreshRegisteredActionTypes();
 			}
+			if (event.payload?.key === 'is24h') {
+				await this.requestUpcomingResync({
+					reason: 'settings-24h-changed',
+				});
+			}
 		});
 
 		await listen(EVENT_NOTIFICATIONS_ACTION_TYPES_REFRESH, async () => {
