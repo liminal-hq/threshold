@@ -29,40 +29,37 @@ The notification system is intentionally split into three layers:
 
 ### `AlarmManagerService`
 
-Owns:
+- **Owns**
     - Listening to core alarm lifecycle events.
     - Native alarm scheduling and cancellation.
     - Emitting `notifications:upcoming:resync` intents.
     - Mapping alarm business operations to commands (`dismiss`, `snooze`, `reportFired`).
-
-Does not own:
+- **Does not own**
     - Notification action type composition internals.
     - Direct toast UI invocation.
 
 ### `AlarmNotificationService`
 
-Owns:
+- **Owns**
     - Action type provider registry and deduplication.
     - Action callback routing by `actionTypeId` and `actionId`.
     - Upcoming notification ID translation and schedule/cancel logic.
     - Notification-domain event API (`notifications:*`).
-
-Does not own:
+- **Does not own**
     - Alarm state mutation authority.
     - Navigation or app window routing.
 
 ### `NotificationToastService`
 
-Owns:
+- **Owns**
     - Listening to `notifications:toast`.
     - Platform filtering and toast rendering.
-
-Does not own:
+- **Does not own**
     - Alarm state, scheduling, or action routing decisions.
 
 ### `SettingsService`
 
-Owns:
+- **Owns**
     - Emitting settings-change events.
     - Registering settings-owned test notification action types.
     - Sending test notifications.
