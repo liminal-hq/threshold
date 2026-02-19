@@ -167,9 +167,7 @@ export class AlarmNotificationService {
 				await this.refreshRegisteredActionTypes();
 			}
 			if (event.payload?.key === 'is24h') {
-				await this.requestUpcomingResync({
-					reason: 'settings-24h-changed',
-				});
+				await this.refreshRegisteredActionTypes();
 			}
 		});
 

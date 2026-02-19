@@ -46,7 +46,7 @@ The notification system is intentionally split into three layers:
     - Action callback routing by `actionTypeId` and `actionId`.
     - Upcoming notification ID translation and schedule/cancel logic.
     - Notification-domain event API (`notifications:*`).
-    - Consuming `settings-changed` for notification-facing concerns (`snoozeLength`, `is24h`) and emitting refresh intents.
+    - Consuming `settings-changed` for notification-facing concerns (`snoozeLength`, `is24h`) and refreshing action registrations.
 - **Does not own**
     - Alarm state mutation authority.
     - Navigation or app window routing.
@@ -75,7 +75,7 @@ The notification system is intentionally split into three layers:
 | `alarms:batch:updated` | Alarm domain | `AlarmManagerService` | Alarm state changed; refresh scheduling |
 | `alarm-ring` | Native/plugin layer | `AlarmManagerService` | Alarm has fired; transition to ringing flow |
 | `settings-changed` (`snoozeLength`) | `SettingsService` | `AlarmNotificationService` | Rebuild action labels |
-| `settings-changed` (`is24h`) | `SettingsService` | `AlarmNotificationService` | Emit resync intent for upcoming-notification text refresh |
+| `settings-changed` (`is24h`) | `SettingsService` | `AlarmNotificationService`, `AlarmManagerService` | Refresh action registration if needed and re-render upcoming-notification text |
 | `notifications:action-types:refresh` | `AlarmNotificationService` | `AlarmNotificationService` | Recompute and register action types |
 | `notifications:upcoming:resync` | `AlarmManagerService`, `AlarmNotificationService` | `AlarmManagerService` | Refresh upcoming notifications (all or targeted) |
 | `notifications:toast` | Notification/domain services | `NotificationToastService` | Present transient confirmation UI |
@@ -101,8 +101,8 @@ This two-step fan-out keeps notification refresh explicit and reusable without c
 - `snoozeLength` change:
     - `AlarmNotificationService` refreshes action types so labels like `Snooze (15m)` stay accurate.
 - `is24h` change:
-    - `AlarmNotificationService` emits `notifications:upcoming:resync`.
-    - `AlarmManagerService` consumes the resync event and regenerates upcoming notification body text in the new time format.
+    - `AlarmNotificationService` refreshes action registrations if any action labels depend on time format.
+    - `AlarmManagerService` directly regenerates upcoming notification body text in the new time format.
 
 ### Toast Intent Path
 
@@ -122,7 +122,7 @@ sequenceDiagram
     participant Tauri as Tauri Notification Plugin
 
     Settings->>NotifHub: emit("settings-changed", { key: "is24h" })
-    NotifHub->>AlarmMgr: emit("notifications:upcoming:resync")
+    Settings->>AlarmMgr: emit("settings-changed", { key: "is24h" })
     AlarmMgr->>AlarmMgr: get alarms
     AlarmMgr->>NotifHub: schedule/cancel upcoming notifications
     NotifHub->>Tauri: sendNotification/cancel/removeActive
