@@ -5,75 +5,112 @@
 
 ## Purpose
 
-This document defines the current notification architecture for Threshold, including ownership boundaries, event flows, and platform behaviour.
+This document describes how Threshold notification behaviour is coordinated across services, which parts are event-driven, and how state-changing actions remain command-driven.
 
-## Design Summary
+The goal is to keep alarm state authoritative and deterministic while allowing notification UX to react quickly to lifecycle and settings changes.
 
-- `AlarmNotificationService` is the notification hub for mobile action types and upcoming alarm notifications.
-- Feature areas register their own notification action types through providers.
-- Alarm lifecycle remains event-driven from `AlarmManagerService`.
-- Settings owns test notifications and settings-specific action registration.
-- Desktop does not use mobile notification action types.
+## Architectural Overview
 
-## Components
+The notification system is intentionally split into three layers:
 
-- `apps/threshold/src/services/AlarmNotificationService.ts`
-  - Registers and refreshes mobile notification action types.
-  - Routes action callbacks by `actionTypeId`.
-  - Schedules/cancels upcoming notifications on mobile.
-- `apps/threshold/src/services/AlarmManagerService.ts`
-  - Listens to alarm lifecycle events.
-  - Syncs native alarms and upcoming notifications.
-  - Registers alarm-related action providers.
-- `apps/threshold/src/services/SettingsService.ts`
-  - Emits settings events.
-  - Sends test notification.
-  - Registers settings-owned test action provider.
+1. Domain state and scheduling intent
+- `AlarmManagerService` responds to core alarm events (`alarms:batch:updated`, `alarm-ring`), keeps native scheduling in sync, and emits notification refresh intents.
+- It does not own notification rendering primitives directly.
+
+2. Notification orchestration
+- `AlarmNotificationService` is the hub for notification action type registration, action dispatch, and upcoming notification schedule/cancel operations.
+- It provides a stable API to feature services and hides plugin-level details.
+
+3. UI feedback and presentation adapters
+- `NotificationToastService` consumes toast intent events and performs platform-specific presentation.
+- This keeps transient UI feedback separate from alarm domain logic.
+
+## Responsibility Boundaries
+
+### `AlarmManagerService`
+
+Owns:
+- Listening to core alarm lifecycle events.
+- Native alarm scheduling and cancellation.
+- Emitting `notifications:upcoming:resync` intents.
+- Mapping alarm business operations to commands (`dismiss`, `snooze`, `reportFired`).
+
+Does not own:
+- Notification action type composition internals.
+- Direct toast UI invocation.
+
+### `AlarmNotificationService`
+
+Owns:
+- Action type provider registry and deduplication.
+- Action callback routing by `actionTypeId` and `actionId`.
+- Upcoming notification ID translation and schedule/cancel logic.
+- Notification-domain event API (`notifications:*`).
+
+Does not own:
+- Alarm state mutation authority.
+- Navigation or app window routing.
+
+### `NotificationToastService`
+
+Owns:
+- Listening to `notifications:toast`.
+- Platform filtering and toast rendering.
+
+Does not own:
+- Alarm state, scheduling, or action routing decisions.
+
+### `SettingsService`
+
+Owns:
+- Emitting settings-change events.
+- Registering settings-owned test notification action types.
+- Sending test notifications.
 
 ## Event-Driven Flows
 
-### 1. Alarm state changes
+### Event Contract Summary
 
-- Event: `alarms:batch:updated`
-- Listener: `AlarmManagerService`
-- Effect: load alarms, call `syncNativeAlarms`, then emit `notifications:upcoming:resync`.
+| Event | Producer | Primary Consumer | Intent |
+|---|---|---|---|
+| `alarms:batch:updated` | Alarm domain | `AlarmManagerService` | Alarm state changed; refresh scheduling |
+| `alarm-ring` | Native/plugin layer | `AlarmManagerService` | Alarm has fired; transition to ringing flow |
+| `settings-changed` (`snoozeLength`) | `SettingsService` | `AlarmNotificationService` | Rebuild action labels |
+| `settings-changed` (`is24h`) | `SettingsService` | `AlarmManagerService` | Trigger upcoming-notification text refresh |
+| `notifications:action-types:refresh` | `AlarmNotificationService` | `AlarmNotificationService` | Recompute and register action types |
+| `notifications:upcoming:resync` | `AlarmManagerService` | `AlarmManagerService` | Refresh upcoming notifications (all or targeted) |
+| `notifications:toast` | Notification/domain services | `NotificationToastService` | Present transient confirmation UI |
 
-### 2. Alarm starts ringing
+### Alarm Batch Update Path
 
-- Event: `alarm-ring`
-- Listener: `AlarmManagerService`
-- Effect: cancel any upcoming notification for that alarm, then navigate/show ringing UI flow.
+1. Core alarm changes emit `alarms:batch:updated`.
+2. `AlarmManagerService` loads current alarms and syncs native scheduling.
+3. `AlarmManagerService` emits `notifications:upcoming:resync` with reason `alarm-batch-updated`.
+4. `AlarmManagerService` receives that event and refreshes upcoming notifications on mobile.
 
-### 3. Snooze length changes
+This two-step fan-out keeps notification refresh explicit and reusable without coupling every caller to refresh internals.
 
-- Event: `settings-changed` with `key: "snoozeLength"`
-- Listener: `AlarmNotificationService`
-- Effect: refresh registered action types so snooze button labels update dynamically.
+### Ringing Path
 
-### 4. Time format changes
+1. `alarm-ring` is emitted by native/plugin flow.
+2. `AlarmManagerService` cancels stale upcoming notification for the firing alarm.
+3. Ringing notification and routing logic execute for platform-specific UX.
+4. Alarm fire is reported through command flow (`reportFired`) for domain consistency.
 
-- Event: `settings-changed` with `key: "is24h"`
-- Listener: `AlarmManagerService` (mobile only)
-- Effect: emit `notifications:upcoming:resync` so upcoming notification text re-renders with updated time format.
+### Settings-Driven Paths
 
-### 5. Action provider changes
+- `snoozeLength` change:
+  - `AlarmNotificationService` refreshes action types so labels like `Snooze (15m)` stay accurate.
+- `is24h` change:
+  - `AlarmManagerService` emits `notifications:upcoming:resync` so upcoming notification body text is regenerated in the new time format.
 
-- Event: `notifications:action-types:refresh`
-- Emitter: `AlarmNotificationService.registerActionTypeProvider/removeActionTypeProvider`
-- Listener: `AlarmNotificationService`
-- Effect: recompute and register deduplicated action types.
+### Toast Intent Path
 
-### 6. Upcoming notification refresh
+1. Domain service emits `notifications:toast` with semantic `kind` and resolved `message`.
+2. `NotificationToastService` filters by platform if requested.
+3. Toast adapter renders on supported platforms.
 
-- Event: `notifications:upcoming:resync`
-- Listener: `AlarmManagerService` (mobile only)
-- Effect: refresh upcoming notifications for all alarms or targeted `alarmIds`.
-
-### 7. Toast presentation
-
-- Event: `notifications:toast`
-- Listener: `NotificationToastService`
-- Effect: show toast on supported platform for notification-related UX confirmation.
+This prevents domain services from depending directly on UI presentation APIs.
 
 ## Mobile Notification Sequence
 
@@ -109,9 +146,68 @@ sequenceDiagram
     NotifHub->>Tauri: registerActionTypes([...])
 ```
 
+## Commands vs Events
+
+Threshold follows a strict split:
+
+- Commands mutate durable alarm state.
+- Events coordinate fan-out, refresh, and UI feedback.
+
+Examples:
+
+- Command-driven:
+  - `AlarmService.dismiss`
+  - `AlarmService.snooze`
+  - `AlarmService.reportFired`
+- Event-driven:
+  - action type refresh
+  - upcoming notification refresh
+  - toast intent presentation
+
+This avoids ambiguous dual-write logic and keeps source-of-truth behaviour predictable.
+
+## Data Contracts
+
+`notifications:upcoming:resync` payload:
+
+```ts
+type NotificationUpcomingResyncEvent = {
+  reason: 'alarm-batch-updated' | 'settings-24h-changed' | 'manual';
+  alarmIds?: number[];
+};
+```
+
+`notifications:toast` payload:
+
+```ts
+type NotificationToastEvent = {
+  kind: 'upcoming-snoozed' | 'alarm-dismissed' | 'generic';
+  message: string;
+  platform?: 'android' | 'ios' | 'desktop';
+};
+```
+
+## Extension Guidance
+
+When adding a new notification feature:
+
+1. Decide ownership first
+- Add action registration where the feature context lives (settings, alarms, future modules), not in a central monolith.
+
+2. Preserve the split
+- Use commands for state mutation and events for fan-out.
+
+3. Prefer semantic event names
+- Event names should describe intent (`notifications:toast`), not implementation details.
+
+4. Document new contracts
+- Update this document with producer, consumer, payload, and lifecycle impact.
+
 ## Desktop Behaviour
 
-- Desktop notifications may still be sent via plugin APIs where supported.
-- Mobile-specific action type registration and action callbacks are not initialised on desktop.
-- Upcoming-notification scheduling in `AlarmNotificationService` is guarded by `PlatformUtils.isMobile()`.
-- Toast presentation via `NotificationToastService` is event-driven and can be platform-filtered by payload.
+Desktop notification support is intentionally lighter:
+
+- Desktop can still send notification payloads through plugin APIs where supported.
+- Mobile action type registration and action callbacks are not initialised on desktop.
+- Upcoming notification schedule/cancel operations are mobile-gated in `AlarmNotificationService`.
+- Toast events still flow through `NotificationToastService`, with optional payload-level platform filtering.
