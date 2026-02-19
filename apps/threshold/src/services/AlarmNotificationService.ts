@@ -21,7 +21,7 @@ type NotificationActionHandlers = {
 	onSnoozeUpcoming: (alarmId: number, snoozeMinutes: number) => Promise<void>;
 };
 
-type NotificationAction = {
+export type NotificationAction = {
 	id: string;
 	title: string;
 	input?: boolean;
@@ -29,7 +29,7 @@ type NotificationAction = {
 	foreground?: boolean;
 };
 
-type NotificationActionType = {
+export type NotificationActionType = {
 	id: string;
 	actions: NotificationAction[];
 };
@@ -40,12 +40,6 @@ type ActionTypeHandler = (actionId: string, payload: { id?: unknown }) => Promis
 export class AlarmNotificationService {
 	private actionTypeProviders = new Map<string, ActionTypeProvider>();
 	private actionTypeHandlers = new Map<string, ActionTypeHandler>();
-
-	constructor() {
-		this.registerActionTypeProvider('issuer-test', this.buildTestActionTypes.bind(this));
-		this.registerActionTypeProvider('issuer-ringing', this.buildRingingActionTypes.bind(this));
-		this.registerActionTypeProvider('issuer-upcoming', this.buildUpcomingActionTypes.bind(this));
-	}
 
 	public registerActionTypeProvider(key: string, provider: ActionTypeProvider): void {
 		this.actionTypeProviders.set(key, provider);
@@ -77,71 +71,6 @@ export class AlarmNotificationService {
 		const label = alarm.label?.trim() || 'Alarm';
 		const formattedTime = TimeFormatHelper.format(nextTrigger, is24h);
 		return `Next alarm "${label}" at ${formattedTime}`;
-	}
-
-	private buildTestActionTypes(): NotificationActionType[] {
-		return [
-			{
-				id: 'test_trigger',
-				actions: [
-					{
-						id: 'test_action_1',
-						title: 'Test Action 1',
-					},
-					{
-						id: 'test_action_2',
-						title: 'Test Action 2',
-					},
-				],
-			},
-		];
-	}
-
-	private buildRingingActionTypes(): NotificationActionType[] {
-		const snoozeLength = SettingsService.getSnoozeLength();
-		const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
-
-		return [
-			{
-				id: 'alarm_trigger',
-				actions: [
-					{
-						id: 'snooze',
-						title: snoozeActionTitle,
-						input: false,
-					},
-					{
-						id: 'dismiss',
-						title: 'Dismiss',
-						destructive: true,
-						foreground: false,
-					},
-				],
-			},
-		];
-	}
-
-	private buildUpcomingActionTypes(): NotificationActionType[] {
-		const snoozeLength = SettingsService.getSnoozeLength();
-		const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
-
-		return [
-			{
-				id: 'upcoming_alarm',
-				actions: [
-					{
-						id: 'dismiss_alarm',
-						title: 'Dismiss alarm',
-						foreground: false,
-					},
-					{
-						id: 'snooze_alarm',
-						title: snoozeActionTitle,
-						foreground: false,
-					},
-				],
-			},
-		];
 	}
 
 	private registerActionTypeHandlers(handlers: NotificationActionHandlers) {

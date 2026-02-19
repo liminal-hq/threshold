@@ -14,7 +14,7 @@ import { AlarmService } from './AlarmService';
 import { SettingsService } from './SettingsService';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { showToast } from 'tauri-plugin-toast-api';
-import { AlarmNotificationService } from './AlarmNotificationService';
+import { AlarmNotificationService, type NotificationActionType } from './AlarmNotificationService';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
 interface ImportedAlarm {
@@ -36,6 +36,72 @@ export class AlarmManagerService {
 
 	public isInitialized(): boolean {
 		return this.initPromise !== null;
+	}
+
+	private registerNotificationOwners() {
+		this.alarmNotificationService.registerActionTypeProvider(
+			'owner-settings-test',
+			(): NotificationActionType[] => [
+				{
+					id: 'test_trigger',
+					actions: [
+						{ id: 'test_action_1', title: 'Test Action 1' },
+						{ id: 'test_action_2', title: 'Test Action 2' },
+					],
+				},
+			],
+		);
+
+		this.alarmNotificationService.registerActionTypeProvider(
+			'owner-alarm-ringing',
+			(): NotificationActionType[] => {
+				const snoozeLength = SettingsService.getSnoozeLength();
+				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
+				return [
+					{
+						id: 'alarm_trigger',
+						actions: [
+							{
+								id: 'snooze',
+								title: snoozeActionTitle,
+								input: false,
+							},
+							{
+								id: 'dismiss',
+								title: 'Dismiss',
+								destructive: true,
+								foreground: false,
+							},
+						],
+					},
+				];
+			},
+		);
+
+		this.alarmNotificationService.registerActionTypeProvider(
+			'owner-alarm-upcoming',
+			(): NotificationActionType[] => {
+				const snoozeLength = SettingsService.getSnoozeLength();
+				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
+				return [
+					{
+						id: 'upcoming_alarm',
+						actions: [
+							{
+								id: 'dismiss_alarm',
+								title: 'Dismiss alarm',
+								foreground: false,
+							},
+							{
+								id: 'snooze_alarm',
+								title: snoozeActionTitle,
+								foreground: false,
+							},
+						],
+					},
+				];
+			},
+		);
 	}
 
 	async init() {
@@ -82,6 +148,7 @@ export class AlarmManagerService {
 				if (PlatformUtils.isMobile()) {
 					console.log('[AlarmManager] Registering notification actions...');
 					try {
+						this.registerNotificationOwners();
 						await this.alarmNotificationService.initialiseMobileNotificationActions({
 							onDismissRinging: async () => {
 								console.log('[AlarmManager] Action: Dismiss');
