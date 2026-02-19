@@ -43,10 +43,12 @@ export class AlarmNotificationService {
 
 	public registerActionTypeProvider(key: string, provider: ActionTypeProvider): void {
 		this.actionTypeProviders.set(key, provider);
+		void this.requestActionTypesRefresh();
 	}
 
 	public removeActionTypeProvider(key: string): void {
 		this.actionTypeProviders.delete(key);
+		void this.requestActionTypesRefresh();
 	}
 
 	private getUpcomingNotificationId(alarmId: number): number {
@@ -121,7 +123,7 @@ export class AlarmNotificationService {
 		await registerActionTypes([...deduplicatedById.values()]);
 	}
 
-	public async requestActionTypesRefresh(): Promise<void> {
+	private async requestActionTypesRefresh(): Promise<void> {
 		await emit('notifications:action-types:refresh');
 	}
 

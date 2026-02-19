@@ -107,7 +107,6 @@ export const SettingsService = {
 						},
 					],
 				);
-				await alarmNotificationService.requestActionTypesRefresh();
 			}
 
 			await sendNotification({
