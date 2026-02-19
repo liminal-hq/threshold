@@ -311,12 +311,6 @@
           "type": "string",
           "const": "default",
           "markdownDescription": "Default permissions for the theme-utils plugin\n#### This default permission set includes:\n\n- `allow-get-material-you-colours`"
-        },
-        {
-          "description": "Enables the get_material_you_colours command",
-          "type": "string",
-          "const": "allow-get-material-you-colours",
-          "markdownDescription": "Enables the get_material_you_colours command"
         }
       ]
     }

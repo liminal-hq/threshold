@@ -35,39 +35,22 @@ export class AlarmManagerService {
 			try {
 				console.log('[AlarmManager] Starting service initialisation...');
 
-				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
-				// Listen for alarms ringing from the Rust Backend (Desktop) and Android Plugin
+				console.log('[AlarmManager] Setting up event listener 1/2: alarm-ring...');
+				// Listen for alarms ringing from the Rust Backend (Desktop)
 				await listen<{ id: number }>('alarm-ring', (event) => {
-					console.log(`========== FRONTEND EVENT RECEIVED: alarm-ring ==========`);
 					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
 					this.handleAlarmRing(event.payload.id);
 				});
-				console.log('[AlarmManager] Event listener 1/3 registered.');
+				console.log('[AlarmManager] Event listener 1/2 registered.');
 
-				// Listen for alarms ringing from the Android Plugin (emitted via trigger())
-				try {
-					await listen<{ id: number }>('plugin:alarm-manager|alarm-ring', (event) => {
-						console.log(
-							`[AlarmManager] Received plugin alarm-ring event for ID: ${event.payload.id}`,
-						);
-						this.handleAlarmRing(event.payload.id);
-					});
-					console.log('[AlarmManager] Event listener 2/3 registered.');
-				} catch (e) {
-					console.warn(
-						'[AlarmManager] Failed to register plugin event listener (may not be available on this platform):',
-						e,
-					);
-				}
-
-				console.log('[AlarmManager] Setting up event listener 3/3: alarms:batch:updated...');
+				console.log('[AlarmManager] Setting up event listener 2/2: alarms:batch:updated...');
 				// Listen for batch events and refresh native schedule
 				await listen('alarms:batch:updated', async () => {
 					console.log('[AlarmManager] Received alarms:batch:updated event');
 					const alarms = await AlarmService.getAll();
 					this.syncNativeAlarms(alarms);
 				});
-				console.log('[AlarmManager] Event listener 3/3 registered.');
+				console.log('[AlarmManager] Event listener 2/2 registered.');
 
 				console.log('[AlarmManager] Checking for native imports...');
 				await this.checkImports();
@@ -222,10 +205,9 @@ export class AlarmManagerService {
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
 	private async checkImports() {
 		try {
-			const res = await invoke<{ imports: ImportedAlarm[] }>(
+			const imports = await invoke<ImportedAlarm[]>(
 				'plugin:alarm-manager|get_launch_args',
-			);
-			const imports = res?.imports || [];
+			) ?? [];
 			if (imports.length > 0) {
 				console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
 				for (const imp of imports) {

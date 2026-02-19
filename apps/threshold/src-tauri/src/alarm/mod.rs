@@ -24,6 +24,11 @@ impl AlarmCoordinator {
         Self { db }
     }
 
+    /// Get the phone's current revision number.
+    pub async fn current_revision(&self) -> Result<i64> {
+        self.db.current_revision().await
+    }
+
     /// Get all alarms.
     ///
     /// - `_app`: app handle for event context (unused here).
@@ -273,7 +278,9 @@ impl AlarmCoordinator {
         reason: SyncReason,
     ) -> Result<()> {
         let revision = self.db.current_revision().await?;
-        let event = AlarmsSyncNeeded { reason, revision };
+        let alarms = self.db.get_all().await?;
+        let all_alarms_json = serde_json::to_string(&alarms).ok();
+        let event = AlarmsSyncNeeded { reason, revision, all_alarms_json };
         app.emit("alarms:sync:needed", &event)?;
         Ok(())
     }

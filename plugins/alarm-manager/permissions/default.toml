@@ -7,29 +7,3 @@ permissions = [
     "allow-pick-alarm-sound",
     "allow-stop-ringing",
 ]
-
-# Allow commands
-[[permission]]
-identifier = "allow-schedule"
-description = "Enables the schedule command"
-commands.allow = ["schedule"]
-
-[[permission]]
-identifier = "allow-cancel"
-description = "Enables the cancel command"
-commands.allow = ["cancel"]
-
-[[permission]]
-identifier = "allow-get-launch-args"
-description = "Enables the get_launch_args command"
-commands.allow = ["get_launch_args"]
-
-[[permission]]
-identifier = "allow-pick-alarm-sound"
-description = "Enables the pick_alarm_sound command"
-commands.allow = ["pick_alarm_sound"]
-
-[[permission]]
-identifier = "allow-stop-ringing"
-description = "Enables the stop_ringing command"
-commands.allow = ["stop_ringing"]

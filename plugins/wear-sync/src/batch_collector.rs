@@ -1,3 +1,8 @@
+// Debounced batch collector — coalesces rapid alarm changes before publishing
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use std::{
     collections::HashSet,
     sync::Arc,
@@ -108,7 +113,7 @@ mod tests {
             self.batches.lock().unwrap().push((ids, revision));
         }
 
-        fn publish_immediate(&self, reason: &SyncReason, revision: i64) {
+        fn publish_immediate(&self, reason: &SyncReason, revision: i64, _all_alarms_json: Option<String>) {
             self.immediate
                 .lock()
                 .unwrap()

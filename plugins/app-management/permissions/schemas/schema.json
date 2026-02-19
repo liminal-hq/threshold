@@ -311,18 +311,6 @@
           "type": "string",
           "const": "default",
           "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-minimize-app`"
-        },
-        {
-          "description": "Enables the minimize_app command.",
-          "type": "string",
-          "const": "allow-minimize-app",
-          "markdownDescription": "Enables the minimize_app command."
-        },
-        {
-          "description": "Denies the minimize_app command.",
-          "type": "string",
-          "const": "deny-minimize-app",
-          "markdownDescription": "Denies the minimize_app command."
         }
       ]
     }

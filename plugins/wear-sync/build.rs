@@ -1,4 +1,14 @@
-const COMMANDS: &[&str] = &[];
+// Build script — generates Tauri command bindings and injects Android manifest permissions
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+const COMMANDS: &[&str] = &[
+    "publish_to_watch",
+    "request_sync_from_watch",
+    "set_watch_message_handler",
+    "mark_watch_pipeline_ready",
+];
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)

@@ -1,8 +1,3 @@
 [default]
 description = "Default permissions for the theme-utils plugin"
 permissions = ["allow-get-material-you-colours"]
-
-[[permission]]
-identifier = "allow-get-material-you-colours"
-description = "Enables the get_material_you_colours command"
-commands.allow = ["get_material_you_colours"]

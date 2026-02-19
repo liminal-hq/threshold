@@ -2,7 +2,9 @@ pub mod alarm;
 pub mod commands;
 
 use alarm::{database::AlarmDatabase, AlarmCoordinator};
-use tauri::Manager;
+use tauri::{Listener, Manager};
+#[cfg(mobile)]
+use tauri_plugin_wear_sync::WearSyncExt;
 
 #[cfg(target_os = "linux")]
 fn configure_linux_env() {
@@ -163,6 +165,118 @@ pub fn run() {
                     coord.emit_sync_needed(app.handle(), alarm::events::SyncReason::Initialize).await.ok();
                 }
             });
+
+            // ── Watch event handlers ────────────────────────────────────
+            // These events are emitted by the wear-sync plugin when it
+            // receives messages from the watch.  The app crate handles
+            // them because it owns the AlarmCoordinator (single DB writer).
+
+            // Watch toggled an alarm on/off
+            let save_handle = app.handle().clone();
+            app.handle().listen("wear:alarm:save", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct WatchSave { alarm_id: i32, enabled: bool, watch_revision: i64 }
+
+                if let Ok(cmd) = serde_json::from_str::<WatchSave>(event.payload()) {
+                    let handle = save_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            // Reject if this alarm was modified after the watch last synced
+                            if let Ok(alarm) = coord.get_alarm(&handle, cmd.alarm_id).await {
+                                if cmd.watch_revision < alarm.revision {
+                                    log::warn!(
+                                        "watch: rejecting stale save for alarm {} (watch_rev={}, alarm_rev={}) — requesting resync",
+                                        cmd.alarm_id, cmd.watch_revision, alarm.revision
+                                    );
+                                    coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
+                                    return;
+                                }
+                            }
+                            match coord.toggle_alarm(&handle, cmd.alarm_id, cmd.enabled).await {
+                                Ok(_) => log::info!("watch: toggled alarm {} to enabled={}", cmd.alarm_id, cmd.enabled),
+                                Err(e) => {
+                                    log::error!("watch: failed to toggle alarm {}: {e} — requesting resync", cmd.alarm_id);
+                                    if let Err(sync_error) = coord
+                                        .emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync)
+                                        .await
+                                    {
+                                        log::error!(
+                                            "watch: failed to emit ForceSync after toggle error for alarm {}: {sync_error}",
+                                            cmd.alarm_id
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Watch deleted an alarm
+            let delete_handle = app.handle().clone();
+            app.handle().listen("wear:alarm:delete", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct WatchDelete { alarm_id: i32, watch_revision: i64 }
+
+                if let Ok(cmd) = serde_json::from_str::<WatchDelete>(event.payload()) {
+                    let handle = delete_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            // Reject if this alarm was modified after the watch last synced
+                            if let Ok(alarm) = coord.get_alarm(&handle, cmd.alarm_id).await {
+                                if cmd.watch_revision < alarm.revision {
+                                    log::warn!(
+                                        "watch: rejecting stale delete for alarm {} (watch_rev={}, alarm_rev={}) — requesting resync",
+                                        cmd.alarm_id, cmd.watch_revision, alarm.revision
+                                    );
+                                    coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
+                                    return;
+                                }
+                            }
+                            match coord.delete_alarm(&handle, cmd.alarm_id).await {
+                                Ok(_) => log::info!("watch: deleted alarm {}", cmd.alarm_id),
+                                Err(e) => log::error!("watch: failed to delete alarm {}: {e}", cmd.alarm_id),
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Watch requested a full sync.
+            //
+            // NOTE: The wear-sync plugin forwards watch revision in this event
+            // payload, but we intentionally force FullSync here. The current
+            // protocol prioritises reliability and simpler recovery semantics,
+            // and alarm payloads are small enough that full-state publishes are
+            // acceptable on the Data Layer.
+            let sync_handle = app.handle().clone();
+            app.handle().listen("wear:sync:request", move |_event| {
+                let handle = sync_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                        coord.emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync).await.ok();
+                    }
+                });
+            });
+
+            // Batch debounce completed — the wear-sync plugin needs all
+            // alarm data to build a FullSync payload.
+            let batch_handle = app.handle().clone();
+            app.handle().listen("wear:sync:batch_ready", move |_event| {
+                let handle = batch_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                        coord.emit_sync_needed(&handle, alarm::events::SyncReason::BatchComplete).await.ok();
+                    }
+                });
+            });
+
+            #[cfg(mobile)]
+            if let Err(error) = app.handle().wear_sync().mark_watch_pipeline_ready() {
+                log::warn!("watch: failed to mark watch pipeline ready: {error}");
+            }
 
             // Schedule daily maintenance
             let app_handle = app.handle().clone();

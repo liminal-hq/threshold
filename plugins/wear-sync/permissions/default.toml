@@ -1,6 +1,6 @@
 [default]
 description = "Default permissions for the wear-sync plugin"
-permissions = ["allow-event-listeners"]
+permissions = ["allow-event-listeners", "allow-set-watch-message-handler", "allow-mark-watch-pipeline-ready"]
 
 [[permission]]
 identifier = "allow-event-listeners"

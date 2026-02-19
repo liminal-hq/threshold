@@ -204,8 +204,8 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             alarmObj.put("label", alarm.label)
             array.put(alarmObj)
         }
-        
-        ret.put("imports", array)
+
+        ret.put("value", array)
         invoke.resolve(ret)
     }
 }

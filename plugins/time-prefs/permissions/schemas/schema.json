@@ -323,12 +323,6 @@
           "type": "string",
           "const": "default",
           "markdownDescription": "Default permissions for the time-prefs plugin\n#### This default permission set includes:\n\n- `allow-get-time-format`"
-        },
-        {
-          "description": "Enables the get_time_format command",
-          "type": "string",
-          "const": "allow-get-time-format",
-          "markdownDescription": "Enables the get_time_format command"
         }
       ]
     }
