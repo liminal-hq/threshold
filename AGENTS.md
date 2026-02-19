@@ -4,6 +4,7 @@
 
 - [Localization and Spelling](#localization-and-spelling)
 - [Commit Messages](#commit-messages)
+- [Play Console Release Notes](#play-console-release-notes)
 - [Pull Request Titles](#pull-request-titles)
 - [Application Protocol](#application-protocol)
 - [Code Organization](#code-organization)
@@ -45,6 +46,28 @@ Examples:
 - Prefer writing the message to a file with a single-quoted heredoc and commit with `git commit -F <file>` to prevent shell expansion.
 - If using `-m`, escape shell-sensitive characters explicitly before running the command.
 - After committing, verify the stored message with `git log -1 --pretty=fuller` and amend immediately if interpolation altered content.
+
+## Play Console Release Notes
+
+When drafting release notes for Google Play Console:
+
+- Always use locale blocks in this exact format:
+
+```text
+<en-CA>
+Enter or paste your release notes for en-CA here
+</en-CA>
+```
+
+- Keep each locale block at **500 Unicode characters or fewer**.
+- For this repository, provide **separate sections** for:
+  - Threshold phone app release notes
+  - Threshold Wear OS companion app release notes
+- Use compact, user-facing language suitable for Play Console.
+- Prefer concise headings and bullets (for example: "What's New", "Fixes", "Improvements").
+- Include emoji-led mini headings (for example: `⌚`, `🔔`, `🐛`, `🛠️`) to match the established Play Console style.
+- Use the `•` bullet character inside locale blocks (not markdown `-`) to match accepted Play Console formatting.
+- Keep spelling in Canadian English.
 
 ## Pull Request Titles
 

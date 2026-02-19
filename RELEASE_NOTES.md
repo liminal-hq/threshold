@@ -4,6 +4,106 @@ This document tracks all releases of the Threshold application.
 
 ---
 
+## Version 0.1.7
+
+**Release Date:** February 19, 2026  
+**Status:** Released
+
+> [!IMPORTANT]
+> Version `0.1.6` was superseded by `0.1.7` due to a Wear OS versionCode collision risk. Use `0.1.7` as the canonical release for this cycle.
+
+> [!NOTE]
+> This release window includes substantial platform work since `0.1.5`: Wear OS companion delivery, event-driven sync architecture, alarm pipeline refactoring, upcoming reminder actions, and release tooling improvements.
+
+### ✨ New Features
+
+**Wear OS Companion App**
+
+- Shipped the Wear OS companion app with alarms list, edit/toggle flows, and mobile-linked synchronisation
+- Added Tile + Complication support for next-upcoming alarm visibility
+- Applied Material You dynamic accent support with static fallback
+- Added branded launcher icon integration for the watch app
+- Included release/build integration for Wear in the release tooling
+
+**Wear Sync Plugin and Sync Protocol**
+
+- Implemented full Wear sync plugin foundation across Kotlin and Rust bridges
+- Added incremental sync protocol with monotonic revisions
+- Added conflict detection for stale writes and per-alarm revision validation
+- Added offline write queueing and replay for disconnected scenarios
+- Added full sync payload support, lifecycle signalling, and queue readiness coordination
+
+**Alarm Platform Architecture**
+
+- Implemented Rust core alarm scheduler with window randomisation
+- Added Rust SQLite alarm data layer and coordinator wiring
+- Implemented `AlarmService` and migrated UI away from legacy data service patterns
+- Removed legacy `DatabaseService` in favour of unified service paths
+- Added Android boot recovery and event-driven scheduler architecture updates
+
+**Upcoming Reminder Actions**
+
+- Added Android upcoming notification actions for snooze and dismiss
+- Added upcoming alarm scheduling with label/window-aware copy
+- Added Android toast plugin integration for action feedback
+- Fixed startup rehydration and snooze action label refresh behaviour
+
+### 🐛 Bug Fixes
+
+**Wear Sync and App Reliability**
+
+- Fixed stale write rejection, launch argument parsing, and Kotlin mobile init fallback safety
+- Fixed alarm tap dispatch, crown rotary scrolling, and tile/complication selection edge cases
+- Fixed modern Wear message intent filter usage and plugin permission schema duplication
+- Hardened stale toggle recovery and cold-boot behaviour
+
+**Build and Release Tooling**
+
+- Added interactive release version TUI for phone + Wear lockstep updates
+- Added keyboard and mouse-driven TUI controls, terminal resize redraw handling, and improved UX flow
+- Added `pnpm build:release` wrapper for release devcontainer builds
+- Updated release versioning logic to avoid Wear/phone versionCode collisions:
+  - `phoneVC = M*1,000,000 + m*1,000 + p`
+  - `watchVC = phoneVC + 1,000,000,000`
+
+### 📚 Documentation and Testing
+
+- Added and updated Wear companion architecture, setup, troubleshooting, and testing documentation
+- Reorganised and normalised documentation structure with clearer references
+- Added Mermaid linting and CI annotations for diagram quality
+- Added Wear app unit tests and CI integration
+- Expanded wear-sync tests for sync/conflict and queue behaviour
+
+### 📝 Technical Details
+
+**Major PRs Merged (selected):**
+
+- [#98](https://github.com/liminal-hq/threshold/pull/98) - Add Wear OS Watch Companion App
+- [#154](https://github.com/liminal-hq/threshold/pull/154) - Complete Wear OS companion support
+- [#130](https://github.com/liminal-hq/threshold/pull/130) - Wear-sync scaffold, BatchCollector, and Kotlin stubs
+- [#129](https://github.com/liminal-hq/threshold/pull/129) - Implement granular event system with monotonic revisions
+- [#110](https://github.com/liminal-hq/threshold/pull/110) - Event-driven architecture and Android boot recovery
+- [#106](https://github.com/liminal-hq/threshold/pull/106) - Migrate UI to AlarmService and event-driven architecture
+- [#105](https://github.com/liminal-hq/threshold/pull/105) - Implement AlarmService and types
+- [#103](https://github.com/liminal-hq/threshold/pull/103) - Implement AlarmCoordinator and Tauri wiring
+- [#101](https://github.com/liminal-hq/threshold/pull/101) - Implement Rust SQLite database layer
+- [#99](https://github.com/liminal-hq/threshold/pull/99) - Implement alarm scheduler logic in Rust core
+- [#145](https://github.com/liminal-hq/threshold/pull/145) - Add upcoming snooze action with next-occurrence scope
+- [#147](https://github.com/liminal-hq/threshold/pull/147) - Fix upcoming reminder rehydration and snooze action label refresh
+- [#160](https://github.com/liminal-hq/threshold/pull/160) - Modernize release version TUI and add release build shortcut
+
+**Release and Follow-up Issues:**
+
+- [#161](https://github.com/liminal-hq/threshold/issues/161) - Release TUI should create a dedicated version bump commit before tagging
+
+**Commit/Contributor Summary (`0.1.5` → `0.1.7`):**
+
+- **Commits:** 166
+- **Merged PRs:** 22
+- **Contributors:** Scott Morris, google-labs-jules[bot]
+
+---
+
 ## Version 0.1.5
 
 **Release Date:** February 7, 2026  
