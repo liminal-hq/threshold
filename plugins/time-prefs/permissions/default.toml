@@ -3,8 +3,3 @@ description = "Default permissions for the time-prefs plugin"
 permissions = [
     "allow-get-time-format",
 ]
-
-[[permission]]
-identifier = "allow-get-time-format"
-description = "Enables the get_time_format command"
-commands.allow = ["get_time_format"]

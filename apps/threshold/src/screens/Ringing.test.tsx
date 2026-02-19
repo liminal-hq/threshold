@@ -8,6 +8,7 @@ import Ringing from './Ringing';
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
 import { alarmManagerService } from '../services/AlarmManagerService';
+import { AlarmService } from '../services/AlarmService';
 import { appManagementService } from '../services/AppManagementService';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SPECIAL_ALARM_IDS, ROUTES } from '../constants';
@@ -22,6 +23,13 @@ vi.mock('../services/AlarmManagerService', () => ({
 		loadAlarms: vi.fn(),
 		stopRinging: vi.fn(),
 		snoozeAlarm: vi.fn(),
+	},
+}));
+
+vi.mock('../services/AlarmService', () => ({
+	AlarmService: {
+		get: vi.fn(),
+		dismiss: vi.fn(),
 	},
 }));
 
@@ -111,9 +119,19 @@ describe('Ringing Screen Logic', () => {
 		(tauriWindow.getCurrentWindow as any).mockReturnValue(mockWindow);
 
 		// Setup Alarm Mock default
-		(alarmManagerService.loadAlarms as any).mockResolvedValue([
-			{ id: 1, label: 'Morning Alarm', time: '08:00', enabled: true, days: [], soundUri: '' },
-		]);
+		(AlarmService.get as any).mockResolvedValue({
+			id: 1,
+			label: 'Morning Alarm',
+			enabled: true,
+			mode: 'FIXED',
+			fixedTime: '08:00',
+			windowStart: null,
+			windowEnd: null,
+			activeDays: [],
+			nextTrigger: null,
+			soundUri: '',
+			soundTitle: null,
+		});
 
 		// Setup Platform Default (Desktop)
 		(PlatformUtils.isDesktop as any).mockReturnValue(true);
@@ -204,5 +222,47 @@ describe('Ringing Screen Logic', () => {
 			expect(historySpy).toHaveBeenCalled();
 		});
 		expect(mockWindow.minimize).not.toHaveBeenCalled();
+	});
+
+	it('should snooze and close window on desktop', async () => {
+		// Arrange
+		(PlatformUtils.isDesktop as any).mockReturnValue(true);
+		(PlatformUtils.isMobile as any).mockReturnValue(false);
+
+		// Act
+		renderWithTheme(<Ringing />);
+
+		const snoozeBtn = await screen.findByRole('button', { name: /snooze/i });
+		fireEvent.click(snoozeBtn);
+
+		// Assert
+		await waitFor(() => {
+			expect(alarmManagerService.snoozeAlarm).toHaveBeenCalledWith(1, 10);
+			expect(mockWindow.close).toHaveBeenCalled();
+		});
+		expect(appManagementService.minimizeApp).not.toHaveBeenCalled();
+	});
+
+	it('should snooze and minimise window on mobile', async () => {
+		// Arrange
+		(PlatformUtils.isDesktop as any).mockReturnValue(false);
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+
+		// Act
+		renderWithTheme(<Ringing />);
+
+		const snoozeBtn = await screen.findByRole('button', { name: /snooze/i });
+		fireEvent.click(snoozeBtn);
+
+		// Assert
+		await waitFor(() => {
+			expect(alarmManagerService.snoozeAlarm).toHaveBeenCalledWith(1, 10);
+			expect(appManagementService.minimizeApp).toHaveBeenCalled();
+		});
+		expect(mockWindow.close).not.toHaveBeenCalled();
+
+		await waitFor(() => {
+			expect(mockNavigate).toHaveBeenCalledWith({ to: ROUTES.HOME, replace: true });
+		});
 	});
 });

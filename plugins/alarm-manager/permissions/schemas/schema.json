@@ -383,36 +383,6 @@
           "type": "string",
           "const": "default",
           "markdownDescription": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-schedule`\n- `allow-cancel`\n- `allow-get-launch-args`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`"
-        },
-        {
-          "description": "Enables the schedule command",
-          "type": "string",
-          "const": "allow-schedule",
-          "markdownDescription": "Enables the schedule command"
-        },
-        {
-          "description": "Enables the cancel command",
-          "type": "string",
-          "const": "allow-cancel",
-          "markdownDescription": "Enables the cancel command"
-        },
-        {
-          "description": "Enables the get_launch_args command",
-          "type": "string",
-          "const": "allow-get-launch-args",
-          "markdownDescription": "Enables the get_launch_args command"
-        },
-        {
-          "description": "Enables the pick_alarm_sound command",
-          "type": "string",
-          "const": "allow-pick-alarm-sound",
-          "markdownDescription": "Enables the pick_alarm_sound command"
-        },
-        {
-          "description": "Enables the stop_ringing command",
-          "type": "string",
-          "const": "allow-stop-ringing",
-          "markdownDescription": "Enables the stop_ringing command"
         }
       ]
     }

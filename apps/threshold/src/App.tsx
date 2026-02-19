@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { RouterProvider } from '@tanstack/react-router';
 import { router } from './router';
 import { ThemeContextProvider } from './contexts/ThemeContext';
+import { AlarmsProvider } from './contexts/AlarmsContext';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
@@ -17,6 +18,7 @@ import './theme/components.css';
 import './theme/transitions.css';
 import { routeTransitions } from './utils/RouteTransitions';
 import { SettingsService } from './services/SettingsService';
+import { alarmManagerService } from './services/AlarmManagerService';
 import { ROUTES } from './constants';
 
 const App: React.FC = () => {
@@ -40,18 +42,27 @@ const App: React.FC = () => {
 		};
 		initTimePrefs();
 
-		const showWindow = async () => {
+		// Initialize Alarm Manager Service
+		const initAlarmService = async () => {
 			try {
-				// Force Desktop Window Size
-				if (os !== 'android' && os !== 'ios') {
-					try {
-						await win.setDecorations(false); // Force removal of native title bar
-						await win.unmaximize();
-						// await win.setSize(new LogicalSize(450, 800));
-						await win.center();
-					} catch (e) {
-						console.error('Failed to resize/decorate window:', e);
-					}
+				alarmManagerService.setRouter(router);
+				await alarmManagerService.init();
+			} catch (e) {
+				console.error('[App] Failed to init AlarmManagerService:', e);
+			}
+		};
+		initAlarmService();
+
+		const showWindow = async () => {
+			if (os === 'android' || os === 'ios') return;
+			try {
+				try {
+					await win.setDecorations(false); // Force removal of native title bar
+					await win.unmaximize();
+					// await win.setSize(new LogicalSize(450, 800));
+					await win.center();
+				} catch (e) {
+					console.error('Failed to resize/decorate window:', e);
 				}
 
 				const visible = await win.isVisible();
@@ -133,9 +144,11 @@ const App: React.FC = () => {
 
 	return (
 		<ThemeContextProvider>
-			<LocalizationProvider dateAdapter={AdapterDateFns}>
-				<RouterProvider router={router} />
-			</LocalizationProvider>
+			<AlarmsProvider>
+				<LocalizationProvider dateAdapter={AdapterDateFns}>
+					<RouterProvider router={router} />
+				</LocalizationProvider>
+			</AlarmsProvider>
 		</ThemeContextProvider>
 	);
 };

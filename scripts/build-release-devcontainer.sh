@@ -1,5 +1,6 @@
 #!/bin/bash
 # Build script for use with VS Code Dev Containers
+# Builds both the phone app (Tauri) and the Wear OS companion app
 # Automatically uses keystore.properties from /keys mount
 # NO MANUAL SETUP REQUIRED! 🎉
 
@@ -81,7 +82,7 @@ echo -e "  Keystore: $KEYSTORE_FILE${NC}\n"
 # Check NDK
 if [ -z "$NDK_HOME" ]; then
     echo -e "${YELLOW}⚠ NDK_HOME not set, attempting to find NDK...${NC}"
-    
+
     if [ -d "$ANDROID_HOME/ndk" ]; then
         # Find latest NDK (preferably r28+)
         NDK_VERSION=$(ls -1 "$ANDROID_HOME/ndk" | sort -V | tail -n1)
@@ -101,50 +102,69 @@ echo -e "${BLUE}📦 Checking Rust Android targets...${NC}"
 rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android 2>/dev/null || true
 echo -e "${GREEN}✓ Rust targets ready${NC}\n"
 
-# Link keystore.properties into Android project
-ANDROID_PROJECT="apps/threshold/src-tauri/gen/android"
-TARGET_PROPS="$ANDROID_PROJECT/keystore.properties"
+# Link keystore.properties into both Android projects
+PHONE_ANDROID_PROJECT="apps/threshold/src-tauri/gen/android"
+PHONE_TARGET_PROPS="$PHONE_ANDROID_PROJECT/keystore.properties"
+WEAR_PROJECT="apps/threshold-wear"
+WEAR_TARGET_PROPS="$WEAR_PROJECT/keystore.properties"
 
 echo -e "${BLUE}🔗 Linking keystore.properties...${NC}"
 
-# Remove existing link/file if present
-if [ -L "$TARGET_PROPS" ] || [ -f "$TARGET_PROPS" ]; then
-    rm "$TARGET_PROPS"
+# Phone app
+if [ -L "$PHONE_TARGET_PROPS" ] || [ -f "$PHONE_TARGET_PROPS" ]; then
+    rm "$PHONE_TARGET_PROPS"
 fi
+ln -s "$KEYS_PROPS" "$PHONE_TARGET_PROPS"
 
-# Create symlink
-ln -s "$KEYS_PROPS" "$TARGET_PROPS"
-
-if [ ! -L "$TARGET_PROPS" ]; then
-    echo -e "${RED}Error: Failed to create symlink${NC}"
+if [ ! -L "$PHONE_TARGET_PROPS" ]; then
+    echo -e "${RED}Error: Failed to create phone app symlink${NC}"
     exit 1
 fi
+echo -e "${GREEN}✓ Phone app keystore linked${NC}"
 
-echo -e "${GREEN}✓ keystore.properties linked${NC}\n"
+# Wear app
+if [ -L "$WEAR_TARGET_PROPS" ] || [ -f "$WEAR_TARGET_PROPS" ]; then
+    rm "$WEAR_TARGET_PROPS"
+fi
+ln -s "$KEYS_PROPS" "$WEAR_TARGET_PROPS"
 
-# Set up cleanup trap to ensure symlink is removed even on failure
+if [ ! -L "$WEAR_TARGET_PROPS" ]; then
+    echo -e "${RED}Error: Failed to create wear app symlink${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✓ Wear app keystore linked${NC}\n"
+
+# Set up cleanup trap to ensure symlinks are removed even on failure
 cleanup() {
-    if [ -L "$TARGET_PROPS" ]; then
-        echo -e "\n${BLUE}🧹 Cleaning up keystore symlink...${NC}"
-        rm "$TARGET_PROPS"
-        echo -e "${GREEN}✓ Removed keystore.properties symlink${NC}"
+    if [ -L "$PHONE_TARGET_PROPS" ]; then
+        rm "$PHONE_TARGET_PROPS"
     fi
+    if [ -L "$WEAR_TARGET_PROPS" ]; then
+        rm "$WEAR_TARGET_PROPS"
+    fi
+    echo -e "\n${BLUE}🧹 Cleaned up keystore symlinks${NC}"
 }
 trap cleanup EXIT
 
-# Build
+# Create release directory
+RELEASE_DIR="release"
+mkdir -p "$RELEASE_DIR"
+
+# ───────────────────────────────────────────────────
+# Phone App Build
+# ───────────────────────────────────────────────────
+
 echo -e "${MAGENTA}╔════════════════════════════════════════╗${NC}"
-echo -e "${MAGENTA}║         Building Release AAB...        ║${NC}"
+echo -e "${MAGENTA}║     Building Phone App Release AAB...  ║${NC}"
 echo -e "${MAGENTA}╚════════════════════════════════════════╝${NC}\n"
 
 pnpm build:android
 
-BUILD_RESULT=$?
+PHONE_BUILD_RESULT=$?
 
-# Check if build succeeded
-if [ $BUILD_RESULT -ne 0 ]; then
+if [ $PHONE_BUILD_RESULT -ne 0 ]; then
     echo -e "\n${RED}╔════════════════════════════════════════╗${NC}"
-    echo -e "${RED}║           Build Failed ❌              ║${NC}"
+    echo -e "${RED}║       Phone App Build Failed ❌        ║${NC}"
     echo -e "${RED}╚════════════════════════════════════════╝${NC}\n"
     exit 1
 fi
@@ -152,68 +172,46 @@ fi
 AAB_PATH=$(find apps/threshold/src-tauri/gen/android/app/build/outputs/bundle/universalRelease -name "*.aab" -type f 2>/dev/null | head -n1)
 
 if [ -z "$AAB_PATH" ]; then
-    echo -e "\n${RED}✗ Build completed but no AAB found${NC}"
+    echo -e "\n${RED}✗ Phone build completed but no AAB found${NC}"
     exit 1
 fi
 
-echo -e "\n${GREEN}╔════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║     ✓ Release Build Successful! 🎉     ║${NC}"
-echo -e "${GREEN}╚════════════════════════════════════════╝${NC}\n"
-
-# Create release directory and copy outputs
-RELEASE_DIR="release"
-echo -e "${BLUE}📦 Copying release files...${NC}"
-
-mkdir -p "$RELEASE_DIR"
+echo -e "\n${GREEN}✓ Phone app built successfully${NC}"
 
 # Extract version from tauri.properties
 TAURI_PROPS="apps/threshold/src-tauri/gen/android/app/tauri.properties"
 if [ -f "$TAURI_PROPS" ]; then
     VERSION_NAME=$(grep "tauri.android.versionName" "$TAURI_PROPS" | cut -d'=' -f2)
     VERSION_CODE=$(grep "tauri.android.versionCode" "$TAURI_PROPS" | cut -d'=' -f2)
-    VERSION_SUFFIX="-v${VERSION_NAME}-${VERSION_CODE}"
+    PHONE_VERSION_SUFFIX="-v${VERSION_NAME}-${VERSION_CODE}"
 else
-    VERSION_SUFFIX=""
+    PHONE_VERSION_SUFFIX=""
 fi
 
-# Copy AAB
+# Copy phone AAB
 AAB_FILENAME=$(basename "$AAB_PATH" .aab)
-cp "$AAB_PATH" "$RELEASE_DIR/${AAB_FILENAME}${VERSION_SUFFIX}.aab"
-echo -e "${GREEN}✓ Copied AAB to: $RELEASE_DIR/${AAB_FILENAME}${VERSION_SUFFIX}.aab${NC}"
-
-# Show file info
-AAB_SIZE=$(du -h "$RELEASE_DIR/${AAB_FILENAME}${VERSION_SUFFIX}.aab" | cut -f1)
-echo -e "${BLUE}📦 AAB Size:${NC} $AAB_SIZE"
-echo ""
+cp "$AAB_PATH" "$RELEASE_DIR/${AAB_FILENAME}${PHONE_VERSION_SUFFIX}.aab"
+PHONE_AAB_SIZE=$(du -h "$RELEASE_DIR/${AAB_FILENAME}${PHONE_VERSION_SUFFIX}.aab" | cut -f1)
+echo -e "  📦 ${BLUE}$RELEASE_DIR/${AAB_FILENAME}${PHONE_VERSION_SUFFIX}.aab${NC} ($PHONE_AAB_SIZE)"
 
 # Check for debug symbols
 SYMBOLS_DIR=$(find apps/threshold/src-tauri/gen/android/app/build/intermediates/merged_native_libs/universalRelease -type d -name "lib" 2>/dev/null | head -n1)
 
 if [ -n "$SYMBOLS_DIR" ] && [ -d "$SYMBOLS_DIR" ]; then
-    # Check if libraries actually have debug symbols
     SAMPLE_LIB=$(find "$SYMBOLS_DIR" -name "libthreshold.so" | head -n1)
-    
+
     if [ -n "$SAMPLE_LIB" ] && file "$SAMPLE_LIB" | grep -q "not stripped"; then
         echo -e "${BLUE}🔍 Creating debug symbols zip...${NC}"
-        
-        # Save current directory (repo root)
+
         REPO_ROOT=$(pwd)
-        
-        # Create symbols zip
         cd "$SYMBOLS_DIR"
         SYMBOLS_ZIP="native-debug-symbols.zip"
         zip -r -q "$SYMBOLS_ZIP" arm64-v8a/ armeabi-v7a/ x86/ x86_64/ 2>/dev/null || true
-        
+
         if [ -f "$SYMBOLS_ZIP" ]; then
             SYMBOLS_SIZE=$(du -h "$SYMBOLS_ZIP" | cut -f1)
-            
-            # Copy to release directory at repo root with version suffix
-            cp "$SYMBOLS_ZIP" "$REPO_ROOT/$RELEASE_DIR/native-debug-symbols${VERSION_SUFFIX}.zip"
-            
-            echo -e "${GREEN}✓ Debug Symbols Package Created${NC}"
-            echo -e "   Copied to: $RELEASE_DIR/native-debug-symbols${VERSION_SUFFIX}.zip"
-            echo -e "${BLUE}📦 Symbols Size:${NC} $SYMBOLS_SIZE"
-            echo ""
+            cp "$SYMBOLS_ZIP" "$REPO_ROOT/$RELEASE_DIR/native-debug-symbols${PHONE_VERSION_SUFFIX}.zip"
+            echo -e "  🐛 ${BLUE}$RELEASE_DIR/native-debug-symbols${PHONE_VERSION_SUFFIX}.zip${NC} ($SYMBOLS_SIZE)"
         fi
         cd - > /dev/null
     else
@@ -221,23 +219,85 @@ if [ -n "$SYMBOLS_DIR" ] && [ -d "$SYMBOLS_DIR" ]; then
         echo "   To enable crash symbolication, add to apps/threshold/src-tauri/Cargo.toml:"
         echo "   [profile.release]"
         echo "   strip = false"
-        echo ""
     fi
-else
-    echo -e "${YELLOW}⚠ Native libraries directory not found${NC}"
-    echo "   (Build may not have completed successfully)"
-    echo ""
+fi
+echo ""
+
+# ───────────────────────────────────────────────────
+# Wear OS App Build
+# ───────────────────────────────────────────────────
+
+echo -e "${MAGENTA}╔════════════════════════════════════════╗${NC}"
+echo -e "${MAGENTA}║     Building Wear OS Release AAB...    ║${NC}"
+echo -e "${MAGENTA}╚════════════════════════════════════════╝${NC}\n"
+
+"$WEAR_PROJECT/gradlew" --project-dir "$WEAR_PROJECT" bundleRelease
+
+WEAR_BUILD_RESULT=$?
+
+if [ $WEAR_BUILD_RESULT -ne 0 ]; then
+    echo -e "\n${RED}╔════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║       Wear OS Build Failed ❌          ║${NC}"
+    echo -e "${RED}╚════════════════════════════════════════╝${NC}\n"
+    exit 1
 fi
 
-# Verify signature
-echo -e "${BLUE}🔐 Verifying signature...${NC}"
+WEAR_AAB_PATH=$(find "$WEAR_PROJECT/build/outputs/bundle/release" -name "*.aab" -type f 2>/dev/null | head -n1)
+
+if [ -z "$WEAR_AAB_PATH" ]; then
+    echo -e "\n${RED}✗ Wear build completed but no AAB found${NC}"
+    exit 1
+fi
+
+echo -e "\n${GREEN}✓ Wear OS app built successfully${NC}"
+
+# Extract wear version from build.gradle.kts
+WEAR_VERSION_NAME=$(grep "versionName" "$WEAR_PROJECT/build.gradle.kts" | head -n1 | sed 's/.*"\(.*\)".*/\1/')
+WEAR_VERSION_CODE=$(grep "versionCode" "$WEAR_PROJECT/build.gradle.kts" | head -n1 | sed 's/[^0-9]//g')
+if [ -n "$WEAR_VERSION_NAME" ] && [ -n "$WEAR_VERSION_CODE" ]; then
+    WEAR_VERSION_SUFFIX="-v${WEAR_VERSION_NAME}-${WEAR_VERSION_CODE}"
+else
+    WEAR_VERSION_SUFFIX=""
+fi
+
+# Copy wear AAB
+WEAR_AAB_FILENAME=$(basename "$WEAR_AAB_PATH" .aab)
+cp "$WEAR_AAB_PATH" "$RELEASE_DIR/${WEAR_AAB_FILENAME}${WEAR_VERSION_SUFFIX}.aab"
+WEAR_AAB_SIZE=$(du -h "$RELEASE_DIR/${WEAR_AAB_FILENAME}${WEAR_VERSION_SUFFIX}.aab" | cut -f1)
+echo -e "  📦 ${BLUE}$RELEASE_DIR/${WEAR_AAB_FILENAME}${WEAR_VERSION_SUFFIX}.aab${NC} ($WEAR_AAB_SIZE)"
+
+# Copy R8 mapping file for crash symbolication (ProGuard/R8 obfuscation map)
+WEAR_MAPPING="$WEAR_PROJECT/build/outputs/mapping/release/mapping.txt"
+if [ -f "$WEAR_MAPPING" ]; then
+    cp "$WEAR_MAPPING" "$RELEASE_DIR/wear-mapping${WEAR_VERSION_SUFFIX}.txt"
+    MAPPING_SIZE=$(du -h "$RELEASE_DIR/wear-mapping${WEAR_VERSION_SUFFIX}.txt" | cut -f1)
+    echo -e "  🐛 ${BLUE}$RELEASE_DIR/wear-mapping${WEAR_VERSION_SUFFIX}.txt${NC} ($MAPPING_SIZE)"
+else
+    echo -e "${YELLOW}⚠ Wear R8 mapping.txt not found (crash reports will be obfuscated)${NC}"
+fi
+echo ""
+
+# ───────────────────────────────────────────────────
+# Summary
+# ───────────────────────────────────────────────────
+
+echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║     ✓ Release Build Successful! 🎉     ║${NC}"
+echo -e "${GREEN}╚════════════════════════════════════════╝${NC}\n"
+
+# Verify signatures
+echo -e "${BLUE}🔐 Verifying signatures...${NC}"
 if command -v jarsigner &> /dev/null; then
-    SIGNER=$(jarsigner -verify -verbose -certs "$AAB_PATH" 2>&1 | grep "CN=" | head -n1 | sed 's/.*CN=/CN=/g')
-    if [ -n "$SIGNER" ]; then
-        echo -e "${GREEN}✓ Signed by: $SIGNER${NC}"
-    else
-        echo -e "${YELLOW}⚠ Could not verify signature (but build succeeded)${NC}"
-    fi
+    for aab in "$AAB_PATH" "$WEAR_AAB_PATH"; do
+        APP_LABEL="Phone"
+        if [ "$aab" = "$WEAR_AAB_PATH" ]; then APP_LABEL="Wear "; fi
+        SIGNER=$(jarsigner -verify -verbose -certs "$aab" 2>&1 | grep "CN=" | head -n1 | sed 's/.*CN=/CN=/g')
+        if [ -n "$SIGNER" ]; then
+            echo -e "${GREEN}✓ $APP_LABEL signed by: $SIGNER${NC}"
+        else
+            echo -e "${YELLOW}⚠ $APP_LABEL could not verify signature (but build succeeded)${NC}"
+        fi
+    done
 else
     echo -e "${YELLOW}⚠ jarsigner not found, skipping signature verification${NC}"
 fi
@@ -249,17 +309,20 @@ echo -e "${MAGENTA}╚═══════════════════�
 echo ""
 echo -e "${YELLOW}1.${NC} Upload files from ${BLUE}release/${NC} folder to Play Console:"
 echo "   https://play.google.com/console"
-echo "   📦 AAB: release/${AAB_FILENAME}${VERSION_SUFFIX}.aab"
+echo "   📱 Phone: release/${AAB_FILENAME}${PHONE_VERSION_SUFFIX}.aab"
+echo "   ⌚ Wear:  release/${WEAR_AAB_FILENAME}${WEAR_VERSION_SUFFIX}.aab"
 
-# Check if we created symbols
-if [ -f "release/native-debug-symbols${VERSION_SUFFIX}.zip" ]; then
-    echo "   🐛 Symbols: release/native-debug-symbols${VERSION_SUFFIX}.zip"
+if [ -f "release/native-debug-symbols${PHONE_VERSION_SUFFIX}.zip" ]; then
+    echo "   🐛 Phone symbols: release/native-debug-symbols${PHONE_VERSION_SUFFIX}.zip"
+fi
+if [ -f "release/wear-mapping${WEAR_VERSION_SUFFIX}.txt" ]; then
+    echo "   🐛 Wear mapping:  release/wear-mapping${WEAR_VERSION_SUFFIX}.txt"
 fi
 
 echo ""
-echo -e "${YELLOW}2.${NC} Before next build, increment version in:"
-echo "   apps/threshold/src-tauri/tauri.conf.json"
-echo "   (Look for 'versionCode' under bundle.android)"
+echo -e "${YELLOW}2.${NC} Before next build, increment versions in:"
+echo "   📱 apps/threshold/src-tauri/tauri.conf.json (versionCode under bundle.android)"
+echo "   ⌚ apps/threshold-wear/build.gradle.kts (versionCode + versionName)"
 echo ""
 echo -e "${GREEN}✨ Build complete! Happy releasing! ✨${NC}"
 echo ""

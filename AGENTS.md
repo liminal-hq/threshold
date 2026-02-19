@@ -10,6 +10,7 @@
 - [Best Practices](#best-practices)
 - [Plugin Development](#plugin-development)
 - [UI Project Structure](#ui-project-structure)
+- [Licence and Copyright](#licence-and-copyright)
 - [Tauri v2](#tauri-v2)
 
 ## Localization and Spelling
@@ -67,7 +68,7 @@ Examples:
 - The application registers the `threshold://` protocol for deep linking.
 - **Use Cases:** External apps can launch Threshold with `threshold://set?time=07:30`
 - **IMPORTANT:** If the app name or identifier changes, ensure this protocol registration is updated in `tauri.conf.json` and relevant documentation.
-- **See Also:** `/docs/DESKTOP_DEEPLINKS.md` for usage examples
+- **See Also:** `/docs/desktop/deeplinks.md` for usage examples
 
 ## Code Organization
 
@@ -86,12 +87,12 @@ Examples:
 
 When creating or modifying Threshold plugins with Android support:
 
-**Documentation:** All plugin patterns are in `/docs/patterns/`
+**Documentation:** All plugin patterns are in `/docs/plugins/`
 
-- **Quick Start:** `/docs/patterns/PLUGIN_MANIFEST_QUICKSTART.md`
-- **Full Reference:** `/docs/patterns/THRESHOLD_PLUGIN_MANIFEST_PATTERN.md`
-- **PR Checklist:** `/docs/patterns/PLUGIN_MANIFEST_PR_CHECKLIST.md`
-- **AI Agent Guide:** `/docs/guides/AI_AGENT_USAGE_GUIDE.md`
+- **Quick Start:** `/docs/plugins/plugin-manifest-quickstart.md`
+- **Full Reference:** `/docs/plugins/plugin-manifest-pattern.md`
+- **PR Checklist:** `/docs/plugins/plugin-manifest-pr-checklist.md`
+- **AI Agent Guide:** `/docs/ai-agent-usage-guide.md`
 
 **Android Manifest Injection (Required):**
 
@@ -131,21 +132,52 @@ See quickstart guide for complete implementation steps.
 
 **See Also:**
 
-- `/docs/ALARM_MANAGER.md` - Alarm manager implementation details
-- `/docs/ANDROID_INTENTS.md` - Android intent handling
+- `/docs/plugins/alarm-manager.md` - Alarm manager plugin specification
+- `/docs/android/intents.md` - Android intent handling
 
 ## UI Project Structure
 
-Follow this directory structure for React/Ionic applications:
+Follow this directory structure for React/MUI applications:
 
 - **`src/components/`**: Reusable UI components (Buttons, Cards, TimePickers). Prefer "dumb" components that take props.
 - **`src/screens/`**: Full-page views corresponding to routes (e.g., `Home.tsx`, `EditAlarm.tsx`, `Ringing.tsx`).
 - **`src/hooks/`**: Custom React hooks for logic reuse.
 - **`src/services/`**: Singleton classes or modules for business logic (e.g., `DatabaseService`, `AlarmService`).
-- **`src/theme/`**: Global styles, Ionic variables, and theme definitions.
+- **`src/theme/`**: Global styles, MUI theme definitions, and Material You integration.
 - **`src/context/`**: React Context providers.
 
-**See Also:** `/docs/UI_TASK.md` for UI implementation details
+**See Also:** `/docs/ui/ui-task.md` for UI implementation details
+
+## Licence and Copyright
+
+**REQUIREMENT:** All source code files (Rust, Kotlin, TypeScript, etc.) MUST include a licence and copyright header as the first content in the file.
+
+**Header format:**
+
+For Rust (`.rs`) and Kotlin (`.kt`) files:
+```
+// Brief one-line summary of what this file does.
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+```
+
+For TypeScript/JavaScript (`.ts`, `.tsx`, `.js`) files:
+```
+// Brief one-line summary of what this file does.
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+```
+
+**Rules:**
+
+- The first line is a concise summary of the file's purpose (one sentence, no period)
+- Place the header before any `package`, `use`, `import`, or `mod` statements
+- Leave one blank line between the header and the first code line
+- Do not add headers to generated files, configuration files (`.toml`, `.json`, `.yml`), or documentation (`.md`)
+- When visiting an existing file that lacks a header, add one as part of the current change
+- Use `SPDX-License-Identifier` for machine-readable licence identification
 
 ## Tauri v2
 
@@ -177,7 +209,7 @@ useEffect(() => {
 ### Window Management
 
 - **Desktop platforms**: Use custom title bars with `data-tauri-drag-region` attribute for draggable areas
-- **Mobile platforms**: Use native Ionic headers (`IonHeader`, `IonToolbar`)
+- **Mobile platforms**: Use MUI `AppBar`/`Toolbar` or custom headers
 - Window controls (minimize, maximize, close) should only render on desktop
 
 ### Tauri APIs

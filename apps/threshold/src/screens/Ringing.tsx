@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Button, Typography, Box } from '@mui/material';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
-import { Alarm } from '../services/DatabaseService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { convertFileSrc } from '@tauri-apps/api/core';
@@ -10,6 +9,8 @@ import { PlatformUtils } from '../utils/PlatformUtils';
 import { listen } from '@tauri-apps/api/event';
 import '../theme/ringing.css';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
+import { AlarmService } from '../services/AlarmService';
+import { AlarmRecord } from '../types/alarm';
 import { ROUTES, SPECIAL_ALARM_IDS } from '../constants';
 import { SettingsService } from '../services/SettingsService';
 import { appManagementService } from '../services/AppManagementService';
@@ -17,7 +18,7 @@ import ThresholdIndicator from './ThresholdIndicator';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
-	const [alarm, setAlarm] = useState<Alarm | null>(null);
+	const [alarm, setAlarm] = useState<AlarmRecord | null>(null);
 	const [timeStr, setTimeStr] = useState<string>('');
 	const navigate = useNavigate();
 
@@ -74,31 +75,14 @@ const Ringing: React.FC = () => {
 
 	useEffect(() => {
 		const loadAlarm = async () => {
-			try {
-				if (alarmManagerService.isInitialized()) {
-					console.log('[Ringing] AlarmManager already initialized.');
-				} else {
-					console.log('[Ringing] Initializing AlarmManagerService...');
-					await alarmManagerService.init();
-				}
-
-				const alarms = await alarmManagerService.loadAlarms();
-				const found = alarms.find((a) => a.id === parseInt(id));
-
-				if (found) {
-					setAlarm((prev) => {
-						if (!prev || prev.id !== found.id || prev.soundUri !== found.soundUri) {
-							console.log('[Ringing] Alarm updated:', found.id, 'soundUri:', found.soundUri);
-							return found;
-						}
-						return prev;
-					});
-				} else {
-					console.error('[Ringing] Alarm not found for ID:', id);
-				}
-			} catch (e) {
-				console.error('[Ringing] Failed to load alarm:', e);
-			}
+            try {
+                const found = await AlarmService.get(parseInt(id));
+                if (found) {
+                    setAlarm(found);
+                }
+            } catch (e) {
+                console.error('Failed to load ringing alarm', e);
+            }
 		};
 		loadAlarm();
 
@@ -128,10 +112,7 @@ const Ringing: React.FC = () => {
 	const [audioError, setAudioError] = useState<string | null>(null);
 	const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
 
-	const handleDismiss = useCallback(async () => {
-		console.log('[Ringing] Dismissing Alarm', id);
-		await alarmManagerService.stopRinging();
-
+	const closeRingingWindow = useCallback(async () => {
 		// Check platform and close window if desktop
 		if (PlatformUtils.isDesktop()) {
 			try {
@@ -162,11 +143,25 @@ const Ringing: React.FC = () => {
 		}
 	}, [navigate, id]);
 
+	const handleDismiss = useCallback(async () => {
+		console.log('[Ringing] Dismissing Alarm', id);
+		await alarmManagerService.stopRinging();
+
+		// Notify backend to dismiss (reschedule)
+		try {
+			await AlarmService.dismiss(parseInt(id));
+		} catch (e) {
+			console.error('Failed to dismiss alarm in backend', e);
+		}
+
+		await closeRingingWindow();
+	}, [closeRingingWindow, id]);
+
 	const handleSnooze = async () => {
 		const alarmId = parseInt(id);
 		console.log('Snoozing Alarm', alarmId, 'for', snoozeLength, 'minutes');
 		await alarmManagerService.snoozeAlarm(alarmId, snoozeLength);
-		handleDismiss();
+		await closeRingingWindow();
 	};
 
 	// Silence After Timer

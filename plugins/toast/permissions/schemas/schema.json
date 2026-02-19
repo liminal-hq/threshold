@@ -311,12 +311,6 @@
           "type": "string",
           "const": "default",
           "markdownDescription": "Default permissions for the toast plugin\n#### This default permission set includes:\n\n- `allow-show`"
-        },
-        {
-          "description": "Enables the show command",
-          "type": "string",
-          "const": "allow-show",
-          "markdownDescription": "Enables the show command"
         }
       ]
     }

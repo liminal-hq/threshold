@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Threshold</string>
+    <string name="no_alarms">No alarms</string>
+    <string name="syncing">Syncing…</string>
+    <string name="offline">Offline</string>
+    <string name="connected">Connected</string>
+    <string name="delete_alarm_confirm">Delete this alarm?</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+</resources>

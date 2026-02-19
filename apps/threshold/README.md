@@ -8,7 +8,7 @@ This directory contains the main Tauri v2 application.
 
 - **Framework:** Tauri v2
 - **Frontend:** React + TypeScript + Material UI + TanStack Router
-- **State/Logic:** Custom Hooks + SQLite (`tauri-plugin-sql`)
+- **State/Logic:** AlarmService + Rust alarm core (SQLite managed in Rust)
 - **Native Integration:** `tauri-plugin-alarm-manager` (Local plugin for Threshold)
 
 ## Theming
@@ -87,4 +87,4 @@ On Android, the export includes app logs only (system logcat access is restricte
 ## Android Transitions
 
 The application uses native-like page transitions on Android using the View Transitions API.
-For implementation details, see [docs/ANDROID_TRANSITIONS.md](../../docs/ANDROID_TRANSITIONS.md).
+For implementation details, see [docs/android/transitions.md](../../docs/android/transitions.md).

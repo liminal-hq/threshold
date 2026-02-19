@@ -1,6 +1,6 @@
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    Manager, Runtime,
+    AppHandle, Listener, Manager, Runtime,
 };
 
 pub use models::*;
@@ -49,7 +49,29 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             #[cfg(desktop)]
             let alarm_manager = desktop::init(app, api)?;
             app.manage(alarm_manager);
+
+            // Listen to alarms:changed events
+            setup_event_listener(app.clone());
+
             Ok(())
         })
         .build()
+}
+
+fn setup_event_listener<R: Runtime>(app: AppHandle<R>) {
+    use serde_json::Value;
+
+    let app_handle = app.clone();
+    app.listen("alarms:changed", move |event| {
+        let payload = event.payload();
+
+        // Parse AlarmRecord array
+        if let Ok(alarms) = serde_json::from_str::<Vec<Value>>(payload) {
+            #[cfg(mobile)]
+            mobile::handle_alarms_changed(&app_handle, alarms);
+
+            #[cfg(desktop)]
+            desktop::handle_alarms_changed(&app_handle, alarms);
+        }
+    });
 }

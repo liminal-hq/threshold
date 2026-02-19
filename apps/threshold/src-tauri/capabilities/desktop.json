@@ -4,5 +4,10 @@
 	"description": "Desktop only capabilities",
 	"windows": ["main"],
 	"platforms": ["linux", "macOS", "windows"],
-	"permissions": ["core:webview:allow-create-webview-window", "core:window:allow-destroy"]
+	"permissions": [
+		"window-state:default",
+		"core:webview:allow-create-webview-window",
+		"core:window:allow-destroy",
+		"core:window:allow-set-size"
+	]
 }

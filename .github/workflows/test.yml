@@ -44,6 +44,27 @@ jobs:
       # - name: Lint Code
       #   run: pnpm format:check
 
+  lint-mermaid:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint Mermaid diagrams
+        run: pnpm run lint:mermaid
+
   test-rust:
     runs-on: ubuntu-24.04
     steps:
@@ -100,10 +121,36 @@ jobs:
       # - name: Rust Clippy
       #   run: cargo clippy --all-features -- -D warnings
 
+  test-kotlin:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Run Wear app unit tests
+        working-directory: apps/threshold-wear
+        run: ./gradlew testDebugUnitTest
+
+      - name: Upload Kotlin Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kotlin-test-results
+          path: apps/threshold-wear/build/test-results/**/*.xml
+
   report:
     runs-on: ubuntu-24.04
     if: always()
-    needs: [test-js, test-rust]
+    needs: [test-js, test-rust, test-kotlin, lint-mermaid]
     permissions:
       contents: read
       checks: write
@@ -123,6 +170,12 @@ jobs:
         with:
           name: rust-test-results
           path: test-results/rust
+
+      - name: Download Kotlin Test Results
+        uses: actions/download-artifact@v4
+        with:
+          name: kotlin-test-results
+          path: test-results/kotlin
 
       - name: Publish Test Report
         uses: dorny/test-reporter@v1
