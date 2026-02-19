@@ -21,7 +21,36 @@ type NotificationActionHandlers = {
 	onSnoozeUpcoming: (alarmId: number, snoozeMinutes: number) => Promise<void>;
 };
 
+type NotificationAction = {
+	id: string;
+	title: string;
+	input?: boolean;
+	destructive?: boolean;
+	foreground?: boolean;
+};
+
+type NotificationActionType = {
+	id: string;
+	actions: NotificationAction[];
+};
+
+type ActionTypeProvider = () => NotificationActionType[] | Promise<NotificationActionType[]>;
+
 export class AlarmNotificationService {
+	private actionTypeProviders = new Map<string, ActionTypeProvider>();
+
+	constructor() {
+		this.registerActionTypeProvider('alarm-core', this.buildCoreActionTypes.bind(this));
+	}
+
+	public registerActionTypeProvider(key: string, provider: ActionTypeProvider): void {
+		this.actionTypeProviders.set(key, provider);
+	}
+
+	public removeActionTypeProvider(key: string): void {
+		this.actionTypeProviders.delete(key);
+	}
+
 	private getUpcomingNotificationId(alarmId: number): number {
 		return UPCOMING_NOTIFICATION_ID_OFFSET + alarmId;
 	}
@@ -46,11 +75,11 @@ export class AlarmNotificationService {
 		return `Next alarm "${label}" at ${formattedTime}`;
 	}
 
-	private async registerMobileActions() {
+	private buildCoreActionTypes(): NotificationActionType[] {
 		const snoozeLength = SettingsService.getSnoozeLength();
 		const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
 
-		await registerActionTypes([
+		return [
 			{
 				id: 'test_trigger',
 				actions: [
@@ -95,17 +124,30 @@ export class AlarmNotificationService {
 					},
 				],
 			},
-		]);
+		];
+	}
+
+	private async refreshRegisteredActionTypes() {
+		const providedActionTypes = await Promise.all(
+			[...this.actionTypeProviders.values()].map(async (provider) => provider()),
+		);
+		const flattened = providedActionTypes.flat();
+		const deduplicatedById = new Map<string, NotificationActionType>();
+		for (const actionType of flattened) {
+			deduplicatedById.set(actionType.id, actionType);
+		}
+
+		await registerActionTypes([...deduplicatedById.values()]);
 	}
 
 	async initialiseMobileNotificationActions(handlers: NotificationActionHandlers): Promise<void> {
 		if (!PlatformUtils.isMobile()) return;
 
-		await this.registerMobileActions();
+		await this.refreshRegisteredActionTypes();
 
 		await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
 			if (event.payload?.key === 'snoozeLength') {
-				await this.registerMobileActions();
+				await this.refreshRegisteredActionTypes();
 			}
 		});
 
