@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import { registerActionTypes, onAction, Schedule, cancel, removeActive, sendNotification } from '@tauri-apps/plugin-notification';
-import { listen } from '@tauri-apps/api/event';
+import { emit, listen } from '@tauri-apps/api/event';
 import { AlarmMode } from '@threshold/core/types';
 import type { AlarmRecord } from '../types/alarm';
 import { PlatformUtils } from '../utils/PlatformUtils';
@@ -121,8 +121,8 @@ export class AlarmNotificationService {
 		await registerActionTypes([...deduplicatedById.values()]);
 	}
 
-	public async refreshActionTypes(): Promise<void> {
-		await this.refreshRegisteredActionTypes();
+	public async requestActionTypesRefresh(): Promise<void> {
+		await emit('notifications:action-types:refresh');
 	}
 
 	async initialiseMobileNotificationActions(handlers: NotificationActionHandlers): Promise<void> {
@@ -135,6 +135,10 @@ export class AlarmNotificationService {
 			if (event.payload?.key === 'snoozeLength') {
 				await this.refreshRegisteredActionTypes();
 			}
+		});
+
+		await listen('notifications:action-types:refresh', async () => {
+			await this.refreshRegisteredActionTypes();
 		});
 
 		await onAction(async (notification) => {
@@ -195,3 +199,5 @@ export class AlarmNotificationService {
 		}
 	}
 }
+
+export const alarmNotificationService = new AlarmNotificationService();

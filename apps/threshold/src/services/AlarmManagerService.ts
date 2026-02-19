@@ -14,7 +14,7 @@ import { AlarmService } from './AlarmService';
 import { SettingsService } from './SettingsService';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { showToast } from 'tauri-plugin-toast-api';
-import { AlarmNotificationService, type NotificationActionType } from './AlarmNotificationService';
+import { alarmNotificationService, type NotificationActionType } from './AlarmNotificationService';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
 interface ImportedAlarm {
@@ -28,7 +28,6 @@ export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
 	private router: any = null;
 	private scheduledIds = new Set<number>();
-	private alarmNotificationService = new AlarmNotificationService();
 
 	public setRouter(router: any) {
 		this.router = router;
@@ -39,8 +38,8 @@ export class AlarmManagerService {
 	}
 
 	private registerNotificationActionTypes() {
-		this.alarmNotificationService.registerActionTypeProvider(
-			'alarm_trigger',
+		alarmNotificationService.registerActionTypeProvider(
+			'alarm-trigger-actions',
 			(): NotificationActionType[] => {
 				const snoozeLength = SettingsService.getSnoozeLength();
 				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
@@ -65,8 +64,8 @@ export class AlarmManagerService {
 			},
 		);
 
-		this.alarmNotificationService.registerActionTypeProvider(
-			'upcoming_alarm',
+		alarmNotificationService.registerActionTypeProvider(
+			'upcoming-alarm-actions',
 			(): NotificationActionType[] => {
 				const snoozeLength = SettingsService.getSnoozeLength();
 				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
@@ -136,7 +135,7 @@ export class AlarmManagerService {
 					console.log('[AlarmManager] Registering notification actions...');
 					try {
 						this.registerNotificationActionTypes();
-						await this.alarmNotificationService.initialiseMobileNotificationActions({
+						await alarmNotificationService.initialiseMobileNotificationActions({
 							onDismissRinging: async () => {
 								console.log('[AlarmManager] Action: Dismiss');
 								await this.stopRinging();
@@ -186,7 +185,7 @@ export class AlarmManagerService {
 			).catch(() => null);
 
 			if (result && result.isAlarm && result.alarmId) {
-				await this.alarmNotificationService.cancelUpcomingNotification(result.alarmId);
+				await alarmNotificationService.cancelUpcomingNotification(result.alarmId);
 				console.log(`[AlarmManager] Active alarm detected: ${result.alarmId}. Redirecting...`);
 
 				if (this.router) {
@@ -201,7 +200,7 @@ export class AlarmManagerService {
 	}
 
 	private async dismissNextOccurrence(alarmId: number): Promise<void> {
-		await this.alarmNotificationService.cancelUpcomingNotification(alarmId);
+		await alarmNotificationService.cancelUpcomingNotification(alarmId);
 		await AlarmService.dismiss(alarmId);
 	}
 
@@ -242,7 +241,7 @@ export class AlarmManagerService {
 
 			if (alarm.enabled && alarm.nextTrigger && alarm.nextTrigger > Date.now()) {
 				await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger, alarm.soundUri);
-				await this.alarmNotificationService.scheduleUpcomingNotification(
+				await alarmNotificationService.scheduleUpcomingNotification(
 					alarm,
 					alarm.nextTrigger,
 				);
@@ -252,7 +251,7 @@ export class AlarmManagerService {
 					await this.cancelNativeAlarm(alarm.id);
 					this.scheduledIds.delete(alarm.id);
 				}
-				await this.alarmNotificationService.cancelUpcomingNotification(alarm.id);
+				await alarmNotificationService.cancelUpcomingNotification(alarm.id);
 			}
 		}
 
@@ -260,7 +259,7 @@ export class AlarmManagerService {
 		for (const id of toCancel) {
 			console.log(`[AlarmManager] Alarm ${id} removed, cancelling native schedule.`);
 			await this.cancelNativeAlarm(id);
-			await this.alarmNotificationService.cancelUpcomingNotification(id);
+			await alarmNotificationService.cancelUpcomingNotification(id);
 			this.scheduledIds.delete(id);
 		}
 	}
@@ -305,37 +304,6 @@ export class AlarmManagerService {
 		}
 	}
 
-	async sendTestNotification() {
-		console.log('[AlarmManager] Sending test notification...');
-		const isMobile = PlatformUtils.isMobile();
-		try {
-			if (isMobile) {
-				this.alarmNotificationService.registerActionTypeProvider(
-					'test_trigger',
-					(): NotificationActionType[] => [
-						{
-							id: 'test_trigger',
-							actions: [
-								{ id: 'test_action_1', title: 'Test Action 1' },
-								{ id: 'test_action_2', title: 'Test Action 2' },
-							],
-						},
-					],
-				);
-				await this.alarmNotificationService.refreshActionTypes();
-			}
-
-			await sendNotification({
-				title: 'Test Notification',
-				body: 'This is a test notification with actions',
-				actionTypeId: isMobile ? 'test_trigger' : undefined,
-			});
-			console.log('[AlarmManager] Test notification sent');
-		} catch (e) {
-			console.error('[AlarmManager] Failed to send test notification', e);
-		}
-	}
-
 	async toggleAlarm(alarm: Alarm, enabled: boolean) {
 		await AlarmService.toggle(alarm.id, enabled);
 	}
@@ -347,12 +315,12 @@ export class AlarmManagerService {
 
 	async deleteAlarm(id: number) {
 		await AlarmService.delete(id);
-		await this.alarmNotificationService.cancelUpcomingNotification(id);
+		await alarmNotificationService.cancelUpcomingNotification(id);
 	}
 
 	async snoozeAlarm(id: number, minutes: number, stopCurrentRinging: boolean = true) {
 		console.log(`[AlarmManager] Snoozing alarm ${id} for ${minutes} minutes`);
-		await this.alarmNotificationService.cancelUpcomingNotification(id);
+		await alarmNotificationService.cancelUpcomingNotification(id);
 		await AlarmService.snooze(id, minutes);
 		if (stopCurrentRinging) {
 			await this.stopRinging();
@@ -371,7 +339,7 @@ export class AlarmManagerService {
 	}
 
 	private async handleAlarmRing(id: number) {
-		await this.alarmNotificationService.cancelUpcomingNotification(id);
+		await alarmNotificationService.cancelUpcomingNotification(id);
 
 		const isMobile = PlatformUtils.isMobile();
 		await sendNotification({
