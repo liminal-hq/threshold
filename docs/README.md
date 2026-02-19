@@ -17,6 +17,7 @@
 
 - **Adding a plugin?** Start with [plugin-manifest-quickstart](plugins/plugin-manifest-quickstart.md)
 - **Understanding the architecture?** Start with [architecture/README](architecture/README.md)
+- **Working on notifications?** Read [architecture/notification-architecture](architecture/notification-architecture.md)
 - **Working on Wear OS?** Start with [wear-implementation/README](wear-implementation/README.md)
 - **Using an AI agent?** See [ai-agent-usage-guide](ai-agent-usage-guide.md)
 - **Project conventions:** See [AGENTS.md](../AGENTS.md)

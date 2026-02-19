@@ -97,22 +97,33 @@ export class AlarmManagerService {
 			try {
 				console.log('[AlarmManager] Starting service initialisation...');
 
-				console.log('[AlarmManager] Setting up event listener 1/2: alarm-ring...');
+				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
 				// Listen for alarms ringing from the Rust Backend (Desktop)
 				await listen<{ id: number }>('alarm-ring', (event) => {
 					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
 					this.handleAlarmRing(event.payload.id);
 				});
-				console.log('[AlarmManager] Event listener 1/2 registered.');
+				console.log('[AlarmManager] Event listener 1/3 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 2/2: alarms:batch:updated...');
+				console.log('[AlarmManager] Setting up event listener 2/3: alarms:batch:updated...');
 				// Listen for batch events and refresh native schedule
 				await listen('alarms:batch:updated', async () => {
 					console.log('[AlarmManager] Received alarms:batch:updated event');
 					const alarms = await AlarmService.getAll();
 					this.syncNativeAlarms(alarms);
 				});
-				console.log('[AlarmManager] Event listener 2/2 registered.');
+				console.log('[AlarmManager] Event listener 2/3 registered.');
+
+				console.log('[AlarmManager] Setting up event listener 3/3: settings-changed...');
+				await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
+					if (event.payload?.key !== 'is24h') return;
+					if (!PlatformUtils.isMobile()) return;
+
+					console.log('[AlarmManager] Received settings-changed event for is24h');
+					const alarms = await AlarmService.getAll();
+					await this.syncNativeAlarms(alarms);
+				});
+				console.log('[AlarmManager] Event listener 3/3 registered.');
 
 				console.log('[AlarmManager] Checking for native imports...');
 				await this.checkImports();

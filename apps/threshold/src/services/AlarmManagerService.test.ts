@@ -333,4 +333,40 @@ describe('AlarmManagerService', () => {
 			]),
 		);
 	});
+
+	it('re-syncs upcoming notifications when 24-hour setting changes', async () => {
+		const service = new AlarmManagerService();
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+		const nextTrigger = Date.now() + 30 * 60_000;
+
+		(AlarmService.getAll as any).mockResolvedValue([
+			{
+				id: 21,
+				enabled: true,
+				mode: AlarmMode.Fixed,
+				fixedTime: '07:30',
+				activeDays: [1],
+				label: 'Format refresh alarm',
+				nextTrigger,
+				soundUri: null,
+				soundTitle: null,
+			},
+		]);
+
+		await service.init();
+
+		(sendNotification as any).mockClear();
+		const settingsChangedHandlers = eventListeners.get('settings-changed') ?? [];
+		expect(settingsChangedHandlers.length).toBeGreaterThan(0);
+		for (const handler of settingsChangedHandlers) {
+			await handler({ payload: { key: 'is24h', value: true } });
+		}
+
+		expect(sendNotification).toHaveBeenCalledWith(
+			expect.objectContaining({
+				id: 1_000_021,
+				actionTypeId: 'upcoming_alarm',
+			}),
+		);
+	});
 });
