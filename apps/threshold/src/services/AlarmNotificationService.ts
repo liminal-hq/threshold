@@ -35,12 +35,16 @@ type NotificationActionType = {
 };
 
 type ActionTypeProvider = () => NotificationActionType[] | Promise<NotificationActionType[]>;
+type ActionTypeHandler = (actionId: string, payload: { id?: unknown }) => Promise<void>;
 
 export class AlarmNotificationService {
 	private actionTypeProviders = new Map<string, ActionTypeProvider>();
+	private actionTypeHandlers = new Map<string, ActionTypeHandler>();
 
 	constructor() {
-		this.registerActionTypeProvider('alarm-core', this.buildCoreActionTypes.bind(this));
+		this.registerActionTypeProvider('issuer-test', this.buildTestActionTypes.bind(this));
+		this.registerActionTypeProvider('issuer-ringing', this.buildRingingActionTypes.bind(this));
+		this.registerActionTypeProvider('issuer-upcoming', this.buildUpcomingActionTypes.bind(this));
 	}
 
 	public registerActionTypeProvider(key: string, provider: ActionTypeProvider): void {
@@ -75,10 +79,7 @@ export class AlarmNotificationService {
 		return `Next alarm "${label}" at ${formattedTime}`;
 	}
 
-	private buildCoreActionTypes(): NotificationActionType[] {
-		const snoozeLength = SettingsService.getSnoozeLength();
-		const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
-
+	private buildTestActionTypes(): NotificationActionType[] {
 		return [
 			{
 				id: 'test_trigger',
@@ -93,6 +94,14 @@ export class AlarmNotificationService {
 					},
 				],
 			},
+		];
+	}
+
+	private buildRingingActionTypes(): NotificationActionType[] {
+		const snoozeLength = SettingsService.getSnoozeLength();
+		const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
+
+		return [
 			{
 				id: 'alarm_trigger',
 				actions: [
@@ -109,6 +118,14 @@ export class AlarmNotificationService {
 					},
 				],
 			},
+		];
+	}
+
+	private buildUpcomingActionTypes(): NotificationActionType[] {
+		const snoozeLength = SettingsService.getSnoozeLength();
+		const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
+
+		return [
 			{
 				id: 'upcoming_alarm',
 				actions: [
@@ -127,50 +144,17 @@ export class AlarmNotificationService {
 		];
 	}
 
-	private async refreshRegisteredActionTypes() {
-		const providedActionTypes = await Promise.all(
-			[...this.actionTypeProviders.values()].map(async (provider) => provider()),
-		);
-		const flattened = providedActionTypes.flat();
-		const deduplicatedById = new Map<string, NotificationActionType>();
-		for (const actionType of flattened) {
-			deduplicatedById.set(actionType.id, actionType);
-		}
-
-		await registerActionTypes([...deduplicatedById.values()]);
-	}
-
-	async initialiseMobileNotificationActions(handlers: NotificationActionHandlers): Promise<void> {
-		if (!PlatformUtils.isMobile()) return;
-
-		await this.refreshRegisteredActionTypes();
-
-		await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
-			if (event.payload?.key === 'snoozeLength') {
-				await this.refreshRegisteredActionTypes();
+	private registerActionTypeHandlers(handlers: NotificationActionHandlers) {
+		this.actionTypeHandlers.set('alarm_trigger', async (actionId) => {
+			if (actionId === 'dismiss') {
+				await handlers.onDismissRinging();
+			} else if (actionId === 'snooze') {
+				await handlers.onSnoozeRinging();
 			}
 		});
 
-		await onAction(async (notification) => {
-			console.log('[AlarmNotifications] Action performed:', notification);
-
-			const actionTypeId = (notification as any).actionTypeId;
-			const actionId = (notification as any).actionId;
-
-			if (actionTypeId === 'alarm_trigger') {
-				if (actionId === 'dismiss') {
-					await handlers.onDismissRinging();
-				} else if (actionId === 'snooze') {
-					await handlers.onSnoozeRinging();
-				}
-				return;
-			}
-
-			if (actionTypeId !== 'upcoming_alarm') {
-				return;
-			}
-
-			const rawId = (notification as any).id;
+		this.actionTypeHandlers.set('upcoming_alarm', async (actionId, payload) => {
+			const rawId = payload.id;
 			const notificationId =
 				typeof rawId === 'number' ? rawId : Number.parseInt(String(rawId ?? ''), 10);
 			if (Number.isNaN(notificationId)) {
@@ -192,6 +176,49 @@ export class AlarmNotificationService {
 				const snoozeLength = SettingsService.getSnoozeLength();
 				await handlers.onSnoozeUpcoming(alarmId, snoozeLength);
 			}
+		});
+	}
+
+	private async refreshRegisteredActionTypes() {
+		const providedActionTypes = await Promise.all(
+			[...this.actionTypeProviders.values()].map(async (provider) => provider()),
+		);
+		const flattened = providedActionTypes.flat();
+		const deduplicatedById = new Map<string, NotificationActionType>();
+		for (const actionType of flattened) {
+			deduplicatedById.set(actionType.id, actionType);
+		}
+
+		await registerActionTypes([...deduplicatedById.values()]);
+	}
+
+	async initialiseMobileNotificationActions(handlers: NotificationActionHandlers): Promise<void> {
+		if (!PlatformUtils.isMobile()) return;
+
+		this.registerActionTypeHandlers(handlers);
+		await this.refreshRegisteredActionTypes();
+
+		await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
+			if (event.payload?.key === 'snoozeLength') {
+				await this.refreshRegisteredActionTypes();
+			}
+		});
+
+		await onAction(async (notification) => {
+			console.log('[AlarmNotifications] Action performed:', notification);
+
+			const actionTypeId = (notification as any).actionTypeId;
+			const actionId = (notification as any).actionId;
+			if (typeof actionTypeId !== 'string' || typeof actionId !== 'string') {
+				return;
+			}
+
+			const handler = this.actionTypeHandlers.get(actionTypeId);
+			if (!handler) {
+				return;
+			}
+
+			await handler(actionId, { id: (notification as any).id });
 		});
 	}
 
