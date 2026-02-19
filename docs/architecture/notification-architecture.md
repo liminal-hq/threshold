@@ -14,58 +14,58 @@ The goal is to keep alarm state authoritative and deterministic while allowing n
 The notification system is intentionally split into three layers:
 
 1. Domain state and scheduling intent
-  - `AlarmManagerService` responds to core alarm events (`alarms:batch:updated`, `alarm-ring`), keeps native scheduling in sync, and emits notification refresh intents.
-  - It does not own notification rendering primitives directly.
+    - `AlarmManagerService` responds to core alarm events (`alarms:batch:updated`, `alarm-ring`), keeps native scheduling in sync, and emits notification refresh intents.
+    - It does not own notification rendering primitives directly.
 
 2. Notification orchestration
-  - `AlarmNotificationService` is the hub for notification action type registration, action dispatch, and upcoming notification schedule/cancel operations.
-  - It provides a stable API to feature services and hides plugin-level details.
+    - `AlarmNotificationService` is the hub for notification action type registration, action dispatch, and upcoming notification schedule/cancel operations.
+    - It provides a stable API to feature services and hides plugin-level details.
 
 3. UI feedback and presentation adapters
-  - `NotificationToastService` consumes toast intent events and performs platform-specific presentation.
-  - This keeps transient UI feedback separate from alarm domain logic.
+    - `NotificationToastService` consumes toast intent events and performs platform-specific presentation.
+    - This keeps transient UI feedback separate from alarm domain logic.
 
 ## Responsibility Boundaries
 
 ### `AlarmManagerService`
 
 Owns:
-  - Listening to core alarm lifecycle events.
-  - Native alarm scheduling and cancellation.
-  - Emitting `notifications:upcoming:resync` intents.
-  - Mapping alarm business operations to commands (`dismiss`, `snooze`, `reportFired`).
+    - Listening to core alarm lifecycle events.
+    - Native alarm scheduling and cancellation.
+    - Emitting `notifications:upcoming:resync` intents.
+    - Mapping alarm business operations to commands (`dismiss`, `snooze`, `reportFired`).
 
 Does not own:
-  - Notification action type composition internals.
-  - Direct toast UI invocation.
+    - Notification action type composition internals.
+    - Direct toast UI invocation.
 
 ### `AlarmNotificationService`
 
 Owns:
-  - Action type provider registry and deduplication.
-  - Action callback routing by `actionTypeId` and `actionId`.
-  - Upcoming notification ID translation and schedule/cancel logic.
-  - Notification-domain event API (`notifications:*`).
+    - Action type provider registry and deduplication.
+    - Action callback routing by `actionTypeId` and `actionId`.
+    - Upcoming notification ID translation and schedule/cancel logic.
+    - Notification-domain event API (`notifications:*`).
 
 Does not own:
-  - Alarm state mutation authority.
-  - Navigation or app window routing.
+    - Alarm state mutation authority.
+    - Navigation or app window routing.
 
 ### `NotificationToastService`
 
 Owns:
-  - Listening to `notifications:toast`.
-  - Platform filtering and toast rendering.
+    - Listening to `notifications:toast`.
+    - Platform filtering and toast rendering.
 
 Does not own:
-  - Alarm state, scheduling, or action routing decisions.
+    - Alarm state, scheduling, or action routing decisions.
 
 ### `SettingsService`
 
 Owns:
-  - Emitting settings-change events.
-  - Registering settings-owned test notification action types.
-  - Sending test notifications.
+    - Emitting settings-change events.
+    - Registering settings-owned test notification action types.
+    - Sending test notifications.
 
 ## Event-Driven Flows
 
@@ -100,9 +100,9 @@ This two-step fan-out keeps notification refresh explicit and reusable without c
 ### Settings-Driven Paths
 
 - `snoozeLength` change:
-  - `AlarmNotificationService` refreshes action types so labels like `Snooze (15m)` stay accurate.
+    - `AlarmNotificationService` refreshes action types so labels like `Snooze (15m)` stay accurate.
 - `is24h` change:
-  - `AlarmManagerService` emits `notifications:upcoming:resync` so upcoming notification body text is regenerated in the new time format.
+    - `AlarmManagerService` emits `notifications:upcoming:resync` so upcoming notification body text is regenerated in the new time format.
 
 ### Toast Intent Path
 
@@ -192,16 +192,16 @@ type NotificationToastEvent = {
 When adding a new notification feature:
 
 1. Decide ownership first
-  - Add action registration where the feature context lives (settings, alarms, future modules), not in a central monolith.
+    - Add action registration where the feature context lives (settings, alarms, future modules), not in a central monolith.
 
 2. Preserve the split
-  - Use commands for state mutation and events for fan-out.
+    - Use commands for state mutation and events for fan-out.
 
 3. Prefer semantic event names
-  - Event names should describe intent (`notifications:toast`), not implementation details.
+    - Event names should describe intent (`notifications:toast`), not implementation details.
 
 4. Document new contracts
-  - Update this document with producer, consumer, payload, and lifecycle impact.
+    - Update this document with producer, consumer, payload, and lifecycle impact.
 
 ## Desktop Behaviour
 
