@@ -34,6 +34,7 @@ The notification system is intentionally split into three layers:
     - Native alarm scheduling and cancellation.
     - Emitting `notifications:upcoming:resync` intents.
     - Mapping alarm business operations to commands (`dismiss`, `snooze`, `reportFired`).
+    - Consuming `notifications:upcoming:resync` and executing upcoming notification refresh using current alarm state.
 - **Does not own**
     - Notification action type composition internals.
     - Direct toast UI invocation.
@@ -45,7 +46,7 @@ The notification system is intentionally split into three layers:
     - Action callback routing by `actionTypeId` and `actionId`.
     - Upcoming notification ID translation and schedule/cancel logic.
     - Notification-domain event API (`notifications:*`).
-    - Presentation-driven notification refresh triggers (`settings-changed` for `snoozeLength` and `is24h`).
+    - Consuming `settings-changed` for notification-facing concerns (`snoozeLength`, `is24h`) and emitting refresh intents.
 - **Does not own**
     - Alarm state mutation authority.
     - Navigation or app window routing.
@@ -74,7 +75,7 @@ The notification system is intentionally split into three layers:
 | `alarms:batch:updated` | Alarm domain | `AlarmManagerService` | Alarm state changed; refresh scheduling |
 | `alarm-ring` | Native/plugin layer | `AlarmManagerService` | Alarm has fired; transition to ringing flow |
 | `settings-changed` (`snoozeLength`) | `SettingsService` | `AlarmNotificationService` | Rebuild action labels |
-| `settings-changed` (`is24h`) | `SettingsService` | `AlarmNotificationService` | Trigger upcoming-notification text refresh |
+| `settings-changed` (`is24h`) | `SettingsService` | `AlarmNotificationService` | Emit resync intent for upcoming-notification text refresh |
 | `notifications:action-types:refresh` | `AlarmNotificationService` | `AlarmNotificationService` | Recompute and register action types |
 | `notifications:upcoming:resync` | `AlarmManagerService`, `AlarmNotificationService` | `AlarmManagerService` | Refresh upcoming notifications (all or targeted) |
 | `notifications:toast` | Notification/domain services | `NotificationToastService` | Present transient confirmation UI |
@@ -100,7 +101,8 @@ This two-step fan-out keeps notification refresh explicit and reusable without c
 - `snoozeLength` change:
     - `AlarmNotificationService` refreshes action types so labels like `Snooze (15m)` stay accurate.
 - `is24h` change:
-    - `AlarmNotificationService` emits `notifications:upcoming:resync` so upcoming notification body text is regenerated in the new time format.
+    - `AlarmNotificationService` emits `notifications:upcoming:resync`.
+    - `AlarmManagerService` consumes the resync event and regenerates upcoming notification body text in the new time format.
 
 ### Toast Intent Path
 
