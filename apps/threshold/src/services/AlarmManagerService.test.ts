@@ -18,6 +18,7 @@ import {
 } from '@tauri-apps/plugin-notification';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { showToast } from 'tauri-plugin-toast-api';
+import { notificationToastService } from './NotificationToastService';
 
 vi.mock('./AlarmService', () => ({
 	AlarmService: {
@@ -73,6 +74,7 @@ describe('AlarmManagerService', () => {
 
 	beforeEach(() => {
 		vi.resetAllMocks();
+		(notificationToastService as any).initPromise = null;
 		localStorageState.clear();
 		eventListeners.clear();
 
@@ -94,7 +96,12 @@ describe('AlarmManagerService', () => {
 			eventListeners.set(eventName, existing);
 			return () => undefined;
 		});
-		(emit as any).mockResolvedValue(undefined);
+		(emit as any).mockImplementation(async (eventName: string, payload?: unknown) => {
+			const handlers = eventListeners.get(eventName) ?? [];
+			for (const handler of handlers) {
+				await handler({ payload });
+			}
+		});
 		(invoke as any).mockImplementation((command: string) => {
 			if (command === 'plugin:alarm-manager|get_launch_args') {
 				return Promise.resolve([]);

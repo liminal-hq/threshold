@@ -36,7 +36,7 @@ This document defines the current notification architecture for Threshold, inclu
 
 - Event: `alarms:batch:updated`
 - Listener: `AlarmManagerService`
-- Effect: load alarms, call `syncNativeAlarms`, update native scheduling + upcoming notifications.
+- Effect: load alarms, call `syncNativeAlarms`, then emit `notifications:upcoming:resync`.
 
 ### 2. Alarm starts ringing
 
@@ -54,7 +54,7 @@ This document defines the current notification architecture for Threshold, inclu
 
 - Event: `settings-changed` with `key: "is24h"`
 - Listener: `AlarmManagerService` (mobile only)
-- Effect: re-sync alarms so upcoming notification text re-renders with updated time format.
+- Effect: emit `notifications:upcoming:resync` so upcoming notification text re-renders with updated time format.
 
 ### 5. Action provider changes
 
@@ -62,6 +62,18 @@ This document defines the current notification architecture for Threshold, inclu
 - Emitter: `AlarmNotificationService.registerActionTypeProvider/removeActionTypeProvider`
 - Listener: `AlarmNotificationService`
 - Effect: recompute and register deduplicated action types.
+
+### 6. Upcoming notification refresh
+
+- Event: `notifications:upcoming:resync`
+- Listener: `AlarmManagerService` (mobile only)
+- Effect: refresh upcoming notifications for all alarms or targeted `alarmIds`.
+
+### 7. Toast presentation
+
+- Event: `notifications:toast`
+- Listener: `NotificationToastService`
+- Effect: show toast on supported platform for notification-related UX confirmation.
 
 ## Mobile Notification Sequence
 
@@ -73,6 +85,7 @@ sequenceDiagram
     participant Tauri as Tauri Notification Plugin
 
     Settings->>AlarmMgr: emit("settings-changed", { key: "is24h" })
+    AlarmMgr->>NotifHub: emit("notifications:upcoming:resync")
     AlarmMgr->>AlarmMgr: get alarms
     AlarmMgr->>NotifHub: schedule/cancel upcoming notifications
     NotifHub->>Tauri: sendNotification/cancel/removeActive
@@ -101,9 +114,4 @@ sequenceDiagram
 - Desktop notifications may still be sent via plugin APIs where supported.
 - Mobile-specific action type registration and action callbacks are not initialised on desktop.
 - Upcoming-notification scheduling in `AlarmNotificationService` is guarded by `PlatformUtils.isMobile()`.
-
-## Remaining Event-Driven Opportunities
-
-- Add a dedicated event such as `notifications:upcoming:resync` to decouple upcoming-notification refresh from `AlarmManagerService` internals.
-- Publish toast intents as events (for example `notifications:toast`) to keep UI confirmation concerns separate from alarm lifecycle logic.
-- Emit a dedicated setting event for notification formatting preferences if notification concerns expand beyond `is24h`.
+- Toast presentation via `NotificationToastService` is event-driven and can be platform-filtered by payload.

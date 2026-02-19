@@ -13,8 +13,12 @@ import { AlarmInput, AlarmRecord, AlarmMode } from '../types/alarm';
 import { AlarmService } from './AlarmService';
 import { SettingsService } from './SettingsService';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
-import { showToast } from 'tauri-plugin-toast-api';
-import { alarmNotificationService, type NotificationActionType } from './AlarmNotificationService';
+import {
+	alarmNotificationService,
+	type NotificationActionType,
+	type NotificationUpcomingResyncEvent,
+} from './AlarmNotificationService';
+import { notificationToastService } from './NotificationToastService';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
 interface ImportedAlarm {
@@ -23,6 +27,8 @@ interface ImportedAlarm {
 	minute: number;
 	label: string;
 }
+
+type NotificationUpcomingResyncPayload = NotificationUpcomingResyncEvent | null | undefined;
 
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
@@ -97,33 +103,48 @@ export class AlarmManagerService {
 			try {
 				console.log('[AlarmManager] Starting service initialisation...');
 
-				console.log('[AlarmManager] Setting up event listener 1/3: alarm-ring...');
+				await notificationToastService.init();
+
+				console.log('[AlarmManager] Setting up event listener 1/4: alarm-ring...');
 				// Listen for alarms ringing from the Rust Backend (Desktop)
 				await listen<{ id: number }>('alarm-ring', (event) => {
 					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
 					this.handleAlarmRing(event.payload.id);
 				});
-				console.log('[AlarmManager] Event listener 1/3 registered.');
+				console.log('[AlarmManager] Event listener 1/4 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 2/3: alarms:batch:updated...');
+				console.log('[AlarmManager] Setting up event listener 2/4: alarms:batch:updated...');
 				// Listen for batch events and refresh native schedule
 				await listen('alarms:batch:updated', async () => {
 					console.log('[AlarmManager] Received alarms:batch:updated event');
 					const alarms = await AlarmService.getAll();
-					this.syncNativeAlarms(alarms);
+					await this.syncNativeAlarms(alarms);
+					await alarmNotificationService.requestUpcomingResync({
+						reason: 'alarm-batch-updated',
+					});
 				});
-				console.log('[AlarmManager] Event listener 2/3 registered.');
+				console.log('[AlarmManager] Event listener 2/4 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 3/3: settings-changed...');
+				console.log('[AlarmManager] Setting up event listener 3/4: settings-changed...');
 				await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
 					if (event.payload?.key !== 'is24h') return;
 					if (!PlatformUtils.isMobile()) return;
 
 					console.log('[AlarmManager] Received settings-changed event for is24h');
-					const alarms = await AlarmService.getAll();
-					await this.syncNativeAlarms(alarms);
+					await alarmNotificationService.requestUpcomingResync({
+						reason: 'settings-24h-changed',
+					});
 				});
-				console.log('[AlarmManager] Event listener 3/3 registered.');
+				console.log('[AlarmManager] Event listener 3/4 registered.');
+
+				console.log('[AlarmManager] Setting up event listener 4/4: notifications:upcoming:resync...');
+				await listen<NotificationUpcomingResyncEvent>(
+					'notifications:upcoming:resync',
+					async (event) => {
+						await this.resyncUpcomingNotifications(event.payload);
+					},
+				);
+				console.log('[AlarmManager] Event listener 4/4 registered.');
 
 				console.log('[AlarmManager] Checking for native imports...');
 				await this.checkImports();
@@ -133,6 +154,7 @@ export class AlarmManagerService {
 				// Initial sync
 				const alarms = await AlarmService.getAll();
 				await this.syncNativeAlarms(alarms);
+				await alarmNotificationService.requestUpcomingResync({ reason: 'manual' });
 				console.log('[AlarmManager] Reschedule complete.');
 
 				console.log('[AlarmManager] Service initialisation complete.');
@@ -163,7 +185,7 @@ export class AlarmManagerService {
 							onSnoozeUpcoming: async (alarmId, snoozeLength) => {
 								console.log('[AlarmManager] Action: Snooze upcoming alarm', alarmId);
 								await this.snoozeAlarm(alarmId, snoozeLength, false);
-								await this.showUpcomingSnoozeToast(alarmId, snoozeLength);
+								await this.emitUpcomingSnoozeToast(alarmId, snoozeLength);
 							},
 						});
 						console.log('[AlarmManager] Notification actions registered.');
@@ -215,9 +237,7 @@ export class AlarmManagerService {
 		await AlarmService.dismiss(alarmId);
 	}
 
-	private async showUpcomingSnoozeToast(alarmId: number, durationMinutes: number): Promise<void> {
-		if (PlatformUtils.getPlatform() !== 'android') return;
-
+	private async emitUpcomingSnoozeToast(alarmId: number, durationMinutes: number): Promise<void> {
 		let message = `Alarm snoozed for ${durationMinutes} min`;
 		try {
 			const alarm = await AlarmService.get(alarmId);
@@ -231,13 +251,13 @@ export class AlarmManagerService {
 		}
 
 		try {
-			await showToast({
+			await alarmNotificationService.publishToast({
+				kind: 'upcoming-snoozed',
 				message,
-				duration: 'short',
-				position: 'bottom',
+				platform: 'android',
 			});
 		} catch (e) {
-			console.warn('[AlarmManager] Failed to show toast confirmation', e);
+			console.warn('[AlarmManager] Failed to publish toast confirmation', e);
 		}
 	}
 
@@ -252,17 +272,12 @@ export class AlarmManagerService {
 
 			if (alarm.enabled && alarm.nextTrigger && alarm.nextTrigger > Date.now()) {
 				await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger, alarm.soundUri);
-				await alarmNotificationService.scheduleUpcomingNotification(
-					alarm,
-					alarm.nextTrigger,
-				);
 				this.scheduledIds.add(alarm.id);
 			} else {
 				if (this.scheduledIds.has(alarm.id)) {
 					await this.cancelNativeAlarm(alarm.id);
 					this.scheduledIds.delete(alarm.id);
 				}
-				await alarmNotificationService.cancelUpcomingNotification(alarm.id);
 			}
 		}
 
@@ -270,8 +285,30 @@ export class AlarmManagerService {
 		for (const id of toCancel) {
 			console.log(`[AlarmManager] Alarm ${id} removed, cancelling native schedule.`);
 			await this.cancelNativeAlarm(id);
-			await alarmNotificationService.cancelUpcomingNotification(id);
 			this.scheduledIds.delete(id);
+		}
+	}
+
+	private async resyncUpcomingNotifications(
+		payload: NotificationUpcomingResyncPayload,
+	): Promise<void> {
+		if (!PlatformUtils.isMobile()) return;
+
+		const alarms = await AlarmService.getAll();
+		const alarmsById = new Map<number, AlarmRecord>(alarms.map((alarm) => [alarm.id, alarm]));
+		const targetIds =
+			payload?.alarmIds && payload.alarmIds.length > 0
+				? [...new Set(payload.alarmIds)]
+				: alarms.map((alarm) => alarm.id);
+
+		for (const alarmId of targetIds) {
+			const alarm = alarmsById.get(alarmId);
+			if (!alarm || !alarm.enabled || !alarm.nextTrigger || alarm.nextTrigger <= Date.now()) {
+				await alarmNotificationService.cancelUpcomingNotification(alarmId);
+				continue;
+			}
+
+			await alarmNotificationService.scheduleUpcomingNotification(alarm, alarm.nextTrigger);
 		}
 	}
 

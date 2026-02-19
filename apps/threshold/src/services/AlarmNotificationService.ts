@@ -13,6 +13,9 @@ import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 
 const UPCOMING_NOTIFICATION_ID_OFFSET = 1_000_000;
 const UPCOMING_NOTIFICATION_LEAD_MS = 10 * 60 * 1000;
+const EVENT_NOTIFICATIONS_ACTION_TYPES_REFRESH = 'notifications:action-types:refresh';
+const EVENT_NOTIFICATIONS_UPCOMING_RESYNC = 'notifications:upcoming:resync';
+const EVENT_NOTIFICATIONS_TOAST = 'notifications:toast';
 
 type NotificationActionHandlers = {
 	onDismissRinging: () => Promise<void>;
@@ -32,6 +35,24 @@ export type NotificationAction = {
 export type NotificationActionType = {
 	id: string;
 	actions: NotificationAction[];
+};
+
+export type NotificationUpcomingResyncReason =
+	| 'alarm-batch-updated'
+	| 'settings-24h-changed'
+	| 'manual';
+
+export type NotificationUpcomingResyncEvent = {
+	reason: NotificationUpcomingResyncReason;
+	alarmIds?: number[];
+};
+
+export type NotificationToastKind = 'upcoming-snoozed' | 'alarm-dismissed' | 'generic';
+
+export type NotificationToastEvent = {
+	kind: NotificationToastKind;
+	message: string;
+	platform?: 'android' | 'ios' | 'desktop';
 };
 
 type ActionTypeProvider = () => NotificationActionType[] | Promise<NotificationActionType[]>;
@@ -124,7 +145,15 @@ export class AlarmNotificationService {
 	}
 
 	private async requestActionTypesRefresh(): Promise<void> {
-		await emit('notifications:action-types:refresh');
+		await emit(EVENT_NOTIFICATIONS_ACTION_TYPES_REFRESH);
+	}
+
+	public async requestUpcomingResync(payload: NotificationUpcomingResyncEvent): Promise<void> {
+		await emit(EVENT_NOTIFICATIONS_UPCOMING_RESYNC, payload);
+	}
+
+	public async publishToast(payload: NotificationToastEvent): Promise<void> {
+		await emit(EVENT_NOTIFICATIONS_TOAST, payload);
 	}
 
 	async initialiseMobileNotificationActions(handlers: NotificationActionHandlers): Promise<void> {
@@ -139,7 +168,7 @@ export class AlarmNotificationService {
 			}
 		});
 
-		await listen('notifications:action-types:refresh', async () => {
+		await listen(EVENT_NOTIFICATIONS_ACTION_TYPES_REFRESH, async () => {
 			await this.refreshRegisteredActionTypes();
 		});
 
