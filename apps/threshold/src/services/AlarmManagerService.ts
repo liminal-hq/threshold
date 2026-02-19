@@ -386,15 +386,19 @@ export class AlarmManagerService {
 		}
 	}
 
-	private async handleAlarmRing(id: number) {
-		await alarmNotificationService.cancelUpcomingNotification(id);
+		private async handleAlarmRing(id: number) {
+			await alarmNotificationService.cancelUpcomingNotification(id);
 
-		const isMobile = PlatformUtils.isMobile();
-		await sendNotification({
-			title: APP_NAME,
-			body: 'Your alarm is ringing!',
-			actionTypeId: isMobile ? 'alarm_trigger' : undefined,
-		});
+			const isMobile = PlatformUtils.isMobile();
+			try {
+				await sendNotification({
+					title: APP_NAME,
+					body: 'Your alarm is ringing!',
+					actionTypeId: isMobile ? 'alarm_trigger' : undefined,
+				});
+			} catch (e) {
+				console.error('[AlarmManager] Failed to send ringing notification', e);
+			}
 
 		try {
 			await AlarmService.reportFired(id, Date.now());

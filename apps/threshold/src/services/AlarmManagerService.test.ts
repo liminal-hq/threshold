@@ -292,6 +292,16 @@ describe('AlarmManagerService', () => {
 		expect(removeActive).toHaveBeenCalledWith([{ id: 1_000_017 }]);
 	});
 
+	it('continues ringing flow if sendNotification fails', async () => {
+		const service = new AlarmManagerService();
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+		(sendNotification as any).mockRejectedValueOnce(new Error('permission denied'));
+
+		await (service as any).handleAlarmRing(23);
+
+		expect(AlarmService.reportFired).toHaveBeenCalledWith(23, expect.any(Number));
+	});
+
 	it('registers dynamic snooze labels and refreshes them when snooze length changes', async () => {
 		const service = new AlarmManagerService();
 		(PlatformUtils.isMobile as any).mockReturnValue(true);
