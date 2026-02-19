@@ -1,4 +1,4 @@
-// Coordinates alarm scheduling, notification actions, and ringing flows across platforms
+// Coordinates alarm lifecycle, native scheduling sync, and ringing UI orchestration
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -40,7 +40,7 @@ export class AlarmManagerService {
 
 	private registerNotificationOwners() {
 		this.alarmNotificationService.registerActionTypeProvider(
-			'owner-settings-test',
+			'settings-test',
 			(): NotificationActionType[] => [
 				{
 					id: 'test_trigger',
@@ -53,7 +53,7 @@ export class AlarmManagerService {
 		);
 
 		this.alarmNotificationService.registerActionTypeProvider(
-			'owner-alarm-ringing',
+			'alarm-ringing',
 			(): NotificationActionType[] => {
 				const snoozeLength = SettingsService.getSnoozeLength();
 				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
@@ -79,7 +79,7 @@ export class AlarmManagerService {
 		);
 
 		this.alarmNotificationService.registerActionTypeProvider(
-			'owner-alarm-upcoming',
+			'alarm-upcoming',
 			(): NotificationActionType[] => {
 				const snoozeLength = SettingsService.getSnoozeLength();
 				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
