@@ -1,3 +1,8 @@
+// Renders settings controls for appearance, alarm behaviour, diagnostics, and test utilities
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React, { useState, useEffect } from 'react';
 import {
 	IconButton,
@@ -25,7 +30,6 @@ import { ArrowBack as ArrowBackIcon, FileDownload as FileDownloadIcon } from '@m
 import { useNavigate } from '@tanstack/react-router';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SettingsService, Theme } from '../services/SettingsService';
-import { alarmManagerService } from '../services/AlarmManagerService';
 import { AlarmService } from '../services/AlarmService';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { eventLogService } from '../services/EventLogService';
@@ -306,7 +310,7 @@ const Settings: React.FC = () => {
 								/>
 								<IconButton
 									edge="end"
-									onClick={() => alarmManagerService.sendTestNotification()}
+									onClick={() => SettingsService.sendTestNotification()}
 									sx={{
 										bgcolor: 'secondary.main',
 										color: 'secondary.contrastText',

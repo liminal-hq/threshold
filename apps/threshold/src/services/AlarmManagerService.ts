@@ -1,11 +1,24 @@
+// Coordinates alarm lifecycle, native scheduling sync, and ringing UI orchestration
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { APP_NAME } from '../constants';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { PlatformUtils } from '../utils/PlatformUtils';
-import { sendNotification, registerActionTypes, onAction } from '@tauri-apps/plugin-notification';
+import { sendNotification } from '@tauri-apps/plugin-notification';
 import { Alarm } from '@threshold/core/types';
 import { AlarmInput, AlarmRecord, AlarmMode } from '../types/alarm';
 import { AlarmService } from './AlarmService';
+import { SettingsService } from './SettingsService';
+import { TimeFormatHelper } from '../utils/TimeFormatHelper';
+import {
+	alarmNotificationService,
+	type NotificationActionType,
+	type NotificationUpcomingResyncEvent,
+} from './AlarmNotificationService';
+import { notificationToastService } from './NotificationToastService';
 
 // Define the plugin invoke types manually since we can't import from the plugin in this environment
 interface ImportedAlarm {
@@ -14,6 +27,8 @@ interface ImportedAlarm {
 	minute: number;
 	label: string;
 }
+
+type NotificationUpcomingResyncPayload = NotificationUpcomingResyncEvent | null | undefined;
 
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
@@ -28,6 +43,59 @@ export class AlarmManagerService {
 		return this.initPromise !== null;
 	}
 
+	private registerNotificationActionTypes() {
+		alarmNotificationService.registerActionTypeProvider(
+			'alarm-trigger-actions',
+			(): NotificationActionType[] => {
+				const snoozeLength = SettingsService.getSnoozeLength();
+				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
+				return [
+					{
+						id: 'alarm_trigger',
+						actions: [
+							{
+								id: 'snooze',
+								title: snoozeActionTitle,
+								input: false,
+							},
+							{
+								id: 'dismiss',
+								title: 'Dismiss',
+								destructive: true,
+								foreground: false,
+							},
+						],
+					},
+				];
+			},
+		);
+
+		alarmNotificationService.registerActionTypeProvider(
+			'upcoming-alarm-actions',
+			(): NotificationActionType[] => {
+				const snoozeLength = SettingsService.getSnoozeLength();
+				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
+				return [
+					{
+						id: 'upcoming_alarm',
+						actions: [
+							{
+								id: 'dismiss_alarm',
+								title: 'Dismiss alarm',
+								foreground: false,
+							},
+							{
+								id: 'snooze_alarm',
+								title: snoozeActionTitle,
+								foreground: false,
+							},
+						],
+					},
+				];
+			},
+		);
+	}
+
 	async init() {
 		if (this.initPromise) return this.initPromise;
 
@@ -35,22 +103,48 @@ export class AlarmManagerService {
 			try {
 				console.log('[AlarmManager] Starting service initialisation...');
 
-				console.log('[AlarmManager] Setting up event listener 1/2: alarm-ring...');
+				await notificationToastService.init();
+
+				console.log('[AlarmManager] Setting up event listener 1/4: alarm-ring...');
 				// Listen for alarms ringing from the Rust Backend (Desktop)
 				await listen<{ id: number }>('alarm-ring', (event) => {
 					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
 					this.handleAlarmRing(event.payload.id);
 				});
-				console.log('[AlarmManager] Event listener 1/2 registered.');
+				console.log('[AlarmManager] Event listener 1/4 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 2/2: alarms:batch:updated...');
+				console.log('[AlarmManager] Setting up event listener 2/4: alarms:batch:updated...');
 				// Listen for batch events and refresh native schedule
 				await listen('alarms:batch:updated', async () => {
 					console.log('[AlarmManager] Received alarms:batch:updated event');
 					const alarms = await AlarmService.getAll();
-					this.syncNativeAlarms(alarms);
+					await this.syncNativeAlarms(alarms);
+					await alarmNotificationService.requestUpcomingResync({
+						reason: 'alarm-batch-updated',
+					});
 				});
-				console.log('[AlarmManager] Event listener 2/2 registered.');
+				console.log('[AlarmManager] Event listener 2/4 registered.');
+
+				console.log('[AlarmManager] Setting up event listener 3/4: settings-changed...');
+				await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
+					if (event.payload?.key !== 'is24h') return;
+					if (!PlatformUtils.isMobile()) return;
+
+					console.log('[AlarmManager] Received settings-changed event for is24h');
+					await this.resyncUpcomingNotifications({
+						reason: 'settings-24h-changed',
+					});
+				});
+				console.log('[AlarmManager] Event listener 3/4 registered.');
+
+				console.log('[AlarmManager] Setting up event listener 4/4: notifications:upcoming:resync...');
+				await listen<NotificationUpcomingResyncEvent>(
+					'notifications:upcoming:resync',
+					async (event) => {
+						await this.resyncUpcomingNotifications(event.payload);
+					},
+				);
+				console.log('[AlarmManager] Event listener 4/4 registered.');
 
 				console.log('[AlarmManager] Checking for native imports...');
 				await this.checkImports();
@@ -60,6 +154,7 @@ export class AlarmManagerService {
 				// Initial sync
 				const alarms = await AlarmService.getAll();
 				await this.syncNativeAlarms(alarms);
+				await alarmNotificationService.requestUpcomingResync({ reason: 'manual' });
 				console.log('[AlarmManager] Reschedule complete.');
 
 				console.log('[AlarmManager] Service initialisation complete.');
@@ -72,60 +167,26 @@ export class AlarmManagerService {
 				if (PlatformUtils.isMobile()) {
 					console.log('[AlarmManager] Registering notification actions...');
 					try {
-						await registerActionTypes([
-							{
-								id: 'test_trigger',
-								actions: [
-									{
-										id: 'test_action_1',
-										title: 'Test Action 1',
-									},
-									{
-										id: 'test_action_2',
-										title: 'Test Action 2',
-									},
-								],
-							},
-							{
-								id: 'alarm_trigger',
-								actions: [
-									{
-										id: 'snooze',
-										title: 'Snooze',
-										input: false,
-									},
-									{
-										id: 'dismiss',
-										title: 'Dismiss',
-										destructive: true,
-										foreground: false, // Don't bring app to foreground for dismiss
-									},
-								],
-							},
-						]);
-
-						await onAction((notification) => {
-							console.log('[AlarmManager] Action performed:', notification);
-
-							const actionTypeId = (notification as any).actionTypeId;
-							if (actionTypeId !== 'alarm_trigger') {
-								console.log(
-									'[AlarmManager] Ignoring action from different category:',
-									actionTypeId,
-								);
-								return;
-							}
-
-							const actionId = (notification as any).actionId;
-
-							if (actionId === 'dismiss') {
+						this.registerNotificationActionTypes();
+						await alarmNotificationService.initialiseMobileNotificationActions({
+							onDismissRinging: async () => {
 								console.log('[AlarmManager] Action: Dismiss');
-								this.stopRinging();
-							} else if (actionId === 'snooze') {
+								await this.stopRinging();
+							},
+							onSnoozeRinging: async () => {
 								console.log('[AlarmManager] Action: Snooze');
-								// Placeholder: Treat snooze as cancel for now until full snooze logic is reviewed
-								this.stopRinging();
-							}
+								// Keep existing behaviour until ringing notifications include alarm IDs.
+								await this.stopRinging();
+							},
+							onDismissUpcoming: async (alarmId) => {
+								console.log('[AlarmManager] Action: Dismiss upcoming alarm', alarmId);
+								await this.dismissNextOccurrence(alarmId);
+							},
+							onSnoozeUpcoming: async (alarmId, snoozeLength) => {
+								console.log('[AlarmManager] Action: Snooze upcoming alarm', alarmId);
+								await this.snoozeAlarm(alarmId, snoozeLength, false);
+								await this.emitUpcomingSnoozeToast(alarmId, snoozeLength);
+							},
 						});
 						console.log('[AlarmManager] Notification actions registered.');
 					} catch (e) {
@@ -150,13 +211,14 @@ export class AlarmManagerService {
 	// This is called AFTER init() completes to avoid interrupting alarm loading
 	private async checkActiveAlarm() {
 		try {
-			if (window.location.pathname.includes('/ringing')) return; // Already there
+			if (window.location.pathname.includes('/ringing')) return;
 
 			const result = await invoke<{ isAlarm: boolean; alarmId: number | null }>(
 				'plugin:alarm-manager|check_active_alarm',
-			).catch(() => null); // Mobile fetch might fail on desktop, ignore
+			).catch(() => null);
 
 			if (result && result.isAlarm && result.alarmId) {
+				await alarmNotificationService.cancelUpcomingNotification(result.alarmId);
 				console.log(`[AlarmManager] Active alarm detected: ${result.alarmId}. Redirecting...`);
 
 				if (this.router) {
@@ -170,6 +232,35 @@ export class AlarmManagerService {
 		}
 	}
 
+	private async dismissNextOccurrence(alarmId: number): Promise<void> {
+		await alarmNotificationService.cancelUpcomingNotification(alarmId);
+		await AlarmService.dismiss(alarmId);
+	}
+
+	private async emitUpcomingSnoozeToast(alarmId: number, durationMinutes: number): Promise<void> {
+		let message = `Alarm snoozed for ${durationMinutes} min`;
+		try {
+			const alarm = await AlarmService.get(alarmId);
+			if (alarm?.nextTrigger) {
+				const is24h = SettingsService.getIs24h();
+				const formattedTime = TimeFormatHelper.format(alarm.nextTrigger, is24h);
+				message = `${message} and will go off at ${formattedTime}`;
+			}
+		} catch (e) {
+			console.warn('[AlarmManager] Failed to load snoozed alarm details for toast', e);
+		}
+
+		try {
+			await alarmNotificationService.publishToast({
+				kind: 'upcoming-snoozed',
+				message,
+				platform: 'android',
+			});
+		} catch (e) {
+			console.warn('[AlarmManager] Failed to publish toast confirmation', e);
+		}
+	}
+
 	/**
 	 * Sync native alarms with the current state from Rust
 	 */
@@ -179,13 +270,10 @@ export class AlarmManagerService {
 		for (const alarm of alarms) {
 			currentIds.add(alarm.id);
 
-			// If enabled and has future trigger, schedule it
 			if (alarm.enabled && alarm.nextTrigger && alarm.nextTrigger > Date.now()) {
 				await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger, alarm.soundUri);
 				this.scheduledIds.add(alarm.id);
 			} else {
-				// If disabled or expired, ensure it's not scheduled
-				// (Optimisation: only cancel if we think it's scheduled)
 				if (this.scheduledIds.has(alarm.id)) {
 					await this.cancelNativeAlarm(alarm.id);
 					this.scheduledIds.delete(alarm.id);
@@ -193,7 +281,6 @@ export class AlarmManagerService {
 			}
 		}
 
-		// Identify deleted alarms (present in scheduledIds but not in current alarms)
 		const toCancel = [...this.scheduledIds].filter((id) => !currentIds.has(id));
 		for (const id of toCancel) {
 			console.log(`[AlarmManager] Alarm ${id} removed, cancelling native schedule.`);
@@ -202,12 +289,34 @@ export class AlarmManagerService {
 		}
 	}
 
+	private async resyncUpcomingNotifications(
+		payload: NotificationUpcomingResyncPayload,
+	): Promise<void> {
+		if (!PlatformUtils.isMobile()) return;
+
+		const alarms = await AlarmService.getAll();
+		const alarmsById = new Map<number, AlarmRecord>(alarms.map((alarm) => [alarm.id, alarm]));
+		const targetIds =
+			payload?.alarmIds && payload.alarmIds.length > 0
+				? [...new Set(payload.alarmIds)]
+				: alarms.map((alarm) => alarm.id);
+
+		for (const alarmId of targetIds) {
+			const alarm = alarmsById.get(alarmId);
+			if (!alarm || !alarm.enabled || !alarm.nextTrigger || alarm.nextTrigger <= Date.now()) {
+				await alarmNotificationService.cancelUpcomingNotification(alarmId);
+				continue;
+			}
+
+			await alarmNotificationService.scheduleUpcomingNotification(alarm, alarm.nextTrigger);
+		}
+	}
+
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
 	private async checkImports() {
 		try {
-			const imports = await invoke<ImportedAlarm[]>(
-				'plugin:alarm-manager|get_launch_args',
-			) ?? [];
+			const imports =
+				(await invoke<ImportedAlarm[]>('plugin:alarm-manager|get_launch_args')) ?? [];
 			if (imports.length > 0) {
 				console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
 				for (const imp of imports) {
@@ -231,7 +340,7 @@ export class AlarmManagerService {
 						label: imp.label,
 						mode: AlarmMode.Fixed,
 						fixedTime: timeStr,
-						activeDays: [0, 1, 2, 3, 4, 5, 6], // Default to every day
+						activeDays: [0, 1, 2, 3, 4, 5, 6],
 						enabled: true,
 					};
 
@@ -243,42 +352,27 @@ export class AlarmManagerService {
 		}
 	}
 
-	async sendTestNotification() {
-		console.log('[AlarmManager] Sending test notification...');
-		const isMobile = PlatformUtils.isMobile();
-		try {
-			await sendNotification({
-				title: 'Test Notification',
-				body: 'This is a test notification with actions',
-				actionTypeId: isMobile ? 'test_trigger' : undefined,
-			});
-			console.log('[AlarmManager] Test notification sent');
-		} catch (e) {
-			console.error('[AlarmManager] Failed to send test notification', e);
-		}
-	}
-
 	async toggleAlarm(alarm: Alarm, enabled: boolean) {
-		// Use AlarmService
 		await AlarmService.toggle(alarm.id, enabled);
-		// Sync handled by listener
 	}
 
 	async saveAndSchedule(alarm: AlarmInput) {
 		const saved = await AlarmService.save(alarm);
-		// Sync handled by listener
 		return saved.id;
 	}
 
 	async deleteAlarm(id: number) {
 		await AlarmService.delete(id);
-		// Sync handled by listener
+		await alarmNotificationService.cancelUpcomingNotification(id);
 	}
 
-	async snoozeAlarm(id: number, minutes: number) {
+	async snoozeAlarm(id: number, minutes: number, stopCurrentRinging: boolean = true) {
 		console.log(`[AlarmManager] Snoozing alarm ${id} for ${minutes} minutes`);
+		await alarmNotificationService.cancelUpcomingNotification(id);
 		await AlarmService.snooze(id, minutes);
-		await this.stopRinging();
+		if (stopCurrentRinging) {
+			await this.stopRinging();
+		}
 	}
 
 	private async scheduleNativeAlarm(id: number, timestamp: number, soundUri?: string | null) {
@@ -292,28 +386,31 @@ export class AlarmManagerService {
 		}
 	}
 
-	private async handleAlarmRing(id: number) {
-		// 1. Send Notification
-		const isMobile = PlatformUtils.isMobile();
-		sendNotification({
-			title: APP_NAME,
-			body: 'Your alarm is ringing!',
-			actionTypeId: isMobile ? 'alarm_trigger' : undefined,
-		});
+		private async handleAlarmRing(id: number) {
+			await alarmNotificationService.cancelUpcomingNotification(id);
 
-		// 2. Emit lifecycle event (fired)
+			const isMobile = PlatformUtils.isMobile();
+			try {
+				await sendNotification({
+					title: APP_NAME,
+					body: 'Your alarm is ringing!',
+					actionTypeId: isMobile ? 'alarm_trigger' : undefined,
+				});
+			} catch (e) {
+				console.error('[AlarmManager] Failed to send ringing notification', e);
+			}
+
 		try {
 			await AlarmService.reportFired(id, Date.now());
 		} catch (e) {
 			console.error('[AlarmManager] Failed to report alarm fired', e);
 		}
 
-		// 3. Open Floating Window (Singleton)
 		try {
 			const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-			const isMobile = PlatformUtils.isMobile();
+			const mobile = PlatformUtils.isMobile();
 
-			if (isMobile) {
+			if (mobile) {
 				console.log('[AlarmManager] Mobile detected. Navigating current window to ringing screen.');
 				if (this.router) {
 					this.router.navigate({ to: '/ringing/$id', params: { id: id.toString() } });
@@ -323,8 +420,7 @@ export class AlarmManagerService {
 				return;
 			}
 
-			const label = 'ringing-window'; // Fixed label to ensure singleton
-
+			const label = 'ringing-window';
 			const existing = await WebviewWindow.getByLabel(label);
 
 			if (existing) {
@@ -358,8 +454,6 @@ export class AlarmManagerService {
 		} catch (err) {
 			console.error('Failed to open alarm window', err);
 		}
-
-		// 4. Wait for user action to dismiss/snooze.
 	}
 
 	async stopRinging() {

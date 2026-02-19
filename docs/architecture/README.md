@@ -8,6 +8,7 @@ Core application architecture for Threshold — event system, data models, and i
 |----------|-------------|
 | [event-architecture](event-architecture.md) | Authoritative event system specification (Level 3 granular events) |
 | [architecture](architecture.md) | High-level design philosophy and system overview |
+| [notification-architecture](notification-architecture.md) | Notification hub architecture, ownership, and event-driven flows |
 | [data-architecture](data-architecture.md) | Data models, schemas, and sync protocol |
 | [flow-diagrams](flow-diagrams.md) | Sequence diagrams for alarm lifecycle and sync flows |
 | [getting-started](getting-started.md) | Quick start guide for contributors |
@@ -23,6 +24,7 @@ Core application architecture for Threshold — event system, data models, and i
 **Understanding the design?**
 1. [architecture.md](architecture.md) — design philosophy
 2. [flow-diagrams.md](flow-diagrams.md) — visual sequence diagrams
+3. [notification-architecture.md](notification-architecture.md) — notification lifecycle and action model
 
 ## Current Status
 

@@ -1,6 +1,17 @@
+// Manages user settings state and settings-owned notification actions
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { emit } from '@tauri-apps/api/event';
+import { sendNotification } from '@tauri-apps/plugin-notification';
 import { TimePrefs } from '../utils/timePrefs';
 import { ThemeId } from '../theme/themes';
+import { PlatformUtils } from '../utils/PlatformUtils';
+import {
+	alarmNotificationService,
+	type NotificationActionType,
+} from './AlarmNotificationService';
 
 export type Theme = ThemeId;
 
@@ -78,6 +89,34 @@ export const SettingsService = {
 	setSnoozeLength: (minutes: number) => {
 		localStorage.setItem(KEY_SNOOZE_LENGTH, String(minutes));
 		emit('settings-changed', { key: 'snoozeLength', value: minutes });
+	},
+
+	sendTestNotification: async () => {
+		const isMobile = PlatformUtils.isMobile();
+		try {
+			if (isMobile) {
+				alarmNotificationService.registerActionTypeProvider(
+					'test-trigger-actions',
+					(): NotificationActionType[] => [
+						{
+							id: 'test_trigger',
+							actions: [
+								{ id: 'test_action_1', title: 'Test Action 1' },
+								{ id: 'test_action_2', title: 'Test Action 2' },
+							],
+						},
+					],
+				);
+			}
+
+			await sendNotification({
+				title: 'Test Notification',
+				body: 'This is a test notification with actions',
+				actionTypeId: isMobile ? 'test_trigger' : undefined,
+			});
+		} catch (e) {
+			console.error('[Settings] Failed to send test notification', e);
+		}
 	},
 
 	// Deprecated: Logic moved to ThemeProvider
