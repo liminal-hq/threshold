@@ -320,9 +320,9 @@ if [ -f "release/wear-mapping${WEAR_VERSION_SUFFIX}.txt" ]; then
 fi
 
 echo ""
-echo -e "${YELLOW}2.${NC} Before next build, increment versions in:"
-echo "   📱 apps/threshold/src-tauri/tauri.conf.json (versionCode under bundle.android)"
-echo "   ⌚ apps/threshold-wear/build.gradle.kts (versionCode + versionName)"
+echo -e "${YELLOW}2.${NC} Before next build, run:"
+echo "   pnpm version:release"
+echo "   (interactive TUI for phone + wear version updates and tag validation)"
 echo ""
 echo -e "${GREEN}✨ Build complete! Happy releasing! ✨${NC}"
 echo ""

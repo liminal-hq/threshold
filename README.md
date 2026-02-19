@@ -50,6 +50,35 @@ pnpm test
 pnpm format
 ```
 
+## Release Versioning
+
+Use the interactive release TUI to update phone and Wear versions in one flow:
+
+```bash
+pnpm version:release
+```
+
+What it updates:
+
+- `apps/threshold/src-tauri/tauri.conf.json` (`version`)
+- `apps/threshold-wear/build.gradle.kts` (`versionName` + `versionCode`)
+- Optional: `apps/threshold/package.json` (`version`)
+
+TUI shortcuts:
+
+- `h` or `?` for help
+- `q` to quit
+- Version step: `1/p` patch, `2/m` minor, `3/M` major, `4/c` custom
+- Version step: `←/→` (or mouse wheel) to cycle bump options, `Enter`/left click/middle click to confirm
+- Review step: `a` apply, `b` back/restart
+- Review step: right click (or mouse back button) maps to back when available
+
+TUI behaviour:
+
+- Uses an alternate screen buffer and restores the terminal on exit
+- Handles terminal resize events and redraws to the new dimensions
+- Ignores non-action escape sequences (for example, unsupported mouse events)
+
 ## Android logging
 
 ```bash
