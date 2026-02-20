@@ -248,9 +248,11 @@ describe('AlarmManagerService', () => {
 		expect(actionCallback).not.toBeNull();
 
 		await actionCallback!({
-			actionTypeId: 'upcoming_alarm',
 			actionId: 'dismiss_alarm',
-			id: 1_000_009,
+			notification: {
+				actionTypeId: 'upcoming_alarm',
+				id: 1_000_009,
+			},
 		});
 
 		expect(AlarmService.dismiss).toHaveBeenCalledWith(9);
@@ -272,9 +274,11 @@ describe('AlarmManagerService', () => {
 
 		(invoke as any).mockClear();
 		await actionCallback!({
-			actionTypeId: 'upcoming_alarm',
 			actionId: 'snooze_alarm',
-			id: 1_000_011,
+			notification: {
+				actionTypeId: 'upcoming_alarm',
+				id: 1_000_011,
+			},
 		});
 
 		expect(AlarmService.snooze).toHaveBeenCalledWith(11, 10);

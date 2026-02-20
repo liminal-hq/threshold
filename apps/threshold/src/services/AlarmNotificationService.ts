@@ -57,6 +57,14 @@ export type NotificationToastEvent = {
 
 type ActionTypeProvider = () => NotificationActionType[] | Promise<NotificationActionType[]>;
 type ActionTypeHandler = (actionId: string, payload: { id?: unknown }) => Promise<void>;
+type NotificationPayloadRecord = Record<string, unknown>;
+
+type ParsedNotificationAction = {
+	actionId?: string;
+	actionTypeId?: string;
+	notificationId?: unknown;
+	diagnosticPayload: NotificationPayloadRecord;
+};
 
 export class AlarmNotificationService {
 	private actionTypeProviders = new Map<string, ActionTypeProvider>();
@@ -148,6 +156,39 @@ export class AlarmNotificationService {
 		await emit(EVENT_NOTIFICATIONS_ACTION_TYPES_REFRESH);
 	}
 
+	private getRecord(value: unknown): NotificationPayloadRecord {
+		return value && typeof value === 'object' ? (value as NotificationPayloadRecord) : {};
+	}
+
+	private serialiseForLog(value: unknown): string {
+		try {
+			return JSON.stringify(value);
+		} catch {
+			return String(value);
+		}
+	}
+
+	private parseActionPayload(notification: unknown): ParsedNotificationAction {
+		const topLevel = this.getRecord(notification);
+		const nestedNotification = this.getRecord(topLevel.notification);
+
+		const actionIdRaw = topLevel.actionId;
+		const actionTypeIdRaw = nestedNotification.actionTypeId ?? topLevel.actionTypeId;
+		const notificationId = nestedNotification.id ?? topLevel.id;
+
+		return {
+			actionId: typeof actionIdRaw === 'string' ? actionIdRaw : undefined,
+			actionTypeId: typeof actionTypeIdRaw === 'string' ? actionTypeIdRaw : undefined,
+			notificationId,
+			diagnosticPayload: {
+				actionId: actionIdRaw,
+				actionTypeId: actionTypeIdRaw,
+				notificationId,
+				raw: topLevel,
+			},
+		};
+	}
+
 	public async requestUpcomingResync(payload: NotificationUpcomingResyncEvent): Promise<void> {
 		await emit(EVENT_NOTIFICATIONS_UPCOMING_RESYNC, payload);
 	}
@@ -173,20 +214,22 @@ export class AlarmNotificationService {
 		});
 
 		await onAction(async (notification) => {
-			console.log('[AlarmNotifications] Action performed:', notification);
+			const parsed = this.parseActionPayload(notification);
+			console.log(`[AlarmNotifications] Action performed: ${this.serialiseForLog(parsed.diagnosticPayload)}`);
 
-			const actionTypeId = (notification as any).actionTypeId;
-			const actionId = (notification as any).actionId;
-			if (typeof actionTypeId !== 'string' || typeof actionId !== 'string') {
+			if (!parsed.actionTypeId || !parsed.actionId) {
+				console.warn(
+					`[AlarmNotifications] Ignoring action with missing fields: ${this.serialiseForLog(parsed.diagnosticPayload)}`,
+				);
 				return;
 			}
 
-			const handler = this.actionTypeHandlers.get(actionTypeId);
+			const handler = this.actionTypeHandlers.get(parsed.actionTypeId);
 			if (!handler) {
 				return;
 			}
 
-			await handler(actionId, { id: (notification as any).id });
+			await handler(parsed.actionId, { id: parsed.notificationId });
 		});
 	}
 
