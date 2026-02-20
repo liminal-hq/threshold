@@ -4727,7 +4727,6 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-notification"
 version = "2.3.3"
-source = "git+https://github.com/ScottMorris/tauri-plugins-workspace.git?branch=notification-actions-fix#ad0a41affa608bc8ecd0df20719726bb082ea7af"
 dependencies = [
  "log",
  "notify-rust",
