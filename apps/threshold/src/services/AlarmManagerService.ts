@@ -33,7 +33,7 @@ type NotificationUpcomingResyncPayload = NotificationUpcomingResyncEvent | null 
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
 	private router: any = null;
-	private scheduledIds = new Set<number>();
+	private scheduledTriggers = new Map<number, number>();
 
 	public setRouter(router: any) {
 		this.router = router;
@@ -271,21 +271,24 @@ export class AlarmManagerService {
 			currentIds.add(alarm.id);
 
 			if (alarm.enabled && alarm.nextTrigger && alarm.nextTrigger > Date.now()) {
-				await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger, alarm.soundUri);
-				this.scheduledIds.add(alarm.id);
+				const previousTrigger = this.scheduledTriggers.get(alarm.id);
+				if (previousTrigger !== alarm.nextTrigger) {
+					await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger, alarm.soundUri);
+					this.scheduledTriggers.set(alarm.id, alarm.nextTrigger);
+				}
 			} else {
-				if (this.scheduledIds.has(alarm.id)) {
+				if (this.scheduledTriggers.has(alarm.id)) {
 					await this.cancelNativeAlarm(alarm.id);
-					this.scheduledIds.delete(alarm.id);
+					this.scheduledTriggers.delete(alarm.id);
 				}
 			}
 		}
 
-		const toCancel = [...this.scheduledIds].filter((id) => !currentIds.has(id));
+		const toCancel = [...this.scheduledTriggers.keys()].filter((id) => !currentIds.has(id));
 		for (const id of toCancel) {
 			console.log(`[AlarmManager] Alarm ${id} removed, cancelling native schedule.`);
 			await this.cancelNativeAlarm(id);
-			this.scheduledIds.delete(id);
+			this.scheduledTriggers.delete(id);
 		}
 	}
 
