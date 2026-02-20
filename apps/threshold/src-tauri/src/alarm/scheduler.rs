@@ -1,9 +1,31 @@
+// Computes the next alarm trigger timestamp for fixed and window alarm modes
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use chrono::{Datelike, Local, NaiveTime};
+use chrono::{DateTime, TimeZone};
 use rand::Rng;
 use crate::alarm::{models::*, error::Result};
 
 /// Calculate next trigger timestamp for an alarm
 pub fn calculate_next_trigger(alarm: &AlarmInput) -> Result<Option<i64>> {
+    calculate_next_trigger_from(alarm, Local::now())
+}
+
+/// Calculate next trigger timestamp for an alarm after a given reference instant.
+pub fn calculate_next_trigger_after(alarm: &AlarmInput, after_ms: i64) -> Result<Option<i64>> {
+    let reference = Local
+        .timestamp_millis_opt(after_ms)
+        .single()
+        .ok_or("Invalid reference timestamp")?;
+    calculate_next_trigger_from(alarm, reference)
+}
+
+fn calculate_next_trigger_from(
+    alarm: &AlarmInput,
+    now: DateTime<Local>,
+) -> Result<Option<i64>> {
     if !alarm.enabled {
         return Ok(None);
     }
@@ -12,20 +34,23 @@ pub fn calculate_next_trigger(alarm: &AlarmInput) -> Result<Option<i64>> {
         AlarmMode::Fixed => {
             let time = alarm.fixed_time.as_ref()
                 .ok_or("Fixed alarm missing fixedTime")?;
-            calculate_fixed_trigger(time, &alarm.active_days)
+            calculate_fixed_trigger(time, &alarm.active_days, now)
         },
         AlarmMode::Window => {
             let start = alarm.window_start.as_ref()
                 .ok_or("Window alarm missing windowStart")?;
             let end = alarm.window_end.as_ref()
                 .ok_or("Window alarm missing windowEnd")?;
-            calculate_window_trigger(start, end, &alarm.active_days)
+            calculate_window_trigger(start, end, &alarm.active_days, now)
         },
     }
 }
 
-fn calculate_fixed_trigger(time_str: &str, active_days: &[i32]) -> Result<Option<i64>> {
-    let now = Local::now();
+fn calculate_fixed_trigger(
+    time_str: &str,
+    active_days: &[i32],
+    now: DateTime<Local>,
+) -> Result<Option<i64>> {
     let target_time = NaiveTime::parse_from_str(time_str, "%H:%M")?;
 
     // Find next occurrence in active days
@@ -57,8 +82,8 @@ fn calculate_window_trigger(
     start_str: &str,
     end_str: &str,
     active_days: &[i32],
+    now: DateTime<Local>,
 ) -> Result<Option<i64>> {
-    let now = Local::now();
     let start_time = NaiveTime::parse_from_str(start_str, "%H:%M")?;
     let end_time = NaiveTime::parse_from_str(end_str, "%H:%M")?;
 
@@ -209,5 +234,44 @@ mod tests {
 
         // Double check the weekday matches day1
         assert_eq!(trigger_dt.weekday().num_days_from_sunday() as i32, day1);
+    }
+
+    #[test]
+    fn test_calculate_after_skips_current_occurrence() {
+        let now = Local::now();
+        let today_idx = now.weekday().num_days_from_sunday() as i32;
+        let tomorrow_idx = (today_idx + 1) % 7;
+        let target_time = (now + chrono::Duration::minutes(5))
+            .format("%H:%M")
+            .to_string();
+
+        let input = AlarmInput {
+            enabled: true,
+            mode: AlarmMode::Fixed,
+            fixed_time: Some(target_time),
+            active_days: vec![today_idx, tomorrow_idx],
+            ..Default::default()
+        };
+
+        let first_trigger = calculate_next_trigger(&input).unwrap().unwrap();
+        let skipped_trigger = calculate_next_trigger_after(&input, first_trigger + 1_000)
+            .unwrap()
+            .unwrap();
+
+        assert!(skipped_trigger > first_trigger);
+
+        let first_day = DateTime::from_timestamp_millis(first_trigger)
+            .unwrap()
+            .with_timezone(&Local)
+            .weekday()
+            .num_days_from_sunday() as i32;
+        let skipped_day = DateTime::from_timestamp_millis(skipped_trigger)
+            .unwrap()
+            .with_timezone(&Local)
+            .weekday()
+            .num_days_from_sunday() as i32;
+
+        assert_eq!(first_day, today_idx);
+        assert_eq!(skipped_day, tomorrow_idx);
     }
 }
