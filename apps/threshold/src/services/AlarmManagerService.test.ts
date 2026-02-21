@@ -258,6 +258,36 @@ describe('AlarmManagerService', () => {
 		expect(AlarmService.dismiss).toHaveBeenCalledWith(9);
 	});
 
+	it('dismisses upcoming actions when Android bridge payload is wrapped', async () => {
+		const service = new AlarmManagerService();
+		let actionCallback: ((notification: any) => Promise<void>) | null = null;
+
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+		(onAction as any).mockImplementation(async (cb: (notification: any) => Promise<void>) => {
+			actionCallback = cb;
+			return undefined;
+		});
+
+		await service.init();
+		expect(actionCallback).not.toBeNull();
+
+		await actionCallback!([
+			{
+				nameValuePairs: {
+					actionId: 'dismiss_alarm',
+					notification: {
+						nameValuePairs: {
+							actionTypeId: 'upcoming_alarm',
+							id: 1_000_009,
+						},
+					},
+				},
+			},
+		]);
+
+		expect(AlarmService.dismiss).toHaveBeenCalledWith(9);
+	});
+
 	it('snoozes upcoming actions without stopping active ringing', async () => {
 		const service = new AlarmManagerService();
 		let actionCallback: ((notification: any) => Promise<void>) | null = null;

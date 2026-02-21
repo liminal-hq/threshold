@@ -157,7 +157,26 @@ export class AlarmNotificationService {
 	}
 
 	private getRecord(value: unknown): NotificationPayloadRecord {
-		return value && typeof value === 'object' ? (value as NotificationPayloadRecord) : {};
+		if (Array.isArray(value)) {
+			// Android bridge can wrap payloads in a single-entry array during replay.
+			if (value.length === 1) {
+				return this.getRecord(value[0]);
+			}
+			return {};
+		}
+
+		if (!value || typeof value !== 'object') {
+			return {};
+		}
+
+		const record = value as NotificationPayloadRecord;
+		const wrapped = record.nameValuePairs;
+		// org.json objects can surface as `{ nameValuePairs: {...} }` in the WebView bridge.
+		if (wrapped && typeof wrapped === 'object') {
+			return this.getRecord(wrapped);
+		}
+
+		return record;
 	}
 
 	private serialiseForLog(value: unknown): string {
