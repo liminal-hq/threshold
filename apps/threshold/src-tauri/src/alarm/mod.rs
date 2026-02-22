@@ -1,3 +1,8 @@
+// Coordinates alarm persistence, scheduling, and lifecycle event emission
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 pub mod database;
 pub mod events;
 pub mod models;
@@ -117,7 +122,7 @@ impl AlarmCoordinator {
             id: Some(alarm.id),
             label: alarm.label,
             enabled,
-            mode: alarm.mode,
+            mode: alarm.mode.clone(),
             fixed_time: alarm.fixed_time,
             window_start: alarm.window_start,
             window_end: alarm.window_end,
@@ -179,21 +184,41 @@ impl AlarmCoordinator {
         let dismissed_at = chrono::Utc::now().timestamp_millis();
         let fired_at = dismissed_at; // Approximation if not tracking exact fire time
 
-        // Recalculate next occurrence
+        // Recalculate next occurrence after the current scheduled trigger so
+        // dismissing an upcoming alarm skips this occurrence.
         let input = AlarmInput {
             id: Some(alarm.id),
-            label: alarm.label,
+            label: alarm.label.clone(),
             enabled: alarm.enabled,
-            mode: alarm.mode,
-            fixed_time: alarm.fixed_time,
-            window_start: alarm.window_start,
-            window_end: alarm.window_end,
-            active_days: alarm.active_days,
-            sound_uri: alarm.sound_uri,
-            sound_title: alarm.sound_title,
+            mode: alarm.mode.clone(),
+            fixed_time: alarm.fixed_time.clone(),
+            window_start: alarm.window_start.clone(),
+            window_end: alarm.window_end.clone(),
+            active_days: alarm.active_days.clone(),
+            sound_uri: alarm.sound_uri.clone(),
+            sound_title: alarm.sound_title.clone(),
         };
 
-        let new_alarm = self.save_alarm(app, input).await?;
+        let next_trigger = if input.enabled {
+            let reference_ms = alarm
+                .next_trigger
+                .unwrap_or_else(|| chrono::Utc::now().timestamp_millis())
+                + 1_000;
+            scheduler::calculate_next_trigger_after(&input, reference_ms)?
+        } else {
+            None
+        };
+
+        let revision = self.db.next_revision().await?;
+        let new_alarm = self.db.save(input, next_trigger, revision).await?;
+        self.emit_alarm_updated(
+            app,
+            &new_alarm,
+            Some(AlarmSnapshot::from_alarm(&alarm)),
+            revision,
+        ).await?;
+        self.emit_scheduling_events(app, &new_alarm, Some(&alarm), revision).await?;
+        self.emit_batch_update(app, vec![id], revision).await?;
 
         // Emit dismissed event
         let event = AlarmDismissed {

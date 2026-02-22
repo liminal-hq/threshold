@@ -33,7 +33,7 @@ type NotificationUpcomingResyncPayload = NotificationUpcomingResyncEvent | null 
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
 	private router: any = null;
-	private scheduledIds = new Set<number>();
+	private scheduledSignatures = new Map<number, string>();
 
 	public setRouter(router: any) {
 		this.router = router;
@@ -271,22 +271,36 @@ export class AlarmManagerService {
 			currentIds.add(alarm.id);
 
 			if (alarm.enabled && alarm.nextTrigger && alarm.nextTrigger > Date.now()) {
-				await this.scheduleNativeAlarm(alarm.id, alarm.nextTrigger, alarm.soundUri);
-				this.scheduledIds.add(alarm.id);
+				const nextSignature = this.getNativeScheduleSignature(alarm.nextTrigger, alarm.soundUri);
+				const previousSignature = this.scheduledSignatures.get(alarm.id);
+				if (previousSignature !== nextSignature) {
+					const scheduled = await this.scheduleNativeAlarm(
+						alarm.id,
+						alarm.nextTrigger,
+						alarm.soundUri,
+					);
+					if (scheduled) {
+						this.scheduledSignatures.set(alarm.id, nextSignature);
+					}
+				}
 			} else {
-				if (this.scheduledIds.has(alarm.id)) {
+				if (this.scheduledSignatures.has(alarm.id)) {
 					await this.cancelNativeAlarm(alarm.id);
-					this.scheduledIds.delete(alarm.id);
+					this.scheduledSignatures.delete(alarm.id);
 				}
 			}
 		}
 
-		const toCancel = [...this.scheduledIds].filter((id) => !currentIds.has(id));
+		const toCancel = [...this.scheduledSignatures.keys()].filter((id) => !currentIds.has(id));
 		for (const id of toCancel) {
 			console.log(`[AlarmManager] Alarm ${id} removed, cancelling native schedule.`);
 			await this.cancelNativeAlarm(id);
-			this.scheduledIds.delete(id);
+			this.scheduledSignatures.delete(id);
 		}
+	}
+
+	private getNativeScheduleSignature(timestamp: number, soundUri?: string | null): string {
+		return `${timestamp}|${soundUri ?? ''}`;
 	}
 
 	private async resyncUpcomingNotifications(
@@ -375,14 +389,20 @@ export class AlarmManagerService {
 		}
 	}
 
-	private async scheduleNativeAlarm(id: number, timestamp: number, soundUri?: string | null) {
+	private async scheduleNativeAlarm(
+		id: number,
+		timestamp: number,
+		soundUri?: string | null,
+	): Promise<boolean> {
 		console.log(`Scheduling alarm ${id} for ${new Date(timestamp).toLocaleString()}`);
 		try {
 			await invoke('plugin:alarm-manager|schedule', {
 				payload: { id, triggerAt: timestamp, soundUri },
 			});
+			return true;
 		} catch (e: any) {
 			console.error('Failed to schedule native alarm', e.message || e.toString());
+			return false;
 		}
 	}
 

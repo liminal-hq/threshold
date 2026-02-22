@@ -25,7 +25,6 @@ tauri-plugin-wear-sync = { path = "../../../plugins/wear-sync" }
 tauri-plugin-toast = { path = "../../../plugins/toast" }
 tauri-plugin-deep-link = { version = "2.0.0", features = [] }
 tauri-plugin-log = { version = "2.0.0", features = [] }
-# tauri-plugin-notification = { version = "2.0.0", features = [] }
 tauri-plugin-notification = { git = "https://github.com/ScottMorris/tauri-plugins-workspace.git", branch = "notification-actions-fix" }
 tauri-plugin-os = { version = "2.0.0", features = [] }
 tauri-plugin-opener = { version = "2.0.0", features = [] }

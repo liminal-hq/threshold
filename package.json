@@ -12,6 +12,7 @@
 		"prebuild:android": "pnpm -C packages/core build",
 		"build:desktop": "pnpm --filter threshold tauri build",
 		"build:android": "pnpm --filter threshold tauri android build",
+		"build:wear": "bash scripts/build-wear.sh",
 		"dev:desktop": "pnpm --filter threshold tauri dev",
 		"dev:android": "pnpm --filter threshold tauri android dev",
 		"format": "prettier --write .",
