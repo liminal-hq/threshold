@@ -149,9 +149,8 @@ jobs:
             apps/threshold-wear/**/*.gradle*
             apps/threshold-wear/**/gradle-wrapper.properties
             apps/threshold-wear/gradle/libs.versions.toml
-            apps/threshold/src-tauri/gen/android/**/*.gradle*
-            apps/threshold/src-tauri/gen/android/**/gradle-wrapper.properties
-            apps/threshold/src-tauri/gen/android/gradle/libs.versions.toml
+            plugins/**/android/**/*.gradle*
+            plugins/**/android/**/gradle-wrapper.properties
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -162,9 +161,32 @@ jobs:
 
       - name: Run core plugin Android unit tests
         run: |
-          ensure_plugin_settings() {
+          TAURI_VERSION="$(awk '
+            BEGIN { in_tauri = 0 }
+            /^\[\[package\]\]$/ { in_tauri = 0; next }
+            /^name = "tauri"$/ { in_tauri = 1; next }
+            in_tauri == 1 && /^version = "/ {
+              match($0, /"([^"]+)"/);
+              print substr($0, RSTART + 1, RLENGTH - 2);
+              exit
+            }
+          ' apps/threshold/src-tauri/Cargo.lock)"
+          if [ -z "${TAURI_VERSION}" ]; then
+            echo "Failed to determine tauri version from Cargo.lock"
+            exit 1
+          fi
+
+          mkdir -p .ci
+          curl -LsSf "https://crates.io/api/v1/crates/tauri/${TAURI_VERSION}/download" | tar -xz -C .ci
+          TAURI_ANDROID_PATH="$(pwd)/.ci/tauri-${TAURI_VERSION}/mobile/android"
+          if [ ! -f "${TAURI_ANDROID_PATH}/build.gradle.kts" ]; then
+            echo "tauri-android source not found at ${TAURI_ANDROID_PATH}"
+            exit 1
+          fi
+
+          write_kts_settings() {
             local plugin_dir="$1"
-            cat > "${plugin_dir}/settings.gradle.kts" <<'EOF'
+            cat > "${plugin_dir}/settings.gradle.kts" <<EOF
           pluginManagement {
             repositories {
               mavenCentral()
@@ -190,14 +212,52 @@ jobs:
           }
 
           include(":tauri-android")
-          project(":tauri-android").projectDir = file(".tauri/tauri-api")
+          project(":tauri-android").projectDir = file("${TAURI_ANDROID_PATH}")
           EOF
           }
 
-          ensure_plugin_settings "plugins/alarm-manager/android"
-          ensure_plugin_settings "plugins/theme-utils/android"
-          ensure_plugin_settings "plugins/time-prefs/android"
-          ensure_plugin_settings "plugins/wear-sync/android"
+          write_groovy_settings() {
+            local plugin_dir="$1"
+            cat > "${plugin_dir}/settings.gradle" <<EOF
+          pluginManagement {
+              repositories {
+                  mavenCentral()
+                  gradlePluginPortal()
+                  google()
+              }
+              resolutionStrategy {
+                  eachPlugin {
+                      switch (requested.id.id) {
+                          case "com.android.library":
+                              useVersion("8.0.2")
+                              break
+                          case "org.jetbrains.kotlin.android":
+                              useVersion("1.8.20")
+                              break
+                      }
+                  }
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  mavenCentral()
+                  google()
+              }
+          }
+
+          include ':tauri-android'
+          project(':tauri-android').projectDir = new File('${TAURI_ANDROID_PATH}')
+          EOF
+          }
+
+          write_kts_settings "plugins/alarm-manager/android"
+          write_kts_settings "plugins/theme-utils/android"
+          write_kts_settings "plugins/time-prefs/android"
+          write_kts_settings "plugins/wear-sync/android"
+          write_groovy_settings "plugins/app-management/android"
+          write_groovy_settings "plugins/toast/android"
 
           ./apps/threshold-wear/gradlew -p plugins/alarm-manager/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/app-management/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
