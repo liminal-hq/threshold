@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -23,6 +25,10 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
+      - name: Build vendored notification plugin package
+        run: |
+          pnpm --dir vendor/tauri-plugins-workspace/plugins/notification install
+          pnpm --dir vendor/tauri-plugins-workspace/plugins/notification build
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -49,6 +55,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -70,6 +78,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install system dependencies
         run: |
@@ -126,6 +136,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -158,6 +170,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Download JS Test Results
         uses: actions/download-artifact@v4
