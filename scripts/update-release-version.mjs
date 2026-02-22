@@ -17,6 +17,7 @@ const PATHS = {
   webPackage: "apps/threshold/package.json",
   wearGradle: "apps/threshold-wear/build.gradle.kts",
 };
+const RELEASE_VERSION_FILES = new Set(Object.values(PATHS));
 
 const SEMVER_RE = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
 const TAG_RE = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -741,6 +742,37 @@ function updateLocalTagToHead(tagName) {
   }
 }
 
+function getWorktreeChanges() {
+  const result = spawnSync(
+    "git",
+    ["status", "--porcelain=v1", "--untracked-files=all"],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(`Failed to inspect git status: ${result.stderr.trim()}`);
+  }
+
+  return result.stdout
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line !== "")
+    .map((line) => {
+      const xy = line.slice(0, 2);
+      const rawPath = line.slice(3);
+      const renameParts = rawPath.split(" -> ");
+      const pathName = renameParts[renameParts.length - 1];
+      return { xy, path: pathName };
+    });
+}
+
+function formatWorktreeChange(change) {
+  return `${change.xy} ${change.path}`;
+}
+
+function findUnrelatedWorktreeChanges(changes) {
+  return changes.filter((change) => !RELEASE_VERSION_FILES.has(change.path));
+}
+
 function updateWearGradle(gradleText, versionName, versionCode) {
   let outputText = gradleText;
 
@@ -1075,6 +1107,17 @@ function applyChanges(nextState) {
   return changedFiles;
 }
 
+function applyTagOperation(tagName, updateExistingLocalTag) {
+  if (updateExistingLocalTag) {
+    updateLocalTagToHead(tagName);
+  } else {
+    const result = spawnSync("git", ["tag", tagName], { encoding: "utf8" });
+    if (result.status !== 0) {
+      throw new Error(`Failed to create tag ${tagName}: ${result.stderr.trim()}`);
+    }
+  }
+}
+
 async function maybeUpdateOrCreateTag(rl, currentState, draftState, tagName, updateExistingLocalTag) {
   renderStatusBoard(currentState, draftState, "Tag operation");
   const actionLabel = updateExistingLocalTag
@@ -1082,23 +1125,40 @@ async function maybeUpdateOrCreateTag(rl, currentState, draftState, tagName, upd
     : `Create local tag ${tagName}`;
   const shouldApply = await askYesNo(rl, `${actionLabel} now`, false);
   if (!shouldApply) {
-    return;
+    return false;
   }
 
+  applyTagOperation(tagName, updateExistingLocalTag);
   if (updateExistingLocalTag) {
-    updateLocalTagToHead(tagName);
     console.log(paint(`Updated local tag ${tagName}.`, COLOUR.green));
     if (tagExistsOnOrigin(tagName)) {
       console.log(paint(`Remote ${tagName} still points to previous commit until manual force-push.`, COLOUR.yellow));
     }
-    return;
+  } else {
+    console.log(paint(`Created local tag ${tagName}.`, COLOUR.green));
+  }
+  return true;
+}
+
+function createReleaseCommit(versionName, changedFiles) {
+  if (changedFiles.length === 0) {
+    throw new Error("Cannot create release bump commit because no version files changed");
   }
 
-  const result = spawnSync("git", ["tag", tagName], { encoding: "utf8" });
-  if (result.status !== 0) {
-    throw new Error(`Failed to create tag ${tagName}: ${result.stderr.trim()}`);
+  const addResult = spawnSync("git", ["add", "--", ...changedFiles], { encoding: "utf8" });
+  if (addResult.status !== 0) {
+    throw new Error(`Failed to stage release files: ${addResult.stderr.trim()}`);
   }
-  console.log(paint(`Created local tag ${tagName}.`, COLOUR.green));
+
+  const commitMessage = `chore(release): bump versions to ${versionName}`;
+  const commitResult = spawnSync("git", ["commit", "-m", commitMessage, "--", ...changedFiles], {
+    encoding: "utf8",
+  });
+  if (commitResult.status !== 0) {
+    throw new Error(`Failed to create release bump commit: ${commitResult.stderr.trim()}`);
+  }
+
+  return commitMessage;
 }
 
 async function main() {
@@ -1170,6 +1230,13 @@ async function main() {
         false,
       );
 
+      renderStatusBoard(currentState, draftState, "Release commit + tag mode");
+      draftState.autoCommitAndTag = await askYesNo(
+        rl,
+        "Automatically create release bump commit and place the tag on that commit",
+        true,
+      );
+
       const nextState = {
         versionName: draftState.versionName,
         tagName: draftState.tagName,
@@ -1177,6 +1244,7 @@ async function main() {
         tauriDerivedVersionCode: draftState.tauriDerivedVersionCode,
         wearVersionCode: draftState.wearVersionCode,
         updateWebVersion: draftState.updateWebVersion,
+        autoCommitAndTag: draftState.autoCommitAndTag,
       };
 
       renderStatusBoard(
@@ -1202,6 +1270,26 @@ async function main() {
           COLOUR.yellow,
         )}`,
       );
+      if (nextState.autoCommitAndTag) {
+        console.log(
+          `- Release commit: ${paint(`chore(release): bump versions to ${nextState.versionName}`, COLOUR.yellow)}`,
+        );
+        console.log("- Commit + tag order: apply file updates -> commit release bump -> create/update local tag");
+      } else {
+        console.log("- Commit + tag mode: manual (existing behaviour)");
+      }
+      const worktreeChanges = getWorktreeChanges();
+      const unrelatedChanges = findUnrelatedWorktreeChanges(worktreeChanges);
+      if (unrelatedChanges.length > 0) {
+        console.log(paint("Warning: unrelated staged/unstaged changes detected.", COLOUR.yellow));
+        const sample = unrelatedChanges.slice(0, 5);
+        for (const change of sample) {
+          console.log(`  - ${paint(formatWorktreeChange(change), COLOUR.yellow)}`);
+        }
+        if (unrelatedChanges.length > sample.length) {
+          console.log(`  - ${paint(`...and ${unrelatedChanges.length - sample.length} more`, COLOUR.yellow)}`);
+        }
+      }
       console.log(divider());
 
       const applyAction = await askWithChoices(
@@ -1221,6 +1309,32 @@ async function main() {
       if (applyAction === "b") {
         continue;
       }
+      if (unrelatedChanges.length > 0) {
+        renderStatusBoard(
+          currentState,
+          draftState,
+          "Unrelated git changes detected",
+          [
+            paint("Applying release updates can be done, but confirm before proceeding.", COLOUR.yellow),
+          ],
+          [
+            ...unrelatedChanges
+              .slice(0, 8)
+              .map((change) => paint(formatWorktreeChange(change), COLOUR.yellow)),
+            ...(unrelatedChanges.length > 8
+              ? [paint(`...and ${unrelatedChanges.length - 8} more`, COLOUR.yellow)]
+              : []),
+          ],
+        );
+        const shouldProceed = await askYesNo(
+          rl,
+          "Proceed with release flow while unrelated working tree changes exist",
+          false,
+        );
+        if (!shouldProceed) {
+          continue;
+        }
+      }
 
       const changedFiles = applyChanges(nextState);
       if (changedFiles.length > 0) {
@@ -1229,19 +1343,38 @@ async function main() {
         console.log(paint("No version file changes were needed; continuing with tag workflow.", COLOUR.yellow));
       }
 
-      await maybeUpdateOrCreateTag(
-        rl,
-        currentState,
-        draftState,
-        nextState.tagName,
-        nextState.updateExistingLocalTag,
-      );
+      if (nextState.autoCommitAndTag) {
+        const commitMessage = createReleaseCommit(nextState.versionName, changedFiles);
+        applyTagOperation(nextState.tagName, nextState.updateExistingLocalTag);
+        console.log(paint(`Created release bump commit: ${commitMessage}`, COLOUR.green));
+        if (nextState.updateExistingLocalTag) {
+          console.log(paint(`Updated local tag ${nextState.tagName} to the new release commit.`, COLOUR.green));
+        } else {
+          console.log(paint(`Created local tag ${nextState.tagName} on the new release commit.`, COLOUR.green));
+        }
+        if (tagExistsOnOrigin(nextState.tagName)) {
+          console.log(paint(`Remote ${nextState.tagName} still points to the previous commit until manual force-push.`, COLOUR.yellow));
+        }
+      } else {
+        await maybeUpdateOrCreateTag(
+          rl,
+          currentState,
+          draftState,
+          nextState.tagName,
+          nextState.updateExistingLocalTag,
+        );
+      }
 
       console.log("");
       console.log(paint("Next steps", `${COLOUR.bold}${COLOUR.blue}`));
       console.log("- Review changes with: git diff");
-      console.log("- Run checks/builds before committing.");
-      console.log("- Push tags manually if needed.");
+      if (nextState.autoCommitAndTag) {
+        console.log("- Review the bump commit with: git show --stat HEAD");
+        console.log(`- Push branch and tag manually when ready: git push origin HEAD && git push origin ${nextState.tagName}`);
+      } else {
+        console.log("- Run checks/builds before committing.");
+        console.log("- Commit and push tags manually if needed.");
+      }
       break;
     }
   } finally {
