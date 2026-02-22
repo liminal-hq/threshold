@@ -315,7 +315,7 @@ The release TUI supports:
 - right click (or a mouse back button) for back actions where supported
 - terminal resize redraw while the TUI is running
 
-It also validates release tags before applying updates.
+It also validates release tags, can create a dedicated release bump commit, and can place the local release tag on that bump commit.
 
 For development with a watch emulator, pair a Wear OS emulator with a phone emulator in Android Studio and deploy to the watch target.
 
