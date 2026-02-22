@@ -138,6 +138,7 @@ jobs:
       packages: read
     container:
       image: ghcr.io/liminal-hq/threshold/ci-base:latest
+      options: --user root
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -151,8 +152,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            /home/vscode/.gradle/caches
-            /home/vscode/.gradle/wrapper
+            /github/home/.gradle/caches
+            /github/home/.gradle/wrapper
           key: ${{ runner.os }}-gradle-kotlin-${{ hashFiles('apps/threshold-wear/**/*.gradle*', 'apps/threshold-wear/**/gradle-wrapper.properties', 'apps/threshold-wear/gradle/libs.versions.toml', 'plugins/**/android/**/*.gradle*', 'plugins/**/android/**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-kotlin-
