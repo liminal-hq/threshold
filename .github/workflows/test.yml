@@ -161,14 +161,50 @@ jobs:
         run: ./gradlew testDebugUnitTest
 
       - name: Run core plugin Android unit tests
-        working-directory: apps/threshold/src-tauri/gen/android
         run: |
-          ./gradlew \
-            :tauri-plugin-alarm-manager:testDebugUnitTest \
-            :tauri-plugin-app-management:testDebugUnitTest \
-            :tauri-plugin-theme-utils:testDebugUnitTest \
-            :tauri-plugin-time-prefs:testDebugUnitTest \
-            :tauri-plugin-wear-sync:testDebugUnitTest
+          ensure_plugin_settings() {
+            local plugin_dir="$1"
+            cat > "${plugin_dir}/settings.gradle.kts" <<'EOF'
+          pluginManagement {
+            repositories {
+              mavenCentral()
+              gradlePluginPortal()
+              google()
+            }
+            resolutionStrategy {
+              eachPlugin {
+                when (requested.id.id) {
+                  "com.android.library" -> useVersion("8.0.2")
+                  "org.jetbrains.kotlin.android" -> useVersion("1.8.20")
+                }
+              }
+            }
+          }
+
+          dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+              mavenCentral()
+              google()
+            }
+          }
+
+          include(":tauri-android")
+          project(":tauri-android").projectDir = file(".tauri/tauri-api")
+          EOF
+          }
+
+          ensure_plugin_settings "plugins/alarm-manager/android"
+          ensure_plugin_settings "plugins/theme-utils/android"
+          ensure_plugin_settings "plugins/time-prefs/android"
+          ensure_plugin_settings "plugins/wear-sync/android"
+
+          ./apps/threshold-wear/gradlew -p plugins/alarm-manager/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/app-management/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/theme-utils/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/time-prefs/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/wear-sync/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/toast/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
 
       - name: Upload Kotlin Test Results
         uses: actions/upload-artifact@v4
@@ -177,7 +213,7 @@ jobs:
           name: kotlin-test-results
           path: |
             apps/threshold-wear/build/test-results/**/*.xml
-            apps/threshold/src-tauri/gen/android/**/build/test-results/**/*.xml
+            plugins/**/android/build/test-results/**/*.xml
 
   report:
     runs-on: ubuntu-24.04
