@@ -225,6 +225,92 @@ describe('AlarmManagerService', () => {
 		});
 	});
 
+	it('re-schedules native alarms when sound changes and trigger stays the same', async () => {
+		const service = new AlarmManagerService();
+		const nextTrigger = Date.now() + 60_000;
+
+		await (service as any).syncNativeAlarms([
+			{
+				id: 7,
+				enabled: true,
+				mode: AlarmMode.Fixed,
+				fixedTime: '06:45',
+				activeDays: [1],
+				label: 'Morning alarm',
+				nextTrigger,
+				soundUri: 'sound://alpha',
+				soundTitle: null,
+			},
+		]);
+
+		await (service as any).syncNativeAlarms([
+			{
+				id: 7,
+				enabled: true,
+				mode: AlarmMode.Fixed,
+				fixedTime: '06:45',
+				activeDays: [1],
+				label: 'Morning alarm',
+				nextTrigger,
+				soundUri: 'sound://beta',
+				soundTitle: null,
+			},
+		]);
+
+		const scheduleCalls = (invoke as any).mock.calls.filter(
+			([command]: [string]) => command === 'plugin:alarm-manager|schedule',
+		);
+		expect(scheduleCalls).toHaveLength(2);
+		expect(scheduleCalls[0][1]).toEqual({
+			payload: { id: 7, triggerAt: nextTrigger, soundUri: 'sound://alpha' },
+		});
+		expect(scheduleCalls[1][1]).toEqual({
+			payload: { id: 7, triggerAt: nextTrigger, soundUri: 'sound://beta' },
+		});
+	});
+
+	it('retries native scheduling when previous schedule attempt failed', async () => {
+		const service = new AlarmManagerService();
+		const nextTrigger = Date.now() + 60_000;
+
+		(invoke as any)
+			.mockRejectedValueOnce(new Error('native unavailable'))
+			.mockResolvedValueOnce(null);
+
+		await (service as any).syncNativeAlarms([
+			{
+				id: 7,
+				enabled: true,
+				mode: AlarmMode.Fixed,
+				fixedTime: '06:45',
+				activeDays: [1],
+				label: 'Morning alarm',
+				nextTrigger,
+				soundUri: 'sound://alpha',
+				soundTitle: null,
+			},
+		]);
+
+		await (service as any).syncNativeAlarms([
+			{
+				id: 7,
+				enabled: true,
+				mode: AlarmMode.Fixed,
+				fixedTime: '06:45',
+				activeDays: [1],
+				label: 'Morning alarm',
+				nextTrigger,
+				soundUri: 'sound://alpha',
+				soundTitle: null,
+			},
+		]);
+
+		const scheduleCalls = (invoke as any).mock.calls.filter(
+			([command]: [string]) => command === 'plugin:alarm-manager|schedule',
+		);
+		expect(scheduleCalls).toHaveLength(2);
+	});
+
 	it('snoozes alarms and stops the current ring by default', async () => {
 		const service = new AlarmManagerService();
 
