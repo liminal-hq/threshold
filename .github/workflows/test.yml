@@ -144,6 +144,14 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: gradle
+          cache-dependency-path: |
+            apps/threshold-wear/**/*.gradle*
+            apps/threshold-wear/**/gradle-wrapper.properties
+            apps/threshold-wear/gradle/libs.versions.toml
+            apps/threshold/src-tauri/gen/android/**/*.gradle*
+            apps/threshold/src-tauri/gen/android/**/gradle-wrapper.properties
+            apps/threshold/src-tauri/gen/android/gradle/libs.versions.toml
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -152,12 +160,24 @@ jobs:
         working-directory: apps/threshold-wear
         run: ./gradlew testDebugUnitTest
 
+      - name: Run core plugin Android unit tests
+        working-directory: apps/threshold/src-tauri/gen/android
+        run: |
+          ./gradlew \
+            :tauri-plugin-alarm-manager:testDebugUnitTest \
+            :tauri-plugin-app-management:testDebugUnitTest \
+            :tauri-plugin-theme-utils:testDebugUnitTest \
+            :tauri-plugin-time-prefs:testDebugUnitTest \
+            :tauri-plugin-wear-sync:testDebugUnitTest
+
       - name: Upload Kotlin Test Results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: kotlin-test-results
-          path: apps/threshold-wear/build/test-results/**/*.xml
+          path: |
+            apps/threshold-wear/build/test-results/**/*.xml
+            apps/threshold/src-tauri/gen/android/**/build/test-results/**/*.xml
 
   report:
     runs-on: ubuntu-24.04
