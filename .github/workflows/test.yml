@@ -133,27 +133,19 @@ jobs:
 
   test-kotlin:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ghcr.io/liminal-hq/threshold/ci-base:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-          cache: gradle
-          cache-dependency-path: |
-            apps/threshold-wear/**/*.gradle*
-            apps/threshold-wear/**/gradle-wrapper.properties
-            apps/threshold-wear/gradle/libs.versions.toml
-            plugins/**/android/**/*.gradle*
-            plugins/**/android/**/gradle-wrapper.properties
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
 
       - name: Run Wear app unit tests
         working-directory: apps/threshold-wear
