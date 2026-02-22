@@ -4,6 +4,58 @@ This document tracks all releases of the Threshold application.
 
 ---
 
+## Version 0.1.8
+
+**Release Date:** February 22, 2026  
+**Status:** Released
+
+> [!NOTE]
+> This release focuses on Android notification reliability, alarm rescheduling resilience, and stability improvements for phone and Wear OS companion interactions.
+
+### ✨ Improvements
+
+**Threshold Phone App**
+
+- Improved Android notification action replay and event-driven synchronisation reliability
+- Strengthened ringing flow resilience when ringing notification delivery fails
+- Normalised Android notification action payload parsing for more consistent callback handling
+- Reduced redundant native rescheduling when alarm triggers are unchanged
+- Improved upcoming alarm dismissal behaviour by skipping the current occurrence when appropriate
+
+**Threshold Wear OS Companion App**
+
+- Improved watch-to-phone action reliability through hardened payload handling and replay paths
+- Improved sync consistency during alarm and notification state updates shared with companion flows
+
+### 🐛 Bug Fixes
+
+- Fixed wrapped Android notification action payload handling edge cases
+- Fixed alarm rescheduling on sound changes with retry support after native failures
+- Fixed forwarded console argument serialisation for safer log ingestion
+
+### 🛠️ Build and Release
+
+- Added a Wear debug build helper script for faster companion debugging
+- Stabilised notification plugin dependency wiring with vendored workspace sources
+- Improved release workflow to ensure a dedicated version bump commit before tagging
+
+### 📝 Technical Details
+
+**Major PRs Merged (selected):**
+
+- [#166](https://github.com/liminal-hq/threshold/pull/166) - Stabilise Android notification action replay and plugin dependency wiring
+- [#167](https://github.com/liminal-hq/threshold/pull/167) - Create a dedicated release bump commit before tagging
+- [#163](https://github.com/liminal-hq/threshold/pull/163) - Restore notification parity and refine event-driven notification flows
+- [#162](https://github.com/liminal-hq/threshold/pull/162) - Finalize 0.1.7 release flow, notes, and Play release
+
+**Commit/Contributor Summary (`0.1.7` → `0.1.8`):**
+
+- **Commits:** 36
+- **Merged PRs:** 4
+- **Contributors:** Scott Morris
+
+---
+
 ## Version 0.1.7
 
 **Release Date:** February 19, 2026  
