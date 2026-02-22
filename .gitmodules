@@ -1,0 +1,4 @@
+[submodule "vendor/tauri-plugins-workspace"]
+	path = vendor/tauri-plugins-workspace
+	url = git@github.com:ScottMorris/tauri-plugins-workspace.git
+	branch = notification-actions-fix
