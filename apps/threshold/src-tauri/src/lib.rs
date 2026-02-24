@@ -87,6 +87,7 @@ pub fn run() {
         commands::snooze_alarm,
         commands::report_alarm_fired,
         commands::request_alarm_sync,
+        commands::test_watch_ring,
     ]);
 
     builder = builder

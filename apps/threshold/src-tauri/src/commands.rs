@@ -1,6 +1,11 @@
+// Tauri command handlers for alarm CRUD and settings operations
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use crate::alarm::{AlarmCoordinator, AlarmInput, AlarmRecord};
 use crate::alarm::events::SyncReason;
-use tauri::{AppHandle, Runtime, State};
+use tauri::{AppHandle, Emitter, Runtime, State};
 
 #[tauri::command]
 /// Fetch all alarms for UI or sync snapshots.
@@ -157,4 +162,23 @@ pub async fn request_alarm_sync<R: Runtime>(
         .emit_sync_needed(&app, reason)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+/// Send a test alarm ring event to the connected watch.
+///
+/// Emits a synthetic `alarm:fired` event with alarm ID 999 (test alarm)
+/// so the wear-sync plugin sends the ring message to the watch.
+pub async fn test_watch_ring<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    use crate::alarm::events::AlarmFired;
+
+    let now = chrono::Utc::now().timestamp_millis();
+    let event = AlarmFired {
+        id: 999,
+        trigger_at: now,
+        actual_fired_at: now,
+        label: Some("Test Watch Ring".to_string()),
+        revision: 0,
+    };
+    app.emit("alarm:fired", &event).map_err(|e| e.to_string())
 }
