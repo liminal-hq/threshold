@@ -66,10 +66,10 @@
 
 <!-- Time display with Material glow -->
 <g filter="url(#material-glow)">
-  <text x="192.0" y="170.0" text-anchor="middle" font-family="Roboto, Inter, system-ui, sans-serif" font-size="52" font-weight="300" fill="#ffffff" opacity="0.95" letter-spacing="-1px">7:22</text>
+  <text x="192.0" y="170.0" text-anchor="middle" font-family="Roboto, Inter, system-ui, sans-serif" font-size="68" font-weight="300" fill="#ffffff" opacity="0.95" letter-spacing="-1px">7:22</text>
 </g>
 <!-- Bloom duplicate for extra glow -->
-<text x="192.0" y="170.0" text-anchor="middle" font-family="Roboto, Inter, system-ui, sans-serif" font-size="52" font-weight="300" fill="#ffffff" opacity="0.05" letter-spacing="-1px" filter="url(#bloom)">7:22</text>
+<text x="192.0" y="170.0" text-anchor="middle" font-family="Roboto, Inter, system-ui, sans-serif" font-size="68" font-weight="300" fill="#ffffff" opacity="0.05" letter-spacing="-1px" filter="url(#bloom)">7:22</text>
 
 <!-- Alarm label (from phone UI) -->
 <text x="192.0" y="192.0" text-anchor="middle" font-family="Roboto, Inter, system-ui, sans-serif" font-size="14" fill="#ffffff" opacity="0.95" font-weight="400">Wake up, Scott 🌅!</text>
