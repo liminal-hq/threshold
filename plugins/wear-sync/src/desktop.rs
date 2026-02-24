@@ -3,7 +3,7 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::models::{PublishRequest, SyncRequest};
+use crate::models::{AlarmRingRequest, PublishRequest, SyncRequest};
 use tauri::{plugin::PluginApi, AppHandle, Runtime};
 
 /// Initialise the desktop backend for the wear-sync plugin.
@@ -35,6 +35,11 @@ impl<R: Runtime> WearSync<R> {
 
     pub fn request_sync_from_watch(&self, _request: SyncRequest) -> crate::Result<()> {
         log::debug!("wear-sync: desktop stub — request_sync_from_watch (no-op)");
+        Ok(())
+    }
+
+    pub fn send_alarm_ring(&self, _request: AlarmRingRequest) -> crate::Result<()> {
+        log::debug!("wear-sync: desktop stub — send_alarm_ring (no-op)");
         Ok(())
     }
 }

@@ -33,8 +33,9 @@ pub use mobile::WearSync;
 
 use batch_collector::BatchCollector;
 use models::{
-    AlarmsBatchUpdated, AlarmsSyncNeeded, PublishRequest, WatchDeleteAlarm, WatchMessage,
-    WatchSaveAlarm, WatchSyncRequest,
+    AlarmFired, AlarmRingRequest, AlarmsBatchUpdated, AlarmsSyncNeeded, PublishRequest,
+    WatchDeleteAlarm, WatchDismissAlarm, WatchMessage, WatchSaveAlarm, WatchSnoozeAlarm,
+    WatchSyncRequest,
 };
 use publisher::{ChannelPublisher, PublishCommand, WearSyncPublisher};
 
@@ -104,6 +105,37 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                         log::warn!(
                             "wear-sync: failed to parse alarms:sync:needed payload: {error}"
                         );
+                    }
+                }
+            });
+
+            // Listen for alarm fired events — notify the watch so it shows
+            // the ringing screen in parallel with the phone.
+            let ring_app = app.clone();
+            app.listen("alarm:fired", move |event| {
+                match serde_json::from_str::<AlarmFired>(event.payload()) {
+                    Ok(fired) => {
+                        let app = ring_app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let wear_sync = app.state::<WearSync<R>>();
+
+                            // Pass hour=-1, minute=-1 to signal the Kotlin side
+                            // should use the current device time for the watch display.
+                            let request = AlarmRingRequest {
+                                alarm_id: fired.id,
+                                label: fired.label.unwrap_or_default(),
+                                hour: -1,
+                                minute: -1,
+                                snooze_length_minutes: 10, // TODO: read from alarm settings
+                            };
+
+                            if let Err(error) = wear_sync.send_alarm_ring(request) {
+                                log::error!("wear-sync: failed to send alarm ring to watch: {error}");
+                            }
+                        });
+                    }
+                    Err(error) => {
+                        log::warn!("wear-sync: failed to parse alarm:fired payload: {error}");
                     }
                 }
             });
@@ -247,6 +279,39 @@ fn handle_watch_message<R: Runtime>(app: &AppHandle<R>, msg: WatchMessage) {
                 }
                 Err(error) => {
                     log::warn!("wear-sync: invalid delete_alarm payload: {error}");
+                }
+            }
+        }
+        "/threshold/alarm_dismiss" => {
+            match serde_json::from_str::<WatchDismissAlarm>(&msg.data) {
+                Ok(dismiss_cmd) => {
+                    log::info!(
+                        "wear-sync: watch dismiss alarm {}",
+                        dismiss_cmd.alarm_id
+                    );
+                    if let Err(error) = app.emit("wear:alarm:dismiss", &dismiss_cmd) {
+                        log::error!("wear-sync: failed to emit wear:alarm:dismiss event: {error}");
+                    }
+                }
+                Err(error) => {
+                    log::warn!("wear-sync: invalid alarm_dismiss payload: {error}");
+                }
+            }
+        }
+        "/threshold/alarm_snooze" => {
+            match serde_json::from_str::<WatchSnoozeAlarm>(&msg.data) {
+                Ok(snooze_cmd) => {
+                    log::info!(
+                        "wear-sync: watch snooze alarm {} for {} min",
+                        snooze_cmd.alarm_id,
+                        snooze_cmd.snooze_length_minutes
+                    );
+                    if let Err(error) = app.emit("wear:alarm:snooze", &snooze_cmd) {
+                        log::error!("wear-sync: failed to emit wear:alarm:snooze event: {error}");
+                    }
+                }
+                Err(error) => {
+                    log::warn!("wear-sync: invalid alarm_snooze payload: {error}");
                 }
             }
         }

@@ -1,8 +1,15 @@
+// Threshold app crate entry point, plugin registration, and event wiring
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 pub mod alarm;
 pub mod commands;
 
 use alarm::{database::AlarmDatabase, AlarmCoordinator};
 use tauri::{Listener, Manager};
+#[cfg(mobile)]
+use tauri_plugin_alarm_manager::AlarmManagerExt;
 #[cfg(mobile)]
 use tauri_plugin_wear_sync::WearSyncExt;
 
@@ -271,6 +278,58 @@ pub fn run() {
                         coord.emit_sync_needed(&handle, alarm::events::SyncReason::BatchComplete).await.ok();
                     }
                 });
+            });
+
+            // Watch dismissed a ringing alarm
+            let dismiss_handle = app.handle().clone();
+            app.handle().listen("wear:alarm:dismiss", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct WatchDismiss { alarm_id: i32 }
+
+                if let Ok(cmd) = serde_json::from_str::<WatchDismiss>(event.payload()) {
+                    let handle = dismiss_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        // Stop the phone's ringing service first
+                        #[cfg(mobile)]
+                        if let Err(e) = handle.alarm_manager().stop_ringing() {
+                            log::error!("watch: failed to stop phone ringing: {e}");
+                        }
+
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            match coord.dismiss_alarm(&handle, cmd.alarm_id).await {
+                                Ok(_) => log::info!("watch: dismissed alarm {}", cmd.alarm_id),
+                                Err(e) => log::error!("watch: failed to dismiss alarm {}: {e}", cmd.alarm_id),
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Watch snoozed a ringing alarm
+            let snooze_handle = app.handle().clone();
+            app.handle().listen("wear:alarm:snooze", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct WatchSnooze { alarm_id: i32, snooze_length_minutes: i64 }
+
+                if let Ok(cmd) = serde_json::from_str::<WatchSnooze>(event.payload()) {
+                    let handle = snooze_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        // Stop the phone's ringing service first
+                        #[cfg(mobile)]
+                        if let Err(e) = handle.alarm_manager().stop_ringing() {
+                            log::error!("watch: failed to stop phone ringing: {e}");
+                        }
+
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            match coord.snooze_alarm(&handle, cmd.alarm_id, cmd.snooze_length_minutes).await {
+                                Ok(_) => log::info!("watch: snoozed alarm {} for {} min", cmd.alarm_id, cmd.snooze_length_minutes),
+                                Err(e) => log::error!("watch: failed to snooze alarm {}: {e}", cmd.alarm_id),
+                            }
+                        }
+                    });
+                }
             });
 
             #[cfg(mobile)]

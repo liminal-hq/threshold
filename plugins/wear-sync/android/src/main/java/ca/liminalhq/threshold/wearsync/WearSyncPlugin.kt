@@ -22,10 +22,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import org.json.JSONObject
 
 private const val TAG = "WearSyncPlugin"
 private const val DATA_PATH_ALARMS = "/threshold/alarms"
 private const val MSG_PATH_SYNC_REQUEST = "/threshold/sync_request"
+private const val MSG_PATH_ALARM_RING = "/threshold/alarm_ring"
 private const val EXTRA_HEADLESS_BOOT = "wear_sync_headless_boot"
 
 @InvokeArg
@@ -37,6 +39,15 @@ class PublishRequest {
 @InvokeArg
 class SyncRequest {
     var revision: Long = 0
+}
+
+@InvokeArg
+class AlarmRingRequest {
+    var alarmId: Int = -1
+    var label: String = ""
+    var hour: Int = 0
+    var minute: Int = 0
+    var snoozeLengthMinutes: Int = 10
 }
 
 @InvokeArg
@@ -123,6 +134,51 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send sync request", e)
                 invoke.reject("Failed to send sync request: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Send an alarm ring message to all connected watch nodes.
+     *
+     * Called from the Rust side when an alarm fires. The watch receives
+     * this message via its [DataLayerListenerService] and starts its
+     * own [WearRingingService] to show the ringing UI and vibrate.
+     */
+    @Command
+    fun send_alarm_ring(invoke: Invoke) {
+        val args = invoke.parseArgs(AlarmRingRequest::class.java)
+        scope.launch {
+            try {
+                val nodes = nodeClient.connectedNodes.await()
+                if (nodes.isEmpty()) {
+                    Log.d(TAG, "No connected watch nodes — skipping ring notification")
+                    invoke.resolve()
+                    return@launch
+                }
+
+                // Use current device time if Rust didn't provide explicit hour/minute
+                val cal = java.util.Calendar.getInstance()
+                val hour = if (args.hour < 0) cal.get(java.util.Calendar.HOUR_OF_DAY) else args.hour
+                val minute = if (args.minute < 0) cal.get(java.util.Calendar.MINUTE) else args.minute
+
+                val json = JSONObject().apply {
+                    put("alarmId", args.alarmId)
+                    put("label", args.label)
+                    put("hour", hour)
+                    put("minute", minute)
+                    put("snoozeLengthMinutes", args.snoozeLengthMinutes)
+                }
+                val payload = json.toString().toByteArray()
+
+                for (node in nodes) {
+                    messageClient.sendMessage(node.id, MSG_PATH_ALARM_RING, payload).await()
+                    Log.d(TAG, "Sent alarm ring to watch: ${node.displayName}")
+                }
+                invoke.resolve()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send alarm ring to watch", e)
+                invoke.reject("Failed to send alarm ring: ${e.message}")
             }
         }
     }

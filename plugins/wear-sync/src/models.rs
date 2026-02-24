@@ -84,3 +84,42 @@ pub struct WatchDeleteAlarm {
 pub struct WatchSyncRequest {
     pub watch_revision: i64,
 }
+
+/// Watch-originated alarm dismiss command.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchDismissAlarm {
+    pub alarm_id: i32,
+}
+
+/// Watch-originated alarm snooze command.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchSnoozeAlarm {
+    pub alarm_id: i32,
+    pub snooze_length_minutes: i32,
+}
+
+// ── Phone → Watch message types (Rust → Kotlin) ─────────────────────
+
+/// Payload for the alarm:fired event (from alarm coordinator).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmFired {
+    pub id: i32,
+    pub trigger_at: i64,
+    pub actual_fired_at: i64,
+    pub label: Option<String>,
+    pub revision: i64,
+}
+
+/// Request to send an alarm ring message to the watch.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmRingRequest {
+    pub alarm_id: i32,
+    pub label: String,
+    pub hour: i32,
+    pub minute: i32,
+    pub snooze_length_minutes: i32,
+}

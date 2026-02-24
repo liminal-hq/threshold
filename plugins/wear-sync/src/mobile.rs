@@ -5,7 +5,7 @@
 
 use serde::Serialize;
 
-use crate::models::{PublishRequest, SyncRequest, WatchMessage};
+use crate::models::{AlarmRingRequest, PublishRequest, SyncRequest, WatchMessage};
 use tauri::{
     ipc::{Channel, InvokeResponseBody},
     plugin::PluginApi,
@@ -119,6 +119,24 @@ impl<R: Runtime> WearSync<R> {
         #[cfg(target_os = "android")]
         self.handle
             .run_mobile_plugin("request_sync_from_watch", request)
+            .map_err(Into::into)
+    }
+
+    /// Send an alarm ring message to connected watches via `MessageClient`.
+    ///
+    /// Called when an alarm fires on the phone so the watch can show its
+    /// ringing UI in parallel.
+    pub fn send_alarm_ring(&self, request: AlarmRingRequest) -> crate::Result<()> {
+        #[cfg(not(target_os = "android"))]
+        {
+            let _ = request;
+            log::debug!("wear-sync: send_alarm_ring no-op on non-Android mobile target");
+            return Ok(());
+        }
+
+        #[cfg(target_os = "android")]
+        self.handle
+            .run_mobile_plugin("send_alarm_ring", request)
             .map_err(Into::into)
     }
 
