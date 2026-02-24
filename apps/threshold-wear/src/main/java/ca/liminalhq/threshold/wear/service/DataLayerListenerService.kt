@@ -5,6 +5,8 @@
 
 package ca.liminalhq.threshold.wear.service
 
+import android.content.Intent
+import android.os.Build
 import android.util.Log
 import ca.liminalhq.threshold.wear.ThresholdWearApp
 import ca.liminalhq.threshold.wear.data.SyncStatus
@@ -19,6 +21,7 @@ import org.json.JSONObject
 
 private const val TAG = "DataLayerListener"
 private const val DATA_PATH_ALARMS = "/threshold/alarms"
+private const val PATH_ALARM_RING = "/threshold/alarm_ring"
 
 /**
  * Receives data changes and messages from the phone via the Wear Data Layer.
@@ -64,9 +67,47 @@ class DataLayerListenerService : WearableListenerService() {
     }
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        Log.d(TAG, "Message received: ${messageEvent.path}")
-        // Messages from the phone are handled here if needed.
-        // Currently, the phone communicates via DataItems for alarm data.
+        val path = messageEvent.path
+        Log.d(TAG, "Message received: $path")
+
+        when (path) {
+            PATH_ALARM_RING -> handleAlarmRing(messageEvent)
+            else -> Log.d(TAG, "Unhandled message path: $path")
+        }
+    }
+
+    /**
+     * Handle an alarm ring message from the phone — start the
+     * [WearRingingService] which shows the ringing notification and UI.
+     */
+    private fun handleAlarmRing(messageEvent: MessageEvent) {
+        try {
+            val data = String(messageEvent.data, Charsets.UTF_8)
+            val json = JSONObject(data)
+            val alarmId = json.getInt("alarmId")
+            val label = json.optString("label", "")
+            val hour = json.optInt("hour", 0)
+            val minute = json.optInt("minute", 0)
+            val snoozeLength = json.optInt("snoozeLengthMinutes", 10)
+
+            Log.d(TAG, "Alarm ring: id=$alarmId, $hour:$minute '$label'")
+
+            val serviceIntent = Intent(this, WearRingingService::class.java).apply {
+                putExtra(WearRingingService.EXTRA_ALARM_ID, alarmId)
+                putExtra(WearRingingService.EXTRA_ALARM_LABEL, label)
+                putExtra(WearRingingService.EXTRA_ALARM_HOUR, hour)
+                putExtra(WearRingingService.EXTRA_ALARM_MINUTE, minute)
+                putExtra(WearRingingService.EXTRA_SNOOZE_LENGTH, snoozeLength)
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to handle alarm ring message", e)
+        }
     }
 
     /**

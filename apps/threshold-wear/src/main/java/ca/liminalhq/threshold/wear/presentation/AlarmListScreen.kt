@@ -75,6 +75,7 @@ fun AlarmListScreen(
     onToggleAlarm: (WatchAlarm) -> Unit,
     onDeleteAlarm: (WatchAlarm) -> Unit,
     onRefresh: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
 ) {
     val alarms by repository.alarms.collectAsState()
     val syncStatus by repository.syncStatus.collectAsState()
@@ -93,6 +94,7 @@ fun AlarmListScreen(
                 syncStatus = syncStatus,
                 onToggleAlarm = onToggleAlarm,
                 onDeleteRequest = { alarmToDelete = it },
+                onNavigateToSettings = onNavigateToSettings,
             )
         }
 
@@ -116,6 +118,7 @@ private fun AlarmList(
     syncStatus: SyncStatus,
     onToggleAlarm: (WatchAlarm) -> Unit,
     onDeleteRequest: (WatchAlarm) -> Unit,
+    onNavigateToSettings: () -> Unit,
 ) {
     val listState = rememberScalingLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -150,6 +153,22 @@ private fun AlarmList(
                 onToggle = { onToggleAlarm(alarm) },
                 onLongPress = { onDeleteRequest(alarm) },
             )
+        }
+
+        // Settings gear at the bottom
+        item {
+            Button(
+                onClick = onNavigateToSettings,
+                modifier = Modifier
+                    .size(36.dp)
+                    .padding(top = 8.dp),
+                colors = ButtonDefaults.secondaryButtonColors(),
+            ) {
+                Text(
+                    text = "⚙",
+                    fontSize = 16.sp,
+                )
+            }
         }
     }
 }
