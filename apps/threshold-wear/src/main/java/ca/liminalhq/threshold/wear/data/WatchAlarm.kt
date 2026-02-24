@@ -20,6 +20,8 @@ data class WatchAlarm(
     val label: String,
     val enabled: Boolean,
     val daysOfWeek: List<Int> = emptyList(),
+    /** Epoch millis of the next scheduled trigger, or null if not scheduled. */
+    val nextTrigger: Long? = null,
 ) {
     /** Formatted time string for display (e.g. "07:30"). */
     val timeDisplay: String
@@ -58,6 +60,14 @@ data class WatchAlarm(
                 minute = 0
             }
 
+            val nextTrigger = if (json.has("nextTrigger") && !json.isNull("nextTrigger")) {
+                json.getLong("nextTrigger")
+            } else if (json.has("next_trigger") && !json.isNull("next_trigger")) {
+                json.getLong("next_trigger")
+            } else {
+                null
+            }
+
             return WatchAlarm(
                 id = json.getInt("id"),
                 hour = hour,
@@ -65,6 +75,7 @@ data class WatchAlarm(
                 label = json.optString("label", ""),
                 enabled = json.getBoolean("enabled"),
                 daysOfWeek = days,
+                nextTrigger = nextTrigger,
             )
         }
     }
@@ -76,5 +87,6 @@ data class WatchAlarm(
         put("label", label)
         put("enabled", enabled)
         put("daysOfWeek", org.json.JSONArray(daysOfWeek))
+        if (nextTrigger != null) put("nextTrigger", nextTrigger)
     }
 }

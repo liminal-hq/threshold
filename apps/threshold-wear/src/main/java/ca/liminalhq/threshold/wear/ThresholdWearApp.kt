@@ -9,6 +9,8 @@ import android.app.Application
 import android.util.Log
 import ca.liminalhq.threshold.wear.data.AlarmRepository
 import ca.liminalhq.threshold.wear.data.WearDataLayerClient
+import ca.liminalhq.threshold.wear.service.PhoneConnectionMonitor
+import ca.liminalhq.threshold.wear.service.WearAlarmScheduler
 
 private const val TAG = "ThresholdWearApp"
 
@@ -18,6 +20,8 @@ private const val TAG = "ThresholdWearApp"
  * Provides singleton access to shared resources:
  * - [AlarmRepository]: local alarm cache with observable state
  * - [WearDataLayerClient]: client for sending messages to the phone
+ * - [WearAlarmScheduler]: schedules local fallback alarms when disconnected
+ * - [PhoneConnectionMonitor]: monitors phone connectivity for fallback toggling
  */
 class ThresholdWearApp : Application() {
 
@@ -27,10 +31,19 @@ class ThresholdWearApp : Application() {
     lateinit var dataLayerClient: WearDataLayerClient
         private set
 
+    lateinit var alarmScheduler: WearAlarmScheduler
+        private set
+
+    lateinit var connectionMonitor: PhoneConnectionMonitor
+        private set
+
     override fun onCreate() {
         super.onCreate()
         alarmRepository = AlarmRepository(this)
         dataLayerClient = WearDataLayerClient(this)
+        alarmScheduler = WearAlarmScheduler(this)
+        connectionMonitor = PhoneConnectionMonitor(this, alarmRepository, alarmScheduler)
+        connectionMonitor.start()
         Log.d(TAG, "Threshold Wear app initialised")
     }
 }

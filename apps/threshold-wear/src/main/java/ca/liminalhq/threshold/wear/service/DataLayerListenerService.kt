@@ -58,6 +58,9 @@ class DataLayerListenerService : WearableListenerService() {
                 Log.d(TAG, "Received alarm data at revision $revision")
                 processSyncPayload(repository, alarmsJson, revision)
 
+                // Re-evaluate fallback alarm scheduling after sync
+                app.connectionMonitor.onAlarmsUpdated()
+
                 repository.setSyncStatus(SyncStatus.CONNECTED)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to process alarm data", e)
