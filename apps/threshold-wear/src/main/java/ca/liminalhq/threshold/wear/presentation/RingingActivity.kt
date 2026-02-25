@@ -51,6 +51,7 @@ class RingingActivity : ComponentActivity() {
 
         val app = application as ThresholdWearApp
         val dataLayerClient = app.dataLayerClient
+        val alarmScheduler = app.alarmScheduler
 
         setContent {
             ThresholdWearTheme {
@@ -71,6 +72,14 @@ class RingingActivity : ComponentActivity() {
                         Log.d(TAG, "Snooze pressed for alarm $alarmId (${snoozeLength}m)")
                         stopRingingService()
                         scope.launch {
+                            // Always schedule a local snooze alarm so the
+                            // alarm re-fires even if the phone is unreachable.
+                            // If the phone IS connected, the message tells it
+                            // to snooze too; the ring deduplication on the watch
+                            // prevents a double ring if the phone also triggers.
+                            alarmScheduler.scheduleSnooze(
+                                alarmId, hour, minute, label, snoozeLength,
+                            )
                             dataLayerClient.sendSnoozeAlarm(alarmId, snoozeLength)
                         }
                         finish()

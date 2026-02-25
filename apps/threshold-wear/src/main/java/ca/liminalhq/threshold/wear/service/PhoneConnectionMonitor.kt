@@ -49,10 +49,15 @@ class PhoneConnectionMonitor(
     var isPhoneConnected: Boolean = false
         private set
 
+    /** Whether the initial connectivity check has run. */
+    private var initialCheckDone: Boolean = false
+
     /**
      * Start monitoring phone connectivity.
      *
-     * Performs an initial connectivity check and begins periodic polling.
+     * Performs an initial connectivity check — which always calls
+     * [onConnectivityChanged] so fallback alarms are scheduled on
+     * cold-start-offline — and begins periodic polling.
      */
     fun start() {
         scope.launch {
@@ -88,34 +93,39 @@ class PhoneConnectionMonitor(
         try {
             val nodes = nodeClient.connectedNodes.await()
             val connected = nodes.isNotEmpty()
-            if (connected != isPhoneConnected) {
-                Log.d(TAG, "Connectivity changed: ${nodes.size} node(s), connected=$connected")
+
+            // On the first check, always call onConnectivityChanged so that
+            // cold-start-offline schedules fallback alarms even though
+            // isPhoneConnected is already false.
+            if (connected != isPhoneConnected || !initialCheckDone) {
+                val isInitial = !initialCheckDone
+                initialCheckDone = true
+                Log.d(TAG, "Connectivity ${if (isInitial) "initial" else "changed"}: ${nodes.size} node(s), connected=$connected")
                 onConnectivityChanged(connected)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to check connectivity", e)
-            // Don't change state on transient errors
+            // Don't change state on transient errors — but if initial check
+            // failed, assume offline and schedule fallback alarms defensively
+            if (!initialCheckDone) {
+                initialCheckDone = true
+                Log.w(TAG, "Initial connectivity check failed — assuming offline, scheduling fallback alarms")
+                onConnectivityChanged(false)
+            }
         }
     }
 
     private fun onConnectivityChanged(connected: Boolean) {
-        val wasConnected = isPhoneConnected
         isPhoneConnected = connected
 
         if (connected) {
             repository.setSyncStatus(SyncStatus.CONNECTED)
-
-            if (!wasConnected) {
-                Log.i(TAG, "Phone connected — cancelling local fallback alarms")
-                scheduler.cancelAll(repository.alarms.value)
-            }
+            Log.i(TAG, "Phone connected — cancelling local fallback alarms")
+            scheduler.cancelAll(repository.alarms.value)
         } else {
             repository.setSyncStatus(SyncStatus.OFFLINE)
-
-            if (wasConnected) {
-                Log.i(TAG, "Phone disconnected — scheduling local fallback alarms")
-                scheduler.reconcile(repository.alarms.value)
-            }
+            Log.i(TAG, "Phone disconnected — scheduling local fallback alarms")
+            scheduler.reconcile(repository.alarms.value)
         }
     }
 }
