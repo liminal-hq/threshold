@@ -15,6 +15,8 @@ The `wear-sync` plugin synchronises alarm data between the Threshold phone app a
 - **Conflict Detection**: Rejects stale watch updates using revision comparison
 - **Tombstone Tracking**: Handles deleted alarms correctly across restarts
 - **FullSync Payloads**: All publishes send complete alarm state (~200 bytes/alarm, well under 100 KB DataItem limit)
+- **Snooze Duration Sync**: Carries `snoozeLengthMinutes` through the entire publish chain so the watch always has the phone's snooze setting
+- **Ring Deduplication**: Watch-side `WearRingingService` ignores duplicate ring messages for already-ringing alarms
 - **No manual JNI**: Uses Tauri `@Command` / `@InvokeArg` plus `Channel` bridge
 
 ## Architecture
@@ -81,7 +83,8 @@ plugins/wear-sync/
 │           ├── WearSyncPlugin.kt      # @TauriPlugin with @Command methods
 │           ├── WearMessageService.kt  # WearableListenerService for incoming
 │           ├── WearSyncService.kt     # Foreground service for offline writes
-│           └── WearSyncCache.kt       # SharedPreferences helper for offline reads
+│           ├── WearSyncCache.kt       # SharedPreferences helper for offline reads
+│           └── WearSyncQueue.kt       # Persistent queue for offline messages
 ├── build.rs
 └── Cargo.toml
 ```
@@ -95,9 +98,9 @@ plugins/wear-sync/
 3. On debounce expiry, `ChannelPublisher` sends `PublishCommand::Batch` via mpsc channel
 4. Background task emits `wear:sync:batch_ready` event
 5. App crate listener calls `AlarmCoordinator.emit_sync_needed(BatchComplete)` which fetches all alarms
-6. `alarms:sync:needed` fires with `allAlarmsJson` → `PublishCommand::Immediate` → `SyncResponse::FullSync`
-7. Tauri bridges to `WearSyncPlugin.publish_to_watch()` (Kotlin)
-8. Kotlin writes `PutDataMapRequest` to `/threshold/alarms` via `DataClient`
+6. `alarms:sync:needed` fires with `allAlarmsJson` + `snoozeLengthMinutes` → `PublishCommand::Immediate` → `SyncResponse::FullSync`
+7. Tauri bridges to `WearSyncPlugin.publish_to_watch()` (Kotlin) with alarm data + snooze duration
+8. Kotlin writes `PutDataMapRequest` to `/threshold/alarms` via `DataClient` (includes `snoozeLengthMinutes` in DataMap)
 9. Watch `DataLayerListenerService` receives the `DataItem` change
 
 **Note:** Both batch and immediate paths produce a `FullSync` envelope with all alarm data. The batch collector still debounces rapid changes, but the final payload is always a complete snapshot. This is acceptable because alarm payloads are small (~200 bytes per alarm, <4 KB for 15 alarms, well under the 100 KB DataItem limit).
@@ -230,7 +233,7 @@ The app crate (`apps/threshold/src-tauri/src/lib.rs`) listens for the events abo
 
 ## Tests
 
-31 tests across all modules:
+31 Rust tests across all modules:
 
 - **batch_collector** (3): debounce coalescing, concurrent merge, flush clears
 - **sync_protocol** (12): all boundary conditions, JSON serialisation round-trips
@@ -256,3 +259,6 @@ Run with: `cargo test -p tauri-plugin-wear-sync`
 - [#115](https://github.com/nicholasgasior/threshold/issues/115) — Mobile/desktop bridge
 - [#116](https://github.com/nicholasgasior/threshold/issues/116) — Sync protocol
 - [#117](https://github.com/nicholasgasior/threshold/issues/117) — Integration tests
+- [#170](https://github.com/nicholasgasior/threshold/issues/170) — Wear OS Ringing Screen (parent)
+- [#173](https://github.com/nicholasgasior/threshold/issues/173) — Snooze duration sync
+- [#174](https://github.com/nicholasgasior/threshold/issues/174) — Ring deduplication

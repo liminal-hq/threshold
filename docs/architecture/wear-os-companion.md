@@ -1,8 +1,8 @@
 # Threshold — Wear OS Companion Architecture
 
 **Version:** 1.0
-**Last Updated:** February 17, 2026
-**Status:** Design Complete — Implementation In Progress
+**Last Updated:** February 25, 2026
+**Status:** Implementation Complete
 
 ---
 
@@ -83,8 +83,8 @@ The Wear Data Layer routes messages using `applicationId`. Both the phone and wa
 | Field | Description |
 |-------|-------------|
 | Path | `/threshold/alarms` |
-| Format | `PutDataMapRequest` with `alarmsJson` (String) and `revision` (Long) |
-| Payload | `SyncResponse` JSON (see §3) |
+| Format | `PutDataMapRequest` with `alarmsJson` (String), `revision` (Long), `timestamp` (Long), and `snoozeLengthMinutes` (Int) |
+| Payload | `SyncResponse` JSON (see §3) + snooze duration from phone settings |
 | Delivery | Automatic when Bluetooth reconnects |
 
 ### 2.2 MessageClient (Phone → Watch)
@@ -214,6 +214,7 @@ Watch sends /threshold/sync_request via MessageClient
 **SharedPreferences cache key:** `wear_sync_cache` in `ThresholdWearSync` preferences
 - `cached_alarms_json`: The last FullSync SyncResponse JSON
 - `cached_revision`: The revision at time of cache
+- `cached_snooze_length_minutes`: The snooze duration from phone settings
 
 **Cache freshness guarantee:** The cache is written on every publish (both batch and immediate). Since alarm changes can only happen through the app (which is running when changes occur), the cache is always consistent when the app closes.
 
@@ -419,6 +420,8 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 | Disconnected fallback scheduling | Done | `PhoneConnectionMonitor` + `WearAlarmScheduler` + `AlarmManager.setAlarmClock()` |
 | Watch settings screen | Done | Test ring button via `SettingsScreen.kt` |
 | Phone "Test Watch Ring" button | Done | `test_watch_ring` Tauri command in phone settings |
+| Snooze duration sync (phone → watch) | Done | DataItem + ring payload + watch persistence; `set_snooze_length` triggers ForceSync |
+| Ring deduplication on watch | Done | `WearRingingService` ignores duplicate ring messages for already-ringing alarm |
 
 ---
 
