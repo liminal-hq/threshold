@@ -6,6 +6,7 @@
 - [Commit Messages](#commit-messages)
 - [Play Console Release Notes](#play-console-release-notes)
 - [Pull Request Titles](#pull-request-titles)
+- [Pull Request Labels](#pull-request-labels)
 - [Application Protocol](#application-protocol)
 - [Code Organization](#code-organization)
 - [Best Practices](#best-practices)
@@ -81,6 +82,15 @@ Enter or paste your release notes for en-CA here
 - If one title in a stack is updated, update the rest of the open stack titles to match style and scope.
 - Do not rename merged PRs unless explicitly requested.
 - Keep linked issues and merge order aligned after any title changes in a stack.
+
+## Pull Request Labels
+
+**REQUIREMENT:** Add labels to every PR when it is created or updated.
+
+- Apply labels that match scope and impact (for example: `build`, `plugin`, `android`, `release`, `bug`).
+- Prefer 2-4 labels that clearly describe the PR; avoid label spam.
+- Keep labels consistent across open PRs in the same stack.
+- If scope changes during review, update labels so they stay accurate.
 
 ## Git Workflow
 
