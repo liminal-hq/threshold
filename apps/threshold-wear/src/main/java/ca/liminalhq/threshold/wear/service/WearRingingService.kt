@@ -55,6 +55,11 @@ class WearRingingService : Service() {
         const val EXTRA_ALARM_MINUTE = "alarm_minute"
         const val EXTRA_SNOOZE_LENGTH = "snooze_length_minutes"
         private const val TAG = "WearRingingService"
+
+        /** Alarm ID currently ringing, or -1 if idle. Used for deduplication. */
+        @Volatile
+        var ringingAlarmId: Int = -1
+            private set
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -91,6 +96,7 @@ class WearRingingService : Service() {
         }
 
         currentAlarmId = intent.getIntExtra(EXTRA_ALARM_ID, -1)
+        ringingAlarmId = currentAlarmId
         val label = intent.getStringExtra(EXTRA_ALARM_LABEL) ?: ""
         val hour = intent.getIntExtra(EXTRA_ALARM_HOUR, 0)
         val minute = intent.getIntExtra(EXTRA_ALARM_MINUTE, 0)
@@ -108,6 +114,7 @@ class WearRingingService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "Service destroying")
+        ringingAlarmId = -1
         stopAudio()
         stopVibration()
         if (wakeLock?.isHeld == true) {
