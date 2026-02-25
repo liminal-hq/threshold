@@ -838,6 +838,34 @@ object ThresholdAnimations {
 
 ---
 
+## 7. Ringing Screen
+
+**Purpose:** Full-screen alarm ringing UI — dismiss or snooze from the wrist
+
+**Design:** See SVG mockups in `docs/ui-mockups/`:
+- `threshold-ringing-wear-lc-refined-01-soft-glow.svg` — Initial soft-glow prototype
+- `threshold-ringing-wear-lc-refined-02-material-liminal.svg` — Material+Liminal hybrid
+- `threshold-ringing-wear-lc-refined-03-standard-buttons.svg` — Final design with standard pill buttons
+
+**Key elements:**
+- Material You gradient background (purple tones from `system_accent2` on API 31+)
+- Dot pattern overlay at 12% opacity
+- Liminal horizon glow at the bottom of the screen
+- Three breathing rings with staggered `rememberInfiniteTransition()` animations (4s cycle)
+- Time display at 68sp (Roboto Thin)
+- Threshold indicator line with pulsing amber dot (sleep → wake transition)
+- "Stop Alarm" button — full-width pill, dark background
+- "Snooze (Xm)" button — outlined pill with synced snooze duration
+
+**Implementation:** `RingingScreen.kt` (Compose), `RingingActivity.kt` (lock-screen host), `WearRingingService.kt` (foreground service with vibration + audio + wake lock)
+
+**Animations are battery-safe:**
+- `rememberInfiniteTransition()` — lifecycle-aware, auto-pauses on composition exit
+- Canvas redraws only (no recomposition of the composable tree)
+- `FLAG_KEEP_SCREEN_ON` during ringing (standard for alarm UIs)
+
+---
+
 ## Accessibility
 
 ### High Contrast Mode

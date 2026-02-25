@@ -51,6 +51,7 @@ Examples:
 
 When drafting release notes for Google Play Console:
 
+- **REQUIREMENT:** When updating release notes for any version, also update `RELEASE_NOTES.md` in the same change.
 - Always use locale blocks in this exact format:
 
 ```text

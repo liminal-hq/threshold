@@ -111,10 +111,23 @@ plugins/wear-sync/
    - `/threshold/sync_request` → `wear:sync:request`
    - `/threshold/save_alarm` → `wear:alarm:save`
    - `/threshold/delete_alarm` → `wear:alarm:delete`
+   - `/threshold/alarm_dismiss` → `wear:alarm:dismiss`
+   - `/threshold/alarm_snooze` → `wear:alarm:snooze`
 5. App crate listeners (`apps/threshold/src-tauri/src/lib.rs`) handle the event via `AlarmCoordinator`:
    - `wear:alarm:save` → `toggle_alarm(id, enabled)` → saves + re-publishes to watch
    - `wear:alarm:delete` → `delete_alarm(id)` → deletes + re-publishes to watch
+   - `wear:alarm:dismiss` → `stop_ringing()` + `dismiss_alarm(id)` → stops phone alarm
+   - `wear:alarm:snooze` → `stop_ringing()` + `snooze_alarm(id, minutes)` → snoozes phone alarm
    - `wear:sync:request` → `emit_sync_needed(ForceSync)` → publishes FullSync to watch
+
+### Phone → Watch (Ring Notification)
+
+1. `AlarmCoordinator` emits `alarm:fired` event when an alarm triggers
+2. wear-sync `lib.rs` listener receives the event
+3. Builds `AlarmRingRequest` with alarm ID, label, time, and snooze duration
+4. Calls `WearSync::send_alarm_ring()` → Kotlin bridge
+5. `WearSyncPlugin.send_alarm_ring()` sends `/threshold/alarm_ring` message to all connected watches
+6. Watch `DataLayerListenerService.onMessageReceived()` starts `WearRingingService`
 
 ## Sync Protocol
 
@@ -172,6 +185,7 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 | `request_sync_from_watch` | Send sync request message to all connected watch nodes |
 | `set_watch_message_handler` | Register Kotlin → Rust Channel handler |
 | `mark_watch_pipeline_ready` | Mark app listener readiness and drain queued messages |
+| `send_alarm_ring` | Send `/threshold/alarm_ring` message to all connected watches |
 
 ## Naming Conventions
 
@@ -187,6 +201,7 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 |-------|--------|---------|
 | `alarms:batch:updated` | AlarmCoordinator | Batched alarm changes |
 | `alarms:sync:needed` | AlarmCoordinator | Force immediate sync |
+| `alarm:fired` | AlarmCoordinator | Alarm triggered — send ring message to watch |
 | `wear:message:received` | WearSyncPlugin.kt | Incoming watch messages |
 
 ### Emitted
@@ -196,16 +211,20 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 | `wear:sync:request` | App layer | Watch wants sync data |
 | `wear:alarm:save` | App layer | Watch wants to toggle alarm |
 | `wear:alarm:delete` | App layer | Watch wants to delete alarm |
+| `wear:alarm:dismiss` | App layer | Watch dismissed a ringing alarm |
+| `wear:alarm:snooze` | App layer | Watch snoozed a ringing alarm |
 | `wear:sync:batch_ready` | App layer | Batch debounce expired, needs full alarm data |
 
 ### Handled by App Layer
 
-The app crate (`apps/threshold/src-tauri/src/lib.rs`) listens for the four events above and routes them through `AlarmCoordinator`:
+The app crate (`apps/threshold/src-tauri/src/lib.rs`) listens for the events above and routes them through `AlarmCoordinator`:
 
 | Event | Handler |
 |-------|---------|
 | `wear:alarm:save` | `coordinator.toggle_alarm(id, enabled)` |
 | `wear:alarm:delete` | `coordinator.delete_alarm(id)` |
+| `wear:alarm:dismiss` | `stop_ringing()` + `coordinator.dismiss_alarm(id)` |
+| `wear:alarm:snooze` | `stop_ringing()` + `coordinator.snooze_alarm(id, minutes)` |
 | `wear:sync:request` | `coordinator.emit_sync_needed(ForceSync)` |
 | `wear:sync:batch_ready` | `coordinator.emit_sync_needed(BatchComplete)` |
 

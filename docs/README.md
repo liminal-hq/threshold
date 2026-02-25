@@ -19,5 +19,6 @@
 - **Understanding the architecture?** Start with [architecture/README](architecture/README.md)
 - **Working on notifications?** Read [architecture/notification-architecture](architecture/notification-architecture.md)
 - **Working on Wear OS?** Start with [wear-implementation/README](wear-implementation/README.md)
+- **Wear OS ringing screen?** See [wear-ringing-implementation-plan](wear-ringing-implementation-plan.md)
 - **Using an AI agent?** See [ai-agent-usage-guide](ai-agent-usage-guide.md)
 - **Project conventions:** See [AGENTS.md](../AGENTS.md)

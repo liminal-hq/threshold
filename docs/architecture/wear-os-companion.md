@@ -87,7 +87,15 @@ The Wear Data Layer routes messages using `applicationId`. Both the phone and wa
 | Payload | `SyncResponse` JSON (see §3) |
 | Delivery | Automatic when Bluetooth reconnects |
 
-### 2.2 MessageClient (Watch → Phone)
+### 2.2 MessageClient (Phone → Watch)
+
+**Purpose:** Fire-and-forget commands for alarm ringing. Requires active connection.
+
+| Path | Payload | Handler |
+|------|---------|---------|
+| `/threshold/alarm_ring` | `AlarmRingRequest` JSON | Starts `WearRingingService` on watch |
+
+### 2.3 MessageClient (Watch → Phone)
 
 **Purpose:** Fire-and-forget commands. Requires active connection.
 
@@ -96,6 +104,8 @@ The Wear Data Layer routes messages using `applicationId`. Both the phone and wa
 | `/threshold/sync_request` | `"0"` (watch revision) | Triggers FullSync response |
 | `/threshold/save_alarm` | `WatchSaveAlarm` JSON | Toggles alarm via coordinator |
 | `/threshold/delete_alarm` | `WatchDeleteAlarm` JSON | Deletes alarm via coordinator |
+| `/threshold/alarm_dismiss` | `WatchDismissAlarm` JSON | Stops phone ringing + dismisses alarm |
+| `/threshold/alarm_snooze` | `WatchSnoozeAlarm` JSON | Stops phone ringing + snoozes alarm |
 
 ---
 
@@ -366,9 +376,16 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 
 | File | Purpose |
 |------|---------|
-| `apps/threshold-wear/src/.../service/DataLayerListenerService.kt` | Receives DataItems, parses SyncResponse |
-| `apps/threshold-wear/src/.../data/WearDataLayerClient.kt` | Sends Messages to phone |
-| `apps/threshold-wear/src/.../data/WatchAlarm.kt` | Watch alarm model with JSON parsing |
+| `apps/threshold-wear/src/.../service/DataLayerListenerService.kt` | Receives DataItems + alarm ring messages |
+| `apps/threshold-wear/src/.../service/WearRingingService.kt` | Foreground service: vibration, audio, wake lock |
+| `apps/threshold-wear/src/.../service/WearAlarmScheduler.kt` | Local AlarmManager scheduling (disconnected fallback) |
+| `apps/threshold-wear/src/.../service/WearAlarmReceiver.kt` | BroadcastReceiver for local alarm fires |
+| `apps/threshold-wear/src/.../service/PhoneConnectionMonitor.kt` | Polls node connectivity, toggles fallback scheduling |
+| `apps/threshold-wear/src/.../presentation/RingingScreen.kt` | Compose ringing UI (breathing rings, stop/snooze) |
+| `apps/threshold-wear/src/.../presentation/RingingActivity.kt` | Lock-screen activity hosting RingingScreen |
+| `apps/threshold-wear/src/.../presentation/SettingsScreen.kt` | Watch settings with test ring button |
+| `apps/threshold-wear/src/.../data/WearDataLayerClient.kt` | Sends Messages to phone (incl. dismiss/snooze) |
+| `apps/threshold-wear/src/.../data/WatchAlarm.kt` | Watch alarm model with JSON parsing (incl. nextTrigger) |
 | `apps/threshold-wear/src/.../data/AlarmRepository.kt` | In-memory alarm state |
 | `apps/threshold-wear/build.gradle.kts` | applicationId = ca.liminalhq.threshold |
 
@@ -394,8 +411,14 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 | WearMessageService offline routing | Done | Cache reads + foreground service writes |
 | SharedPreferences cache (reads) | Done | §4.2 — write on publish, read on offline sync |
 | WearSyncService (foreground, writes) | Done | §4.3 — boots Tauri silently (no UI flash) |
-| Watch event handlers in app crate | Done | wear:alarm:save/delete, wear:sync:request/batch_ready |
+| Watch event handlers in app crate | Done | wear:alarm:save/delete/dismiss/snooze, wear:sync:request/batch_ready |
 | heal-on-launch wear-sync integration | Done | emit_sync_needed(Initialize) on startup |
+| Alarm ring notification (phone → watch) | Done | `alarm:fired` → wear-sync → `/threshold/alarm_ring` → WearRingingService |
+| Alarm dismiss/snooze (watch → phone) | Done | `/threshold/alarm_dismiss` and `/threshold/alarm_snooze` → event bus → coordinator |
+| Watch ringing UI | Done | Compose screen with breathing rings, threshold indicator, stop/snooze buttons |
+| Disconnected fallback scheduling | Done | `PhoneConnectionMonitor` + `WearAlarmScheduler` + `AlarmManager.setAlarmClock()` |
+| Watch settings screen | Done | Test ring button via `SettingsScreen.kt` |
+| Phone "Test Watch Ring" button | Done | `test_watch_ring` Tauri command in phone settings |
 
 ---
 
