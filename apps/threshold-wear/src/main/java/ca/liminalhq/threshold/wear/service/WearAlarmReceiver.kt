@@ -62,12 +62,17 @@ class WearAlarmReceiver : BroadcastReceiver() {
             Log.w(TAG, "Alarm $alarmId not found in repository, using current time")
         }
 
+        // Read snooze length synced from the phone (falls back to 10 minutes)
+        val snoozeLength = context.applicationContext
+            .getSharedPreferences("threshold_wear", android.content.Context.MODE_PRIVATE)
+            .getInt("snooze_length_minutes", 10)
+
         val serviceIntent = Intent(context, WearRingingService::class.java).apply {
             putExtra(WearRingingService.EXTRA_ALARM_ID, alarmId)
             putExtra(WearRingingService.EXTRA_ALARM_LABEL, label)
             putExtra(WearRingingService.EXTRA_ALARM_HOUR, hour)
             putExtra(WearRingingService.EXTRA_ALARM_MINUTE, minute)
-            putExtra(WearRingingService.EXTRA_SNOOZE_LENGTH, 10) // Default snooze
+            putExtra(WearRingingService.EXTRA_SNOOZE_LENGTH, snoozeLength)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

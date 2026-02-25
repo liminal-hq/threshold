@@ -7,7 +7,13 @@ pub mod alarm;
 pub mod commands;
 
 use alarm::{database::AlarmDatabase, AlarmCoordinator};
+use std::sync::atomic::AtomicI32;
+use std::sync::Arc;
 use tauri::{Listener, Manager};
+
+/// Phone-side snooze length (minutes), synced from the frontend settings.
+/// Read by `report_alarm_fired` to include in the `alarm:fired` event.
+pub type SnoozeLengthState = Arc<AtomicI32>;
 #[cfg(mobile)]
 use tauri_plugin_alarm_manager::AlarmManagerExt;
 #[cfg(mobile)]
@@ -88,6 +94,7 @@ pub fn run() {
         commands::report_alarm_fired,
         commands::request_alarm_sync,
         commands::test_watch_ring,
+        commands::set_snooze_length,
     ]);
 
     builder = builder
@@ -166,6 +173,10 @@ pub fn run() {
             }).ok();
 
             app.manage(coordinator);
+
+            // Snooze length state — default 10 minutes, updated by frontend
+            let snooze_state: SnoozeLengthState = Arc::new(AtomicI32::new(10));
+            app.manage(snooze_state);
 
             // Emit initial sync hint for wear-sync
             tauri::async_runtime::block_on(async {

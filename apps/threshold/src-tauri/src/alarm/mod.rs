@@ -13,7 +13,7 @@ pub use models::*;
 pub use error::{Error, Result};
 use events::*;
 
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 use database::AlarmDatabase;
 
 /// Central coordinator for all alarm operations
@@ -277,9 +277,17 @@ impl AlarmCoordinator {
         id: i32,
         actual_fired_at: i64,
     ) -> Result<()> {
+        use std::sync::atomic::Ordering;
+
         let alarm = self.db.get_by_id(id).await?;
         let revision = self.db.current_revision().await?;
         let trigger_at = alarm.next_trigger.unwrap_or(actual_fired_at);
+
+        // Read snooze length from managed state (synced from frontend settings)
+        let snooze = app
+            .try_state::<crate::SnoozeLengthState>()
+            .map(|s: tauri::State<'_, crate::SnoozeLengthState>| s.load(Ordering::Relaxed))
+            .unwrap_or(10);
 
         let event = AlarmFired {
             id,
@@ -287,6 +295,7 @@ impl AlarmCoordinator {
             actual_fired_at,
             label: alarm.label.clone(),
             revision,
+            snooze_length_minutes: snooze,
         };
         app.emit("alarm:fired", &event)?;
 
@@ -302,10 +311,23 @@ impl AlarmCoordinator {
         app: &AppHandle<R>,
         reason: SyncReason,
     ) -> Result<()> {
+        use std::sync::atomic::Ordering;
+
         let revision = self.db.current_revision().await?;
         let alarms = self.db.get_all().await?;
         let all_alarms_json = serde_json::to_string(&alarms).ok();
-        let event = AlarmsSyncNeeded { reason, revision, all_alarms_json };
+
+        let snooze = app
+            .try_state::<crate::SnoozeLengthState>()
+            .map(|s: tauri::State<'_, crate::SnoozeLengthState>| s.load(Ordering::Relaxed))
+            .unwrap_or(10);
+
+        let event = AlarmsSyncNeeded {
+            reason,
+            revision,
+            all_alarms_json,
+            snooze_length_minutes: snooze,
+        };
         app.emit("alarms:sync:needed", &event)?;
         Ok(())
     }

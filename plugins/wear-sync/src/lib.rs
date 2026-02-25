@@ -126,7 +126,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                                 label: fired.label.unwrap_or_default(),
                                 hour: -1,
                                 minute: -1,
-                                snooze_length_minutes: 10, // TODO: read from alarm settings
+                                snooze_length_minutes: fired.snooze_length_minutes,
                             };
 
                             if let Err(error) = wear_sync.send_alarm_ring(request) {
@@ -192,7 +192,7 @@ fn spawn_publish_task<R: Runtime>(
                         log::error!("wear-sync: failed to emit batch_ready: {error}");
                     }
                 }
-                PublishCommand::Immediate { reason, revision, all_alarms_json } => {
+                PublishCommand::Immediate { reason, revision, all_alarms_json, snooze_length_minutes } => {
                     log::info!(
                         "wear-sync: immediate publish ({:?}) at revision {}",
                         reason,
@@ -213,6 +213,7 @@ fn spawn_publish_task<R: Runtime>(
                     let request = PublishRequest {
                         alarms_json,
                         revision,
+                        snooze_length_minutes,
                     };
                     if let Err(error) = wear_sync.publish_to_watch(request) {
                         log::error!("wear-sync: failed to publish immediate sync to watch: {error}");
@@ -337,7 +338,7 @@ async fn handle_sync_needed(
         // any partial batch of IDs.
     }
 
-    publisher.publish_immediate(&payload.reason, payload.revision, payload.all_alarms_json);
+    publisher.publish_immediate(&payload.reason, payload.revision, payload.all_alarms_json, payload.snooze_length_minutes);
 }
 
 #[cfg(test)]
@@ -367,7 +368,7 @@ mod tests {
                 .push(PublishCall::Batch(ids, revision));
         }
 
-        fn publish_immediate(&self, reason: &SyncReason, revision: i64, _all_alarms_json: Option<String>) {
+        fn publish_immediate(&self, reason: &SyncReason, revision: i64, _all_alarms_json: Option<String>, _snooze_length_minutes: i32) {
             self.calls
                 .lock()
                 .unwrap()
@@ -386,6 +387,7 @@ mod tests {
             reason: SyncReason::ForceSync,
             revision: 41,
             all_alarms_json: None,
+            snooze_length_minutes: 10,
         };
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
@@ -412,6 +414,7 @@ mod tests {
             reason: SyncReason::Initialize,
             revision: 1,
             all_alarms_json: None,
+            snooze_length_minutes: 10,
         };
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
@@ -438,6 +441,7 @@ mod tests {
             reason: SyncReason::Reconnect,
             revision: 11,
             all_alarms_json: None,
+            snooze_length_minutes: 10,
         };
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
@@ -461,7 +465,7 @@ mod tests {
         let publisher = ChannelPublisher::new(tx);
 
         publisher.publish_batch(vec![1, 2], 5);
-        publisher.publish_immediate(&SyncReason::ForceSync, 6, None);
+        publisher.publish_immediate(&SyncReason::ForceSync, 6, None, 10);
 
         let cmd1 = rx.recv().await.unwrap();
         match cmd1 {
@@ -497,6 +501,7 @@ mod tests {
             reason: SyncReason::BatchComplete,
             revision: 51,
             all_alarms_json: None,
+            snooze_length_minutes: 10,
         };
 
         handle_sync_needed(publisher, collector, payload).await;

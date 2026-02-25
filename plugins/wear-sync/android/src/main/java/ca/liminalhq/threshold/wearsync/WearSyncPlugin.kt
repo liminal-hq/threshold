@@ -34,6 +34,7 @@ private const val EXTRA_HEADLESS_BOOT = "wear_sync_headless_boot"
 class PublishRequest {
     var alarmsJson: String = ""
     var revision: Long = 0
+    var snoozeLengthMinutes: Int = 10
 }
 
 @InvokeArg
@@ -94,14 +95,15 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     dataMap.putString("alarmsJson", args.alarmsJson)
                     dataMap.putLong("revision", args.revision)
                     dataMap.putLong("timestamp", System.currentTimeMillis())
+                    dataMap.putInt("snoozeLengthMinutes", args.snoozeLengthMinutes)
                 }
                 request.setUrgent()
 
                 val dataItem = dataClient.putDataItem(request.asPutDataRequest()).await()
-                Log.d(TAG, "Published to watch: uri=${dataItem.uri}, revision=${args.revision}")
+                Log.d(TAG, "Published to watch: uri=${dataItem.uri}, revision=${args.revision}, snooze=${args.snoozeLengthMinutes}m")
 
                 // Cache for offline sync (WearMessageService reads this when plugin isn't loaded)
-                WearSyncCache.write(activity, args.alarmsJson, args.revision)
+                WearSyncCache.write(activity, args.alarmsJson, args.revision, args.snoozeLengthMinutes)
 
                 invoke.resolve()
             } catch (e: Exception) {

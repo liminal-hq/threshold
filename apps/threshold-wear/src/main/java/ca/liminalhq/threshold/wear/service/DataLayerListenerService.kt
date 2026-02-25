@@ -55,7 +55,16 @@ class DataLayerListenerService : WearableListenerService() {
                 val alarmsJson = dataMap.getString("alarmsJson") ?: continue
                 val revision = dataMap.getLong("revision")
 
-                Log.d(TAG, "Received alarm data at revision $revision")
+                // Persist snooze length from phone settings so the watch
+                // always uses the latest value (fallback alarms, ringing UI)
+                val snoozeLengthMinutes = dataMap.getInt("snoozeLengthMinutes", 10)
+                applicationContext
+                    .getSharedPreferences("threshold_wear", android.content.Context.MODE_PRIVATE)
+                    .edit()
+                    .putInt("snooze_length_minutes", snoozeLengthMinutes)
+                    .apply()
+
+                Log.d(TAG, "Received alarm data at revision $revision, snooze=${snoozeLengthMinutes}m")
                 processSyncPayload(repository, alarmsJson, revision)
 
                 // Re-evaluate fallback alarm scheduling after sync
@@ -88,12 +97,25 @@ class DataLayerListenerService : WearableListenerService() {
             val data = String(messageEvent.data, Charsets.UTF_8)
             val json = JSONObject(data)
             val alarmId = json.getInt("alarmId")
+
+            // Deduplication: skip if this alarm is already ringing
+            if (WearRingingService.ringingAlarmId == alarmId) {
+                Log.d(TAG, "Alarm $alarmId already ringing — ignoring duplicate ring message")
+                return
+            }
             val label = json.optString("label", "")
             val hour = json.optInt("hour", 0)
             val minute = json.optInt("minute", 0)
             val snoozeLength = json.optInt("snoozeLengthMinutes", 10)
 
-            Log.d(TAG, "Alarm ring: id=$alarmId, $hour:$minute '$label'")
+            Log.d(TAG, "Alarm ring: id=$alarmId, $hour:$minute '$label' snooze=${snoozeLength}m")
+
+            // Persist snooze length so fallback alarms use the phone's setting
+            applicationContext
+                .getSharedPreferences("threshold_wear", android.content.Context.MODE_PRIVATE)
+                .edit()
+                .putInt("snooze_length_minutes", snoozeLength)
+                .apply()
 
             val serviceIntent = Intent(this, WearRingingService::class.java).apply {
                 putExtra(WearRingingService.EXTRA_ALARM_ID, alarmId)

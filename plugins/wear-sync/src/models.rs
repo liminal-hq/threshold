@@ -23,6 +23,9 @@ pub struct AlarmsSyncNeeded {
     /// Pre-serialised JSON array of all alarms (populated by the app crate).
     #[serde(default)]
     pub all_alarms_json: Option<String>,
+    /// Snooze duration in minutes (from phone settings).
+    #[serde(default = "default_snooze_length")]
+    pub snooze_length_minutes: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -43,6 +46,9 @@ pub struct PublishRequest {
     pub alarms_json: String,
     /// The phone's current revision at the time of publish.
     pub revision: i64,
+    /// Snooze duration in minutes (from phone settings).
+    #[serde(default = "default_snooze_length")]
+    pub snooze_length_minutes: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,6 +117,13 @@ pub struct AlarmFired {
     pub actual_fired_at: i64,
     pub label: Option<String>,
     pub revision: i64,
+    /// Snooze duration in minutes (synced from phone settings).
+    #[serde(default = "default_snooze_length")]
+    pub snooze_length_minutes: i32,
+}
+
+fn default_snooze_length() -> i32 {
+    10
 }
 
 /// Request to send an alarm ring message to the watch.

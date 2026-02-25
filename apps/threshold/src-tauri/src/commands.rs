@@ -5,7 +5,9 @@
 
 use crate::alarm::{AlarmCoordinator, AlarmInput, AlarmRecord};
 use crate::alarm::events::SyncReason;
-use tauri::{AppHandle, Emitter, Runtime, State};
+use crate::SnoozeLengthState;
+use std::sync::atomic::Ordering;
+use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
 #[tauri::command]
 /// Fetch all alarms for UI or sync snapshots.
@@ -172,6 +174,11 @@ pub async fn request_alarm_sync<R: Runtime>(
 pub async fn test_watch_ring<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
     use crate::alarm::events::AlarmFired;
 
+    let snooze = app
+        .try_state::<SnoozeLengthState>()
+        .map(|s| s.load(Ordering::Relaxed))
+        .unwrap_or(10);
+
     let now = chrono::Utc::now().timestamp_millis();
     let event = AlarmFired {
         id: 999,
@@ -179,6 +186,31 @@ pub async fn test_watch_ring<R: Runtime>(app: AppHandle<R>) -> Result<(), String
         actual_fired_at: now,
         label: Some("Test Watch Ring".to_string()),
         revision: 0,
+        snooze_length_minutes: snooze,
     };
     app.emit("alarm:fired", &event).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+/// Update the snooze duration stored in Rust state and trigger a wear sync.
+///
+/// Called by the frontend whenever the user changes the snooze length
+/// in settings. The value is included in `alarm:fired` events and
+/// synced to the watch via the DataItem so the snooze button shows
+/// the correct duration.
+pub async fn set_snooze_length<R: Runtime>(
+    app: AppHandle<R>,
+    coordinator: State<'_, AlarmCoordinator>,
+    minutes: i32,
+) -> Result<(), String> {
+    if let Some(state) = app.try_state::<SnoozeLengthState>() {
+        state.store(minutes, Ordering::Relaxed);
+        log::info!("snooze length updated to {} minutes", minutes);
+    }
+
+    // Trigger a wear sync so the watch receives the updated snooze setting
+    coordinator
+        .emit_sync_needed(&app, SyncReason::ForceSync)
+        .await
+        .map_err(|e| e.to_string())
 }

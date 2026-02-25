@@ -1,3 +1,8 @@
+// Root application component with routing, theming, and platform initialisation
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React, { useEffect } from 'react';
 import { RouterProvider } from '@tanstack/react-router';
 import { router } from './router';
@@ -6,6 +11,7 @@ import { AlarmsProvider } from './contexts/AlarmsContext';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
+import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 // import { LogicalSize } from '@tauri-apps/api/dpi';
 import { platform } from '@tauri-apps/plugin-os';
@@ -52,6 +58,11 @@ const App: React.FC = () => {
 			}
 		};
 		initAlarmService();
+
+		// Sync snooze length to Rust so alarm:fired events carry the right value
+		invoke('set_snooze_length', { minutes: SettingsService.getSnoozeLength() }).catch((e) =>
+			console.warn('[App] Failed to sync initial snooze length:', e),
+		);
 
 		const showWindow = async () => {
 			if (os === 'android' || os === 'ios') return;

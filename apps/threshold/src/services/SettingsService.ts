@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import { emit } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { TimePrefs } from '../utils/timePrefs';
 import { ThemeId } from '../theme/themes';
@@ -89,6 +90,10 @@ export const SettingsService = {
 	setSnoozeLength: (minutes: number) => {
 		localStorage.setItem(KEY_SNOOZE_LENGTH, String(minutes));
 		emit('settings-changed', { key: 'snoozeLength', value: minutes });
+		// Sync to Rust state so alarm:fired events include the correct duration
+		invoke('set_snooze_length', { minutes }).catch((e) =>
+			console.warn('[Settings] Failed to sync snooze length to Rust:', e),
+		);
 	},
 
 	sendTestNotification: async () => {
