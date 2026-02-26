@@ -6,6 +6,9 @@
 const COMMANDS: &[&str] = &[
     "publish_to_watch",
     "request_sync_from_watch",
+    "send_alarm_ring",
+    "send_alarm_dismiss",
+    "send_alarm_snooze",
     "set_watch_message_handler",
     "mark_watch_pipeline_ready",
 ];

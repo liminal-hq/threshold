@@ -33,9 +33,9 @@ pub use mobile::WearSync;
 
 use batch_collector::BatchCollector;
 use models::{
-    AlarmFired, AlarmRingRequest, AlarmsBatchUpdated, AlarmsSyncNeeded, PublishRequest,
-    WatchDeleteAlarm, WatchDismissAlarm, WatchMessage, WatchSaveAlarm, WatchSnoozeAlarm,
-    WatchSyncRequest,
+    AlarmDismissRequest, AlarmFired, AlarmRingRequest, AlarmSnoozeRequest, AlarmsBatchUpdated,
+    AlarmsSyncNeeded, PublishRequest, WatchDeleteAlarm, WatchDismissAlarm, WatchMessage,
+    WatchSaveAlarm, WatchSnoozeAlarm, WatchSyncRequest,
 };
 use publisher::{ChannelPublisher, PublishCommand, WearSyncPublisher};
 
@@ -138,6 +138,74 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                     }
                     Err(error) => {
                         log::warn!("wear-sync: failed to parse alarm:fired payload: {error}");
+                    }
+                }
+            });
+
+            // Mirror phone alarm dismiss lifecycle to the watch so tapping
+            // stop on phone halts watch ringing immediately.
+            let dismiss_app = app.clone();
+            app.listen("alarm:dismissed", move |event| {
+                #[derive(Debug, serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct AlarmDismissed {
+                    id: i32,
+                }
+
+                match serde_json::from_str::<AlarmDismissed>(event.payload()) {
+                    Ok(dismissed) => {
+                        let app = dismiss_app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let wear_sync = app.state::<WearSync<R>>();
+                            let request = AlarmDismissRequest {
+                                alarm_id: dismissed.id,
+                            };
+                            if let Err(error) = wear_sync.send_alarm_dismiss(request) {
+                                log::error!(
+                                    "wear-sync: failed to send alarm dismiss to watch: {error}"
+                                );
+                            }
+                        });
+                    }
+                    Err(error) => {
+                        log::warn!("wear-sync: failed to parse alarm:dismissed payload: {error}");
+                    }
+                }
+            });
+
+            // Mirror phone alarm snooze lifecycle to the watch so tapping
+            // snooze on phone halts watch ringing immediately.
+            let snooze_app = app.clone();
+            app.listen("alarm:snoozed", move |event| {
+                #[derive(Debug, serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct AlarmSnoozed {
+                    id: i32,
+                    original_trigger: i64,
+                    snoozed_until: i64,
+                }
+
+                match serde_json::from_str::<AlarmSnoozed>(event.payload()) {
+                    Ok(snoozed) => {
+                        let app = snooze_app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let wear_sync = app.state::<WearSync<R>>();
+                            let duration_ms =
+                                snoozed.snoozed_until.saturating_sub(snoozed.original_trigger);
+                            let snooze_length_minutes = (duration_ms / 60_000).max(0) as i32;
+                            let request = AlarmSnoozeRequest {
+                                alarm_id: snoozed.id,
+                                snooze_length_minutes,
+                            };
+                            if let Err(error) = wear_sync.send_alarm_snooze(request) {
+                                log::error!(
+                                    "wear-sync: failed to send alarm snooze to watch: {error}"
+                                );
+                            }
+                        });
+                    }
+                    Err(error) => {
+                        log::warn!("wear-sync: failed to parse alarm:snoozed payload: {error}");
                     }
                 }
             });

@@ -166,3 +166,18 @@ pub struct AlarmRingRequest {
     #[serde(default = "default_is_24_hour_known")]
     pub is_24_hour_known: bool,
 }
+
+/// Request to send an alarm dismiss message to the watch.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmDismissRequest {
+    pub alarm_id: i32,
+}
+
+/// Request to send an alarm snooze message to the watch.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmSnoozeRequest {
+    pub alarm_id: i32,
+    pub snooze_length_minutes: i32,
+}

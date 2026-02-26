@@ -35,11 +35,21 @@ private const val TAG = "RingingActivity"
  * Window flags ensure the screen turns on and shows over the lock screen.
  */
 class RingingActivity : ComponentActivity() {
+    companion object {
+        const val ACTION_CLOSE_RINGING = "ca.liminalhq.threshold.wear.ACTION_CLOSE_RINGING"
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (intent?.action == ACTION_CLOSE_RINGING) {
+            Log.d(TAG, "Received close action in onCreate")
+            closeRingingTask()
+            return
+        }
+
         configureWindowForAlarm()
 
         val alarmId = intent.getIntExtra(WearRingingService.EXTRA_ALARM_ID, -1)
@@ -97,6 +107,16 @@ class RingingActivity : ComponentActivity() {
                     },
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        if (intent.action == ACTION_CLOSE_RINGING) {
+            Log.d(TAG, "Received close action in onNewIntent")
+            closeRingingTask()
         }
     }
 

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-send-alarm-dismiss"
+description = "Enables the send_alarm_dismiss command without any pre-configured scope."
+commands.allow = ["send_alarm_dismiss"]
+
+[[permission]]
+identifier = "deny-send-alarm-dismiss"
+description = "Denies the send_alarm_dismiss command without any pre-configured scope."
+commands.deny = ["send_alarm_dismiss"]

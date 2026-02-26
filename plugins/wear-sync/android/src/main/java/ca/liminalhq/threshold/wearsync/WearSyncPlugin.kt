@@ -28,6 +28,8 @@ private const val TAG = "WearSyncPlugin"
 private const val DATA_PATH_ALARMS = "/threshold/alarms"
 private const val MSG_PATH_SYNC_REQUEST = "/threshold/sync_request"
 private const val MSG_PATH_ALARM_RING = "/threshold/alarm_ring"
+private const val MSG_PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
+private const val MSG_PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
 private const val EXTRA_HEADLESS_BOOT = "wear_sync_headless_boot"
 
 @InvokeArg
@@ -53,6 +55,17 @@ class AlarmRingRequest {
     var snoozeLengthMinutes: Int = 10
     var is24Hour: Boolean = false
     var is24HourKnown: Boolean = false
+}
+
+@InvokeArg
+class AlarmDismissRequest {
+    var alarmId: Int = -1
+}
+
+@InvokeArg
+class AlarmSnoozeRequest {
+    var alarmId: Int = -1
+    var snoozeLengthMinutes: Int = 10
 }
 
 @InvokeArg
@@ -196,6 +209,77 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send alarm ring to watch", e)
                 invoke.reject("Failed to send alarm ring: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Send an alarm dismiss message to all connected watch nodes.
+     *
+     * Called from the Rust side when an alarm is dismissed on phone so
+     * active watch ringing can stop immediately.
+     */
+    @Command
+    fun send_alarm_dismiss(invoke: Invoke) {
+        val args = invoke.parseArgs(AlarmDismissRequest::class.java)
+        scope.launch {
+            try {
+                val nodes = nodeClient.connectedNodes.await()
+                if (nodes.isEmpty()) {
+                    Log.d(TAG, "No connected watch nodes — skipping dismiss notification")
+                    invoke.resolve()
+                    return@launch
+                }
+
+                val json = JSONObject().apply {
+                    put("alarmId", args.alarmId)
+                }
+                val payload = json.toString().toByteArray()
+
+                for (node in nodes) {
+                    messageClient.sendMessage(node.id, MSG_PATH_ALARM_DISMISS, payload).await()
+                    Log.d(TAG, "Sent alarm dismiss to watch: ${node.displayName}")
+                }
+                invoke.resolve()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send alarm dismiss to watch", e)
+                invoke.reject("Failed to send alarm dismiss: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Send an alarm snooze message to all connected watch nodes.
+     *
+     * Called from the Rust side when an alarm is snoozed on phone so
+     * active watch ringing can stop immediately.
+     */
+    @Command
+    fun send_alarm_snooze(invoke: Invoke) {
+        val args = invoke.parseArgs(AlarmSnoozeRequest::class.java)
+        scope.launch {
+            try {
+                val nodes = nodeClient.connectedNodes.await()
+                if (nodes.isEmpty()) {
+                    Log.d(TAG, "No connected watch nodes — skipping snooze notification")
+                    invoke.resolve()
+                    return@launch
+                }
+
+                val json = JSONObject().apply {
+                    put("alarmId", args.alarmId)
+                    put("snoozeLengthMinutes", args.snoozeLengthMinutes)
+                }
+                val payload = json.toString().toByteArray()
+
+                for (node in nodes) {
+                    messageClient.sendMessage(node.id, MSG_PATH_ALARM_SNOOZE, payload).await()
+                    Log.d(TAG, "Sent alarm snooze to watch: ${node.displayName}")
+                }
+                invoke.resolve()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send alarm snooze to watch", e)
+                invoke.reject("Failed to send alarm snooze: ${e.message}")
             }
         }
     }

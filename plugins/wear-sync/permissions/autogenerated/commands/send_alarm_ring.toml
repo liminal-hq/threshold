@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-send-alarm-ring"
+description = "Enables the send_alarm_ring command without any pre-configured scope."
+commands.allow = ["send_alarm_ring"]
+
+[[permission]]
+identifier = "deny-send-alarm-ring"
+description = "Denies the send_alarm_ring command without any pre-configured scope."
+commands.deny = ["send_alarm_ring"]

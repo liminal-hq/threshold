@@ -331,6 +331,42 @@
           "markdownDescription": "Denies the request_sync_from_watch command without any pre-configured scope."
         },
         {
+          "description": "Enables the send_alarm_dismiss command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-send-alarm-dismiss",
+          "markdownDescription": "Enables the send_alarm_dismiss command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the send_alarm_dismiss command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-send-alarm-dismiss",
+          "markdownDescription": "Denies the send_alarm_dismiss command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the send_alarm_ring command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-send-alarm-ring",
+          "markdownDescription": "Enables the send_alarm_ring command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the send_alarm_ring command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-send-alarm-ring",
+          "markdownDescription": "Denies the send_alarm_ring command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the send_alarm_snooze command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-send-alarm-snooze",
+          "markdownDescription": "Enables the send_alarm_snooze command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the send_alarm_snooze command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-send-alarm-snooze",
+          "markdownDescription": "Denies the send_alarm_snooze command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_watch_message_handler command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-watch-message-handler",

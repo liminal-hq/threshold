@@ -11,6 +11,7 @@ import android.util.Log
 import ca.liminalhq.threshold.wear.ThresholdWearApp
 import ca.liminalhq.threshold.wear.data.SyncStatus
 import ca.liminalhq.threshold.wear.data.WatchAlarm
+import ca.liminalhq.threshold.wear.presentation.RingingActivity
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
@@ -22,6 +23,8 @@ import org.json.JSONObject
 private const val TAG = "DataLayerListener"
 private const val DATA_PATH_ALARMS = "/threshold/alarms"
 private const val PATH_ALARM_RING = "/threshold/alarm_ring"
+private const val PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
+private const val PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
 
 /**
  * Receives data changes and messages from the phone via the Wear Data Layer.
@@ -92,6 +95,8 @@ class DataLayerListenerService : WearableListenerService() {
 
         when (path) {
             PATH_ALARM_RING -> handleAlarmRing(messageEvent)
+            PATH_ALARM_DISMISS -> handleAlarmDismiss(messageEvent)
+            PATH_ALARM_SNOOZE -> handleAlarmSnooze(messageEvent)
             else -> Log.d(TAG, "Unhandled message path: $path")
         }
     }
@@ -146,6 +151,74 @@ class DataLayerListenerService : WearableListenerService() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to handle alarm ring message", e)
+        }
+    }
+
+    /**
+     * Handle an alarm dismiss message from the phone — stop watch ringing.
+     */
+    private fun handleAlarmDismiss(messageEvent: MessageEvent) {
+        try {
+            val data = String(messageEvent.data, Charsets.UTF_8)
+            val json = JSONObject(data)
+            val alarmId = json.optInt("alarmId", -1)
+            Log.d(TAG, "Alarm dismiss: id=$alarmId")
+
+            stopRingingOnWatch(WearRingingService.ACTION_DISMISS, alarmId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to handle alarm dismiss message", e)
+        }
+    }
+
+    /**
+     * Handle an alarm snooze message from the phone — stop watch ringing.
+     */
+    private fun handleAlarmSnooze(messageEvent: MessageEvent) {
+        try {
+            val data = String(messageEvent.data, Charsets.UTF_8)
+            val json = JSONObject(data)
+            val alarmId = json.optInt("alarmId", -1)
+            val snoozeLengthMinutes = json.optInt("snoozeLengthMinutes", 10)
+            Log.d(TAG, "Alarm snooze: id=$alarmId, snooze=${snoozeLengthMinutes}m")
+
+            stopRingingOnWatch(WearRingingService.ACTION_SNOOZE, alarmId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to handle alarm snooze message", e)
+        }
+    }
+
+    private fun stopRingingOnWatch(action: String, alarmId: Int) {
+        if (WearRingingService.ringingAlarmId == -1) {
+            Log.d(TAG, "Ignoring $action for alarm $alarmId because no alarm is currently ringing")
+            return
+        }
+
+        if (alarmId != -1 && WearRingingService.ringingAlarmId != alarmId) {
+            Log.d(
+                TAG,
+                "Ignoring $action for alarm $alarmId while alarm ${WearRingingService.ringingAlarmId} is ringing",
+            )
+            return
+        }
+
+        val serviceIntent = Intent(this, WearRingingService::class.java).apply {
+            this.action = action
+            putExtra(WearRingingService.EXTRA_ALARM_ID, alarmId)
+        }
+        startService(serviceIntent)
+
+        // Ensure the full-screen ringing activity is dismissed as well.
+        val closeUiIntent = Intent(this, RingingActivity::class.java).apply {
+            this.action = RingingActivity.ACTION_CLOSE_RINGING
+            putExtra(WearRingingService.EXTRA_ALARM_ID, alarmId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        try {
+            startActivity(closeUiIntent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to close ringing activity for action $action", e)
         }
     }
 
