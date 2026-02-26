@@ -14,6 +14,7 @@ pub trait WearSyncPublisher: Send + Sync {
         all_alarms_json: Option<String>,
         snooze_length_minutes: i32,
         is_24_hour: bool,
+        is_24_hour_known: bool,
     );
 }
 
@@ -35,6 +36,8 @@ pub enum PublishCommand {
         snooze_length_minutes: i32,
         /// Time format preference from phone settings (`true` = 24-hour clock).
         is_24_hour: bool,
+        /// Whether the phone time format value is explicitly known.
+        is_24_hour_known: bool,
     },
 }
 
@@ -69,6 +72,7 @@ impl WearSyncPublisher for ChannelPublisher {
         all_alarms_json: Option<String>,
         snooze_length_minutes: i32,
         is_24_hour: bool,
+        is_24_hour_known: bool,
     ) {
         if let Err(error) = self.tx.send(PublishCommand::Immediate {
             reason: reason.clone(),
@@ -76,6 +80,7 @@ impl WearSyncPublisher for ChannelPublisher {
             all_alarms_json,
             snooze_length_minutes,
             is_24_hour,
+            is_24_hour_known,
         }) {
             log::error!("wear-sync: failed to send immediate publish command: {error}");
         }
@@ -114,16 +119,18 @@ mod tests {
             Some("[{\"id\":1}]".into()),
             10,
             true,
+            true,
         );
 
         let cmd = rx.try_recv().unwrap();
         match cmd {
-            PublishCommand::Immediate { reason, revision, all_alarms_json, snooze_length_minutes, is_24_hour } => {
+            PublishCommand::Immediate { reason, revision, all_alarms_json, snooze_length_minutes, is_24_hour, is_24_hour_known } => {
                 assert_eq!(reason, SyncReason::ForceSync);
                 assert_eq!(revision, 100);
                 assert_eq!(all_alarms_json, Some("[{\"id\":1}]".into()));
                 assert_eq!(snooze_length_minutes, 10);
                 assert!(is_24_hour);
+                assert!(is_24_hour_known);
             }
             _ => panic!("Expected Immediate command"),
         }
@@ -137,6 +144,6 @@ mod tests {
 
         // Should not panic, just log an error
         publisher.publish_batch(vec![1], 1);
-        publisher.publish_immediate(&SyncReason::Initialize, 1, None, 10, false);
+        publisher.publish_immediate(&SyncReason::Initialize, 1, None, 10, false, false);
     }
 }

@@ -36,6 +36,7 @@ class PublishRequest {
     var revision: Long = 0
     var snoozeLengthMinutes: Int = 10
     var is24Hour: Boolean = false
+    var is24HourKnown: Boolean = false
 }
 
 @InvokeArg
@@ -51,6 +52,7 @@ class AlarmRingRequest {
     var minute: Int = 0
     var snoozeLengthMinutes: Int = 10
     var is24Hour: Boolean = false
+    var is24HourKnown: Boolean = false
 }
 
 @InvokeArg
@@ -99,11 +101,12 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     dataMap.putLong("timestamp", System.currentTimeMillis())
                     dataMap.putInt("snoozeLengthMinutes", args.snoozeLengthMinutes)
                     dataMap.putBoolean("is24Hour", args.is24Hour)
+                    dataMap.putBoolean("is24HourKnown", args.is24HourKnown)
                 }
                 request.setUrgent()
 
                 val dataItem = dataClient.putDataItem(request.asPutDataRequest()).await()
-                Log.d(TAG, "Published to watch: uri=${dataItem.uri}, revision=${args.revision}, snooze=${args.snoozeLengthMinutes}m, is24h=${args.is24Hour}")
+                Log.d(TAG, "Published to watch: uri=${dataItem.uri}, revision=${args.revision}, snooze=${args.snoozeLengthMinutes}m, is24h=${args.is24Hour}, is24hKnown=${args.is24HourKnown}")
 
                 // Cache for offline sync (WearMessageService reads this when plugin isn't loaded)
                 WearSyncCache.write(
@@ -112,6 +115,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     args.revision,
                     args.snoozeLengthMinutes,
                     args.is24Hour,
+                    args.is24HourKnown,
                 )
 
                 invoke.resolve()
@@ -180,6 +184,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     put("minute", minute)
                     put("snoozeLengthMinutes", args.snoozeLengthMinutes)
                     put("is24Hour", args.is24Hour)
+                    put("is24HourKnown", args.is24HourKnown)
                 }
                 val payload = json.toString().toByteArray()
 

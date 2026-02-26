@@ -6,6 +6,7 @@
 use crate::alarm::{AlarmCoordinator, AlarmInput, AlarmRecord};
 use crate::alarm::events::SyncReason;
 use crate::SnoozeLengthState;
+use crate::TimeFormatKnownState;
 use crate::TimeFormatState;
 use std::sync::atomic::Ordering;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
@@ -190,6 +191,10 @@ pub async fn test_watch_ring<R: Runtime>(app: AppHandle<R>) -> Result<(), String
         snooze_length_minutes: snooze,
         is_24_hour: app
             .try_state::<TimeFormatState>()
+            .map(|s| s.load(Ordering::Relaxed))
+            .unwrap_or(false),
+        is_24_hour_known: app
+            .try_state::<TimeFormatKnownState>()
             .map(|s| s.load(Ordering::Relaxed))
             .unwrap_or(false),
     };

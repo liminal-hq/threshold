@@ -48,9 +48,16 @@ class RingingActivity : ComponentActivity() {
         val minute = intent.getIntExtra(WearRingingService.EXTRA_ALARM_MINUTE, 0)
         val snoozeLength = intent.getIntExtra(WearRingingService.EXTRA_SNOOZE_LENGTH, 10)
         val prefs = applicationContext.getSharedPreferences("threshold_wear", Context.MODE_PRIVATE)
-        val is24Hour = prefs.getBoolean("is_24_hour", DateFormat.is24HourFormat(this))
+        val watchDefaultIs24Hour = DateFormat.is24HourFormat(this)
+        val is24HourKnown = prefs.getBoolean("is_24_hour_known", false)
+        val is24Hour = if (is24HourKnown && prefs.contains("is_24_hour")) {
+            prefs.getBoolean("is_24_hour", watchDefaultIs24Hour)
+        } else {
+            watchDefaultIs24Hour
+        }
+        val is24HourSource = if (is24HourKnown) "phone-sync" else "watch-default"
 
-        Log.d(TAG, "Ringing activity created for alarm $alarmId ($hour:$minute '$label', is24h=$is24Hour)")
+        Log.d(TAG, "Ringing activity created for alarm $alarmId ($hour:$minute '$label', is24h=$is24Hour source=$is24HourSource watchDefault=$watchDefaultIs24Hour)")
 
         val app = application as ThresholdWearApp
         val dataLayerClient = app.dataLayerClient

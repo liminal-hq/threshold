@@ -120,6 +120,7 @@ mod tests {
             _all_alarms_json: Option<String>,
             _snooze_length_minutes: i32,
             _is_24_hour: bool,
+            _is_24_hour_known: bool,
         ) {
             self.immediate
                 .lock()

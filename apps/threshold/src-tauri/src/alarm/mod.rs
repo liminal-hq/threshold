@@ -292,6 +292,10 @@ impl AlarmCoordinator {
             .try_state::<crate::TimeFormatState>()
             .map(|s: tauri::State<'_, crate::TimeFormatState>| s.load(Ordering::Relaxed))
             .unwrap_or(false);
+        let is_24_hour_known = app
+            .try_state::<crate::TimeFormatKnownState>()
+            .map(|s: tauri::State<'_, crate::TimeFormatKnownState>| s.load(Ordering::Relaxed))
+            .unwrap_or(false);
 
         let event = AlarmFired {
             id,
@@ -301,6 +305,7 @@ impl AlarmCoordinator {
             revision,
             snooze_length_minutes: snooze,
             is_24_hour,
+            is_24_hour_known,
         };
         app.emit("alarm:fired", &event)?;
 
@@ -330,6 +335,10 @@ impl AlarmCoordinator {
             .try_state::<crate::TimeFormatState>()
             .map(|s: tauri::State<'_, crate::TimeFormatState>| s.load(Ordering::Relaxed))
             .unwrap_or(false);
+        let is_24_hour_known = app
+            .try_state::<crate::TimeFormatKnownState>()
+            .map(|s: tauri::State<'_, crate::TimeFormatKnownState>| s.load(Ordering::Relaxed))
+            .unwrap_or(false);
 
         let event = AlarmsSyncNeeded {
             reason,
@@ -337,6 +346,7 @@ impl AlarmCoordinator {
             all_alarms_json,
             snooze_length_minutes: snooze,
             is_24_hour,
+            is_24_hour_known,
         };
         app.emit("alarms:sync:needed", &event)?;
         Ok(())

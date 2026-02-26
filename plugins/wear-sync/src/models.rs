@@ -29,6 +29,9 @@ pub struct AlarmsSyncNeeded {
     /// Time format preference from phone settings (`true` = 24-hour clock).
     #[serde(default = "default_is_24_hour")]
     pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -55,6 +58,9 @@ pub struct PublishRequest {
     /// Time format preference from phone settings (`true` = 24-hour clock).
     #[serde(default = "default_is_24_hour")]
     pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -129,6 +135,9 @@ pub struct AlarmFired {
     /// Time format preference from phone settings (`true` = 24-hour clock).
     #[serde(default = "default_is_24_hour")]
     pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
 }
 
 fn default_snooze_length() -> i32 {
@@ -136,6 +145,10 @@ fn default_snooze_length() -> i32 {
 }
 
 fn default_is_24_hour() -> bool {
+    false
+}
+
+fn default_is_24_hour_known() -> bool {
     false
 }
 
@@ -150,4 +163,6 @@ pub struct AlarmRingRequest {
     pub snooze_length_minutes: i32,
     #[serde(default = "default_is_24_hour")]
     pub is_24_hour: bool,
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
 }

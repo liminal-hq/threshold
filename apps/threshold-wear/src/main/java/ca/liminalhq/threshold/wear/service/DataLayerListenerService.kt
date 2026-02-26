@@ -58,15 +58,21 @@ class DataLayerListenerService : WearableListenerService() {
                 // Persist snooze length from phone settings so the watch
                 // always uses the latest value (fallback alarms, ringing UI)
                 val snoozeLengthMinutes = dataMap.getInt("snoozeLengthMinutes", 10)
-                val is24Hour = dataMap.getBoolean("is24Hour", false)
-                applicationContext
+                val is24HourKnown = dataMap.getBoolean("is24HourKnown", false)
+                val editor = applicationContext
                     .getSharedPreferences("threshold_wear", android.content.Context.MODE_PRIVATE)
                     .edit()
                     .putInt("snooze_length_minutes", snoozeLengthMinutes)
-                    .putBoolean("is_24_hour", is24Hour)
-                    .apply()
+                    .putBoolean("is_24_hour_known", is24HourKnown)
+                var loggedIs24Hour = "unknown"
+                if (is24HourKnown && dataMap.containsKey("is24Hour")) {
+                    val is24Hour = dataMap.getBoolean("is24Hour")
+                    editor.putBoolean("is_24_hour", is24Hour)
+                    loggedIs24Hour = is24Hour.toString()
+                }
+                editor.apply()
 
-                Log.d(TAG, "Received alarm data at revision $revision, snooze=${snoozeLengthMinutes}m, is24h=$is24Hour")
+                Log.d(TAG, "Received alarm data at revision $revision, snooze=${snoozeLengthMinutes}m, is24h=$loggedIs24Hour, is24hKnown=$is24HourKnown")
                 processSyncPayload(repository, alarmsJson, revision)
 
                 // Re-evaluate fallback alarm scheduling after sync
@@ -109,17 +115,21 @@ class DataLayerListenerService : WearableListenerService() {
             val hour = json.optInt("hour", 0)
             val minute = json.optInt("minute", 0)
             val snoozeLength = json.optInt("snoozeLengthMinutes", 10)
-            val is24Hour = json.optBoolean("is24Hour", false)
+            val is24HourKnown = json.optBoolean("is24HourKnown", false)
+            val is24Hour = if (json.has("is24Hour")) json.optBoolean("is24Hour", false) else null
 
-            Log.d(TAG, "Alarm ring: id=$alarmId, $hour:$minute '$label' snooze=${snoozeLength}m is24h=$is24Hour")
+            Log.d(TAG, "Alarm ring: id=$alarmId, $hour:$minute '$label' snooze=${snoozeLength}m is24h=${is24Hour ?: "unknown"} is24hKnown=$is24HourKnown")
 
             // Persist snooze length so fallback alarms use the phone's setting
-            applicationContext
+            val prefsEditor = applicationContext
                 .getSharedPreferences("threshold_wear", android.content.Context.MODE_PRIVATE)
                 .edit()
                 .putInt("snooze_length_minutes", snoozeLength)
-                .putBoolean("is_24_hour", is24Hour)
-                .apply()
+                .putBoolean("is_24_hour_known", is24HourKnown)
+            if (is24HourKnown && is24Hour != null) {
+                prefsEditor.putBoolean("is_24_hour", is24Hour)
+            }
+            prefsEditor.apply()
 
             val serviceIntent = Intent(this, WearRingingService::class.java).apply {
                 putExtra(WearRingingService.EXTRA_ALARM_ID, alarmId)

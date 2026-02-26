@@ -128,6 +128,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                                 minute: -1,
                                 snooze_length_minutes: fired.snooze_length_minutes,
                                 is_24_hour: fired.is_24_hour,
+                                is_24_hour_known: fired.is_24_hour_known,
                             };
 
                             if let Err(error) = wear_sync.send_alarm_ring(request) {
@@ -193,7 +194,14 @@ fn spawn_publish_task<R: Runtime>(
                         log::error!("wear-sync: failed to emit batch_ready: {error}");
                     }
                 }
-                PublishCommand::Immediate { reason, revision, all_alarms_json, snooze_length_minutes, is_24_hour } => {
+                PublishCommand::Immediate {
+                    reason,
+                    revision,
+                    all_alarms_json,
+                    snooze_length_minutes,
+                    is_24_hour,
+                    is_24_hour_known,
+                } => {
                     log::info!(
                         "wear-sync: immediate publish ({:?}) at revision {}",
                         reason,
@@ -216,6 +224,7 @@ fn spawn_publish_task<R: Runtime>(
                         revision,
                         snooze_length_minutes,
                         is_24_hour,
+                        is_24_hour_known,
                     };
                     if let Err(error) = wear_sync.publish_to_watch(request) {
                         log::error!("wear-sync: failed to publish immediate sync to watch: {error}");
@@ -346,6 +355,7 @@ async fn handle_sync_needed(
         payload.all_alarms_json,
         payload.snooze_length_minutes,
         payload.is_24_hour,
+        payload.is_24_hour_known,
     );
 }
 
@@ -383,6 +393,7 @@ mod tests {
             _all_alarms_json: Option<String>,
             _snooze_length_minutes: i32,
             _is_24_hour: bool,
+            _is_24_hour_known: bool,
         ) {
             self.calls
                 .lock()
@@ -404,6 +415,7 @@ mod tests {
             all_alarms_json: None,
             snooze_length_minutes: 10,
             is_24_hour: false,
+            is_24_hour_known: false,
         };
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
@@ -432,6 +444,7 @@ mod tests {
             all_alarms_json: None,
             snooze_length_minutes: 10,
             is_24_hour: false,
+            is_24_hour_known: false,
         };
 
         handle_sync_needed(publisher.clone(), collector, payload).await;
@@ -483,7 +496,7 @@ mod tests {
         let publisher = ChannelPublisher::new(tx);
 
         publisher.publish_batch(vec![1, 2], 5);
-        publisher.publish_immediate(&SyncReason::ForceSync, 6, None, 10, false);
+        publisher.publish_immediate(&SyncReason::ForceSync, 6, None, 10, false, false);
 
         let cmd1 = rx.recv().await.unwrap();
         match cmd1 {
@@ -521,6 +534,7 @@ mod tests {
             all_alarms_json: None,
             snooze_length_minutes: 10,
             is_24_hour: false,
+            is_24_hour_known: false,
         };
 
         handle_sync_needed(publisher, collector, payload).await;

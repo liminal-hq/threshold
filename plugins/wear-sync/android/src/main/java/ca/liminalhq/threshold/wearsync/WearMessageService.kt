@@ -101,7 +101,7 @@ class WearMessageService : WearableListenerService() {
             return
         }
 
-        val (alarmsJson, revision, snoozeLengthMinutes, is24Hour) = cached
+        val (alarmsJson, revision, snoozeLengthMinutes, is24Hour, is24HourKnown) = cached
         Log.i(TAG, "Serving sync request from cache at revision $revision")
 
         scope.launch {
@@ -113,6 +113,7 @@ class WearMessageService : WearableListenerService() {
                     dataMap.putLong("timestamp", System.currentTimeMillis())
                     dataMap.putInt("snoozeLengthMinutes", snoozeLengthMinutes)
                     dataMap.putBoolean("is24Hour", is24Hour)
+                    dataMap.putBoolean("is24HourKnown", is24HourKnown)
                 }
                 request.setUrgent()
 

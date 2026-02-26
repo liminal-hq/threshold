@@ -113,6 +113,9 @@ pub struct AlarmFired {
     /// Time format preference (synced from phone settings).
     #[serde(default = "default_is_24_hour")]
     pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
 }
 
 fn default_snooze_length() -> i32 {
@@ -120,6 +123,10 @@ fn default_snooze_length() -> i32 {
 }
 
 fn default_is_24_hour() -> bool {
+    false
+}
+
+fn default_is_24_hour_known() -> bool {
     false
 }
 
@@ -182,6 +189,9 @@ pub struct AlarmsSyncNeeded {
     /// Time format preference (from phone settings) to sync to the watch.
     #[serde(default = "default_is_24_hour")]
     pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

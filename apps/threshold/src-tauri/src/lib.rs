@@ -17,6 +17,8 @@ pub type SnoozeLengthState = Arc<AtomicI32>;
 /// Phone-side time format preference, synced from frontend settings.
 /// `true` = 24-hour, `false` = 12-hour.
 pub type TimeFormatState = Arc<AtomicBool>;
+/// Whether the phone-side time format has been explicitly initialised from settings.
+pub type TimeFormatKnownState = Arc<AtomicBool>;
 #[cfg(mobile)]
 use tauri_plugin_alarm_manager::AlarmManagerExt;
 #[cfg(mobile)]
@@ -183,6 +185,9 @@ pub fn run() {
             // Time format state — default 24-hour false, updated by frontend
             let time_format_state: TimeFormatState = Arc::new(AtomicBool::new(false));
             app.manage(time_format_state);
+            // Time format known flag — false until frontend emits settings-changed(is24h)
+            let time_format_known_state: TimeFormatKnownState = Arc::new(AtomicBool::new(false));
+            app.manage(time_format_known_state);
 
             // Keep Rust state aligned with frontend settings via event architecture.
             // This powers alarm:fired and wear sync payloads without bespoke invoke calls.
@@ -212,6 +217,9 @@ pub fn run() {
                         "settings: updated time format to {} via settings-changed event",
                         if is_24_hour { "24h" } else { "12h" }
                     );
+                }
+                if let Some(known_state) = settings_handle.try_state::<TimeFormatKnownState>() {
+                    known_state.store(true, std::sync::atomic::Ordering::Relaxed);
                 }
 
                 let handle = settings_handle.clone();
