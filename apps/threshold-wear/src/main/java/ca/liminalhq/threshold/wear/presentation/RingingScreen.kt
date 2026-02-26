@@ -222,9 +222,9 @@ fun RingingScreen(
         val compact = maxHeight <= 192.dp
         val timeFontSize = if (compact) 46.sp else 52.sp
         val labelFontSize = if (compact) 13.sp else 14.sp
-        val stopHeight: Dp = if (compact) 40.dp else 42.dp
-        val snoozeHeight: Dp = if (compact) 36.dp else 38.dp
-        val topSpacingWeight = if (compact) 0.16f else 0.2f
+        val stopHeight: Dp = if (compact) 38.dp else 40.dp
+        val snoozeHeight: Dp = if (compact) 34.dp else 36.dp
+        val topSpacingWeight = if (compact) 0.2f else 0.24f
 
         // ── Background layers ───────────────────────────────────────
         BackgroundCanvas(colors)
@@ -307,11 +307,11 @@ fun RingingScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .fillMaxWidth(0.84f)
-                        .padding(top = 2.dp),
+                        .padding(top = 0.dp),
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(if (compact) 2.dp else 4.dp))
             ThresholdIndicatorCanvas(
                 dotAlpha = dotAlpha,
                 dotRingRadius = dotRingRadius,
@@ -340,7 +340,7 @@ fun RingingScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Snooze — ghost outline pill
             Button(
@@ -366,7 +366,7 @@ fun RingingScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
         }
     }
 }
@@ -443,10 +443,10 @@ private fun ThresholdIndicatorCanvas(
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(22.dp),
+            .height(18.dp),
     ) {
         val cx = size.width / 2f
-        val cy = size.height / 2f
+        val cy = size.height * 0.34f
         val lineHalfWidth = 28f
         drawThresholdIndicator(
             cx = cx,
