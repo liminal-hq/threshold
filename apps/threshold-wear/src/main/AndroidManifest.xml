@@ -42,6 +42,8 @@
             android:exported="true"
             android:showOnLockScreen="true"
             android:turnScreenOn="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
             android:taskAffinity=""
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>

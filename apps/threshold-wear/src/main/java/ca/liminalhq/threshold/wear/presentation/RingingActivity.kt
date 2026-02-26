@@ -77,7 +77,7 @@ class RingingActivity : ComponentActivity() {
                         scope.launch {
                             dataLayerClient.sendDismissAlarm(alarmId)
                         }
-                        finish()
+                        closeRingingTask()
                     },
                     onSnooze = {
                         Log.d(TAG, "Snooze pressed for alarm $alarmId (${snoozeLength}m)")
@@ -93,7 +93,7 @@ class RingingActivity : ComponentActivity() {
                             )
                             dataLayerClient.sendSnoozeAlarm(alarmId, snoozeLength)
                         }
-                        finish()
+                        closeRingingTask()
                     },
                 )
             }
@@ -126,5 +126,16 @@ class RingingActivity : ComponentActivity() {
             action = WearRingingService.ACTION_DISMISS
         }
         startService(serviceIntent)
+    }
+
+    /**
+     * Close the ringing UI task so Recents reopens the main watch app activity.
+     */
+    private fun closeRingingTask() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            finishAndRemoveTask()
+        } else {
+            finish()
+        }
     }
 }
