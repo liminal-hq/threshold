@@ -6,6 +6,7 @@
 package ca.liminalhq.threshold.wear.presentation
 
 import android.os.Build
+import android.util.Log
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -27,8 +28,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -36,7 +37,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -47,9 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
-import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import ca.liminalhq.threshold.wear.presentation.theme.ThresholdAccent
 
 // ── Static fallback colours (used when Material You is unavailable) ──
 
@@ -59,6 +58,7 @@ private val FallbackHorizonGlow = Color(0xFFFFB74D)
 private val StopButtonBg = Color(0xFF1A1A2E)
 private val DotPatternWhite = Color.White.copy(alpha = 0.12f)
 private val ThresholdAmber = Color(0xFFFFB74D)
+private const val TAG = "RingingScreen"
 
 // ── Ring animation specs (matching SVG) ─────────────────────────────
 
@@ -95,16 +95,16 @@ private data class RingingColors(
 private fun resolveRingingColors(): RingingColors {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val context = LocalContext.current
-        // system_accent2 = secondary palette (maps to --app-colour-secondary)
-        // 300 = tint, 500 = base shade
-        val secondaryTint = Color(context.getColor(android.R.color.system_accent2_300))
-        val secondaryBase = Color(context.getColor(android.R.color.system_accent2_500))
-        // system_accent1 = primary palette (maps to --app-colour-primary / horizon glow)
-        val primaryBase = Color(context.getColor(android.R.color.system_accent1_400))
+        // system_accent3 = tertiary palette (selected for ringing background)
+        // 500 = top shade, 700 = deeper base shade
+        val tertiaryTint = Color(context.getColor(android.R.color.system_accent3_500))
+        val tertiaryBase = Color(context.getColor(android.R.color.system_accent3_700))
+        // system_accent2 = secondary palette (selected for horizon glow)
+        val secondaryBase = Color(context.getColor(android.R.color.system_accent2_400))
         return RingingColors(
-            gradientTop = secondaryTint,
-            gradientBottom = secondaryBase,
-            horizonGlow = primaryBase,
+            gradientTop = tertiaryTint,
+            gradientBottom = tertiaryBase,
+            horizonGlow = secondaryBase,
         )
     }
     return RingingColors(
@@ -142,8 +142,52 @@ fun RingingScreen(
     onSnooze: () -> Unit,
 ) {
     val colors = resolveRingingColors()
+    val context = LocalContext.current
     // Keep screen on while ringing
     KeepScreenOn()
+
+    LaunchedEffect(colors) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val accentDump = buildString {
+                append("a1[300=")
+                append(context.getColor(android.R.color.system_accent1_300).toDebugHex())
+                append(",400=")
+                append(context.getColor(android.R.color.system_accent1_400).toDebugHex())
+                append(",500=")
+                append(context.getColor(android.R.color.system_accent1_500).toDebugHex())
+                append("] ")
+                append("a2[300=")
+                append(context.getColor(android.R.color.system_accent2_300).toDebugHex())
+                append(",400=")
+                append(context.getColor(android.R.color.system_accent2_400).toDebugHex())
+                append(",500=")
+                append(context.getColor(android.R.color.system_accent2_500).toDebugHex())
+                append("] ")
+                append("a3[300=")
+                append(context.getColor(android.R.color.system_accent3_300).toDebugHex())
+                append(",400=")
+                append(context.getColor(android.R.color.system_accent3_400).toDebugHex())
+                append(",500=")
+                append(context.getColor(android.R.color.system_accent3_500).toDebugHex())
+                append("] ")
+                append("n1[100=")
+                append(context.getColor(android.R.color.system_neutral1_100).toDebugHex())
+                append(",500=")
+                append(context.getColor(android.R.color.system_neutral1_500).toDebugHex())
+                append(",900=")
+                append(context.getColor(android.R.color.system_neutral1_900).toDebugHex())
+                append("] ")
+                append("n2[100=")
+                append(context.getColor(android.R.color.system_neutral2_100).toDebugHex())
+                append(",500=")
+                append(context.getColor(android.R.color.system_neutral2_500).toDebugHex())
+                append(",900=")
+                append(context.getColor(android.R.color.system_neutral2_900).toDebugHex())
+                append("]")
+            }
+            Log.d(TAG, "Material You palettes: $accentDump")
+        }
+    }
 
     val infiniteTransition = rememberInfiniteTransition(label = "ringing")
 
@@ -370,6 +414,10 @@ fun RingingScreen(
         }
     }
 }
+
+private fun Color.toDebugHex(): String = String.format("#%08X", this.toArgb())
+
+private fun Int.toDebugHex(): String = String.format("#%08X", this)
 
 // ── Background: gradient + dot pattern + horizon glow ───────────────
 
