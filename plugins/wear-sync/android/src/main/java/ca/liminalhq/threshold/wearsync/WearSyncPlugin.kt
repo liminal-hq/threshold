@@ -35,6 +35,7 @@ class PublishRequest {
     var alarmsJson: String = ""
     var revision: Long = 0
     var snoozeLengthMinutes: Int = 10
+    var is24Hour: Boolean = false
 }
 
 @InvokeArg
@@ -49,6 +50,7 @@ class AlarmRingRequest {
     var hour: Int = 0
     var minute: Int = 0
     var snoozeLengthMinutes: Int = 10
+    var is24Hour: Boolean = false
 }
 
 @InvokeArg
@@ -96,14 +98,21 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     dataMap.putLong("revision", args.revision)
                     dataMap.putLong("timestamp", System.currentTimeMillis())
                     dataMap.putInt("snoozeLengthMinutes", args.snoozeLengthMinutes)
+                    dataMap.putBoolean("is24Hour", args.is24Hour)
                 }
                 request.setUrgent()
 
                 val dataItem = dataClient.putDataItem(request.asPutDataRequest()).await()
-                Log.d(TAG, "Published to watch: uri=${dataItem.uri}, revision=${args.revision}, snooze=${args.snoozeLengthMinutes}m")
+                Log.d(TAG, "Published to watch: uri=${dataItem.uri}, revision=${args.revision}, snooze=${args.snoozeLengthMinutes}m, is24h=${args.is24Hour}")
 
                 // Cache for offline sync (WearMessageService reads this when plugin isn't loaded)
-                WearSyncCache.write(activity, args.alarmsJson, args.revision, args.snoozeLengthMinutes)
+                WearSyncCache.write(
+                    activity,
+                    args.alarmsJson,
+                    args.revision,
+                    args.snoozeLengthMinutes,
+                    args.is24Hour,
+                )
 
                 invoke.resolve()
             } catch (e: Exception) {
@@ -170,6 +179,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     put("hour", hour)
                     put("minute", minute)
                     put("snoozeLengthMinutes", args.snoozeLengthMinutes)
+                    put("is24Hour", args.is24Hour)
                 }
                 val payload = json.toString().toByteArray()
 

@@ -7,7 +7,14 @@ use crate::models::SyncReason;
 
 pub trait WearSyncPublisher: Send + Sync {
     fn publish_batch(&self, ids: Vec<i32>, revision: i64);
-    fn publish_immediate(&self, reason: &SyncReason, revision: i64, all_alarms_json: Option<String>, snooze_length_minutes: i32);
+    fn publish_immediate(
+        &self,
+        reason: &SyncReason,
+        revision: i64,
+        all_alarms_json: Option<String>,
+        snooze_length_minutes: i32,
+        is_24_hour: bool,
+    );
 }
 
 // ── Channel-based publisher ──────────────────────────────────────────
@@ -26,6 +33,8 @@ pub enum PublishCommand {
         all_alarms_json: Option<String>,
         /// Snooze duration in minutes (from phone settings).
         snooze_length_minutes: i32,
+        /// Time format preference from phone settings (`true` = 24-hour clock).
+        is_24_hour: bool,
     },
 }
 
@@ -53,12 +62,20 @@ impl WearSyncPublisher for ChannelPublisher {
         }
     }
 
-    fn publish_immediate(&self, reason: &SyncReason, revision: i64, all_alarms_json: Option<String>, snooze_length_minutes: i32) {
+    fn publish_immediate(
+        &self,
+        reason: &SyncReason,
+        revision: i64,
+        all_alarms_json: Option<String>,
+        snooze_length_minutes: i32,
+        is_24_hour: bool,
+    ) {
         if let Err(error) = self.tx.send(PublishCommand::Immediate {
             reason: reason.clone(),
             revision,
             all_alarms_json,
             snooze_length_minutes,
+            is_24_hour,
         }) {
             log::error!("wear-sync: failed to send immediate publish command: {error}");
         }
@@ -91,15 +108,22 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         let publisher = ChannelPublisher::new(tx);
 
-        publisher.publish_immediate(&SyncReason::ForceSync, 100, Some("[{\"id\":1}]".into()), 10);
+        publisher.publish_immediate(
+            &SyncReason::ForceSync,
+            100,
+            Some("[{\"id\":1}]".into()),
+            10,
+            true,
+        );
 
         let cmd = rx.try_recv().unwrap();
         match cmd {
-            PublishCommand::Immediate { reason, revision, all_alarms_json, snooze_length_minutes } => {
+            PublishCommand::Immediate { reason, revision, all_alarms_json, snooze_length_minutes, is_24_hour } => {
                 assert_eq!(reason, SyncReason::ForceSync);
                 assert_eq!(revision, 100);
                 assert_eq!(all_alarms_json, Some("[{\"id\":1}]".into()));
                 assert_eq!(snooze_length_minutes, 10);
+                assert!(is_24_hour);
             }
             _ => panic!("Expected Immediate command"),
         }
@@ -113,6 +137,6 @@ mod tests {
 
         // Should not panic, just log an error
         publisher.publish_batch(vec![1], 1);
-        publisher.publish_immediate(&SyncReason::Initialize, 1, None, 10);
+        publisher.publish_immediate(&SyncReason::Initialize, 1, None, 10, false);
     }
 }

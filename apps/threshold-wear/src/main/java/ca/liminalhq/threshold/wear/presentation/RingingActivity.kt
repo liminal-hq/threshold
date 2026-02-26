@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -46,8 +47,10 @@ class RingingActivity : ComponentActivity() {
         val hour = intent.getIntExtra(WearRingingService.EXTRA_ALARM_HOUR, 0)
         val minute = intent.getIntExtra(WearRingingService.EXTRA_ALARM_MINUTE, 0)
         val snoozeLength = intent.getIntExtra(WearRingingService.EXTRA_SNOOZE_LENGTH, 10)
+        val prefs = applicationContext.getSharedPreferences("threshold_wear", Context.MODE_PRIVATE)
+        val is24Hour = prefs.getBoolean("is_24_hour", DateFormat.is24HourFormat(this))
 
-        Log.d(TAG, "Ringing activity created for alarm $alarmId ($hour:$minute '$label')")
+        Log.d(TAG, "Ringing activity created for alarm $alarmId ($hour:$minute '$label', is24h=$is24Hour)")
 
         val app = application as ThresholdWearApp
         val dataLayerClient = app.dataLayerClient
@@ -59,6 +62,7 @@ class RingingActivity : ComponentActivity() {
                     hour = hour,
                     minute = minute,
                     label = label,
+                    is24Hour = is24Hour,
                     snoozeLengthMinutes = snoozeLength,
                     onStop = {
                         Log.d(TAG, "Stop pressed for alarm $alarmId")

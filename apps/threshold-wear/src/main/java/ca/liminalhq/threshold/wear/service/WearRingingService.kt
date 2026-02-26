@@ -104,7 +104,14 @@ class WearRingingService : Service() {
 
         Log.d(TAG, "Starting ringing for alarm $currentAlarmId ($hour:$minute '$label')")
 
-        startForegroundNotification(hour, minute, label, snoozeLength)
+        val foregroundStarted = startForegroundNotification(hour, minute, label, snoozeLength)
+        if (!foregroundStarted) {
+            Log.e(TAG, "Failed to enter foreground; stopping ringing service")
+            launchRingingActivity(hour, minute, label, snoozeLength)
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+        launchRingingActivity(hour, minute, label, snoozeLength)
         playAudio()
         startVibration()
 
@@ -122,6 +129,24 @@ class WearRingingService : Service() {
         }
     }
 
+    private fun launchRingingActivity(hour: Int, minute: Int, label: String, snoozeLength: Int) {
+        val intent = Intent(this, RingingActivity::class.java).apply {
+            putExtra(EXTRA_ALARM_ID, currentAlarmId)
+            putExtra(EXTRA_ALARM_LABEL, label)
+            putExtra(EXTRA_ALARM_HOUR, hour)
+            putExtra(EXTRA_ALARM_MINUTE, minute)
+            putExtra(EXTRA_SNOOZE_LENGTH, snoozeLength)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        try {
+            startActivity(intent)
+            Log.d(TAG, "Launched ringing activity")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch ringing activity", e)
+        }
+    }
+
     // ── Notification ────────────────────────────────────────────────
 
     private fun startForegroundNotification(
@@ -129,7 +154,7 @@ class WearRingingService : Service() {
         minute: Int,
         label: String,
         snoozeLength: Int,
-    ) {
+    ): Boolean {
         val notificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -188,7 +213,13 @@ class WearRingingService : Service() {
             )
             .build()
 
-        startForeground(NOTIFICATION_ID, notification)
+        return try {
+            startForeground(NOTIFICATION_ID, notification)
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Unable to start foreground notification for ringing alarm", e)
+            false
+        }
     }
 
     // ── Audio ───────────────────────────────────────────────────────

@@ -26,6 +26,9 @@ pub struct AlarmsSyncNeeded {
     /// Snooze duration in minutes (from phone settings).
     #[serde(default = "default_snooze_length")]
     pub snooze_length_minutes: i32,
+    /// Time format preference from phone settings (`true` = 24-hour clock).
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -49,6 +52,9 @@ pub struct PublishRequest {
     /// Snooze duration in minutes (from phone settings).
     #[serde(default = "default_snooze_length")]
     pub snooze_length_minutes: i32,
+    /// Time format preference from phone settings (`true` = 24-hour clock).
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,10 +126,17 @@ pub struct AlarmFired {
     /// Snooze duration in minutes (synced from phone settings).
     #[serde(default = "default_snooze_length")]
     pub snooze_length_minutes: i32,
+    /// Time format preference from phone settings (`true` = 24-hour clock).
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
 }
 
 fn default_snooze_length() -> i32 {
     10
+}
+
+fn default_is_24_hour() -> bool {
+    false
 }
 
 /// Request to send an alarm ring message to the watch.
@@ -135,4 +148,6 @@ pub struct AlarmRingRequest {
     pub hour: i32,
     pub minute: i32,
     pub snooze_length_minutes: i32,
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
 }

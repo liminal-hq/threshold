@@ -15,7 +15,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,6 +42,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Button
@@ -133,6 +136,7 @@ fun RingingScreen(
     hour: Int,
     minute: Int,
     label: String,
+    is24Hour: Boolean = false,
     snoozeLengthMinutes: Int = 10,
     onStop: () -> Unit,
     onSnooze: () -> Unit,
@@ -207,13 +211,25 @@ fun RingingScreen(
         label = "dot-ring-a",
     )
 
-    val timeText = "%d:%02d".format(hour, minute)
+    val isPm = hour >= 12
+    val hour12 = when (val h = hour % 12) {
+        0 -> 12
+        else -> h
+    }
+    val timeText = if (is24Hour) "%02d:%02d".format(hour, minute) else "%d:%02d".format(hour12, minute)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val compact = maxHeight <= 192.dp
+        val timeFontSize = if (compact) 46.sp else 52.sp
+        val labelFontSize = if (compact) 13.sp else 14.sp
+        val stopHeight: Dp = if (compact) 40.dp else 42.dp
+        val snoozeHeight: Dp = if (compact) 36.dp else 38.dp
+        val topSpacingWeight = if (compact) 0.16f else 0.2f
+
         // ── Background layers ───────────────────────────────────────
         BackgroundCanvas(colors)
 
-        // ── Breathing rings + threshold indicator ───────────────────
+        // ── Breathing rings ─────────────────────────────────────────
         Canvas(modifier = Modifier.fillMaxSize()) {
             val cx = size.width / 2f
             // Rings centered higher (at ~37% of height, matching SVG cy=142/384)
@@ -228,67 +244,88 @@ fun RingingScreen(
                     style = Stroke(width = rings[i].strokeWidth),
                 )
             }
-
-            // Threshold indicator (at ~52% of height, matching SVG cy=200/384)
-            val indicatorY = size.height * 0.52f
-            val lineHalfWidth = 30f
-            drawThresholdIndicator(
-                cx = cx,
-                cy = indicatorY,
-                halfWidth = lineHalfWidth,
-                dotAlpha = dotAlpha,
-                dotRingRadius = dotRingRadius,
-                dotRingAlpha = dotRingAlpha,
-            )
         }
 
         // ── Content overlay ─────────────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 20.dp)
+                .padding(top = if (compact) 6.dp else 8.dp, bottom = if (compact) 8.dp else 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top,
         ) {
-            // Push time to ~37% of screen
-            Spacer(modifier = Modifier.weight(0.28f))
+            // Push time to the upper third of the screen
+            Spacer(modifier = Modifier.weight(topSpacingWeight))
 
-            // Time
-            Text(
-                text = timeText,
-                fontSize = 52.sp,
-                fontWeight = FontWeight.Light,
-                color = Color.White.copy(alpha = 0.95f),
-                letterSpacing = (-1).sp,
-                textAlign = TextAlign.Center,
-            )
+            // Time with stacked AM/PM markers
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = timeText,
+                    fontSize = timeFontSize,
+                    fontWeight = FontWeight.Light,
+                    color = Color.White.copy(alpha = 0.95f),
+                    letterSpacing = (-1).sp,
+                    textAlign = TextAlign.Center,
+                )
+                if (!is24Hour) {
+                    Column(
+                        modifier = Modifier.padding(start = 6.dp, top = 6.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.Start,
+                    ) {
+                        Text(
+                            text = "AM",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White.copy(alpha = if (isPm) 0.28f else 0.95f),
+                            lineHeight = 12.sp,
+                        )
+                        Text(
+                            text = "PM",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White.copy(alpha = if (isPm) 0.95f else 0.28f),
+                            lineHeight = 12.sp,
+                        )
+                    }
+                }
+            }
 
             // Label
             if (label.isNotBlank()) {
                 Text(
                     text = label,
-                    fontSize = 14.sp,
+                    fontSize = labelFontSize,
                     fontWeight = FontWeight.Normal,
                     color = Color.White.copy(alpha = 0.95f),
                     textAlign = TextAlign.Center,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth(0.84f)
+                        .padding(top = 2.dp),
                 )
             }
 
-            // Space for threshold indicator (drawn on canvas)
-            Spacer(modifier = Modifier.weight(0.12f))
+            Spacer(modifier = Modifier.height(8.dp))
+            ThresholdIndicatorCanvas(
+                dotAlpha = dotAlpha,
+                dotRingRadius = dotRingRadius,
+                dotRingAlpha = dotRingAlpha,
+            )
+            Spacer(modifier = Modifier.weight(1f))
 
             // ── Buttons ─────────────────────────────────────────────
-            Spacer(modifier = Modifier.weight(0.08f))
-
             // Stop Alarm — dark pill
             Button(
                 onClick = onStop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
+                    .height(stopHeight),
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = StopButtonBg.copy(alpha = 0.9f),
                 ),
@@ -310,7 +347,7 @@ fun RingingScreen(
                 onClick = onSnooze,
                 modifier = Modifier
                     .fillMaxWidth(0.88f)
-                    .height(40.dp),
+                    .height(snoozeHeight),
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = Color.Transparent,
                 ),
@@ -329,7 +366,7 @@ fun RingingScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(0.06f))
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
@@ -396,6 +433,31 @@ private fun BackgroundCanvas(colors: RingingColors) {
 }
 
 // ── Threshold indicator drawing ─────────────────────────────────────
+
+@Composable
+private fun ThresholdIndicatorCanvas(
+    dotAlpha: Float,
+    dotRingRadius: Float,
+    dotRingAlpha: Float,
+) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(22.dp),
+    ) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val lineHalfWidth = 28f
+        drawThresholdIndicator(
+            cx = cx,
+            cy = cy,
+            halfWidth = lineHalfWidth,
+            dotAlpha = dotAlpha,
+            dotRingRadius = dotRingRadius,
+            dotRingAlpha = dotRingAlpha,
+        )
+    }
+}
 
 private fun DrawScope.drawThresholdIndicator(
     cx: Float,

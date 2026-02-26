@@ -7,13 +7,16 @@ pub mod alarm;
 pub mod commands;
 
 use alarm::{database::AlarmDatabase, AlarmCoordinator};
-use std::sync::atomic::AtomicI32;
+use std::sync::atomic::{AtomicBool, AtomicI32};
 use std::sync::Arc;
 use tauri::{Listener, Manager};
 
 /// Phone-side snooze length (minutes), synced from the frontend settings.
 /// Read by `report_alarm_fired` to include in the `alarm:fired` event.
 pub type SnoozeLengthState = Arc<AtomicI32>;
+/// Phone-side time format preference, synced from frontend settings.
+/// `true` = 24-hour, `false` = 12-hour.
+pub type TimeFormatState = Arc<AtomicBool>;
 #[cfg(mobile)]
 use tauri_plugin_alarm_manager::AlarmManagerExt;
 #[cfg(mobile)]
@@ -177,6 +180,52 @@ pub fn run() {
             // Snooze length state — default 10 minutes, updated by frontend
             let snooze_state: SnoozeLengthState = Arc::new(AtomicI32::new(10));
             app.manage(snooze_state);
+            // Time format state — default 24-hour false, updated by frontend
+            let time_format_state: TimeFormatState = Arc::new(AtomicBool::new(false));
+            app.manage(time_format_state);
+
+            // Keep Rust state aligned with frontend settings via event architecture.
+            // This powers alarm:fired and wear sync payloads without bespoke invoke calls.
+            let settings_handle = app.handle().clone();
+            app.handle().listen("settings-changed", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct SettingsChanged {
+                    key: String,
+                    value: serde_json::Value,
+                }
+
+                let Ok(payload) = serde_json::from_str::<SettingsChanged>(event.payload()) else {
+                    return;
+                };
+                if payload.key != "is24h" {
+                    return;
+                }
+
+                let Some(is_24_hour) = payload.value.as_bool() else {
+                    return;
+                };
+
+                if let Some(state) = settings_handle.try_state::<TimeFormatState>() {
+                    state.store(is_24_hour, std::sync::atomic::Ordering::Relaxed);
+                    log::info!(
+                        "settings: updated time format to {} via settings-changed event",
+                        if is_24_hour { "24h" } else { "12h" }
+                    );
+                }
+
+                let handle = settings_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                        if let Err(error) = coord
+                            .emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync)
+                            .await
+                        {
+                            log::warn!("settings: failed to trigger wear sync after is24h change: {error}");
+                        }
+                    }
+                });
+            });
 
             // Emit initial sync hint for wear-sync
             tauri::async_runtime::block_on(async {

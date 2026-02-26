@@ -58,13 +58,15 @@ class DataLayerListenerService : WearableListenerService() {
                 // Persist snooze length from phone settings so the watch
                 // always uses the latest value (fallback alarms, ringing UI)
                 val snoozeLengthMinutes = dataMap.getInt("snoozeLengthMinutes", 10)
+                val is24Hour = dataMap.getBoolean("is24Hour", false)
                 applicationContext
                     .getSharedPreferences("threshold_wear", android.content.Context.MODE_PRIVATE)
                     .edit()
                     .putInt("snooze_length_minutes", snoozeLengthMinutes)
+                    .putBoolean("is_24_hour", is24Hour)
                     .apply()
 
-                Log.d(TAG, "Received alarm data at revision $revision, snooze=${snoozeLengthMinutes}m")
+                Log.d(TAG, "Received alarm data at revision $revision, snooze=${snoozeLengthMinutes}m, is24h=$is24Hour")
                 processSyncPayload(repository, alarmsJson, revision)
 
                 // Re-evaluate fallback alarm scheduling after sync
@@ -107,14 +109,16 @@ class DataLayerListenerService : WearableListenerService() {
             val hour = json.optInt("hour", 0)
             val minute = json.optInt("minute", 0)
             val snoozeLength = json.optInt("snoozeLengthMinutes", 10)
+            val is24Hour = json.optBoolean("is24Hour", false)
 
-            Log.d(TAG, "Alarm ring: id=$alarmId, $hour:$minute '$label' snooze=${snoozeLength}m")
+            Log.d(TAG, "Alarm ring: id=$alarmId, $hour:$minute '$label' snooze=${snoozeLength}m is24h=$is24Hour")
 
             // Persist snooze length so fallback alarms use the phone's setting
             applicationContext
                 .getSharedPreferences("threshold_wear", android.content.Context.MODE_PRIVATE)
                 .edit()
                 .putInt("snooze_length_minutes", snoozeLength)
+                .putBoolean("is_24_hour", is24Hour)
                 .apply()
 
             val serviceIntent = Intent(this, WearRingingService::class.java).apply {

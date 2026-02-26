@@ -13,6 +13,7 @@ private const val PREFS_NAME = "ThresholdWearSync"
 private const val KEY_ALARMS_JSON = "cached_alarms_json"
 private const val KEY_REVISION = "cached_revision"
 private const val KEY_SNOOZE_LENGTH = "cached_snooze_length_minutes"
+private const val KEY_IS_24_HOUR = "cached_is_24_hour"
 
 /**
  * Persistent cache of the last-published alarm sync payload.
@@ -35,28 +36,43 @@ object WearSyncCache {
      * @param revision The phone's current revision at time of publish
      * @param snoozeLengthMinutes Snooze duration synced from phone settings
      */
-    fun write(context: Context, alarmsJson: String, revision: Long, snoozeLengthMinutes: Int = 10) {
+    fun write(
+        context: Context,
+        alarmsJson: String,
+        revision: Long,
+        snoozeLengthMinutes: Int = 10,
+        is24Hour: Boolean = false,
+    ) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().apply {
             putString(KEY_ALARMS_JSON, alarmsJson)
             putLong(KEY_REVISION, revision)
             putInt(KEY_SNOOZE_LENGTH, snoozeLengthMinutes)
+            putBoolean(KEY_IS_24_HOUR, is24Hour)
             apply()
         }
-        Log.d(TAG, "Cached alarm data at revision $revision (${alarmsJson.length} bytes, snooze=${snoozeLengthMinutes}m)")
+        Log.d(TAG, "Cached alarm data at revision $revision (${alarmsJson.length} bytes, snooze=${snoozeLengthMinutes}m, is24h=$is24Hour)")
     }
 
     /**
      * Read the cached alarm payload, if available.
      *
      * @param context Android context for SharedPreferences access
-     * @return Triple of (alarmsJson, revision, snoozeLengthMinutes) or null if cache is empty
+     * @return Quadruple of (alarmsJson, revision, snoozeLengthMinutes, is24Hour) or null if cache is empty
      */
-    fun read(context: Context): Triple<String, Long, Int>? {
+    fun read(context: Context): Quadruple<String, Long, Int, Boolean>? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = prefs.getString(KEY_ALARMS_JSON, null) ?: return null
         val revision = prefs.getLong(KEY_REVISION, 0)
         val snoozeLength = prefs.getInt(KEY_SNOOZE_LENGTH, 10)
-        return Triple(json, revision, snoozeLength)
+        val is24Hour = prefs.getBoolean(KEY_IS_24_HOUR, false)
+        return Quadruple(json, revision, snoozeLength, is24Hour)
     }
 }
+
+data class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+)

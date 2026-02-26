@@ -288,6 +288,10 @@ impl AlarmCoordinator {
             .try_state::<crate::SnoozeLengthState>()
             .map(|s: tauri::State<'_, crate::SnoozeLengthState>| s.load(Ordering::Relaxed))
             .unwrap_or(10);
+        let is_24_hour = app
+            .try_state::<crate::TimeFormatState>()
+            .map(|s: tauri::State<'_, crate::TimeFormatState>| s.load(Ordering::Relaxed))
+            .unwrap_or(false);
 
         let event = AlarmFired {
             id,
@@ -296,6 +300,7 @@ impl AlarmCoordinator {
             label: alarm.label.clone(),
             revision,
             snooze_length_minutes: snooze,
+            is_24_hour,
         };
         app.emit("alarm:fired", &event)?;
 
@@ -321,12 +326,17 @@ impl AlarmCoordinator {
             .try_state::<crate::SnoozeLengthState>()
             .map(|s: tauri::State<'_, crate::SnoozeLengthState>| s.load(Ordering::Relaxed))
             .unwrap_or(10);
+        let is_24_hour = app
+            .try_state::<crate::TimeFormatState>()
+            .map(|s: tauri::State<'_, crate::TimeFormatState>| s.load(Ordering::Relaxed))
+            .unwrap_or(false);
 
         let event = AlarmsSyncNeeded {
             reason,
             revision,
             all_alarms_json,
             snooze_length_minutes: snooze,
+            is_24_hour,
         };
         app.emit("alarms:sync:needed", &event)?;
         Ok(())
