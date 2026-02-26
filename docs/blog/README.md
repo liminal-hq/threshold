@@ -2,6 +2,12 @@
 
 This folder contains dated blog post drafts and published artefacts.
 
+## Post Index
+
+- [2026-02-17 — Wear OS, Tauri, and Building a Reliable Alarm Companion](2026-02-17-wear-os-tauri.md)
+- [2026-02-24 — Fixing Notification Action Reliability on Android](2026-02-24-notification-action-reliability.md)
+- [2026-02-26 — Moving Alarm Fired Ownership from UI to Core](2026-02-26-native-alarm-fired-bridge.md)
+
 ## Purpose
 
 - Blog posts here are **historical snapshots**.
