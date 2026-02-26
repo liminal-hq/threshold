@@ -1,3 +1,8 @@
+// BroadcastReceiver for native alarm triggers that starts phone ringing service
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package com.plugin.alarmmanager
 
 import android.content.BroadcastReceiver
@@ -13,6 +18,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val alarmId = intent.getIntExtra("ALARM_ID", -1)
         val soundUri = intent.getStringExtra("ALARM_SOUND_URI")
         Log.d("AlarmReceiver", "Alarm ID: $alarmId, Sound URI: $soundUri")
+        AlarmManagerPlugin.notifyAlarmFired(context, alarmId)
 
         // Start the foreground service for sound/notification
         // The notification's full-screen intent will launch the app with the alarm ID

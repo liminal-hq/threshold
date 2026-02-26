@@ -1,3 +1,8 @@
+// Android alarm manager plugin bridge for scheduling, launch args, and alarm-fired callbacks
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package com.plugin.alarmmanager
 
 import android.app.AlarmManager
@@ -13,6 +18,7 @@ import android.webkit.WebView
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
+import app.tauri.plugin.Channel
 import app.tauri.plugin.Plugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
@@ -21,6 +27,8 @@ import android.util.Log
 import androidx.activity.result.ActivityResult
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
+import org.json.JSONArray
+import org.json.JSONObject
 
 @InvokeArg
 class ScheduleRequest {
@@ -50,12 +58,57 @@ class PickAlarmSoundOptions {
     var showDefault: Boolean = true
 }
 
+@InvokeArg
+class AlarmEventHandlerArgs {
+    lateinit var handler: Channel
+}
+
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
+    private var alarmEventChannel: Channel? = null
+    @Volatile
+    private var alarmPipelineReady: Boolean = false
+
+    companion object {
+        private const val TAG = "AlarmManagerPlugin"
+        private const val CALLBACK_PREFS = "AlarmManagerCallbacks"
+        private const val KEY_PENDING_ALARM_EVENTS = "pending_alarm_events"
+
+        @Volatile
+        var instance: AlarmManagerPlugin? = null
+            private set
+
+        @Synchronized
+        fun notifyAlarmFired(context: Context, alarmId: Int, actualFiredAt: Long = System.currentTimeMillis()) {
+            if (alarmId <= 0) return
+
+            val plugin = instance
+            if (plugin != null && plugin.dispatchAlarmFiredEvent(alarmId, actualFiredAt)) {
+                Log.d(TAG, "Dispatched native alarm fired immediately: id=$alarmId")
+                return
+            }
+
+            queueAlarmEvent(context, alarmId, actualFiredAt)
+            Log.i(TAG, "Queued native alarm fired event (plugin/channel not ready): id=$alarmId")
+        }
+
+        @Synchronized
+        private fun queueAlarmEvent(context: Context, alarmId: Int, actualFiredAt: Long) {
+            val prefs = context.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
+            val queue = JSONArray(prefs.getString(KEY_PENDING_ALARM_EVENTS, "[]"))
+            queue.put(JSONObject().apply {
+                put("id", alarmId)
+                put("actualFiredAt", actualFiredAt)
+            })
+            prefs.edit().putString(KEY_PENDING_ALARM_EVENTS, queue.toString()).apply()
+        }
+    }
     
     override fun load(webview: WebView) {
         super.load(webview)
-        Log.d("AlarmManagerPlugin", "Plugin loaded.")
+        instance = this
+        Log.d(TAG, "Plugin loaded.")
+        drainPendingAlarmEvents()
     }
 
     @Command
@@ -97,11 +150,27 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
     @Command
     fun stop_ringing(invoke: Invoke) {
-        Log.d("AlarmManagerPlugin", "Stopping ringing service via Intent")
+        Log.d(TAG, "Stopping ringing service via Intent")
         val intent = Intent(activity, AlarmRingingService::class.java).apply {
             action = AlarmRingingService.ACTION_DISMISS
         }
         activity.startService(intent)
+        invoke.resolve()
+    }
+
+    @Command
+    fun set_alarm_event_handler(invoke: Invoke) {
+        val args = invoke.parseArgs(AlarmEventHandlerArgs::class.java)
+        alarmEventChannel = args.handler
+        Log.d(TAG, "Alarm event handler channel registered")
+        invoke.resolve()
+    }
+
+    @Command
+    fun mark_alarm_pipeline_ready(invoke: Invoke) {
+        alarmPipelineReady = true
+        Log.d(TAG, "Alarm pipeline marked ready")
+        drainPendingAlarmEvents()
         invoke.resolve()
     }
 
@@ -188,7 +257,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
                         prefs.edit().remove(key).apply()
                     }
                 } catch (e: Exception) {
-                    Log.e("AlarmManagerPlugin", "Failed to parse import: $value", e)
+                    Log.e(TAG, "Failed to parse import: $value", e)
                 }
             }
         }
@@ -207,5 +276,53 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         ret.put("value", array)
         invoke.resolve(ret)
+    }
+
+    private fun dispatchAlarmFiredEvent(alarmId: Int, actualFiredAt: Long): Boolean {
+        if (!alarmPipelineReady) return false
+        val channel = alarmEventChannel ?: return false
+        return try {
+            val event = JSObject().apply {
+                put("id", alarmId)
+                put("actualFiredAt", actualFiredAt)
+            }
+            channel.send(event)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to dispatch native alarm fired event", e)
+            false
+        }
+    }
+
+    @Synchronized
+    private fun drainPendingAlarmEvents() {
+        if (!alarmPipelineReady) return
+        val channel = alarmEventChannel ?: return
+        val prefs = activity.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
+        val rawQueue = prefs.getString(KEY_PENDING_ALARM_EVENTS, "[]") ?: "[]"
+        val queue = JSONArray(rawQueue)
+        if (queue.length() == 0) return
+
+        val remaining = JSONArray()
+        for (i in 0 until queue.length()) {
+            val item = queue.optJSONObject(i) ?: continue
+            val id = item.optInt("id", -1)
+            val actualFiredAt = item.optLong("actualFiredAt", System.currentTimeMillis())
+            if (id <= 0) continue
+
+            try {
+                val event = JSObject().apply {
+                    put("id", id)
+                    put("actualFiredAt", actualFiredAt)
+                }
+                channel.send(event)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to replay queued native alarm fired event id=$id", e)
+                remaining.put(item)
+            }
+        }
+
+        prefs.edit().putString(KEY_PENDING_ALARM_EVENTS, remaining.toString()).apply()
+        Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued native alarm fired event(s)")
     }
 }

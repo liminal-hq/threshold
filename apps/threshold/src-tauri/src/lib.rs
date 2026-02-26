@@ -401,9 +401,44 @@ pub fn run() {
                 }
             });
 
+            // Native phone alarm-fired callback from alarm-manager plugin.
+            //
+            // This keeps `alarm:fired` ownership in Rust core (hub) instead of UI routes.
+            let native_alarm_handle = app.handle().clone();
+            app.handle().listen("alarm-manager:native-fired", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct NativeAlarmFired {
+                    id: i32,
+                    actual_fired_at: i64,
+                }
+
+                if let Ok(payload) = serde_json::from_str::<NativeAlarmFired>(event.payload()) {
+                    let handle = native_alarm_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            if let Err(error) = coord
+                                .report_alarm_fired(&handle, payload.id, payload.actual_fired_at)
+                                .await
+                            {
+                                log::error!(
+                                    "alarm-manager: failed to report native alarm fired for {}: {error}",
+                                    payload.id
+                                );
+                            }
+                        }
+                    });
+                }
+            });
+
             #[cfg(mobile)]
             if let Err(error) = app.handle().wear_sync().mark_watch_pipeline_ready() {
                 log::warn!("watch: failed to mark watch pipeline ready: {error}");
+            }
+
+            #[cfg(mobile)]
+            if let Err(error) = app.handle().alarm_manager().mark_alarm_pipeline_ready() {
+                log::warn!("alarm-manager: failed to mark alarm pipeline ready: {error}");
             }
 
             // Schedule daily maintenance

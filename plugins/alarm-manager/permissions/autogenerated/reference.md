@@ -126,6 +126,32 @@ Denies the get_launch_args command without any pre-configured scope.
 <tr>
 <td>
 
+`alarm-manager:allow-mark-alarm-pipeline-ready`
+
+</td>
+<td>
+
+Enables the mark_alarm_pipeline_ready command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:deny-mark-alarm-pipeline-ready`
+
+</td>
+<td>
+
+Denies the mark_alarm_pipeline_ready command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `alarm-manager:allow-pick-alarm-sound`
 
 </td>
@@ -171,6 +197,32 @@ Enables the schedule command without any pre-configured scope.
 <td>
 
 Denies the schedule command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:allow-set-alarm-event-handler`
+
+</td>
+<td>
+
+Enables the set_alarm_event_handler command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:deny-set-alarm-event-handler`
+
+</td>
+<td>
+
+Denies the set_alarm_event_handler command without any pre-configured scope.
 
 </td>
 </tr>
