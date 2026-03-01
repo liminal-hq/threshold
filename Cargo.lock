@@ -4727,7 +4727,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-notification"
 version = "2.3.3"
-source = "git+https://github.com/ScottMorris/tauri-plugins-workspace.git?branch=notification-actions-fix#c0992031493aeb06fdf8bba40aaea5ddd0c63cde"
+source = "git+https://github.com/ScottMorris/tauri-plugins-workspace.git?branch=notification-actions-fix#45004aa01a3b6752221142b42d8f1a48a7f65bc0"
 dependencies = [
  "log",
  "notify-rust",
@@ -5824,7 +5824,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
