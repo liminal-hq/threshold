@@ -541,6 +541,7 @@ mod tests {
             all_alarms_json: None,
             snooze_length_minutes: 10,
             is_24_hour: false,
+            is_24_hour_known: false,
         };
 
         handle_sync_needed(publisher.clone(), collector, payload).await;

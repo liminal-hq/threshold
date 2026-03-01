@@ -89,11 +89,11 @@ Any temporary lifecycle reporting from deep link or ringing UI was removed.
 ```mermaid
 sequenceDiagram
   participant AM as Android AlarmManager
-  participant AR as AlarmReceiver (Kotlin)
-  participant AP as alarm-manager Plugin (Kotlin)
+  participant AR as "AlarmReceiver (Kotlin)"
+  participant AP as "alarm-manager Plugin (Kotlin)"
   participant RC as Rust AlarmCoordinator
-  participant WS as wear-sync (Rust)
-  participant WK as WearSyncPlugin (Kotlin)
+  participant WS as "wear-sync (Rust)"
+  participant WK as "WearSyncPlugin (Kotlin)"
   participant WL as Watch DataLayerListenerService
 
   AM->>AR: Trigger scheduled alarm
