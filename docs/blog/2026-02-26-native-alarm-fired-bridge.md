@@ -98,7 +98,7 @@ sequenceDiagram
 
   AM->>AR: Trigger scheduled alarm
   AR->>AP: notifyAlarmFired(id, actualFiredAt)
-  AP->>RC: alarm-manager:native-fired (channel or queued replay)
+  AP->>RC: native fired event (channel or queued replay)
   RC->>WS: emit alarm:fired
   WS->>WK: send_alarm_ring(...)
   WK->>WL: /threshold/alarm_ring

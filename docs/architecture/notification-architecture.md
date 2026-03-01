@@ -124,12 +124,12 @@ sequenceDiagram
     participant NotifHub as AlarmNotificationService
     participant Tauri as Tauri Notification Plugin
 
-    Settings->>AlarmMgr: emit("settings-changed", { key: "is24h" })
+    Settings->>AlarmMgr: emit(&quot;settings-changed&quot;, { key: &quot;is24h&quot; })
     AlarmMgr->>AlarmMgr: get alarms
     AlarmMgr->>NotifHub: schedule/cancel upcoming notifications
     NotifHub->>Tauri: sendNotification/cancel/removeActive
 
-    Settings->>NotifHub: emit("settings-changed", { key: "snoozeLength" })
+    Settings->>NotifHub: emit(&quot;settings-changed&quot;, { key: &quot;snoozeLength&quot; })
     NotifHub->>NotifHub: refresh action types
     NotifHub->>Tauri: registerActionTypes([...])
 ```
@@ -143,9 +143,10 @@ sequenceDiagram
     participant Tauri as Tauri Notification Plugin
 
     Owner->>NotifHub: registerActionTypeProvider(key, provider)
-    NotifHub->>NotifHub: emit("notifications:action-types:refresh")
+    NotifHub->>NotifHub: emit(&quot;notifications:action-types:refresh&quot;)
     NotifHub->>NotifHub: collect providers + deduplicate
     NotifHub->>Tauri: registerActionTypes([...])
+    deactivate NotifHub
 ```
 
 ## Commands vs Events
