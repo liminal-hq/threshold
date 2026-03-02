@@ -1,4 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+// Alarm ringing screen UI and lifecycle handlers for dismiss and snooze flows
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Button, Typography, Box } from '@mui/material';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { alarmManagerService } from '../services/AlarmManagerService';
@@ -18,9 +23,11 @@ import ThresholdIndicator from './ThresholdIndicator';
 
 const Ringing: React.FC = () => {
 	const { id } = useParams({ from: '/ringing/$id' });
+	const alarmId = Number.parseInt(id, 10);
 	const [alarm, setAlarm] = useState<AlarmRecord | null>(null);
 	const [timeStr, setTimeStr] = useState<string>('');
 	const navigate = useNavigate();
+	const isClosingRef = useRef(false);
 
 	// Settings state
 	const [snoozeLength, setSnoozeLength] = useState<number>(SettingsService.getSnoozeLength());
@@ -76,7 +83,7 @@ const Ringing: React.FC = () => {
 	useEffect(() => {
 		const loadAlarm = async () => {
             try {
-                const found = await AlarmService.get(parseInt(id));
+                const found = await AlarmService.get(alarmId);
                 if (found) {
                     setAlarm(found);
                 }
@@ -94,7 +101,7 @@ const Ringing: React.FC = () => {
 		updateTime();
 		const interval = setInterval(updateTime, 1000);
 		return () => clearInterval(interval);
-	}, [id, is24h]);
+	}, [alarmId, is24h]);
 
 	/**
 	 * Handles alarm dismissal with platform-specific behaviour.
@@ -113,6 +120,10 @@ const Ringing: React.FC = () => {
 	const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
 
 	const closeRingingWindow = useCallback(async () => {
+		// Prevent duplicate close attempts from local button handlers and backend events.
+		if (isClosingRef.current) return;
+		isClosingRef.current = true;
+
 		// Check platform and close window if desktop
 		if (PlatformUtils.isDesktop()) {
 			try {
@@ -125,7 +136,7 @@ const Ringing: React.FC = () => {
 		}
 
 		// Test Alarm Logic
-		if (parseInt(id) === SPECIAL_ALARM_IDS.TEST_ALARM) {
+		if (alarmId === SPECIAL_ALARM_IDS.TEST_ALARM) {
 			window.history.back();
 			return;
 		}
@@ -141,24 +152,42 @@ const Ringing: React.FC = () => {
 			console.error('Failed to minimize window', e);
 			navigate({ to: ROUTES.HOME, replace: true });
 		}
-	}, [navigate, id]);
+	}, [alarmId, navigate]);
+
+	useEffect(() => {
+		const unlistenDismissed = listen<{ id: number }>('alarm:dismissed', async (event) => {
+			if (event.payload.id !== alarmId) return;
+			console.log('[Ringing] Received alarm:dismissed event for current alarm, closing UI');
+			await closeRingingWindow();
+		});
+
+		const unlistenSnoozed = listen<{ id: number }>('alarm:snoozed', async (event) => {
+			if (event.payload.id !== alarmId) return;
+			console.log('[Ringing] Received alarm:snoozed event for current alarm, closing UI');
+			await closeRingingWindow();
+		});
+
+		return () => {
+			unlistenDismissed.then((fn) => fn());
+			unlistenSnoozed.then((fn) => fn());
+		};
+	}, [alarmId, closeRingingWindow]);
 
 	const handleDismiss = useCallback(async () => {
-		console.log('[Ringing] Dismissing Alarm', id);
+		console.log('[Ringing] Dismissing Alarm', alarmId);
 		await alarmManagerService.stopRinging();
 
 		// Notify backend to dismiss (reschedule)
 		try {
-			await AlarmService.dismiss(parseInt(id));
+			await AlarmService.dismiss(alarmId);
 		} catch (e) {
 			console.error('Failed to dismiss alarm in backend', e);
 		}
 
 		await closeRingingWindow();
-	}, [closeRingingWindow, id]);
+	}, [alarmId, closeRingingWindow]);
 
 	const handleSnooze = async () => {
-		const alarmId = parseInt(id);
 		console.log('Snoozing Alarm', alarmId, 'for', snoozeLength, 'minutes');
 		await alarmManagerService.snoozeAlarm(alarmId, snoozeLength);
 		await closeRingingWindow();
