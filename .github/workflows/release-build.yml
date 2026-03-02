@@ -100,6 +100,9 @@ jobs:
     runs-on: ubuntu-24.04
     needs: verify-release-source
     if: needs.verify-release-source.outputs.should_release == 'true'
+    defaults:
+      run:
+        shell: bash
     container:
       image: ghcr.io/${{ github.repository }}/ci-base:latest
       options: --user 0
@@ -147,6 +150,9 @@ jobs:
     runs-on: ubuntu-24.04
     needs: verify-release-source
     if: needs.verify-release-source.outputs.should_release == 'true'
+    defaults:
+      run:
+        shell: bash
     container:
       image: ghcr.io/${{ github.repository }}/ci-base:latest
       options: --user 0
