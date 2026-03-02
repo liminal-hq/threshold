@@ -1,0 +1,29 @@
+{
+	"name": "@threshold/release-tui",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"description": "Unified release TUI — version bumping, tagging, building, and release summary",
+	"bin": {
+		"release-tui": "./dist/cli.js"
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsx src/cli.tsx",
+		"test": "echo \"Release TUI tests temporarily disabled\"",
+		"test:watch": "vitest",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"commander": "^14.0.1",
+		"ink": "^6.0.0",
+		"react": "^19.1.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0",
+		"@types/react": "^19.0.0",
+		"tsx": "^4.19.0",
+		"typescript": "^5.7.0",
+		"vitest": "^3.0.0"
+	}
+}

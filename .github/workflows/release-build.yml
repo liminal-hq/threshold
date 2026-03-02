@@ -1,0 +1,275 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-tag-on-main:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Verify tag commit is on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"
+
+  build-desktop:
+    runs-on: ubuntu-24.04
+    needs: verify-tag-on-main
+    container:
+      image: ghcr.io/${{ github.repository }}/ci-base:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Normalise workspace permissions
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if command -v sudo >/dev/null 2>&1; then
+            sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
+          else
+            chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
+          fi
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2.8.2
+
+      - name: Build vendored notification plugin package
+        run: |
+          pnpm --dir vendor/tauri-plugins-workspace/plugins/notification install
+          pnpm --dir vendor/tauri-plugins-workspace/plugins/notification build
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop app
+        run: pnpm build:desktop
+
+      - name: Upload desktop artefacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-artefacts
+          path: |
+            apps/threshold/src-tauri/target/release/bundle/**
+          if-no-files-found: error
+
+  build-android:
+    runs-on: ubuntu-24.04
+    needs: verify-tag-on-main
+    container:
+      image: ghcr.io/${{ github.repository }}/ci-base:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Normalise workspace permissions
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if command -v sudo >/dev/null 2>&1; then
+            sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
+          else
+            chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
+          fi
+
+      - name: Add Rust Android targets
+        run: |
+          rustup target add \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            i686-linux-android \
+            x86_64-linux-android
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2.8.2
+
+      - name: Build vendored notification plugin package
+        run: |
+          pnpm --dir vendor/tauri-plugins-workspace/plugins/notification install
+          pnpm --dir vendor/tauri-plugins-workspace/plugins/notification build
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure Android signing
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ] || [ -z "${ANDROID_UPLOAD_KEY_ALIAS:-}" ] || [ -z "${ANDROID_UPLOAD_KEYSTORE_PASSWORD:-}" ]; then
+            echo "Missing Android signing secrets. Expected: ANDROID_UPLOAD_KEYSTORE_BASE64, ANDROID_UPLOAD_KEY_ALIAS, ANDROID_UPLOAD_KEYSTORE_PASSWORD" >&2
+            exit 1
+          fi
+
+          mkdir -p .ci/signing
+          echo "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 -d > .ci/signing/upload-keystore.jks
+          chmod 600 .ci/signing/upload-keystore.jks
+
+          mkdir -p apps/threshold/src-tauri/gen/android
+          {
+            printf 'keyAlias=%s\n' "$ANDROID_UPLOAD_KEY_ALIAS"
+            printf 'password=%s\n' "$ANDROID_UPLOAD_KEYSTORE_PASSWORD"
+            printf 'storeFile=%s\n' "${GITHUB_WORKSPACE}/.ci/signing/upload-keystore.jks"
+          } > apps/threshold/src-tauri/gen/android/keystore.properties
+
+          {
+            printf 'keyAlias=%s\n' "$ANDROID_UPLOAD_KEY_ALIAS"
+            printf 'password=%s\n' "$ANDROID_UPLOAD_KEYSTORE_PASSWORD"
+            printf 'storeFile=%s\n' "${GITHUB_WORKSPACE}/.ci/signing/upload-keystore.jks"
+          } > apps/threshold-wear/keystore.properties
+
+      - name: Build Android phone app
+        run: pnpm build:android
+
+      - name: Build Android Wear app
+        run: |
+          ./apps/threshold-wear/gradlew --project-dir apps/threshold-wear bundleRelease assembleRelease
+
+      - name: Verify Android release signatures
+        run: |
+          set -euo pipefail
+          mapfile -d '' artefacts < <(find apps/threshold/src-tauri/gen/android/app/build/outputs apps/threshold-wear/build/outputs -type f \( -name "*.aab" -o -name "*.apk" \) -print0)
+          if [ "${#artefacts[@]}" -eq 0 ]; then
+            echo "No Android release artefacts found to verify" >&2
+            exit 1
+          fi
+
+          for artefact in "${artefacts[@]}"; do
+            echo "Verifying signature: $artefact"
+            jarsigner -verify -certs "$artefact" >/dev/null
+          done
+
+      - name: Collect Android release artefacts
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets/android
+
+          # Phone version metadata
+          tauri_props="apps/threshold/src-tauri/gen/android/app/tauri.properties"
+          if [ ! -f "$tauri_props" ]; then
+            echo "Missing phone tauri.properties at $tauri_props" >&2
+            exit 1
+          fi
+          phone_version_name=$(grep "^tauri.android.versionName=" "$tauri_props" | cut -d'=' -f2)
+          phone_version_code=$(grep "^tauri.android.versionCode=" "$tauri_props" | cut -d'=' -f2)
+          if [ -z "${phone_version_name:-}" ] || [ -z "${phone_version_code:-}" ]; then
+            echo "Could not parse phone version metadata from $tauri_props" >&2
+            exit 1
+          fi
+
+          # Wear version metadata
+          wear_gradle="apps/threshold-wear/build.gradle.kts"
+          wear_version_name=$(grep "versionName" "$wear_gradle" | head -n1 | sed 's/.*"\(.*\)".*/\1/')
+          wear_version_code=$(grep "versionCode" "$wear_gradle" | head -n1 | sed 's/[^0-9]//g')
+          if [ -z "${wear_version_name:-}" ] || [ -z "${wear_version_code:-}" ]; then
+            echo "Could not parse wear version metadata from $wear_gradle" >&2
+            exit 1
+          fi
+
+          # Phone artefacts
+          phone_aab=$(find apps/threshold/src-tauri/gen/android/app/build/outputs -type f -name "*.aab" | sort | head -n1 || true)
+          phone_apk=$(find apps/threshold/src-tauri/gen/android/app/build/outputs -type f -name "*.apk" | sort | head -n1 || true)
+          if [ -z "${phone_aab:-}" ] || [ -z "${phone_apk:-}" ]; then
+            echo "Missing phone AAB/APK output" >&2
+            exit 1
+          fi
+          cp "$phone_aab" "release-assets/android/threshold-phone-v${phone_version_name}-${phone_version_code}.aab"
+          cp "$phone_apk" "release-assets/android/threshold-phone-v${phone_version_name}-${phone_version_code}.apk"
+
+          # Wear artefacts
+          wear_aab=$(find apps/threshold-wear/build/outputs -type f -name "*.aab" | sort | head -n1 || true)
+          wear_apk=$(find apps/threshold-wear/build/outputs -type f -name "*.apk" | sort | head -n1 || true)
+          if [ -z "${wear_aab:-}" ] || [ -z "${wear_apk:-}" ]; then
+            echo "Missing wear AAB/APK output" >&2
+            exit 1
+          fi
+          cp "$wear_aab" "release-assets/android/threshold-wear-v${wear_version_name}-${wear_version_code}.aab"
+          cp "$wear_apk" "release-assets/android/threshold-wear-v${wear_version_name}-${wear_version_code}.apk"
+
+          # Wear mapping only (phone mapping intentionally excluded)
+          wear_mapping=$(find apps/threshold-wear/build/outputs -type f -name "mapping.txt" | sort | head -n1 || true)
+          if [ -n "${wear_mapping:-}" ]; then
+            cp "$wear_mapping" "release-assets/android/wear-mapping-v${wear_version_name}-${wear_version_code}.txt"
+          fi
+
+          # Phone native debug symbols zip (if unstripped symbols exist)
+          symbols_dir=$(find apps/threshold/src-tauri/gen/android/app/build/intermediates/merged_native_libs/universalRelease -type d -name "lib" 2>/dev/null | head -n1 || true)
+          if [ -n "${symbols_dir:-}" ] && [ -d "$symbols_dir" ]; then
+            sample_lib=$(find "$symbols_dir" -name "libthreshold.so" | head -n1 || true)
+            if [ -n "${sample_lib:-}" ] && file "$sample_lib" | grep -q "not stripped"; then
+              (
+                cd "$symbols_dir"
+                zip -r -q "$GITHUB_WORKSPACE/release-assets/android/threshold-phone-native-debug-symbols-v${phone_version_name}-${phone_version_code}.zip" arm64-v8a/ armeabi-v7a/ x86/ x86_64/ || true
+              )
+            fi
+          fi
+
+          ls -lah release-assets/android
+
+      - name: Upload Android artefacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-artefacts
+          path: |
+            release-assets/android/**
+          if-no-files-found: error
+
+      - name: Cleanup signing files
+        if: always()
+        run: |
+          rm -f .ci/signing/upload-keystore.jks
+          rm -f apps/threshold/src-tauri/gen/android/keystore.properties
+          rm -f apps/threshold-wear/keystore.properties
+
+  publish-release:
+    runs-on: ubuntu-24.04
+    needs: [build-desktop, build-android]
+    steps:
+      - name: Download desktop artefacts
+        uses: actions/download-artifact@v8
+        with:
+          name: desktop-artefacts
+          path: release-assets/desktop
+
+      - name: Download Android artefacts
+        uses: actions/download-artifact@v8
+        with:
+          name: android-artefacts
+          path: release-assets/android
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Threshold ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            release-assets/desktop/**/*
+            release-assets/android/**/*
