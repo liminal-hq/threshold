@@ -74,6 +74,7 @@ jobs:
     if: needs.verify-release-source.outputs.should_release == 'true'
     container:
       image: ghcr.io/${{ github.repository }}/ci-base:latest
+      options: --user 0
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -120,6 +121,7 @@ jobs:
     if: needs.verify-release-source.outputs.should_release == 'true'
     container:
       image: ghcr.io/${{ github.repository }}/ci-base:latest
+      options: --user 0
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
