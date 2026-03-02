@@ -102,6 +102,10 @@ class PhoneConnectionMonitor(
                 initialCheckDone = true
                 Log.d(TAG, "Connectivity ${if (isInitial) "initial" else "changed"}: ${nodes.size} node(s), connected=$connected")
                 onConnectivityChanged(connected)
+            } else if (!connected) {
+                // Stay defensive while offline: re-run reconcile so repeating
+                // fallback alarms continue scheduling future occurrences.
+                scheduler.reconcile(repository.alarms.value)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to check connectivity", e)
