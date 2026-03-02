@@ -1,8 +1,8 @@
 # Threshold — Wear OS Companion Architecture
 
 **Version:** 1.0
-**Last Updated:** February 17, 2026
-**Status:** Design Complete — Implementation In Progress
+**Last Updated:** February 25, 2026
+**Status:** Implementation Complete
 
 ---
 
@@ -83,11 +83,19 @@ The Wear Data Layer routes messages using `applicationId`. Both the phone and wa
 | Field | Description |
 |-------|-------------|
 | Path | `/threshold/alarms` |
-| Format | `PutDataMapRequest` with `alarmsJson` (String) and `revision` (Long) |
-| Payload | `SyncResponse` JSON (see §3) |
+| Format | `PutDataMapRequest` with `alarmsJson` (String), `revision` (Long), `timestamp` (Long), and `snoozeLengthMinutes` (Int) |
+| Payload | `SyncResponse` JSON (see §3) + snooze duration from phone settings |
 | Delivery | Automatic when Bluetooth reconnects |
 
-### 2.2 MessageClient (Watch → Phone)
+### 2.2 MessageClient (Phone → Watch)
+
+**Purpose:** Fire-and-forget commands for alarm ringing. Requires active connection.
+
+| Path | Payload | Handler |
+|------|---------|---------|
+| `/threshold/alarm_ring` | `AlarmRingRequest` JSON | Starts `WearRingingService` on watch |
+
+### 2.3 MessageClient (Watch → Phone)
 
 **Purpose:** Fire-and-forget commands. Requires active connection.
 
@@ -96,6 +104,8 @@ The Wear Data Layer routes messages using `applicationId`. Both the phone and wa
 | `/threshold/sync_request` | `"0"` (watch revision) | Triggers FullSync response |
 | `/threshold/save_alarm` | `WatchSaveAlarm` JSON | Toggles alarm via coordinator |
 | `/threshold/delete_alarm` | `WatchDeleteAlarm` JSON | Deletes alarm via coordinator |
+| `/threshold/alarm_dismiss` | `WatchDismissAlarm` JSON | Stops phone ringing + dismisses alarm |
+| `/threshold/alarm_snooze` | `WatchSnoozeAlarm` JSON | Stops phone ringing + snoozes alarm |
 
 ---
 
@@ -204,6 +214,7 @@ Watch sends /threshold/sync_request via MessageClient
 **SharedPreferences cache key:** `wear_sync_cache` in `ThresholdWearSync` preferences
 - `cached_alarms_json`: The last FullSync SyncResponse JSON
 - `cached_revision`: The revision at time of cache
+- `cached_snooze_length_minutes`: The snooze duration from phone settings
 
 **Cache freshness guarantee:** The cache is written on every publish (both batch and immediate). Since alarm changes can only happen through the app (which is running when changes occur), the cache is always consistent when the app closes.
 
@@ -366,9 +377,16 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 
 | File | Purpose |
 |------|---------|
-| `apps/threshold-wear/src/.../service/DataLayerListenerService.kt` | Receives DataItems, parses SyncResponse |
-| `apps/threshold-wear/src/.../data/WearDataLayerClient.kt` | Sends Messages to phone |
-| `apps/threshold-wear/src/.../data/WatchAlarm.kt` | Watch alarm model with JSON parsing |
+| `apps/threshold-wear/src/.../service/DataLayerListenerService.kt` | Receives DataItems + alarm ring messages |
+| `apps/threshold-wear/src/.../service/WearRingingService.kt` | Foreground service: vibration, audio, wake lock |
+| `apps/threshold-wear/src/.../service/WearAlarmScheduler.kt` | Local AlarmManager scheduling (disconnected fallback) |
+| `apps/threshold-wear/src/.../service/WearAlarmReceiver.kt` | BroadcastReceiver for local alarm fires |
+| `apps/threshold-wear/src/.../service/PhoneConnectionMonitor.kt` | Polls node connectivity, toggles fallback scheduling |
+| `apps/threshold-wear/src/.../presentation/RingingScreen.kt` | Compose ringing UI (breathing rings, stop/snooze) |
+| `apps/threshold-wear/src/.../presentation/RingingActivity.kt` | Lock-screen activity hosting RingingScreen |
+| `apps/threshold-wear/src/.../presentation/SettingsScreen.kt` | Watch settings with test ring button |
+| `apps/threshold-wear/src/.../data/WearDataLayerClient.kt` | Sends Messages to phone (incl. dismiss/snooze) |
+| `apps/threshold-wear/src/.../data/WatchAlarm.kt` | Watch alarm model with JSON parsing (incl. nextTrigger) |
 | `apps/threshold-wear/src/.../data/AlarmRepository.kt` | In-memory alarm state |
 | `apps/threshold-wear/build.gradle.kts` | applicationId = ca.liminalhq.threshold |
 
@@ -394,8 +412,16 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 | WearMessageService offline routing | Done | Cache reads + foreground service writes |
 | SharedPreferences cache (reads) | Done | §4.2 — write on publish, read on offline sync |
 | WearSyncService (foreground, writes) | Done | §4.3 — boots Tauri silently (no UI flash) |
-| Watch event handlers in app crate | Done | wear:alarm:save/delete, wear:sync:request/batch_ready |
+| Watch event handlers in app crate | Done | wear:alarm:save/delete/dismiss/snooze, wear:sync:request/batch_ready |
 | heal-on-launch wear-sync integration | Done | emit_sync_needed(Initialize) on startup |
+| Alarm ring notification (phone → watch) | Done | `alarm:fired` → wear-sync → `/threshold/alarm_ring` → WearRingingService |
+| Alarm dismiss/snooze (watch → phone) | Done | `/threshold/alarm_dismiss` and `/threshold/alarm_snooze` → event bus → coordinator |
+| Watch ringing UI | Done | Compose screen with breathing rings, threshold indicator, stop/snooze buttons |
+| Disconnected fallback scheduling | Done | `PhoneConnectionMonitor` + `WearAlarmScheduler` + `AlarmManager.setAlarmClock()` |
+| Watch settings screen | Done | Test ring button via `SettingsScreen.kt` |
+| Phone "Test Watch Ring" button | Done | `test_watch_ring` Tauri command in phone settings |
+| Snooze duration sync (phone → watch) | Done | DataItem + ring payload + watch persistence; `set_snooze_length` triggers ForceSync |
+| Ring deduplication on watch | Done | `WearRingingService` ignores duplicate ring messages for already-ringing alarm |
 
 ---
 

@@ -11,6 +11,7 @@
 | [ui/](ui/) | UI implementation specs and components |
 | [wear-implementation/](wear-implementation/) | Wear OS companion app (UI mockups) |
 | [infrastructure/](infrastructure/) | CI/CD and operational docs |
+| [blog/](blog/) | Engineering blog posts and technical deep dives |
 | [archive/](archive/) | Deprecated documents (kept for reference) |
 
 ## Quick Links
@@ -19,5 +20,7 @@
 - **Understanding the architecture?** Start with [architecture/README](architecture/README.md)
 - **Working on notifications?** Read [architecture/notification-architecture](architecture/notification-architecture.md)
 - **Working on Wear OS?** Start with [wear-implementation/README](wear-implementation/README.md)
+- **Wear OS ringing screen?** See [wear-ringing-implementation-plan](wear-ringing-implementation-plan.md)
+- **Reading engineering write-ups?** Start with [blog/README](blog/README.md)
 - **Using an AI agent?** See [ai-agent-usage-guide](ai-agent-usage-guide.md)
 - **Project conventions:** See [AGENTS.md](../AGENTS.md)

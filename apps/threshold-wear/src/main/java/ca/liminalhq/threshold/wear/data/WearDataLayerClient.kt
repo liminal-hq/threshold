@@ -17,6 +17,8 @@ private const val TAG = "WearDataLayerClient"
 private const val PATH_SYNC_REQUEST = "/threshold/sync_request"
 private const val PATH_SAVE_ALARM = "/threshold/save_alarm"
 private const val PATH_DELETE_ALARM = "/threshold/delete_alarm"
+private const val PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
+private const val PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
 
 /**
  * Client for sending messages from the watch to the phone via the Wear
@@ -60,6 +62,27 @@ class WearDataLayerClient(context: Context) {
             put("watchRevision", watchRevision)
         }
         sendToPhone(PATH_DELETE_ALARM, json.toString().toByteArray())
+    }
+
+    /**
+     * Tell the phone to dismiss (stop) a ringing alarm.
+     */
+    suspend fun sendDismissAlarm(alarmId: Int) {
+        val json = JSONObject().apply {
+            put("alarmId", alarmId)
+        }
+        sendToPhone(PATH_ALARM_DISMISS, json.toString().toByteArray())
+    }
+
+    /**
+     * Tell the phone to snooze a ringing alarm.
+     */
+    suspend fun sendSnoozeAlarm(alarmId: Int, snoozeLengthMinutes: Int) {
+        val json = JSONObject().apply {
+            put("alarmId", alarmId)
+            put("snoozeLengthMinutes", snoozeLengthMinutes)
+        }
+        sendToPhone(PATH_ALARM_SNOOZE, json.toString().toByteArray())
     }
 
     /**

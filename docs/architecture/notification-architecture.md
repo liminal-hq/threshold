@@ -1,7 +1,7 @@
 # Notification Architecture
 
 **Status:** Implemented on `main` (event-driven integration)  
-**Last Updated:** February 19, 2026
+**Last Updated:** February 26, 2026
 
 ## Purpose
 
@@ -33,7 +33,7 @@ The notification system is intentionally split into three layers:
     - Listening to core alarm lifecycle events.
     - Native alarm scheduling and cancellation.
     - Emitting `notifications:upcoming:resync` intents.
-    - Mapping alarm business operations to commands (`dismiss`, `snooze`, `reportFired`).
+    - Mapping alarm business operations to commands (`dismiss`, `snooze`).
     - Consuming `notifications:upcoming:resync` and executing upcoming notification refresh using current alarm state.
 - **Does not own**
     - Notification action type composition internals.
@@ -74,6 +74,8 @@ The notification system is intentionally split into three layers:
 |---|---|---|---|
 | `alarms:batch:updated` | Alarm domain | `AlarmManagerService` | Alarm state changed; refresh scheduling |
 | `alarm-ring` | Native/plugin layer | `AlarmManagerService` | Alarm has fired; transition to ringing flow |
+| `alarm-manager:native-fired` | alarm-manager plugin mobile bridge | Rust core (`src-tauri`) | Native alarm-fired lifecycle callback |
+| `alarm:fired` | Rust alarm coordinator | wear-sync plugin | Canonical lifecycle event fan-out |
 | `settings-changed` (`snoozeLength`) | `SettingsService` | `AlarmNotificationService` | Rebuild action labels |
 | `settings-changed` (`is24h`) | `SettingsService` | `AlarmManagerService` | Re-render upcoming-notification text |
 | `notifications:action-types:refresh` | `AlarmNotificationService` | `AlarmNotificationService` | Recompute and register action types |
@@ -94,7 +96,9 @@ This two-step fan-out keeps notification refresh explicit and reusable without c
 1. `alarm-ring` is emitted by native/plugin flow.
 2. `AlarmManagerService` cancels stale upcoming notification for the firing alarm.
 3. Ringing notification and routing logic execute for platform-specific UX.
-4. Alarm fire is reported through command flow (`reportFired`) for domain consistency.
+4. Native callback `alarm-manager:native-fired` is emitted by the alarm-manager bridge.
+5. Rust core consumes it and emits canonical `alarm:fired`.
+6. wear-sync consumes `alarm:fired` to fan out watch ring events.
 
 ### Settings-Driven Paths
 
@@ -120,12 +124,12 @@ sequenceDiagram
     participant NotifHub as AlarmNotificationService
     participant Tauri as Tauri Notification Plugin
 
-    Settings->>AlarmMgr: emit("settings-changed", { key: "is24h" })
+    Settings->>AlarmMgr: emit(&quot;settings-changed&quot;, { key: &quot;is24h&quot; })
     AlarmMgr->>AlarmMgr: get alarms
     AlarmMgr->>NotifHub: schedule/cancel upcoming notifications
     NotifHub->>Tauri: sendNotification/cancel/removeActive
 
-    Settings->>NotifHub: emit("settings-changed", { key: "snoozeLength" })
+    Settings->>NotifHub: emit(&quot;settings-changed&quot;, { key: &quot;snoozeLength&quot; })
     NotifHub->>NotifHub: refresh action types
     NotifHub->>Tauri: registerActionTypes([...])
 ```
@@ -139,9 +143,10 @@ sequenceDiagram
     participant Tauri as Tauri Notification Plugin
 
     Owner->>NotifHub: registerActionTypeProvider(key, provider)
-    NotifHub->>NotifHub: emit("notifications:action-types:refresh")
+    NotifHub->>NotifHub: emit(&quot;notifications:action-types:refresh&quot;)
     NotifHub->>NotifHub: collect providers + deduplicate
     NotifHub->>Tauri: registerActionTypes([...])
+    deactivate NotifHub
 ```
 
 ## Commands vs Events
@@ -156,8 +161,8 @@ Examples:
 - Command-driven:
     - `AlarmService.dismiss`
     - `AlarmService.snooze`
-    - `AlarmService.reportFired`
 - Event-driven:
+    - `alarm-manager:native-fired` -> Rust `alarm:fired`
     - action type refresh
     - upcoming notification refresh
     - toast intent presentation

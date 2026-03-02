@@ -1,19 +1,63 @@
+// Android alarm manager bridge for schedule, cancel, and native alarm callbacks
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use crate::models::*;
+use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use tauri::{
+    ipc::{Channel, InvokeResponseBody},
     plugin::{PluginApi, PluginHandle},
-    AppHandle, Manager, Runtime,
+    AppHandle, Emitter, Manager, Runtime,
 };
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AlarmEventHandler {
+    handler: Channel,
+}
 
 // Initialize the plugin
 pub fn init<R: Runtime>(
-    _app: &tauri::AppHandle<R>,
+    app: &tauri::AppHandle<R>,
     api: PluginApi<R, ()>,
 ) -> crate::Result<AlarmManager<R>> {
     #[cfg(target_os = "android")]
-    let handle = api.register_android_plugin("com.plugin.alarmmanager", "AlarmManagerPlugin")?;
+    let handle = {
+        let handle = api.register_android_plugin("com.plugin.alarmmanager", "AlarmManagerPlugin")?;
+        let app_handle = app.clone();
+
+        handle.run_mobile_plugin::<()>(
+            "set_alarm_event_handler",
+            AlarmEventHandler {
+                handler: Channel::new(move |event| {
+                    let payload = match event {
+                        InvokeResponseBody::Json(payload) => {
+                            serde_json::from_str::<NativeAlarmFiredPayload>(&payload).ok()
+                        }
+                        _ => None,
+                    };
+
+                    if let Some(payload) = payload {
+                        log::info!(
+                            "alarm-manager: native alarm fired id={} at {}",
+                            payload.id,
+                            payload.actual_fired_at
+                        );
+                        let _ = app_handle.emit("alarm-manager:native-fired", &payload);
+                    } else {
+                        log::warn!("alarm-manager: failed to parse native alarm fired payload");
+                    }
+                    Ok(())
+                }),
+            },
+        )?;
+
+        handle
+    };
     #[cfg(not(target_os = "android"))]
     let handle = api.handle().clone();
 
@@ -85,6 +129,21 @@ impl<R: Runtime> AlarmManager<R> {
     pub fn stop_ringing(&self) -> crate::Result<()> {
         self.handle
             .run_mobile_plugin("stop_ringing", ())
+            .map_err(Into::into)
+    }
+
+    pub fn mark_alarm_pipeline_ready(&self) -> crate::Result<()> {
+        #[cfg(not(target_os = "android"))]
+        {
+            log::debug!(
+                "alarm-manager: mark_alarm_pipeline_ready no-op on non-Android mobile target"
+            );
+            return Ok(());
+        }
+
+        #[cfg(target_os = "android")]
+        self.handle
+            .run_mobile_plugin("mark_alarm_pipeline_ready", ())
             .map_err(Into::into)
     }
 

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-mark-alarm-pipeline-ready"
+description = "Enables the mark_alarm_pipeline_ready command without any pre-configured scope."
+commands.allow = ["mark_alarm_pipeline_ready"]
+
+[[permission]]
+identifier = "deny-mark-alarm-pipeline-ready"
+description = "Denies the mark_alarm_pipeline_ready command without any pre-configured scope."
+commands.deny = ["mark_alarm_pipeline_ready"]

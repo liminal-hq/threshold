@@ -1,3 +1,8 @@
+// Alarm manager request and event payload models
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,6 +49,13 @@ pub struct PickedAlarmSound {
 #[serde(rename_all = "camelCase")]
 pub struct RingEventPayload {
     pub id: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeAlarmFiredPayload {
+    pub id: i32,
+    pub actual_fired_at: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

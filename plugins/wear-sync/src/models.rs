@@ -23,6 +23,15 @@ pub struct AlarmsSyncNeeded {
     /// Pre-serialised JSON array of all alarms (populated by the app crate).
     #[serde(default)]
     pub all_alarms_json: Option<String>,
+    /// Snooze duration in minutes (from phone settings).
+    #[serde(default = "default_snooze_length")]
+    pub snooze_length_minutes: i32,
+    /// Time format preference from phone settings (`true` = 24-hour clock).
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -43,6 +52,15 @@ pub struct PublishRequest {
     pub alarms_json: String,
     /// The phone's current revision at the time of publish.
     pub revision: i64,
+    /// Snooze duration in minutes (from phone settings).
+    #[serde(default = "default_snooze_length")]
+    pub snooze_length_minutes: i32,
+    /// Time format preference from phone settings (`true` = 24-hour clock).
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,4 +101,83 @@ pub struct WatchDeleteAlarm {
 #[serde(rename_all = "camelCase")]
 pub struct WatchSyncRequest {
     pub watch_revision: i64,
+}
+
+/// Watch-originated alarm dismiss command.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchDismissAlarm {
+    pub alarm_id: i32,
+}
+
+/// Watch-originated alarm snooze command.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchSnoozeAlarm {
+    pub alarm_id: i32,
+    pub snooze_length_minutes: i32,
+}
+
+// ── Phone → Watch message types (Rust → Kotlin) ─────────────────────
+
+/// Payload for the alarm:fired event (from alarm coordinator).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmFired {
+    pub id: i32,
+    pub trigger_at: i64,
+    pub actual_fired_at: i64,
+    pub label: Option<String>,
+    pub revision: i64,
+    /// Snooze duration in minutes (synced from phone settings).
+    #[serde(default = "default_snooze_length")]
+    pub snooze_length_minutes: i32,
+    /// Time format preference from phone settings (`true` = 24-hour clock).
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
+}
+
+fn default_snooze_length() -> i32 {
+    10
+}
+
+fn default_is_24_hour() -> bool {
+    false
+}
+
+fn default_is_24_hour_known() -> bool {
+    false
+}
+
+/// Request to send an alarm ring message to the watch.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmRingRequest {
+    pub alarm_id: i32,
+    pub label: String,
+    pub hour: i32,
+    pub minute: i32,
+    pub snooze_length_minutes: i32,
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
+}
+
+/// Request to send an alarm dismiss message to the watch.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmDismissRequest {
+    pub alarm_id: i32,
+}
+
+/// Request to send an alarm snooze message to the watch.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmSnoozeRequest {
+    pub alarm_id: i32,
+    pub snooze_length_minutes: i32,
 }

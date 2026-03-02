@@ -23,6 +23,8 @@ private const val TAG = "WearMessageService"
 private const val PATH_SYNC_REQUEST = "/threshold/sync_request"
 private const val PATH_SAVE_ALARM = "/threshold/save_alarm"
 private const val PATH_DELETE_ALARM = "/threshold/delete_alarm"
+private const val PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
+private const val PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
 private const val DATA_PATH_ALARMS = "/threshold/alarms"
 
 /**
@@ -57,7 +59,9 @@ class WearMessageService : WearableListenerService() {
             when (path) {
                 PATH_SYNC_REQUEST,
                 PATH_SAVE_ALARM,
-                PATH_DELETE_ALARM -> {
+                PATH_DELETE_ALARM,
+                PATH_ALARM_DISMISS,
+                PATH_ALARM_SNOOZE -> {
                     plugin.onWatchMessage(path, data)
                 }
                 else -> {
@@ -72,6 +76,12 @@ class WearMessageService : WearableListenerService() {
             PATH_SYNC_REQUEST -> handleOfflineSyncRequest()
             PATH_SAVE_ALARM,
             PATH_DELETE_ALARM -> handleOfflineWrite(path, data)
+            PATH_ALARM_DISMISS,
+            PATH_ALARM_SNOOZE -> {
+                // Dismiss/snooze require the Tauri runtime to stop the ringing service.
+                // Boot the app so the coordinator can process the command.
+                handleOfflineWrite(path, data)
+            }
             else -> {
                 Log.w(TAG, "Unknown message path (offline): $path")
             }
@@ -91,7 +101,7 @@ class WearMessageService : WearableListenerService() {
             return
         }
 
-        val (alarmsJson, revision) = cached
+        val (alarmsJson, revision, snoozeLengthMinutes, is24Hour, is24HourKnown) = cached
         Log.i(TAG, "Serving sync request from cache at revision $revision")
 
         scope.launch {
@@ -101,6 +111,9 @@ class WearMessageService : WearableListenerService() {
                     dataMap.putString("alarmsJson", alarmsJson)
                     dataMap.putLong("revision", revision)
                     dataMap.putLong("timestamp", System.currentTimeMillis())
+                    dataMap.putInt("snoozeLengthMinutes", snoozeLengthMinutes)
+                    dataMap.putBoolean("is24Hour", is24Hour)
+                    dataMap.putBoolean("is24HourKnown", is24HourKnown)
                 }
                 request.setUrgent()
 

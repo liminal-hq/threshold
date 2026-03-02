@@ -14,7 +14,10 @@ Phone (Tauri + Rust + Kotlin)          Watch (Pure Android/Kotlin)
 │  ├─ ChannelPublisher    │  Bluetooth │  ├─ WearDataLayerClient │
 │  ├─ WearSyncPlugin.kt ─┼────────────┼──┤ DataLayerListener    │
 │  └─ WearMessageService ─┼────────────┼──┤ AlarmListScreen      │
-└─────────────────────────┘            │  ├─ NextAlarmTile       │
+└─────────────────────────┘            │  ├─ RingingScreen       │
+                                       │  ├─ WearRingingService  │
+                                       │  ├─ PhoneConnectionMon. │
+                                       │  ├─ NextAlarmTile       │
                                        │  └─ NextAlarmComplication│
                                        └─────────────────────────┘
 ```
@@ -34,11 +37,16 @@ flowchart LR
         AR[AlarmRepository]
         UI[AlarmListScreen]
         WDL[WearDataLayerClient]
+        RS[RingingScreen + WearRingingService]
+        PCM[PhoneConnectionMonitor]
+        WAS[WearAlarmScheduler]
         Tile[NextAlarmTile]
         Comp[NextAlarmComplication]
         DL --> AR --> UI
+        DL --> RS
         AR --> Tile
         AR --> Comp
+        PCM --> WAS
     end
 
     WSP <-->|Bluetooth<br/>Wear Data Layer| DL
@@ -51,6 +59,9 @@ flowchart LR
 - **Toggle alarms**: Tap an alarm card to toggle its enabled state on the phone
 - **Delete alarms**: Long-press an alarm card for a delete confirmation dialog
 - **Sync status**: Header shows connected (green), syncing (spinner), or offline (yellow)
+- **Ringing screen**: Full-screen alarm UI with breathing ring animations, threshold indicator, and stop/snooze buttons — mirrors the phone's ringing design in Compose for Wear OS
+- **Disconnected fallback**: When the phone is out of range, the watch schedules local `AlarmManager` alarms so the user still gets woken up
+- **Settings**: Lightweight settings screen with a test ring button (accessed via gear icon)
 - **Tile**: Shows next upcoming alarm time in the tile carousel
 - **Complication**: Provides next alarm time for watch face complications (short and long text)
 
@@ -68,15 +79,22 @@ apps/threshold-wear/
         ├── data/
         │   ├── AlarmRepository.kt      # Local alarm cache (StateFlow + SharedPrefs)
         │   ├── SyncStatus.kt           # Connected / Syncing / Offline enum
-        │   ├── WatchAlarm.kt           # Watch-side alarm data class
-        │   └── WearDataLayerClient.kt  # MessageClient wrapper for phone comms
+        │   ├── WatchAlarm.kt           # Watch-side alarm data class (incl. nextTrigger)
+        │   └── WearDataLayerClient.kt  # MessageClient wrapper (toggle, delete, dismiss, snooze)
         ├── presentation/
-        │   ├── MainActivity.kt         # Single-activity Compose host
-        │   ├── AlarmListScreen.kt      # Alarm list UI (ScalingLazyColumn)
+        │   ├── MainActivity.kt         # SwipeDismissableNavHost (alarms/settings/ringing)
+        │   ├── AlarmListScreen.kt      # Alarm list UI (ScalingLazyColumn + settings gear)
+        │   ├── RingingScreen.kt        # Full-screen ringing UI (breathing rings, stop/snooze)
+        │   ├── RingingActivity.kt      # Lock-screen activity hosting RingingScreen
+        │   ├── SettingsScreen.kt       # Lightweight settings with test ring button
         │   └── theme/
         │       └── Theme.kt           # Deep black + calm blue palette
         ├── service/
-        │   └── DataLayerListenerService.kt  # Receives DataItem changes from phone
+        │   ├── DataLayerListenerService.kt  # Receives DataItems + alarm ring messages
+        │   ├── WearRingingService.kt        # Foreground service: vibration, audio, wake lock
+        │   ├── WearAlarmScheduler.kt        # Local AlarmManager scheduling (fallback)
+        │   ├── WearAlarmReceiver.kt         # BroadcastReceiver for local alarm fires
+        │   └── PhoneConnectionMonitor.kt    # Polls connectivity, toggles fallback
         └── tile/
             ├── NextAlarmTileService.kt       # Wear OS tile
             └── NextAlarmComplicationService.kt # Watch face complication
@@ -119,6 +137,56 @@ sequenceDiagram
     BT->>WMS: onMessageReceived()
     WMS->>WS: onWatchMessage() → Tauri event
 ```
+
+### Alarm Ringing (Phone → Watch)
+
+```mermaid
+sequenceDiagram
+    participant Phone as AlarmRingingService
+    participant Bus as Rust Event Bus
+    participant WS as wear-sync plugin
+    participant BT as Bluetooth / Data Layer
+    participant DL as DataLayerListenerService
+    participant Svc as WearRingingService
+    participant UI as RingingScreen
+
+    Phone->>Bus: alarm:fired event
+    Bus->>WS: listener in lib.rs
+    WS->>BT: MessageClient → /threshold/alarm_ring
+    BT->>DL: onMessageReceived()
+    DL->>Svc: startForegroundService()
+    Svc->>UI: Full-screen intent → RingingActivity
+    Note over Svc,UI: Vibration + audio + wake lock
+```
+
+### Dismiss/Snooze (Watch → Phone)
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant UI as RingingScreen
+    participant Client as WearDataLayerClient
+    participant BT as Bluetooth / Data Layer
+    participant WMS as WearMessageService.kt
+    participant Bus as Rust Event Bus
+    participant Coord as AlarmCoordinator
+
+    User->>UI: Tap "Stop" or "Snooze"
+    UI->>Client: sendDismissAlarm() or sendSnoozeAlarm()
+    Client->>BT: MessageClient → /threshold/alarm_dismiss
+    BT->>WMS: onMessageReceived()
+    WMS->>Bus: wear:alarm:dismiss event
+    Bus->>Coord: dismiss_alarm() + stop_ringing()
+```
+
+### Disconnected Fallback
+
+When the phone is out of Bluetooth range, the watch fires alarms independently using local `AlarmManager` scheduling:
+
+1. `PhoneConnectionMonitor` polls `NodeClient.connectedNodes` every 30 seconds
+2. On disconnect: `WearAlarmScheduler.reconcile()` schedules local alarms via `AlarmManager.setAlarmClock()`
+3. On reconnect: `WearAlarmScheduler.cancelAll()` removes local alarms (phone takes over)
+4. When a local alarm fires, `WearAlarmReceiver` starts `WearRingingService`
 
 ### Sync Request
 
@@ -276,6 +344,10 @@ If no alarms appear, check:
 
 **Deleting an alarm:** Long-press an alarm card to show a delete confirmation dialog. Tap "Delete" to remove it from both watch and phone.
 
+**Ringing:** When an alarm fires on the phone, the watch vibrates and shows a full-screen ringing UI with "Stop Alarm" and "Snooze" buttons. Dismissing on either device dismisses both. If the phone is disconnected, the watch rings independently using its local alarm schedule.
+
+**Settings:** Scroll to the bottom of the alarm list and tap the gear icon. The settings screen includes a "Test Ring" developer button.
+
 **Syncing:** The watch syncs automatically when the phone publishes alarm changes. To manually request a sync, tap the "Sync" button on the empty state screen, or relaunch the app.
 
 **Tile:** Add the Threshold tile to your tile carousel (swipe left from the watch face → "+" → Threshold). It shows the next upcoming alarm time.
@@ -290,6 +362,9 @@ If no alarms appear, check:
 | Alarms don't appear | Sync hasn't happened yet | Relaunch watch app to trigger sync request |
 | Toggle doesn't work | Phone app not processing messages | Check logcat for `WearMessageService` errors |
 | Tile shows "No alarms" | No enabled alarms, or tile not refreshed | Enable an alarm, then swipe away and back to tile |
+| Watch doesn't ring when phone does | Ring message not delivered | Check logcat for `DataLayerListener` and `WearRingingService` |
+| Ringing screen doesn't appear | Full-screen intent blocked | Ensure `USE_FULL_SCREEN_INTENT` permission is granted |
+| Fallback alarms don't fire when disconnected | Exact alarm permission missing | Grant `SCHEDULE_EXACT_ALARM` in system settings |
 
 ## Building
 

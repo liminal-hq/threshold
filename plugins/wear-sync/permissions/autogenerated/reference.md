@@ -98,6 +98,84 @@ Denies the request_sync_from_watch command without any pre-configured scope.
 <tr>
 <td>
 
+`wear-sync:allow-send-alarm-dismiss`
+
+</td>
+<td>
+
+Enables the send_alarm_dismiss command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-send-alarm-dismiss`
+
+</td>
+<td>
+
+Denies the send_alarm_dismiss command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:allow-send-alarm-ring`
+
+</td>
+<td>
+
+Enables the send_alarm_ring command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-send-alarm-ring`
+
+</td>
+<td>
+
+Denies the send_alarm_ring command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:allow-send-alarm-snooze`
+
+</td>
+<td>
+
+Enables the send_alarm_snooze command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-send-alarm-snooze`
+
+</td>
+<td>
+
+Denies the send_alarm_snooze command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `wear-sync:allow-set-watch-message-handler`
 
 </td>

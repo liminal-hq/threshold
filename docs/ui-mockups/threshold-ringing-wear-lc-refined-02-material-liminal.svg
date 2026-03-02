@@ -1,0 +1,109 @@
+<svg viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg" width="384" height="384">
+<defs>
+  <clipPath id="wc"><circle cx="192.0" cy="192.0" r="192.0"/></clipPath>
+  <!-- Material You purple gradient background -->
+  <linearGradient id="material-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#9c4dcc"/>
+    <stop offset="100%" stop-color="#7b1fa2"/>
+  </linearGradient>
+  <!-- Liminal horizon glow -->
+  <radialGradient id="liminal-horizon">
+    <stop offset="0%" stop-color="#ffb74d" stop-opacity="0.2"/>
+    <stop offset="100%" stop-color="#7b1fa2" stop-opacity="0"/>
+  </radialGradient>
+  <!-- Threshold dot pattern -->
+  <pattern id="threshold-dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="20" cy="20" r="1" fill="#ffffff" opacity="0.12"/>
+  </pattern>
+  <!-- Vignette for round watch -->
+  <radialGradient id="vig">
+    <stop offset="55%" stop-color="#7b1fa2" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000000" stop-opacity="0.85"/>
+  </radialGradient>
+  <!-- Material glow effect -->
+  <filter id="material-glow">
+    <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+    <feMerge>
+      <feMergeNode in="coloredBlur"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+  <filter id="bloom" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur stdDeviation="12"/>
+  </filter>
+  <filter id="inner_glow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="8"/>
+  </filter>
+  <filter id="breathe">
+    <feGaussianBlur stdDeviation="12" result="blur"/>
+    <feMerge>
+      <feMergeNode in="blur"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+</defs>
+<g clip-path="url(#wc)">
+<!-- Material gradient base -->
+<rect width="384" height="384" fill="url(#material-bg)"/>
+<!-- Liminal horizon glow at bottom of watch face -->
+<circle cx="192.0" cy="340" r="200" fill="url(#liminal-horizon)"/>
+<!-- Threshold dot pattern overlay -->
+<rect width="384" height="384" fill="url(#threshold-dots)"/>
+
+<!-- Breathing pulse rings (same positions as wear prototype) -->
+<circle cx="192.0" cy="162.0" r="70" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.15">
+  <animate attributeName="r" values="70;85;70" dur="4s" begin="0s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0.15;0.08;0.15" dur="4s" begin="0s" repeatCount="indefinite"/>
+</circle>
+<circle cx="192.0" cy="162.0" r="90" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.2">
+  <animate attributeName="r" values="90;105;90" dur="4s" begin="1s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0.2;0.08;0.2" dur="4s" begin="1s" repeatCount="indefinite"/>
+</circle>
+<circle cx="192.0" cy="162.0" r="110" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.1">
+  <animate attributeName="r" values="110;125;110" dur="4s" begin="2s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0.1;0.05;0.1" dur="4s" begin="2s" repeatCount="indefinite"/>
+</circle>
+
+<!-- Time display with Material glow -->
+<g filter="url(#material-glow)">
+  <text x="192.0" y="170.0" text-anchor="middle" font-family="Roboto, Inter, system-ui, sans-serif" font-size="68" font-weight="300" fill="#ffffff" opacity="0.95" letter-spacing="-1px">7:22</text>
+</g>
+<!-- Bloom duplicate for extra glow -->
+<text x="192.0" y="170.0" text-anchor="middle" font-family="Roboto, Inter, system-ui, sans-serif" font-size="68" font-weight="300" fill="#ffffff" opacity="0.05" letter-spacing="-1px" filter="url(#bloom)">7:22</text>
+
+<!-- Alarm label (from phone UI) -->
+<text x="192.0" y="192.0" text-anchor="middle" font-family="Roboto, Inter, system-ui, sans-serif" font-size="14" fill="#ffffff" opacity="0.95" font-weight="400">Wake up, Scott 🌅!</text>
+
+<!-- Threshold indicator line and animated dot (same position as wear prototype) -->
+<line x1="162.0" y1="212.0" x2="222.0" y2="212.0" stroke="#ffffff" stroke-width="1.5" opacity="0.3"/>
+<!-- Sleep endpoint -->
+<circle cx="162.0" cy="212.0" r="3" fill="#ffffff" opacity="0.4"/>
+<!-- Wake endpoint -->
+<circle cx="222.0" cy="212.0" r="3" fill="#ffffff" opacity="0.3"/>
+<!-- Current position (threshold dot) -->
+<circle cx="192.0" cy="212.0" r="4" fill="#ffb74d" opacity="0.9">
+  <animate attributeName="opacity" values="0.9;0.5;0.9" dur="2s" repeatCount="indefinite"/>
+</circle>
+<circle cx="192.0" cy="212.0" r="7" fill="none" stroke="#ffb74d" stroke-width="1.5" opacity="0.4">
+  <animate attributeName="r" values="7;11;7" dur="2s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="0.4;0.1;0.4" dur="2s" repeatCount="indefinite"/>
+</circle>
+
+<!-- Bottom arc buttons (symmetric, outer r=192 inner r=120, span 115°–180°–245°) -->
+<!-- Right arc: Stop - Material dark fill -->
+<path d="M 366.01,273.14 A 192,192 0 0,1 193,384.0 L 193,312.0 A 120,120 0 0,0 300.76,242.71 Z" fill="#1a1a2e" opacity="0.85" />
+<!-- Left arc: Snooze - ghost outline style matching phone UI -->
+<path d="M 191,384.0 A 192,192 0 0,1 17.99,273.14 L 83.24,242.71 A 120,120 0 0,0 191,312.0 Z" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.6" />
+
+<!-- Divider line between arcs -->
+<line x1="192.0" y1="311.0" x2="192.0" y2="384.0" stroke="#1a1a2e" stroke-width="3"/>
+
+<!-- Button labels -->
+<text x="275.82" y="323.57" text-anchor="middle" dominant-baseline="central" font-family="Roboto, Inter, system-ui, sans-serif" font-size="16" fill="#ffffff" opacity="0.95" font-weight="600">Stop</text>
+<text x="108.18" y="318.57" text-anchor="middle" dominant-baseline="central" font-family="Roboto, Inter, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.9" font-weight="500">Snooze</text>
+<text x="108.18" y="334.57" text-anchor="middle" dominant-baseline="central" font-family="Roboto, Inter, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.5" font-weight="400">10m</text>
+
+<!-- Vignette overlay for round watch depth -->
+<rect width="384" height="384" fill="url(#vig)"/>
+</g>
+</svg>

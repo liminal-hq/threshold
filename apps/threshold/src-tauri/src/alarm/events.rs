@@ -1,3 +1,8 @@
+// Alarm event types emitted through the Tauri event bus
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use serde::{Deserialize, Serialize};
 use crate::alarm::models::{AlarmRecord, AlarmMode};
 
@@ -102,6 +107,27 @@ pub struct AlarmFired {
     pub actual_fired_at: i64,
     pub label: Option<String>,
     pub revision: i64,
+    /// Snooze duration in minutes (synced from phone settings).
+    #[serde(default = "default_snooze_length")]
+    pub snooze_length_minutes: i32,
+    /// Time format preference (synced from phone settings).
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
+}
+
+fn default_snooze_length() -> i32 {
+    10
+}
+
+fn default_is_24_hour() -> bool {
+    false
+}
+
+fn default_is_24_hour_known() -> bool {
+    false
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -157,6 +183,15 @@ pub struct AlarmsSyncNeeded {
     /// Pre-serialised JSON array of all alarms for wear sync.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub all_alarms_json: Option<String>,
+    /// Snooze duration in minutes (from phone settings) to sync to the watch.
+    #[serde(default = "default_snooze_length")]
+    pub snooze_length_minutes: i32,
+    /// Time format preference (from phone settings) to sync to the watch.
+    #[serde(default = "default_is_24_hour")]
+    pub is_24_hour: bool,
+    /// Whether the phone time format value is explicitly known.
+    #[serde(default = "default_is_24_hour_known")]
+    pub is_24_hour_known: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

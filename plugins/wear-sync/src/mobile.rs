@@ -5,7 +5,10 @@
 
 use serde::Serialize;
 
-use crate::models::{PublishRequest, SyncRequest, WatchMessage};
+use crate::models::{
+    AlarmDismissRequest, AlarmRingRequest, AlarmSnoozeRequest, PublishRequest, SyncRequest,
+    WatchMessage,
+};
 use tauri::{
     ipc::{Channel, InvokeResponseBody},
     plugin::PluginApi,
@@ -119,6 +122,60 @@ impl<R: Runtime> WearSync<R> {
         #[cfg(target_os = "android")]
         self.handle
             .run_mobile_plugin("request_sync_from_watch", request)
+            .map_err(Into::into)
+    }
+
+    /// Send an alarm ring message to connected watches via `MessageClient`.
+    ///
+    /// Called when an alarm fires on the phone so the watch can show its
+    /// ringing UI in parallel.
+    pub fn send_alarm_ring(&self, request: AlarmRingRequest) -> crate::Result<()> {
+        #[cfg(not(target_os = "android"))]
+        {
+            let _ = request;
+            log::debug!("wear-sync: send_alarm_ring no-op on non-Android mobile target");
+            return Ok(());
+        }
+
+        #[cfg(target_os = "android")]
+        self.handle
+            .run_mobile_plugin("send_alarm_ring", request)
+            .map_err(Into::into)
+    }
+
+    /// Send an alarm dismiss message to connected watches.
+    ///
+    /// Called when an alarm is stopped on the phone so the watch can stop
+    /// its ringing service/UI if active.
+    pub fn send_alarm_dismiss(&self, request: AlarmDismissRequest) -> crate::Result<()> {
+        #[cfg(not(target_os = "android"))]
+        {
+            let _ = request;
+            log::debug!("wear-sync: send_alarm_dismiss no-op on non-Android mobile target");
+            return Ok(());
+        }
+
+        #[cfg(target_os = "android")]
+        self.handle
+            .run_mobile_plugin("send_alarm_dismiss", request)
+            .map_err(Into::into)
+    }
+
+    /// Send an alarm snooze message to connected watches.
+    ///
+    /// Called when an alarm is snoozed on the phone so the watch can stop
+    /// its ringing service/UI if active.
+    pub fn send_alarm_snooze(&self, request: AlarmSnoozeRequest) -> crate::Result<()> {
+        #[cfg(not(target_os = "android"))]
+        {
+            let _ = request;
+            log::debug!("wear-sync: send_alarm_snooze no-op on non-Android mobile target");
+            return Ok(());
+        }
+
+        #[cfg(target_os = "android")]
+        self.handle
+            .run_mobile_plugin("send_alarm_snooze", request)
             .map_err(Into::into)
     }
 

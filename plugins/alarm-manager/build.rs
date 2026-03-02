@@ -1,3 +1,8 @@
+// Build script for alarm-manager plugin command metadata and Android permissions
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 const COMMANDS: &[&str] = &[
     "schedule",
     "cancel",
@@ -5,6 +10,8 @@ const COMMANDS: &[&str] = &[
     "pick_alarm_sound",
     "check_active_alarm",
     "stop_ringing",
+    "set_alarm_event_handler",
+    "mark_alarm_pipeline_ready",
 ];
 
 fn main() {

@@ -12,6 +12,9 @@ private const val TAG = "WearSyncCache"
 private const val PREFS_NAME = "ThresholdWearSync"
 private const val KEY_ALARMS_JSON = "cached_alarms_json"
 private const val KEY_REVISION = "cached_revision"
+private const val KEY_SNOOZE_LENGTH = "cached_snooze_length_minutes"
+private const val KEY_IS_24_HOUR = "cached_is_24_hour"
+private const val KEY_IS_24_HOUR_KNOWN = "cached_is_24_hour_known"
 
 /**
  * Persistent cache of the last-published alarm sync payload.
@@ -32,27 +35,49 @@ object WearSyncCache {
      * @param context Android context for SharedPreferences access
      * @param alarmsJson The SyncResponse JSON string (FullSync envelope)
      * @param revision The phone's current revision at time of publish
+     * @param snoozeLengthMinutes Snooze duration synced from phone settings
      */
-    fun write(context: Context, alarmsJson: String, revision: Long) {
+    fun write(
+        context: Context,
+        alarmsJson: String,
+        revision: Long,
+        snoozeLengthMinutes: Int = 10,
+        is24Hour: Boolean = false,
+        is24HourKnown: Boolean = false,
+    ) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().apply {
             putString(KEY_ALARMS_JSON, alarmsJson)
             putLong(KEY_REVISION, revision)
+            putInt(KEY_SNOOZE_LENGTH, snoozeLengthMinutes)
+            putBoolean(KEY_IS_24_HOUR, is24Hour)
+            putBoolean(KEY_IS_24_HOUR_KNOWN, is24HourKnown)
             apply()
         }
-        Log.d(TAG, "Cached alarm data at revision $revision (${alarmsJson.length} bytes)")
+        Log.d(TAG, "Cached alarm data at revision $revision (${alarmsJson.length} bytes, snooze=${snoozeLengthMinutes}m, is24h=$is24Hour, is24hKnown=$is24HourKnown)")
     }
 
     /**
      * Read the cached alarm payload, if available.
      *
      * @param context Android context for SharedPreferences access
-     * @return Pair of (alarmsJson, revision) or null if cache is empty
+     * @return Quintuple of (alarmsJson, revision, snoozeLengthMinutes, is24Hour, is24HourKnown) or null if cache is empty
      */
-    fun read(context: Context): Pair<String, Long>? {
+    fun read(context: Context): Quintuple<String, Long, Int, Boolean, Boolean>? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = prefs.getString(KEY_ALARMS_JSON, null) ?: return null
         val revision = prefs.getLong(KEY_REVISION, 0)
-        return Pair(json, revision)
+        val snoozeLength = prefs.getInt(KEY_SNOOZE_LENGTH, 10)
+        val is24Hour = prefs.getBoolean(KEY_IS_24_HOUR, false)
+        val is24HourKnown = prefs.getBoolean(KEY_IS_24_HOUR_KNOWN, false)
+        return Quintuple(json, revision, snoozeLength, is24Hour, is24HourKnown)
     }
 }
+
+data class Quintuple<A, B, C, D, E>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E,
+)

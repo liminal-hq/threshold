@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-send-alarm-snooze"
+description = "Enables the send_alarm_snooze command without any pre-configured scope."
+commands.allow = ["send_alarm_snooze"]
+
+[[permission]]
+identifier = "deny-send-alarm-snooze"
+description = "Denies the send_alarm_snooze command without any pre-configured scope."
+commands.deny = ["send_alarm_snooze"]

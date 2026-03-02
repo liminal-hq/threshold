@@ -1,8 +1,26 @@
+// Threshold app crate entry point, plugin registration, and event wiring
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 pub mod alarm;
 pub mod commands;
 
 use alarm::{database::AlarmDatabase, AlarmCoordinator};
+use std::sync::atomic::{AtomicBool, AtomicI32};
+use std::sync::Arc;
 use tauri::{Listener, Manager};
+
+/// Phone-side snooze length (minutes), synced from the frontend settings.
+/// Read by `report_alarm_fired` to include in the `alarm:fired` event.
+pub type SnoozeLengthState = Arc<AtomicI32>;
+/// Phone-side time format preference, synced from frontend settings.
+/// `true` = 24-hour, `false` = 12-hour.
+pub type TimeFormatState = Arc<AtomicBool>;
+/// Whether the phone-side time format has been explicitly initialised from settings.
+pub type TimeFormatKnownState = Arc<AtomicBool>;
+#[cfg(mobile)]
+use tauri_plugin_alarm_manager::AlarmManagerExt;
 #[cfg(mobile)]
 use tauri_plugin_wear_sync::WearSyncExt;
 
@@ -80,6 +98,10 @@ pub fn run() {
         commands::snooze_alarm,
         commands::report_alarm_fired,
         commands::request_alarm_sync,
+        commands::test_watch_ring,
+        commands::set_snooze_length,
+        commands::set_time_format,
+        commands::mark_alarm_pipeline_ready,
     ]);
 
     builder = builder
@@ -158,6 +180,62 @@ pub fn run() {
             }).ok();
 
             app.manage(coordinator);
+
+            // Snooze length state — default 10 minutes, updated by frontend
+            let snooze_state: SnoozeLengthState = Arc::new(AtomicI32::new(10));
+            app.manage(snooze_state);
+            // Time format state — default 24-hour false, updated by frontend
+            let time_format_state: TimeFormatState = Arc::new(AtomicBool::new(false));
+            app.manage(time_format_state);
+            // Time format known flag — false until frontend emits settings-changed(is24h)
+            let time_format_known_state: TimeFormatKnownState = Arc::new(AtomicBool::new(false));
+            app.manage(time_format_known_state);
+
+            // Keep Rust state aligned with frontend settings via event architecture.
+            // This powers alarm:fired and wear sync payloads without bespoke invoke calls.
+            let settings_handle = app.handle().clone();
+            app.handle().listen("settings-changed", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct SettingsChanged {
+                    key: String,
+                    value: serde_json::Value,
+                }
+
+                let Ok(payload) = serde_json::from_str::<SettingsChanged>(event.payload()) else {
+                    return;
+                };
+                if payload.key != "is24h" {
+                    return;
+                }
+
+                let Some(is_24_hour) = payload.value.as_bool() else {
+                    return;
+                };
+
+                if let Some(state) = settings_handle.try_state::<TimeFormatState>() {
+                    state.store(is_24_hour, std::sync::atomic::Ordering::Relaxed);
+                    log::info!(
+                        "settings: updated time format to {} via settings-changed event",
+                        if is_24_hour { "24h" } else { "12h" }
+                    );
+                }
+                if let Some(known_state) = settings_handle.try_state::<TimeFormatKnownState>() {
+                    known_state.store(true, std::sync::atomic::Ordering::Relaxed);
+                }
+
+                let handle = settings_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                        if let Err(error) = coord
+                            .emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync)
+                            .await
+                        {
+                            log::warn!("settings: failed to trigger wear sync after is24h change: {error}");
+                        }
+                    }
+                });
+            });
 
             // Emit initial sync hint for wear-sync
             tauri::async_runtime::block_on(async {
@@ -271,6 +349,88 @@ pub fn run() {
                         coord.emit_sync_needed(&handle, alarm::events::SyncReason::BatchComplete).await.ok();
                     }
                 });
+            });
+
+            // Watch dismissed a ringing alarm
+            let dismiss_handle = app.handle().clone();
+            app.handle().listen("wear:alarm:dismiss", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct WatchDismiss { alarm_id: i32 }
+
+                if let Ok(cmd) = serde_json::from_str::<WatchDismiss>(event.payload()) {
+                    let handle = dismiss_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        // Stop the phone's ringing service first
+                        #[cfg(mobile)]
+                        if let Err(e) = handle.alarm_manager().stop_ringing() {
+                            log::error!("watch: failed to stop phone ringing: {e}");
+                        }
+
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            match coord.dismiss_alarm(&handle, cmd.alarm_id).await {
+                                Ok(_) => log::info!("watch: dismissed alarm {}", cmd.alarm_id),
+                                Err(e) => log::error!("watch: failed to dismiss alarm {}: {e}", cmd.alarm_id),
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Watch snoozed a ringing alarm
+            let snooze_handle = app.handle().clone();
+            app.handle().listen("wear:alarm:snooze", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct WatchSnooze { alarm_id: i32, snooze_length_minutes: i64 }
+
+                if let Ok(cmd) = serde_json::from_str::<WatchSnooze>(event.payload()) {
+                    let handle = snooze_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        // Stop the phone's ringing service first
+                        #[cfg(mobile)]
+                        if let Err(e) = handle.alarm_manager().stop_ringing() {
+                            log::error!("watch: failed to stop phone ringing: {e}");
+                        }
+
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            match coord.snooze_alarm(&handle, cmd.alarm_id, cmd.snooze_length_minutes).await {
+                                Ok(_) => log::info!("watch: snoozed alarm {} for {} min", cmd.alarm_id, cmd.snooze_length_minutes),
+                                Err(e) => log::error!("watch: failed to snooze alarm {}: {e}", cmd.alarm_id),
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Native phone alarm-fired callback from alarm-manager plugin.
+            //
+            // This keeps `alarm:fired` ownership in Rust core (hub) instead of UI routes.
+            let native_alarm_handle = app.handle().clone();
+            app.handle().listen("alarm-manager:native-fired", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct NativeAlarmFired {
+                    id: i32,
+                    actual_fired_at: i64,
+                }
+
+                if let Ok(payload) = serde_json::from_str::<NativeAlarmFired>(event.payload()) {
+                    let handle = native_alarm_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            if let Err(error) = coord
+                                .report_alarm_fired(&handle, payload.id, payload.actual_fired_at)
+                                .await
+                            {
+                                log::error!(
+                                    "alarm-manager: failed to report native alarm fired for {}: {error}",
+                                    payload.id
+                                );
+                            }
+                        }
+                    });
+                }
             });
 
             #[cfg(mobile)]

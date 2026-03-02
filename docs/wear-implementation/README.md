@@ -13,8 +13,9 @@ Wear OS-specific design and UI documentation for Threshold.
 
 ## Status
 
-- **Milestone D (wear-sync plugin):** Complete — batch collector, sync protocol, conflict detection, Kotlin Data Layer bridge, watch message routing, 31 tests
+- **Milestone D (wear-sync plugin):** Complete — batch collector, sync protocol, conflict detection, Kotlin Data Layer bridge, watch message routing, alarm ring/dismiss/snooze event plumbing, 31 tests
 - **Milestone E (Wear OS app):** Complete — standalone app at `apps/threshold-wear/` with alarm list UI, Data Layer client, tile, and complication
+- **Milestone F (Ringing screen):** Complete — full-screen Compose ringing UI with breathing ring animations, foreground service (vibration + audio + wake lock), bidirectional dismiss/snooze, disconnected fallback via `AlarmManager`, and settings screen with test ring button
 
 ## Architecture Overview
 
@@ -31,9 +32,12 @@ A Tauri plugin that bridges the Rust alarm system with the Wear Data Layer API. 
 
 A standalone Android Wear OS app that runs on the watch hardware. Communicates with the phone purely through the Wear Data Layer — no Rust involved on the watch side.
 
-- **Receives**: `DataItem` changes at `/threshold/alarms` → updates local `AlarmRepository`
-- **Sends**: `MessageClient` messages for sync requests, alarm toggles, alarm deletes
+- **Receives**: `DataItem` changes at `/threshold/alarms` + `/threshold/alarm_ring` messages
+- **Sends**: `MessageClient` messages for sync requests, alarm toggles, deletes, dismiss, snooze
 - **UI**: Compose for Wear OS with `ScalingLazyColumn`, alarm cards, sync status header
+- **Ringing**: Full-screen Compose UI with breathing ring animations, vibration, audio, wake lock
+- **Fallback**: Local `AlarmManager` scheduling when the phone is disconnected
+- **Settings**: Lightweight settings screen with test ring button
 - **Tile**: Shows next alarm time on the watch face tile carousel
 - **Complication**: Provides next alarm time for watch face complications
 

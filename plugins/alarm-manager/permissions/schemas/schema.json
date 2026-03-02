@@ -343,6 +343,18 @@
           "markdownDescription": "Denies the get_launch_args command without any pre-configured scope."
         },
         {
+          "description": "Enables the mark_alarm_pipeline_ready command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-mark-alarm-pipeline-ready",
+          "markdownDescription": "Enables the mark_alarm_pipeline_ready command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the mark_alarm_pipeline_ready command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-mark-alarm-pipeline-ready",
+          "markdownDescription": "Denies the mark_alarm_pipeline_ready command without any pre-configured scope."
+        },
+        {
           "description": "Enables the pick_alarm_sound command without any pre-configured scope.",
           "type": "string",
           "const": "allow-pick-alarm-sound",
@@ -365,6 +377,18 @@
           "type": "string",
           "const": "deny-schedule",
           "markdownDescription": "Denies the schedule command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_alarm_event_handler command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-alarm-event-handler",
+          "markdownDescription": "Enables the set_alarm_event_handler command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_alarm_event_handler command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-alarm-event-handler",
+          "markdownDescription": "Denies the set_alarm_event_handler command without any pre-configured scope."
         },
         {
           "description": "Enables the stop_ringing command without any pre-configured scope.",
