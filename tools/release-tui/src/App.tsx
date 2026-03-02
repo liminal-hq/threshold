@@ -15,6 +15,7 @@ import {
 	tagExistsOnOrigin,
 } from './lib/git.js';
 import { checkPrerequisites, runFullBuild } from './lib/build.js';
+import { BuildFailureError } from './lib/build.js';
 import type { Artifacts } from './lib/build.js';
 import type { CurrentState } from './lib/files.js';
 import type { DraftState } from './screens/Review.js';
@@ -25,6 +26,7 @@ import { CustomVersion } from './screens/CustomVersion.js';
 import { ReleaseLog } from './screens/ReleaseLog.js';
 import { Review } from './screens/Review.js';
 import { TagConflict } from './screens/TagConflict.js';
+import { CustomTag } from './screens/CustomTag.js';
 import { BuildOffer } from './screens/BuildOffer.js';
 import { BuildProgressScreen } from './screens/BuildProgress.js';
 import { PreflightFailure } from './screens/PreflightFailure.js';
@@ -38,6 +40,7 @@ type Screen =
 	| 'release-log'
 	| 'review'
 	| 'tag-conflict'
+	| 'custom-tag'
 	| 'build-offer'
 	| 'build-progress'
 	| 'preflight-failure'
@@ -94,6 +97,11 @@ export function App({ initialState }: AppProps) {
 
 	const handleCustomVersion = useCallback((version: string) => {
 		setDraft({ mode: 'bump', version });
+		setScreen('review');
+	}, []);
+
+	const handleCustomTag = useCallback((tagName: string) => {
+		setDraft((prev) => ({ ...prev, tagOverride: tagName, forceTag: false }));
 		setScreen('review');
 	}, []);
 
@@ -155,45 +163,54 @@ export function App({ initialState }: AppProps) {
 		setBuildLogLines([]);
 
 		const versionCode = deriveTauriVersionCode(draft.version);
-		const result = await runFullBuild(draft.version, versionCode, {
-			onPhoneProgress: (update) => {
-				setPhoneStatus((prev) => ({ ...prev, progress: update.progress }));
-				setBuildLogLines(update.logLines.slice(-20));
-			},
-			onPhoneComplete: (phone) => {
-				setPhoneStatus({
-					building: false,
-					done: true,
-					failed: false,
-					progress: 100,
-					size: phone.aab ? undefined : undefined,
-				});
-				setWearStatus((prev) => ({ ...prev, building: true }));
-			},
-			onPhoneError: (logLines) => {
-				setPhoneStatus((prev) => ({ ...prev, building: false, failed: true }));
-				setBuildLogLines(logLines.slice(-20));
-			},
-			onWearProgress: (update) => {
-				setWearStatus((prev) => ({ ...prev, progress: update.progress }));
-				setBuildLogLines(update.logLines.slice(-20));
-			},
-			onWearComplete: () => {
-				setWearStatus({
-					building: false,
-					done: true,
-					failed: false,
-					progress: 100,
-				});
-			},
-			onWearError: (logLines) => {
-				setWearStatus((prev) => ({ ...prev, building: false, failed: true }));
-				setBuildLogLines(logLines.slice(-20));
-			},
-		});
+		try {
+			const result = await runFullBuild(draft.version, versionCode, {
+				onPhoneProgress: (update) => {
+					setPhoneStatus((prev) => ({ ...prev, progress: update.progress }));
+					setBuildLogLines(update.logLines.slice(-20));
+				},
+				onPhoneComplete: (phone) => {
+					setPhoneStatus({
+						building: false,
+						done: true,
+						failed: false,
+						progress: 100,
+						size: phone.aab ? undefined : undefined,
+					});
+					setWearStatus((prev) => ({ ...prev, building: true }));
+				},
+				onPhoneError: (logLines) => {
+					setPhoneStatus((prev) => ({ ...prev, building: false, failed: true }));
+					setBuildLogLines(logLines.slice(-20));
+				},
+				onWearProgress: (update) => {
+					setWearStatus((prev) => ({ ...prev, progress: update.progress }));
+					setBuildLogLines(update.logLines.slice(-20));
+				},
+				onWearComplete: () => {
+					setWearStatus({
+						building: false,
+						done: true,
+						failed: false,
+						progress: 100,
+					});
+				},
+				onWearError: (logLines) => {
+					setWearStatus((prev) => ({ ...prev, building: false, failed: true }));
+					setBuildLogLines(logLines.slice(-20));
+				},
+			});
 
-		setArtifacts(result);
-		setScreen('done');
+			setArtifacts(result);
+			setScreen('done');
+		} catch (error) {
+			if (error instanceof BuildFailureError) {
+				setArtifacts(error.artifacts);
+			} else {
+				setArtifacts(null);
+			}
+			setScreen('done');
+		}
 	}, [draft]);
 
 	const handleSkipBuild = useCallback(() => {
@@ -248,9 +265,18 @@ export function App({ initialState }: AppProps) {
 						setDraft((prev) => ({ ...prev, forceTag: true }));
 						setScreen('review');
 					}}
-					onRename={() => setScreen('version-bump')}
+					onRename={() => setScreen('custom-tag')}
 					onBack={() => setScreen('version-bump')}
 					onQuit={quit}
+				/>
+			);
+
+		case 'custom-tag':
+			return (
+				<CustomTag
+					initialTag={tagName}
+					onConfirm={handleCustomTag}
+					onCancel={() => setScreen('tag-conflict')}
 				/>
 			);
 
@@ -291,6 +317,7 @@ export function App({ initialState }: AppProps) {
 					tagName={tagName}
 					filesChanged={filesChanged}
 					isRedo={draft.mode === 'redo'}
+					forceTag={Boolean(draft.forceTag)}
 					artifacts={artifacts}
 					onExit={quit}
 				/>

@@ -12,7 +12,7 @@ import { App } from './App.js';
 import { ensureRepoRoot, readCurrentState, applyChanges } from './lib/files.js';
 import { bumpSemver, deriveTauriVersionCode, deriveWearVersionCode, isValidSemver } from './lib/version.js';
 import { createReleaseCommit, createRedoCommit, applyTag } from './lib/git.js';
-import { runFullBuild, fileSize } from './lib/build.js';
+import { runFullBuild, fileSize, BuildFailureError } from './lib/build.js';
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -162,14 +162,24 @@ async function runCi(cliArgs: CliArgs): Promise<void> {
 
 	if (cliArgs.build && !cliArgs.dryRun) {
 		console.log('Building...');
-		const artifacts = await runFullBuild(version, versionCode);
-		if (artifacts) {
-			const parts: string[] = [];
-			if (artifacts.phone?.aab) parts.push(`phone AAB (${fileSize(artifacts.phone.aab)})`);
-			if (artifacts.phone?.apk) parts.push(`phone APK (${fileSize(artifacts.phone.apk)})`);
-			if (artifacts.wear?.aab) parts.push(`wear AAB (${fileSize(artifacts.wear.aab)})`);
-			if (artifacts.wear?.apk) parts.push(`wear APK (${fileSize(artifacts.wear.apk)})`);
-			console.log(`Build: ${parts.join(', ')}`);
+		try {
+			const artifacts = await runFullBuild(version, versionCode);
+			if (artifacts) {
+				const parts: string[] = [];
+				if (artifacts.phone?.aab) parts.push(`phone AAB (${fileSize(artifacts.phone.aab)})`);
+				if (artifacts.phone?.apk) parts.push(`phone APK (${fileSize(artifacts.phone.apk)})`);
+				if (artifacts.wear?.aab) parts.push(`wear AAB (${fileSize(artifacts.wear.aab)})`);
+				if (artifacts.wear?.apk) parts.push(`wear APK (${fileSize(artifacts.wear.apk)})`);
+				console.log(`Build: ${parts.join(', ')}`);
+			}
+		} catch (error) {
+			if (error instanceof BuildFailureError) {
+				console.error(`Error: ${error.message}`);
+			} else {
+				console.error(`Error: ${(error as Error).message}`);
+			}
+			process.exitCode = 1;
+			return;
 		}
 	}
 

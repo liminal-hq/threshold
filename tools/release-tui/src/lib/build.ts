@@ -245,6 +245,25 @@ export interface BuildCallbacks {
 	onWearError?: (logLines: string[]) => void;
 }
 
+export class BuildFailureError extends Error {
+	phase: 'phone' | 'wear';
+	logLines: string[];
+	artifacts: Artifacts;
+
+	constructor(
+		phase: 'phone' | 'wear',
+		message: string,
+		logLines: string[] = [],
+		artifacts: Artifacts,
+	) {
+		super(message);
+		this.name = 'BuildFailureError';
+		this.phase = phase;
+		this.logLines = logLines;
+		this.artifacts = artifacts;
+	}
+}
+
 export async function runFullBuild(
 	version: string,
 	versionCode: number,
@@ -297,6 +316,12 @@ export async function runFullBuild(
 		} catch (err: unknown) {
 			const buildErr = err as { logLines?: string[] };
 			callbacks.onPhoneError?.(buildErr.logLines ?? []);
+			throw new BuildFailureError(
+				'phone',
+				'Phone build failed',
+				buildErr.logLines ?? [],
+				artifacts,
+			);
 		}
 
 		// Wear build
@@ -336,6 +361,12 @@ export async function runFullBuild(
 		} catch (err: unknown) {
 			const buildErr = err as { logLines?: string[] };
 			callbacks.onWearError?.(buildErr.logLines ?? []);
+			throw new BuildFailureError(
+				'wear',
+				'Wear build failed',
+				buildErr.logLines ?? [],
+				artifacts,
+			);
 		}
 
 		return artifacts;

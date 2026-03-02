@@ -100,3 +100,9 @@ export function applyTag(tagName: string, force = false): void {
 	const result = git(...args);
 	if (result.status !== 0) throw new Error(`Failed to tag ${tagName}: ${result.stderr.trim()}`);
 }
+
+export function isValidTagName(tagName: string): boolean {
+	if (!tagName.trim()) return false;
+	const result = git('check-ref-format', `refs/tags/${tagName}`);
+	return result.status === 0;
+}

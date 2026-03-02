@@ -15,6 +15,7 @@ interface DoneProps {
 	tagName: string;
 	filesChanged: number;
 	isRedo: boolean;
+	forceTag: boolean;
 	artifacts: Artifacts | null;
 	onExit: () => void;
 }
@@ -31,7 +32,7 @@ function ArtifactRow({ label, path, sig }: { label: string; path: string; sig: s
 	);
 }
 
-export function Done({ version, tagName, filesChanged, isRedo, artifacts, onExit }: DoneProps) {
+export function Done({ version, tagName, filesChanged, isRedo, forceTag, artifacts, onExit }: DoneProps) {
 	const commitMsg = isRedo
 		? `chore(release): redo release ${version}`
 		: `chore(release): bump versions to ${version}`;
@@ -121,7 +122,7 @@ export function Done({ version, tagName, filesChanged, isRedo, artifacts, onExit
 			<Text> </Text>
 			<Divider />
 			<Text> </Text>
-			{isRedo ? (
+			{(isRedo || forceTag) ? (
 				<Text> <Text color={palette.accent}>Next</Text>    git push origin HEAD && git push origin {tagName} --force</Text>
 			) : (
 				<Text> <Text color={palette.accent}>Next</Text>   git push origin HEAD && git push origin {tagName}</Text>
@@ -135,7 +136,7 @@ export function Done({ version, tagName, filesChanged, isRedo, artifacts, onExit
 			{!hasArtifacts && !isRedo && (
 				<Text> <Text color={palette.accent}>Build</Text>  pnpm build:release</Text>
 			)}
-			{isRedo ? (
+			{(isRedo || forceTag) ? (
 				<>
 					<Text> <Text color={palette.red}>Undo</Text>    git reset --soft HEAD~1</Text>
 					<Text> </Text>
