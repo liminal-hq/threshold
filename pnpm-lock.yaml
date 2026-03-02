@@ -158,6 +158,9 @@ importers:
 
   tools/release-tui:
     dependencies:
+      commander:
+        specifier: ^14.0.1
+        version: 14.0.3
       ink:
         specifier: ^6.0.0
         version: 6.8.0(@types/react@19.2.8)(react@19.2.3)
@@ -171,9 +174,6 @@ importers:
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.8
-      ink-testing-library:
-        specifier: github:ScottMorris/ink-testing-library#update-ink-v6-react-19-node-20-16479698356027131445
-        version: https://codeload.github.com/ScottMorris/ink-testing-library/tar.gz/410f3dca11596ca598daa517748a21d2f5a55add(@types/react@19.2.8)
       tsx:
         specifier: ^4.19.0
         version: 4.21.0
@@ -1400,6 +1400,10 @@ packages:
     resolution: {integrity: sha512-xxodCmBen3iy2i0WtAK8FlFNrRzjUqjRsMfho58xT/wvZU1YTM3fCnRjcy1gJPMepaRlgm/0e6w8SpWHpn3/cA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
+  commander@14.0.3:
+    resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
+    engines: {node: '>=20'}
+
   confbox@0.1.8:
     resolution: {integrity: sha512-RMtmw0iFkeR4YV+fUOSucriAQNb9g8zFR52MWCtl+cCZOFRNL6zeB395vPzFhEjjn4fMxXudmELnl/KF/WrK6w==}
 
@@ -1659,16 +1663,6 @@ packages:
   indent-string@5.0.0:
     resolution: {integrity: sha512-m6FAo/spmsW2Ab2fU35JTYwtOKa2yAwXSwgjSv1TJzh4Mh7mC3lzAOVLBprb72XsTrgkEIsl7YrFNAiDiRhIGg==}
     engines: {node: '>=12'}
-
-  ink-testing-library@https://codeload.github.com/ScottMorris/ink-testing-library/tar.gz/410f3dca11596ca598daa517748a21d2f5a55add:
-    resolution: {tarball: https://codeload.github.com/ScottMorris/ink-testing-library/tar.gz/410f3dca11596ca598daa517748a21d2f5a55add}
-    version: 4.0.0
-    engines: {node: '>=20'}
-    peerDependencies:
-      '@types/react': '>=19.0.0'
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
 
   ink@6.8.0:
     resolution: {integrity: sha512-sbl1RdLOgkO9isK42WCZlJCFN9hb++sX9dsklOvfd1YQ3bQ2AiFu12Q6tFlr0HvEUvzraJntQCCpfEoUe9DSzA==}
@@ -3530,6 +3524,8 @@ snapshots:
     dependencies:
       convert-to-spaces: 2.0.1
 
+  commander@14.0.3: {}
+
   confbox@0.1.8: {}
 
   convert-source-map@1.9.0: {}
@@ -3819,12 +3815,6 @@ snapshots:
   indent-string@4.0.0: {}
 
   indent-string@5.0.0: {}
-
-  ink-testing-library@https://codeload.github.com/ScottMorris/ink-testing-library/tar.gz/410f3dca11596ca598daa517748a21d2f5a55add(@types/react@19.2.8):
-    dependencies:
-      strip-ansi: 7.2.0
-    optionalDependencies:
-      '@types/react': 19.2.8
 
   ink@6.8.0(@types/react@19.2.8)(react@19.2.3):
     dependencies:

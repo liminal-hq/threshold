@@ -7,6 +7,7 @@
 
 import { render } from 'ink';
 import process from 'node:process';
+import { Command, CommanderError } from 'commander';
 import { App } from './App.js';
 import { ensureRepoRoot, readCurrentState, applyChanges } from './lib/files.js';
 import { bumpSemver, deriveTauriVersionCode, deriveWearVersionCode, isValidSemver } from './lib/version.js';
@@ -27,29 +28,65 @@ interface CliArgs {
 	dryRun: boolean;
 }
 
-function parseCliArgs(argv: string[]): CliArgs {
-	const args: CliArgs = {
-		ci: false,
-		bump: null,
-		redo: false,
-		build: false,
-		noCommit: false,
-		noWebSync: false,
-		dryRun: false,
-	};
+interface CommanderCliOptions {
+	ci?: boolean;
+	bump?: string;
+	redo?: boolean;
+	build?: boolean;
+	noCommit?: boolean;
+	noWebSync?: boolean;
+	dryRun?: boolean;
+}
 
-	for (let i = 2; i < argv.length; i++) {
-		const arg = argv[i];
-		if (arg === '--ci') args.ci = true;
-		else if (arg === '--bump' && i + 1 < argv.length) args.bump = argv[++i];
-		else if (arg === '--redo') args.redo = true;
-		else if (arg === '--build') args.build = true;
-		else if (arg === '--no-commit') args.noCommit = true;
-		else if (arg === '--no-web-sync') args.noWebSync = true;
-		else if (arg === '--dry-run') args.dryRun = true;
+interface ParsedCliArgs {
+	args: CliArgs | null;
+	exitCode: number;
+}
+
+function parseCliArgs(argv: string[]): ParsedCliArgs {
+	const program = new Command();
+	program
+		.name('pnpm version:release')
+		.description('Threshold release CLI')
+		.allowUnknownOption(false)
+		.allowExcessArguments(false)
+		.showHelpAfterError()
+		.exitOverride()
+		.option('--ci', 'Run in non-interactive mode')
+		.option('--bump <value>', 'Bump type (`patch`, `minor`, `major`) or explicit semver')
+		.option('--redo', 'Re-tag and re-commit the current version')
+		.option('--build', 'Build phone and Wear artefacts after version step')
+		.option('--no-commit', 'Skip commit and tag creation')
+		.option('--no-web-sync', 'Skip web package version sync')
+		.option('--dry-run', 'Preview actions without writing changes');
+
+	let options: CommanderCliOptions;
+	try {
+		program.parse(argv, { from: 'node' });
+		options = program.opts<CommanderCliOptions>();
+	} catch (error) {
+		if (error instanceof CommanderError) {
+			return { args: null, exitCode: error.code === 'commander.helpDisplayed' ? 0 : 1 };
+		}
+		throw error;
 	}
 
-	return args;
+	const args: CliArgs = {
+		ci: Boolean(options.ci),
+		bump: options.bump ?? null,
+		redo: Boolean(options.redo),
+		build: Boolean(options.build),
+		noCommit: Boolean(options.noCommit),
+		noWebSync: Boolean(options.noWebSync),
+		dryRun: Boolean(options.dryRun),
+	};
+
+	if (args.redo && args.bump) {
+		console.error('error: cannot use --bump and --redo together');
+		return { args: null, exitCode: 1 };
+	}
+
+	return { args, exitCode: 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -61,7 +98,8 @@ async function runCi(cliArgs: CliArgs): Promise<void> {
 	const currentState = readCurrentState();
 
 	if (!cliArgs.bump && !cliArgs.redo) {
-		console.error('Error: --ci requires --bump <type> or --redo');
+		console.error('Error: --ci requires exactly one of --bump <type> or --redo');
+		console.error('Run with --help for usage details.');
 		process.exitCode = 1;
 		return;
 	}
@@ -143,7 +181,12 @@ async function runCi(cliArgs: CliArgs): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-	const cliArgs = parseCliArgs(process.argv);
+	const parsed = parseCliArgs(process.argv);
+	if (!parsed.args) {
+		process.exitCode = parsed.exitCode;
+		return;
+	}
+	const cliArgs = parsed.args;
 
 	// CI or non-TTY: plain text mode
 	if (cliArgs.ci || !process.stdin.isTTY || !process.stdout.isTTY) {

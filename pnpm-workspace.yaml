@@ -3,5 +3,3 @@ packages:
   - 'packages/*'
   - 'plugins/*'
   - 'tools/*'
-onlyBuiltDependencies:
-  - 'ink-testing-library'
