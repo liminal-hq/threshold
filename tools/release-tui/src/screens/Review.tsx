@@ -4,10 +4,11 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import { useState } from 'react';
-import { Box, Text, useInput, useStdout } from 'ink';
+import { Box, Text, useInput } from 'ink';
 import { Layout, Divider } from '../components/Layout.js';
 import { HotkeyBar } from '../components/HotkeyHint.js';
 import { palette } from '../lib/theme.js';
+import { useTerminalSize } from '../lib/useTerminalSize.js';
 import { deriveTauriVersionCode, deriveWearVersionCode } from '../lib/version.js';
 import { getWorktreeChanges, findUnrelatedChanges } from '../lib/git.js';
 import type { CurrentState } from '../lib/files.js';
@@ -28,7 +29,7 @@ interface ReviewProps {
 	onQuit: () => void;
 }
 
-function DetailPanel({ currentState, draft }: { currentState: CurrentState; draft: DraftState }) {
+function DetailPanel({ currentState, draft, width }: { currentState: CurrentState; draft: DraftState; width?: number }) {
 	const tauriVC = deriveTauriVersionCode(draft.version);
 	const wearVC = deriveWearVersionCode(draft.version);
 	const isRedo = draft.mode === 'redo';
@@ -36,7 +37,7 @@ function DetailPanel({ currentState, draft }: { currentState: CurrentState; draf
 	return (
 		<Box flexDirection="column">
 			<Text bold color={palette.muted}>  Details</Text>
-			<Divider />
+			<Divider width={width} />
 			<Text> </Text>
 			<Text color={palette.accent}>  tauri.conf.json</Text>
 			<Text>    version           <Text color={palette.red}>{currentState.tauriVersionName}</Text> <Text color={palette.muted}>{'\u2192'}</Text> <Text color={palette.bar}>{draft.version}</Text></Text>
@@ -58,7 +59,7 @@ function DetailPanel({ currentState, draft }: { currentState: CurrentState; draf
 
 export function Review({ currentState, draft, onApply, onBack, onHelp, onQuit }: ReviewProps) {
 	const [showDetails, setShowDetails] = useState(false);
-	const { stdout } = useStdout();
+	const termSize = useTerminalSize();
 	const isRedo = draft.mode === 'redo';
 	const tagName = draft.tagOverride ?? `v${draft.version}`;
 	const commitMsg = isRedo
@@ -84,7 +85,8 @@ export function Review({ currentState, draft, onApply, onBack, onHelp, onQuit }:
 		if (input === 'b') return onBack();
 	});
 
-	const wide = (stdout?.columns ?? 80) >= 100;
+	const wide = termSize.columns >= 100;
+	const detailWidth = Math.floor(termSize.columns / 2);
 
 	return (
 		<Layout
@@ -132,7 +134,7 @@ export function Review({ currentState, draft, onApply, onBack, onHelp, onQuit }:
 				{showDetails && wide && (
 					<Box flexDirection="column" width="50%">
 						<Text color={palette.line}>|</Text>
-						<DetailPanel currentState={currentState} draft={draft} />
+						<DetailPanel currentState={currentState} draft={draft} width={detailWidth} />
 					</Box>
 				)}
 			</Box>

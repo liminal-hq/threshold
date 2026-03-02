@@ -5,8 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import type { ReactNode } from 'react';
-import { Box, Text, useStdout } from 'ink';
+import { Box, Text } from 'ink';
 import { palette } from '../lib/theme.js';
+import { useTerminalSize } from '../lib/useTerminalSize.js';
 
 export interface LayoutProps {
 	headerLeft: string;
@@ -17,9 +18,9 @@ export interface LayoutProps {
 	children: ReactNode;
 }
 
-function Divider() {
-	const { stdout } = useStdout();
-	const width = stdout?.columns ?? 80;
+function Divider({ width: explicitWidth }: { width?: number } = {}) {
+	const termSize = useTerminalSize();
+	const width = explicitWidth ?? termSize.columns;
 	return (
 		<Text wrap="truncate" color={palette.line}>
 			{'-'.repeat(width)}
@@ -35,8 +36,8 @@ export function Layout({
 	footerWarning,
 	children,
 }: LayoutProps) {
-	const { stdout } = useStdout();
-	const height = stdout?.rows ?? 24;
+	const termSize = useTerminalSize();
+	const height = termSize.rows;
 
 	// Footer takes: optional warning (1) + divider (1) + footer bar (1) = 2-3 lines
 	// Header takes: header (1) + divider (1) = 2 lines
