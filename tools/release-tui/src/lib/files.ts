@@ -8,10 +8,28 @@ import path from 'node:path';
 import { PATHS, REPO_ROOT_MARKER } from './constants.js';
 import { deriveTauriVersionCode } from './version.js';
 
+/**
+ * Walk up from cwd until we find the repo root marker, then chdir there.
+ * This lets the TUI work regardless of which directory pnpm invokes it from.
+ */
 export function ensureRepoRoot(): void {
-	if (!fs.existsSync(path.resolve(REPO_ROOT_MARKER))) {
-		throw new Error('Run this script from the repository root');
+	// Already at root?
+	if (fs.existsSync(path.resolve(REPO_ROOT_MARKER))) return;
+
+	// Walk up
+	let dir = process.cwd();
+	while (true) {
+		const candidate = path.join(dir, REPO_ROOT_MARKER);
+		if (fs.existsSync(candidate)) {
+			process.chdir(dir);
+			return;
+		}
+		const parent = path.dirname(dir);
+		if (parent === dir) break;
+		dir = parent;
 	}
+
+	throw new Error('Could not find the repository root (looked for pnpm-workspace.yaml)');
 }
 
 function readJson(filePath: string): Record<string, unknown> {
