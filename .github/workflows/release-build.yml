@@ -6,6 +6,12 @@ on:
       - main
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Optional release tag (for example v0.1.9). Leave blank to use apps/threshold/package.json version.'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -30,6 +36,8 @@ jobs:
 
       - name: Resolve release trigger and tag
         id: resolve
+        env:
+          MANUAL_RELEASE_TAG: ${{ github.event.inputs.release_tag || '' }}
         run: |
           set -euo pipefail
           git fetch origin main
@@ -37,6 +45,26 @@ jobs:
           ref_type="${GITHUB_REF_TYPE}"
           ref_name="${GITHUB_REF_NAME}"
           event_name="${GITHUB_EVENT_NAME}"
+
+          if [ "$event_name" = "workflow_dispatch" ]; then
+            if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+              echo "Manual run commit is not on origin/main; skipping release"
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            if [ -n "${MANUAL_RELEASE_TAG:-}" ]; then
+              echo "Manual release override requested; using tag ${MANUAL_RELEASE_TAG}"
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+              echo "release_tag=${MANUAL_RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+            else
+              version="$(node -p "require('./apps/threshold/package.json').version")"
+              echo "Manual release override requested; using derived tag v$version"
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+              echo "release_tag=v$version" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
 
           if [ "$ref_type" = "tag" ]; then
             if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
