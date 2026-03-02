@@ -36,19 +36,38 @@ const App: React.FC = () => {
 		const os = platform();
 		const win = getCurrentWindow();
 
-		// Initialize Time Preferences
-		const initTimePrefs = async () => {
+		const initSettingsAndPipelines = async () => {
+			let is24Hour = SettingsService.getIs24h();
+
 			try {
-				const { is24Hour, source } = await SettingsService.getSystemTimeFormat();
-				console.log(`[App] System time format: ${is24Hour ? '24h' : '12h'} (source: ${source})`);
-				SettingsService.setIs24h(is24Hour);
+				const detected = await SettingsService.getSystemTimeFormat();
+				is24Hour = detected.is24Hour;
+				console.log(`[App] System time format: ${is24Hour ? '24h' : '12h'} (source: ${detected.source})`);
 			} catch (e) {
 				console.error('[App] Failed to get system time format:', e);
 			}
-		};
-		initTimePrefs();
 
-		// Initialize Alarm Manager Service
+			SettingsService.setIs24h(is24Hour);
+
+			try {
+				await invoke('set_time_format', { is24_hour: is24Hour });
+			} catch (e) {
+				console.warn('[App] Failed to sync initial time format:', e);
+			}
+
+			try {
+				await invoke('set_snooze_length', { minutes: SettingsService.getSnoozeLength() });
+			} catch (e) {
+				console.warn('[App] Failed to sync initial snooze length:', e);
+			}
+
+			try {
+				await invoke('mark_alarm_pipeline_ready');
+			} catch (e) {
+				console.warn('[App] Failed to mark alarm pipeline ready:', e);
+			}
+		};
+
 		const initAlarmService = async () => {
 			try {
 				alarmManagerService.setRouter(router);
@@ -57,12 +76,8 @@ const App: React.FC = () => {
 				console.error('[App] Failed to init AlarmManagerService:', e);
 			}
 		};
-		initAlarmService();
-
-		// Sync snooze length to Rust so alarm:fired events carry the right value
-		invoke('set_snooze_length', { minutes: SettingsService.getSnoozeLength() }).catch((e) =>
-			console.warn('[App] Failed to sync initial snooze length:', e),
-		);
+		void initSettingsAndPipelines();
+		void initAlarmService();
 
 		const showWindow = async () => {
 			if (os === 'android' || os === 'ios') return;

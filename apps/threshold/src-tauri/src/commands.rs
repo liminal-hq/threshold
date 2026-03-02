@@ -10,6 +10,8 @@ use crate::TimeFormatKnownState;
 use crate::TimeFormatState;
 use std::sync::atomic::Ordering;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
+#[cfg(mobile)]
+use tauri_plugin_alarm_manager::AlarmManagerExt;
 
 #[tauri::command]
 /// Fetch all alarms for UI or sync snapshots.
@@ -223,4 +225,47 @@ pub async fn set_snooze_length<R: Runtime>(
         .emit_sync_needed(&app, SyncReason::ForceSync)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+/// Update the time format stored in Rust state and trigger a wear sync.
+///
+/// Called by the frontend during start-up and settings changes so
+/// `alarm:fired` payloads can carry accurate time format metadata.
+pub async fn set_time_format<R: Runtime>(
+    app: AppHandle<R>,
+    coordinator: State<'_, AlarmCoordinator>,
+    is24_hour: bool,
+) -> Result<(), String> {
+    if let Some(state) = app.try_state::<TimeFormatState>() {
+        state.store(is24_hour, Ordering::Relaxed);
+    }
+    if let Some(known_state) = app.try_state::<TimeFormatKnownState>() {
+        known_state.store(true, Ordering::Relaxed);
+    }
+
+    coordinator
+        .emit_sync_needed(&app, SyncReason::ForceSync)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+/// Mark the native alarm callback pipeline ready after initial settings sync.
+///
+/// This prevents queued native alarm-fired events from being replayed with
+/// default settings values during cold start.
+pub async fn mark_alarm_pipeline_ready<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    #[cfg(mobile)]
+    {
+        app.alarm_manager()
+            .mark_alarm_pipeline_ready()
+            .map_err(|e| e.to_string())
+    }
+
+    #[cfg(not(mobile))]
+    {
+        let _ = app;
+        Ok(())
+    }
 }

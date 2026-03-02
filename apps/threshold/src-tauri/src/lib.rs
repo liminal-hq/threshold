@@ -100,6 +100,8 @@ pub fn run() {
         commands::request_alarm_sync,
         commands::test_watch_ring,
         commands::set_snooze_length,
+        commands::set_time_format,
+        commands::mark_alarm_pipeline_ready,
     ]);
 
     builder = builder
@@ -434,11 +436,6 @@ pub fn run() {
             #[cfg(mobile)]
             if let Err(error) = app.handle().wear_sync().mark_watch_pipeline_ready() {
                 log::warn!("watch: failed to mark watch pipeline ready: {error}");
-            }
-
-            #[cfg(mobile)]
-            if let Err(error) = app.handle().alarm_manager().mark_alarm_pipeline_ready() {
-                log::warn!("alarm-manager: failed to mark alarm pipeline ready: {error}");
             }
 
             // Schedule daily maintenance
