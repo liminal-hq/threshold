@@ -4,6 +4,92 @@ This document tracks all releases of the Threshold application.
 
 ---
 
+## Version 0.1.9
+
+**Release Date:** March 2, 2026
+**Status:** Released
+
+> [!NOTE]
+> This release delivers a full alarm ringing experience on Wear OS, cross-device dismiss and snooze coordination, and a ground-up rewrite of the release TUI using Ink.
+
+### ✨ New Features
+
+**Wear OS Ringing Screen**
+
+- Full-screen Compose ringing UI with Material You gradient, breathing ring animations, and threshold indicator
+- Foreground service with vibration, alarm audio via MediaPlayer, and partial wake lock
+- Bidirectional control: dismissing or snoozing on either device dismisses both via event bus routing
+- Disconnected fallback scheduling: watch fires alarms independently via local `AlarmManager.setAlarmClock()` when phone is out of Bluetooth range
+- Offline fallback reconciliation for repeating alarms while connectivity remains unavailable
+- Snooze duration sync from phone settings to watch persistence via DataItem payload
+- Ring deduplication to prevent duplicate ringing when multiple messages arrive
+- "Test Watch Ring" button in phone settings and "Test Ring" in watch settings
+- Three design iteration mockups (soft-glow, Material+Liminal, standard buttons)
+
+**Cross-Device Ringing Coordination**
+
+- Phone ringing screen closes when watch stops or snoozes the active alarm
+- Guard against duplicate close attempts when local actions and backend events race
+
+**Unified Release TUI**
+
+- Replaced the monolithic `update-release-version.mjs` (1,400+ lines) with a screen-based Ink (React for CLI) TUI in `tools/release-tui/`
+- Full-screen alternate-screen mode with reactive terminal resize, pinned footer, and single-key hotkeys
+- 10 screens: Version Bump, Custom Version, Review, Tag Conflict, Build Offer, Build Progress, Pre-flight Failure, Done, Release Log, and Help
+- CI/non-interactive mode via `--ci` flags with `--bump`, `--redo`, `--build`, `--dry-run`, `--no-commit`, `--no-web-sync`
+- Detailed specification document and 10 SVG screen mockups
+
+### 🐛 Bug Fixes
+
+- Fixed phone ringing UI not closing when watch dismisses or snoozes the alarm
+- Fixed native alarm replay hydration: initialise Rust time-format and snooze state before marking alarm pipeline ready
+- Fixed offline fallback reconciliation so repeating fallback alarms continue scheduling
+- Fixed watch ringing action labels and time bloom presentation
+- Fixed watch 24-hour fallback when phone time format is unknown
+- Fixed ringing task reopening via watch recents
+- Fixed phone and watch alarm stop/snooze state synchronisation
+- Fixed phone ringing route alarms not reporting as fired for wear sync
+- Resolved CI failures in Rust tests and Mermaid lint warnings
+- Fixed release TUI reactive terminal resize and detail panel divider width
+- Fixed release TUI repo root detection when invoked from a subpackage
+
+### 🛠️ Build and Release
+
+- Added tag-driven signed release build workflow for GitHub Actions
+- Refreshed GitHub Actions versions across existing workflows
+- Documented release build pipeline and signing setup
+- Added commander CLI parsing to release TUI
+- Added `tools/*` to `pnpm-workspace.yaml` and wired `pnpm version:release` to the new TUI
+
+### 📚 Documentation
+
+- Added Wear OS ringing implementation docs, work summary, and mockups
+- Added notification action reliability write-up and blog doc links
+- Resolved Mermaid lint warnings in sequence diagrams
+- Added release TUI redesign spec and screen mockups
+- Documented release build pipeline and signing infrastructure
+
+### 📝 Technical Details
+
+**Major PRs Merged (selected):**
+
+- [#177](https://github.com/liminal-hq/threshold/pull/177) - Add Wear OS ringing screen with fallback scheduling and snooze sync
+- [#181](https://github.com/liminal-hq/threshold/pull/181) - Close phone ringing screen when watch stops or snoozes alarm
+- [#180](https://github.com/liminal-hq/threshold/pull/180) - Unified release TUI with Ink, replacing monolithic version script
+- [#179](https://github.com/liminal-hq/threshold/pull/179) - Update notification plugin lockfile to rebased branch head
+
+**Issues Resolved:**
+
+- [#170](https://github.com/liminal-hq/threshold/issues/170)–[#176](https://github.com/liminal-hq/threshold/issues/176) - Wear OS ringing screen feature set
+
+**Commit/Contributor Summary (`0.1.8` → `0.1.9`):**
+
+- **Commits:** 45
+- **Merged PRs:** 4
+- **Contributors:** Scott Morris
+
+---
+
 ## Version 0.1.8
 
 **Release Date:** February 22, 2026  
