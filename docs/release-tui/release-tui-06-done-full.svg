@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 824 556" font-family="'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', Consolas, 'Liberation Mono', Menlo, monospace" font-size="13" letter-spacing="0.02em">
+  <defs>
+    <style>
+      .bg { fill: #1b1f24; } .titlebar { fill: #252930; } .titlebar-text { fill: #9aa4b2; font-size: 12px; }
+      .wm-btn { fill: none; stroke: #5a6270; stroke-width: 1.2; } .wm-icon { fill: #9aa4b2; font-size: 9px; }
+      .text { fill: #d2d8e1; } .muted { fill: #7c8796; } .accent { fill: #5aa2ff; } .cyan { fill: #7dd3fc; }
+      .green { fill: #2ec66a; } .yellow { fill: #ffd166; } .red { fill: #ff6b6b; } .line { fill: #2e3540; } .bold { font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect class="titlebar" width="824" height="36" rx="8"/>
+  <rect class="bg" x="0" y="28" width="824" height="8"/>
+  <text x="412" y="23" class="titlebar-text" text-anchor="middle" font-weight="500">Terminal</text>
+  <circle cx="742" cy="18" r="8" class="wm-btn"/><text x="742" y="21" class="wm-icon" text-anchor="middle">−</text>
+  <circle cx="770" cy="18" r="8" class="wm-btn"/><rect x="765" y="14" width="10" height="8" rx="1" fill="none" stroke="#9aa4b2" stroke-width="1"/>
+  <circle cx="798" cy="18" r="8" class="wm-btn"/><text x="798" y="22" class="wm-icon" text-anchor="middle">✕</text>
+
+  <rect class="bg" x="0" y="36" width="824" height="520"/>
+  <path d="M0,548 Q0,556 8,556 L816,556 Q824,556 824,548 L824,536 L0,536 Z" fill="#1b1f24"/>
+
+  <text x="12" y="68" class="muted bold"> Done</text>
+  <text x="580" y="68" class="muted bold">Threshold Release TUI</text>
+  <line x1="12" y1="78" x2="812" y2="78" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Commit/tag summary -->
+  <text x="36" y="108"><tspan class="green bold">✓</tspan><tspan class="text">  Updated 3 files</tspan></text>
+  <text x="36" y="132"><tspan class="green bold">✓</tspan><tspan class="text">  Created commit: </tspan><tspan class="muted">chore(release): bump versions to 0.1.9</tspan></text>
+  <text x="36" y="156"><tspan class="green bold">✓</tspan><tspan class="text">  Tagged </tspan><tspan class="yellow">v0.1.9</tspan></text>
+
+  <line x1="12" y1="176" x2="812" y2="176" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Artifacts table header -->
+  <text x="12" y="200" class="muted bold"> Artifacts</text>
+  <text x="610" y="200" class="muted bold">Signatures</text>
+  <line x1="596" y1="176" x2="596" y2="358" stroke="#2e3540" stroke-width="1"/>
+
+  <!-- Artifacts rows -->
+  <text x="20" y="224"><tspan class="text">  Phone AAB</tspan><tspan class="muted" dx="12">36.2 MB</tspan></text>
+  <text x="240" y="224" class="accent" font-size="11">release/app-v0.1.9-1009.aab</text>
+  <text x="610" y="224"><tspan class="green">  ✓ </tspan><tspan class="muted">CN=Upload Key</tspan></text>
+
+  <text x="20" y="248"><tspan class="text">  Phone APK</tspan><tspan class="muted" dx="12">38.4 MB</tspan></text>
+  <text x="240" y="248" class="accent" font-size="11">release/app-v0.1.9-1009.apk</text>
+  <text x="610" y="248"><tspan class="green">  ✓ </tspan><tspan class="muted">CN=Upload Key</tspan></text>
+
+  <text x="20" y="272"><tspan class="text">  Phone syms</tspan><tspan class="muted" dx="4">12.8 MB</tspan></text>
+  <text x="240" y="272" class="accent" font-size="11">release/symbols-v0.1.9.zip</text>
+
+  <text x="20" y="296"><tspan class="text">  Wear AAB</tspan><tspan class="muted" dx="20"> 4.1 MB</tspan></text>
+  <text x="240" y="296" class="accent" font-size="11">release/wear-v0.1.9-1009.aab</text>
+  <text x="610" y="296"><tspan class="green">  ✓ </tspan><tspan class="muted">CN=Upload Key</tspan></text>
+
+  <text x="20" y="320"><tspan class="text">  Wear APK</tspan><tspan class="muted" dx="20"> 4.3 MB</tspan></text>
+  <text x="240" y="320" class="accent" font-size="11">release/wear-v0.1.9-1009.apk</text>
+  <text x="610" y="320"><tspan class="green">  ✓ </tspan><tspan class="muted">CN=Upload Key</tspan></text>
+
+  <text x="20" y="344"><tspan class="text">  Wear map</tspan><tspan class="muted" dx="16">856 KB</tspan></text>
+  <text x="240" y="344" class="accent" font-size="11">release/wear-mapping-v0.1.9.txt</text>
+
+  <line x1="12" y1="366" x2="812" y2="366" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Next steps -->
+  <text x="12" y="396"><tspan class="muted bold"> Next</tspan><tspan class="cyan" dx="16">git push origin HEAD &amp;&amp; git push origin v0.1.9</tspan></text>
+  <text x="12" y="420"><tspan class="muted bold"> Play</tspan><tspan class="cyan" dx="16">https://play.google.com/console</tspan><tspan class="muted"> (AABs)</tspan></text>
+  <text x="12" y="444"><tspan class="muted bold"> GitHub</tspan><tspan class="cyan" dx="0">Upload APKs to GitHub release</tspan><tspan class="muted"> (APKs)</tspan></text>
+  <text x="12" y="468"><tspan class="muted bold"> Undo</tspan><tspan class="red" dx="16">git reset --soft HEAD~1 &amp;&amp; git tag -d v0.1.9</tspan></text>
+
+  <line x1="12" y1="498" x2="812" y2="498" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="12" y="522" class="muted"> Release complete: 0.1.9</text>
+  <text x="578" y="522" class="muted">Press <tspan class="cyan">Enter</tspan> to exit</text>
+</svg>

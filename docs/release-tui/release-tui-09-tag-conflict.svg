@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 824 556" font-family="'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', Consolas, 'Liberation Mono', Menlo, monospace" font-size="13" letter-spacing="0.02em">
+  <defs>
+    <style>
+      .bg { fill: #1b1f24; } .titlebar { fill: #252930; } .titlebar-text { fill: #9aa4b2; font-size: 12px; }
+      .wm-btn { fill: none; stroke: #5a6270; stroke-width: 1.2; } .wm-icon { fill: #9aa4b2; font-size: 9px; }
+      .text { fill: #d2d8e1; } .muted { fill: #7c8796; } .accent { fill: #5aa2ff; } .cyan { fill: #7dd3fc; }
+      .green { fill: #2ec66a; } .yellow { fill: #ffd166; } .red { fill: #ff6b6b; } .line { fill: #2e3540; } .bold { font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect class="titlebar" width="824" height="36" rx="8"/>
+  <rect class="bg" x="0" y="28" width="824" height="8"/>
+  <text x="412" y="23" class="titlebar-text" text-anchor="middle" font-weight="500">Terminal</text>
+  <circle cx="742" cy="18" r="8" class="wm-btn"/><text x="742" y="21" class="wm-icon" text-anchor="middle">−</text>
+  <circle cx="770" cy="18" r="8" class="wm-btn"/><rect x="765" y="14" width="10" height="8" rx="1" fill="none" stroke="#9aa4b2" stroke-width="1"/>
+  <circle cx="798" cy="18" r="8" class="wm-btn"/><text x="798" y="22" class="wm-icon" text-anchor="middle">✕</text>
+
+  <rect class="bg" x="0" y="36" width="824" height="520"/>
+  <path d="M0,548 Q0,556 8,556 L816,556 Q824,556 824,548 L824,536 L0,536 Z" fill="#1b1f24"/>
+
+  <text x="12" y="68" class="muted bold"> Step 2 of 3</text>
+  <text x="580" y="68" class="muted bold">Threshold Release TUI</text>
+  <line x1="12" y1="78" x2="812" y2="78" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <text x="12" y="118"><tspan class="muted"> Version</tspan><tspan class="text" dx="48">0.1.8</tspan><tspan class="muted"> → </tspan><tspan class="green bold">0.1.9</tspan></text>
+  <text x="12" y="150"><tspan class="muted"> Tag</tspan><tspan class="yellow" dx="88">v0.1.9</tspan></text>
+  <text x="12" y="182"><tspan class="muted"> Commit</tspan><tspan class="text" dx="52">chore(release): bump versions to 0.1.9</tspan></text>
+  <text x="12" y="214"><tspan class="muted"> Files</tspan><tspan class="text" dx="64">3 updated</tspan></text>
+
+  <line x1="12" y1="244" x2="812" y2="244" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Warning -->
+  <text x="12" y="274" class="yellow bold"> Tag v0.1.9 already exists (local)</text>
+  <text x="12" y="298" class="muted"> Created: 2026-02-22    Points to: abc1234</text>
+
+  <text x="36" y="340"><tspan class="accent bold">u</tspan><tspan class="text">  Update local tag to HEAD</tspan></text>
+  <text x="36" y="374"><tspan class="accent bold">t</tspan><tspan class="text">  Enter a different tag name</tspan></text>
+  <text x="36" y="408"><tspan class="accent bold">b</tspan><tspan class="text">  Back to version selection</tspan></text>
+
+  <line x1="12" y1="498" x2="812" y2="498" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="12" y="522" class="muted"> Tag conflict</text>
+  <text x="574" y="522" class="muted">Help: <tspan class="cyan">?</tspan>  Quit: <tspan class="cyan">q</tspan></text>
+</svg>

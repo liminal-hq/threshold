@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 824 556" font-family="'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', Consolas, 'Liberation Mono', Menlo, monospace" font-size="13" letter-spacing="0.02em">
+  <!-- Terminal: 100 cols x 28 rows — consistent across all screens -->
+  <defs>
+    <style>
+      .bg { fill: #1b1f24; }
+      .titlebar { fill: #252930; }
+      .titlebar-text { fill: #9aa4b2; font-size: 12px; }
+      .wm-btn { fill: none; stroke: #5a6270; stroke-width: 1.2; }
+      .wm-icon { fill: #9aa4b2; font-size: 9px; }
+      .text { fill: #d2d8e1; }
+      .muted { fill: #7c8796; }
+      .accent { fill: #5aa2ff; }
+      .cyan { fill: #7dd3fc; }
+      .green { fill: #2ec66a; }
+      .yellow { fill: #ffd166; }
+      .red { fill: #ff6b6b; }
+      .line { fill: #2e3540; }
+      .bold { font-weight: 700; }
+    </style>
+  </defs>
+
+  <!-- GNOME title bar -->
+  <rect class="titlebar" width="824" height="36" rx="8"/>
+  <rect class="bg" x="0" y="28" width="824" height="8"/>
+  <text x="412" y="23" class="titlebar-text" text-anchor="middle" font-weight="500">Terminal</text>
+
+  <!-- Window buttons (right side, GNOME style) -->
+  <circle cx="742" cy="18" r="8" class="wm-btn"/>
+  <text x="742" y="21" class="wm-icon" text-anchor="middle">−</text>
+
+  <circle cx="770" cy="18" r="8" class="wm-btn"/>
+  <rect x="765" y="14" width="10" height="8" rx="1" fill="none" stroke="#9aa4b2" stroke-width="1"/>
+
+  <circle cx="798" cy="18" r="8" class="wm-btn"/>
+  <text x="798" y="22" class="wm-icon" text-anchor="middle">✕</text>
+
+  <!-- Terminal body -->
+  <rect class="bg" x="0" y="36" width="824" height="520"/>
+  <path d="M0,548 L0,548 Q0,556 8,556 L816,556 Q824,556 824,548 L824,536 L0,536 Z" fill="#1b1f24"/>
+
+  <!-- Row 1: Header -->
+  <text x="12" y="68" class="muted bold"> Step 2 of 2</text>
+  <text x="580" y="68" class="muted bold">Threshold Release TUI</text>
+
+  <!-- Row 2: Divider -->
+  <line x1="12" y1="78" x2="812" y2="78" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Vertical pipe separator for detail panel -->
+  <line x1="420" y1="84" x2="420" y2="492" stroke="#2e3540" stroke-width="1"/>
+
+  <!-- LEFT SIDE: Summary -->
+
+  <!-- Row 4: Version -->
+  <text x="12" y="120">
+    <tspan class="muted"> Version</tspan>
+    <tspan class="text" dx="32">0.1.8</tspan>
+    <tspan class="muted"> → </tspan>
+    <tspan class="green bold">0.1.9</tspan>
+  </text>
+
+  <!-- Row 6: Tag -->
+  <text x="12" y="156">
+    <tspan class="muted"> Tag</tspan>
+    <tspan class="yellow" dx="72">v0.1.9</tspan>
+  </text>
+
+  <!-- Row 8: Commit -->
+  <text x="12" y="192">
+    <tspan class="muted"> Commit</tspan>
+    <tspan class="text" dx="36">chore(release): bump...</tspan>
+  </text>
+
+  <!-- Row 10: Files -->
+  <text x="12" y="228">
+    <tspan class="muted"> Files</tspan>
+    <tspan class="text" dx="48">3 updated</tspan>
+  </text>
+
+  <!-- RIGHT SIDE: Detail panel -->
+
+  <!-- Panel title -->
+  <text x="436" y="108" class="muted bold"> Details</text>
+
+  <!-- Panel sub-divider -->
+  <line x1="436" y1="116" x2="812" y2="116" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- File 1: tauri.conf.json -->
+  <text x="436" y="146" class="accent bold"> tauri.conf.json</text>
+  <text x="452" y="166">
+    <tspan class="muted">version</tspan>
+    <tspan class="text" dx="40">0.1.8</tspan>
+    <tspan class="muted"> → </tspan>
+    <tspan class="green">0.1.9</tspan>
+  </text>
+  <text x="452" y="184">
+    <tspan class="muted">android vCode</tspan>
+    <tspan class="text" dx="8">1008</tspan>
+    <tspan class="muted"> → </tspan>
+    <tspan class="green">1009</tspan>
+  </text>
+
+  <!-- File 2: build.gradle.kts -->
+  <text x="436" y="218" class="accent bold"> build.gradle.kts</text>
+  <text x="452" y="238">
+    <tspan class="muted">versionName</tspan>
+    <tspan class="text" dx="16">0.1.8</tspan>
+    <tspan class="muted"> → </tspan>
+    <tspan class="green">0.1.9</tspan>
+  </text>
+  <text x="452" y="256">
+    <tspan class="muted">versionCode</tspan>
+    <tspan class="text" dx="16">1000001008</tspan>
+    <tspan class="muted"> → </tspan>
+    <tspan class="green">1000001009</tspan>
+  </text>
+
+  <!-- File 3: package.json -->
+  <text x="436" y="290" class="accent bold"> package.json</text>
+  <text x="452" y="310">
+    <tspan class="muted">version</tspan>
+    <tspan class="text" dx="40">0.1.8</tspan>
+    <tspan class="muted"> → </tspan>
+    <tspan class="green">0.1.9</tspan>
+  </text>
+
+  <!-- Row 26: Divider -->
+  <line x1="12" y1="498" x2="812" y2="498" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Row 27: Footer -->
+  <text x="12" y="522" class="muted"> Review changes</text>
+  <text x="262" y="522" class="muted">Apply: <tspan class="cyan">a</tspan>/<tspan class="cyan">Enter</tspan>  Details: <tspan class="cyan">d</tspan>  Back: <tspan class="cyan">b</tspan>  Help: <tspan class="cyan">?</tspan>  Quit: <tspan class="cyan">q</tspan></text>
+</svg>

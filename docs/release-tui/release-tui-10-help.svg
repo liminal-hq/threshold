@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 824 556" font-family="'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', Consolas, 'Liberation Mono', Menlo, monospace" font-size="13" letter-spacing="0.02em">
+  <defs>
+    <style>
+      .bg { fill: #1b1f24; } .titlebar { fill: #252930; } .titlebar-text { fill: #9aa4b2; font-size: 12px; }
+      .wm-btn { fill: none; stroke: #5a6270; stroke-width: 1.2; } .wm-icon { fill: #9aa4b2; font-size: 9px; }
+      .text { fill: #d2d8e1; } .muted { fill: #7c8796; } .accent { fill: #5aa2ff; } .cyan { fill: #7dd3fc; }
+      .green { fill: #2ec66a; } .yellow { fill: #ffd166; } .red { fill: #ff6b6b; } .line { fill: #2e3540; } .bold { font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect class="titlebar" width="824" height="36" rx="8"/>
+  <rect class="bg" x="0" y="28" width="824" height="8"/>
+  <text x="412" y="23" class="titlebar-text" text-anchor="middle" font-weight="500">Terminal</text>
+  <circle cx="742" cy="18" r="8" class="wm-btn"/><text x="742" y="21" class="wm-icon" text-anchor="middle">−</text>
+  <circle cx="770" cy="18" r="8" class="wm-btn"/><rect x="765" y="14" width="10" height="8" rx="1" fill="none" stroke="#9aa4b2" stroke-width="1"/>
+  <circle cx="798" cy="18" r="8" class="wm-btn"/><text x="798" y="22" class="wm-icon" text-anchor="middle">✕</text>
+
+  <rect class="bg" x="0" y="36" width="824" height="520"/>
+  <path d="M0,548 Q0,556 8,556 L816,556 Q824,556 824,548 L824,536 L0,536 Z" fill="#1b1f24"/>
+
+  <text x="12" y="68" class="muted bold"> Help</text>
+  <text x="580" y="68" class="muted bold">Threshold Release TUI</text>
+  <line x1="12" y1="78" x2="812" y2="78" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Global -->
+  <text x="12" y="110" class="accent bold"> Global keys</text>
+  <text x="36" y="132" class="cyan">?</text><text x="120" y="132" class="text">Toggle this help</text>
+  <text x="36" y="150" class="cyan">q</text><text x="120" y="150" class="text">Quit without changes</text>
+  <text x="36" y="168" class="cyan">Ctrl+C</text><text x="120" y="168" class="text">Quit / abort build</text>
+
+  <!-- Version bump -->
+  <text x="12" y="200" class="accent bold"> Version bump (Screen 1)</text>
+  <text x="36" y="222" class="cyan">p</text><text x="120" y="222" class="text">Patch bump</text>
+  <text x="36" y="240" class="cyan">n</text><text x="120" y="240" class="text">Minor bump</text>
+  <text x="36" y="258" class="cyan">j</text><text x="120" y="258" class="text">Major bump</text>
+  <text x="36" y="276" class="cyan">c</text><text x="120" y="276" class="text">Custom version</text>
+  <text x="36" y="294" class="cyan">r</text><text x="120" y="294" class="text">Redo current version (re-tag + rebuild)</text>
+  <text x="36" y="312" class="cyan">l</text><text x="120" y="312" class="text">View release log</text>
+
+  <!-- Review -->
+  <text x="12" y="344" class="accent bold"> Review (Screen 2)</text>
+  <text x="36" y="366" class="cyan">a/Enter</text><text x="120" y="366" class="text">Apply all changes</text>
+  <text x="36" y="384" class="cyan">d</text><text x="120" y="384" class="text">Toggle detail panel</text>
+  <text x="36" y="402" class="cyan">b</text><text x="120" y="402" class="text">Back to version bump</text>
+
+  <!-- Tag + Build -->
+  <text x="400" y="110" class="accent bold"> Tag conflict (if shown)</text>
+  <text x="424" y="132" class="cyan">u</text><text x="508" y="132" class="text">Update existing tag</text>
+  <text x="424" y="150" class="cyan">t</text><text x="508" y="150" class="text">Enter different tag</text>
+
+  <text x="400" y="182" class="accent bold"> Build (Screen 2.5)</text>
+  <text x="424" y="204" class="cyan">b</text><text x="508" y="204" class="text">Build phone + wear AABs/APKs</text>
+  <text x="424" y="222" class="cyan">s</text><text x="508" y="222" class="text">Skip build</text>
+  <text x="424" y="240" class="cyan">r</text><text x="508" y="240" class="text">Retry failed build</text>
+
+  <line x1="12" y1="498" x2="812" y2="498" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="12" y="522" class="muted"> Help</text>
+  <text x="540" y="522" class="muted">Press <tspan class="cyan">any key</tspan> to close</text>
+</svg>

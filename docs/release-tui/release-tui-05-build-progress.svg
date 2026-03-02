@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 824 556" font-family="'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', Consolas, 'Liberation Mono', Menlo, monospace" font-size="13" letter-spacing="0.02em">
+  <defs>
+    <style>
+      .bg { fill: #1b1f24; }
+      .titlebar { fill: #252930; }
+      .titlebar-text { fill: #9aa4b2; font-size: 12px; }
+      .wm-btn { fill: none; stroke: #5a6270; stroke-width: 1.2; }
+      .wm-icon { fill: #9aa4b2; font-size: 9px; }
+      .text { fill: #d2d8e1; }
+      .muted { fill: #7c8796; }
+      .accent { fill: #5aa2ff; }
+      .cyan { fill: #7dd3fc; }
+      .green { fill: #2ec66a; }
+      .yellow { fill: #ffd166; }
+      .amber { fill: #fbbf24; }
+      .red { fill: #ff6b6b; }
+      .line { fill: #2e3540; }
+      .bold { font-weight: 700; }
+
+      /* Threshold clock animations */
+      @keyframes sweep-hand {
+        0%   { transform: rotate(0deg); }
+        100% { transform: rotate(210deg); }
+      }
+      @keyframes pulse-glow {
+        0%, 100% { opacity: 0.15; }
+        50%      { opacity: 0.35; }
+      }
+      @keyframes float-up-1 {
+        0%   { transform: translate(0, 0); opacity: 0; }
+        15%  { opacity: 0.6; }
+        85%  { opacity: 0.6; }
+        100% { transform: translate(-30px, -180px); opacity: 0; }
+      }
+      @keyframes float-up-2 {
+        0%   { transform: translate(0, 0); opacity: 0; }
+        20%  { opacity: 0.4; }
+        80%  { opacity: 0.4; }
+        100% { transform: translate(20px, -160px); opacity: 0; }
+      }
+      @keyframes float-up-3 {
+        0%   { transform: translate(0, 0); opacity: 0; }
+        10%  { opacity: 0.5; }
+        90%  { opacity: 0.5; }
+        100% { transform: translate(-15px, -200px); opacity: 0; }
+      }
+      @keyframes arc-draw {
+        0%   { stroke-dashoffset: 80; }
+        100% { stroke-dashoffset: 22; }
+      }
+      @keyframes bar-fill {
+        0%   { width: 0; }
+        100% { width: 235px; }
+      }
+      .sweep { animation: sweep-hand 8s linear infinite; transform-origin: 680px 280px; }
+      .glow  { animation: pulse-glow 3s ease-in-out infinite; }
+      .particle-1 { animation: float-up-1 4s ease-out infinite; }
+      .particle-2 { animation: float-up-2 5s ease-out 1.5s infinite; }
+      .particle-3 { animation: float-up-3 3.5s ease-out 0.8s infinite; }
+      .arc-anim   { animation: arc-draw 8s linear infinite; }
+    </style>
+
+    <!-- Ambient glow behind clock -->
+    <radialGradient id="amber-glow" cx="680" cy="280" r="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- GNOME chrome -->
+  <rect class="titlebar" width="824" height="36" rx="8"/>
+  <rect class="bg" x="0" y="28" width="824" height="8"/>
+  <text x="412" y="23" class="titlebar-text" text-anchor="middle" font-weight="500">Terminal</text>
+  <circle cx="742" cy="18" r="8" class="wm-btn"/><text x="742" y="21" class="wm-icon" text-anchor="middle">−</text>
+  <circle cx="770" cy="18" r="8" class="wm-btn"/><rect x="765" y="14" width="10" height="8" rx="1" fill="none" stroke="#9aa4b2" stroke-width="1"/>
+  <circle cx="798" cy="18" r="8" class="wm-btn"/><text x="798" y="22" class="wm-icon" text-anchor="middle">✕</text>
+
+  <!-- Terminal body -->
+  <rect class="bg" x="0" y="36" width="824" height="520"/>
+  <path d="M0,548 Q0,556 8,556 L816,556 Q824,556 824,548 L824,536 L0,536 Z" fill="#1b1f24"/>
+
+  <!-- Header -->
+  <text x="12" y="68" class="muted bold"> Building</text>
+  <text x="580" y="68" class="muted bold">Threshold Release TUI</text>
+  <line x1="12" y1="78" x2="812" y2="78" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- ==================== LEFT SIDE: Build status ==================== -->
+
+  <!-- Phone AAB/APK: completed -->
+  <text x="16" y="106" class="green bold"> ✓</text>
+  <text x="36" y="106" class="text bold"> Phone AAB</text>
+  <text x="440" y="106" class="muted">36.2 MB</text>
+  <text x="16" y="124" class="green bold"> ✓</text>
+  <text x="36" y="124" class="text bold"> Phone APK</text>
+  <text x="440" y="124" class="muted">38.4 MB</text>
+  <text x="510" y="115" class="muted">42s</text>
+
+  <!-- Phone progress bar (full) -->
+  <rect x="36" y="134" width="404" height="10" rx="2" fill="#2e3540"/>
+  <rect x="36" y="134" width="404" height="10" rx="2" fill="#2ec66a"/>
+
+  <!-- Wear AAB/APK: building -->
+  <text x="16" y="170" class="cyan bold"> ▸</text>
+  <text x="36" y="170" class="text bold"> Wear AAB/APK</text>
+  <text x="540" y="170" class="yellow">Building...</text>
+
+  <!-- Wear progress bar (58%) -->
+  <rect x="36" y="178" width="404" height="10" rx="2" fill="#2e3540"/>
+  <rect x="36" y="178" width="235" height="10" rx="2" fill="#fbbf24">
+    <animate attributeName="width" from="180" to="280" dur="8s" repeatCount="indefinite"/>
+  </rect>
+  <text x="448" y="187" class="muted" font-size="11">58%</text>
+
+  <!-- Divider before build log -->
+  <line x1="12" y1="200" x2="540" y2="200" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Build log -->
+  <text x="12" y="222" class="muted bold"> Build log</text>
+  <text x="20" y="248" class="muted" font-size="11"> &gt; ./gradlew --project-dir apps/threshold-wear bundleRelease assembleRelease</text>
+  <text x="20" y="266" class="muted" font-size="11"> &gt; :app:compileReleaseKotlin</text>
+  <text x="20" y="284" class="text" font-size="11"> &gt; :app:bundleRelease</text>
+
+  <!-- ==================== RIGHT SIDE: Animated Threshold clock ==================== -->
+
+  <!-- Ambient glow -->
+  <circle cx="680" cy="280" r="90" fill="url(#amber-glow)" class="glow"/>
+
+  <!-- Clock face ring -->
+  <circle cx="680" cy="280" r="60" fill="none" stroke="#334155" stroke-width="2.5"/>
+
+  <!-- 12 o'clock tick mark -->
+  <line x1="680" y1="224" x2="680" y2="232" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- 3 o'clock tick -->
+  <line x1="736" y1="280" x2="728" y2="280" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- 6 o'clock tick -->
+  <line x1="680" y1="336" x2="680" y2="328" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- 9 o'clock tick -->
+  <line x1="624" y1="280" x2="632" y2="280" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Threshold range arc (the amber "window" — 6:00 to 8:00 position) -->
+  <path d="M 680 340 A 60 60 0 0 1 627.36 310"
+        fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" opacity="0.5"
+        stroke-dasharray="80" class="arc-anim"/>
+
+  <!-- Ghost hand 1 (faint, at 6:30 position) -->
+  <line x1="680" y1="280" x2="664.44" y2="337.93" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" opacity="0.15"/>
+
+  <!-- Ghost hand 2 (faint, at 7:30 position) -->
+  <line x1="680" y1="280" x2="641.7" y2="322.43" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" opacity="0.15"/>
+
+  <!-- Sweeping minute hand (animated — the "build progress" hand) -->
+  <g class="sweep">
+    <line x1="680" y1="280" x2="680" y2="232" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Hour hand (static, points to 12) -->
+  <line x1="680" y1="280" x2="680" y2="248" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Center dot -->
+  <circle cx="680" cy="280" r="3" fill="#fbbf24"/>
+
+  <!-- Arc endpoint dots -->
+  <circle cx="680" cy="340" r="2" fill="#fbbf24" opacity="0.3"/>
+  <circle cx="627.36" cy="310" r="2" fill="#fbbf24" opacity="0.3"/>
+
+  <!-- Floating amber particles -->
+  <circle cx="660" cy="360" r="1.5" fill="#fbbf24" class="particle-1"/>
+  <circle cx="700" cy="350" r="1" fill="#fbbf24" class="particle-2"/>
+  <circle cx="675" cy="365" r="1.2" fill="#fbbf24" class="particle-3"/>
+  <circle cx="690" cy="370" r="0.8" fill="#fbbf24" class="particle-1" style="animation-delay: 2s"/>
+  <circle cx="650" cy="355" r="1" fill="#fbbf24" class="particle-2" style="animation-delay: 3s"/>
+
+  <!-- Version label under clock -->
+  <text x="680" y="378" class="muted" font-size="11" text-anchor="middle">v0.1.9</text>
+
+  <!-- Bottom divider -->
+  <line x1="12" y1="498" x2="812" y2="498" stroke="#2e3540" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Footer -->
+  <text x="12" y="522" class="muted"> Building wear AAB/APK...</text>
+  <text x="538" y="522" class="muted">Abort: <tspan class="cyan">Ctrl+C</tspan>  Quit: <tspan class="cyan">q</tspan></text>
+</svg>
