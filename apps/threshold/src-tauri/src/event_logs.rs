@@ -25,17 +25,14 @@ fn truncate_to_limit(value: &str, limit: usize) -> (String, bool) {
     (value[..end].to_string(), true)
 }
 
-fn collect_event_logs(app: &AppHandle) -> Result<String, String> {
-    let log_dir = app
-        .path()
-        .app_log_dir()
-        .map_err(|err| format!("Failed to locate log directory: {err}"))?;
-    let app_name = app.package_info().name.clone();
-    let app_version = app.package_info().version.to_string();
-
+fn read_and_format_logs(
+    log_dir: PathBuf,
+    app_name: String,
+    app_version: String,
+) -> Result<String, String> {
     let mut entries: Vec<(PathBuf, SystemTime)> = Vec::new();
-    let read_dir = fs::read_dir(&log_dir)
-        .map_err(|err| format!("Failed to read log directory: {err}"))?;
+    let read_dir =
+        fs::read_dir(&log_dir).map_err(|err| format!("Failed to read log directory: {err}"))?;
 
     for entry in read_dir {
         let entry = entry.map_err(|err| format!("Failed to read log entry: {err}"))?;
@@ -116,9 +113,24 @@ fn collect_event_logs(app: &AppHandle) -> Result<String, String> {
     Ok(output)
 }
 
+async fn collect_event_logs(app: AppHandle) -> Result<String, String> {
+    let log_dir = app
+        .path()
+        .app_log_dir()
+        .map_err(|err| format!("Failed to locate log directory: {err}"))?;
+    let app_name = app.package_info().name.clone();
+    let app_version = app.package_info().version.to_string();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        read_and_format_logs(log_dir, app_name, app_version)
+    })
+    .await
+    .map_err(|err| format!("Failed to spawn blocking task: {err}"))?
+}
+
 #[tauri::command]
-pub fn export_event_logs(app: AppHandle, destination: String) -> Result<String, String> {
-    let content = collect_event_logs(&app)?;
+pub async fn export_event_logs(app: AppHandle, destination: String) -> Result<String, String> {
+    let content = collect_event_logs(app).await?;
     if destination.starts_with("content://") {
         return Err(
             "Android content URIs are not supported for log export. Please choose a file path."
@@ -128,32 +140,36 @@ pub fn export_event_logs(app: AppHandle, destination: String) -> Result<String, 
 
     let normalised_destination = destination
         .strip_prefix("file://")
-        .unwrap_or(destination.as_str());
-    let destination_path = PathBuf::from(normalised_destination);
-    if let Some(parent) = destination_path.parent() {
-        if !parent.exists() {
-            fs::create_dir_all(parent)
-                .map_err(|err| format!("Failed to create log export directory: {err}"))?;
-        }
-    }
+        .unwrap_or(destination.as_str())
+        .to_string();
 
-    fs::write(&destination_path, content)
-        .map_err(|err| {
-            format!(
-                "Failed to write event logs to {normalised_destination}: {err}"
-            )
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(&normalised_destination);
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)
+                    .map_err(|err| format!("Failed to create log export directory: {err}"))?;
+            }
+        }
+
+        fs::write(&path, content).map_err(|err| {
+            format!("Failed to write event logs to {normalised_destination}: {err}")
         })?;
-    Ok(normalised_destination.to_string())
+        Ok(normalised_destination)
+    })
+    .await
+    .map_err(|err| format!("Failed to spawn blocking task: {err}"))?
 }
 
 #[tauri::command]
-pub fn get_event_logs(app: AppHandle) -> Result<String, String> {
-    collect_event_logs(&app)
+pub async fn get_event_logs(app: AppHandle) -> Result<String, String> {
+    collect_event_logs(app).await
 }
 
 #[cfg(test)]
 mod tests {
-    use super::truncate_to_limit;
+    use super::{read_and_format_logs, truncate_to_limit};
+    use std::fs;
 
     #[test]
     fn truncate_to_limit_returns_full_string_when_under_limit() {
@@ -175,5 +191,36 @@ mod tests {
         let (value, truncated) = truncate_to_limit(original, 5);
         assert_eq!(value, "log");
         assert!(truncated);
+    }
+
+    #[test]
+    fn read_and_format_logs_works() {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let temp_dir = std::env::temp_dir().join(format!("threshold-test-{}", timestamp));
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let app_name = "test-app".to_string();
+        let app_version = "1.0.0".to_string();
+
+        let log_file = temp_dir.join("test-app.log");
+        fs::write(&log_file, "Log content").unwrap();
+
+        // Also create a file that should be ignored
+        let ignored_file = temp_dir.join("other.log");
+        fs::write(&ignored_file, "Ignored content").unwrap();
+
+        let result =
+            read_and_format_logs(temp_dir.clone(), app_name.clone(), app_version.clone()).unwrap();
+
+        assert!(result.contains("test-app event logs"));
+        assert!(result.contains("Version: 1.0.0"));
+        assert!(result.contains("==== test-app.log ===="));
+        assert!(result.contains("Log content"));
+        assert!(!result.contains("Ignored content"));
+
+        fs::remove_dir_all(&temp_dir).unwrap();
     }
 }
