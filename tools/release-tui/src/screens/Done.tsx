@@ -38,8 +38,8 @@ export function Done({ version, tagName, filesChanged, isRedo, artifacts, onExit
 
 	const hasArtifacts = artifacts && (artifacts.phone?.aab || artifacts.wear?.aab);
 
-	useInput((_input, key) => {
-		if (key.return) return onExit();
+	useInput((input, key) => {
+		if (key.return || key.escape || input === 'q') return onExit();
 	});
 
 	return (

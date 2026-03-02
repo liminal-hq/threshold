@@ -153,16 +153,33 @@ async function main(): Promise<void> {
 
 	ensureRepoRoot();
 
-	const { waitUntilExit } = render(<App />, {
-		exitOnCtrlC: true,
-	});
+	// Enter alternate screen buffer (like vim/mc)
+	process.stdout.write('\x1b[?1049h'); // Alt screen
+	process.stdout.write('\x1b[?25l'); // Hide cursor
 
-	await waitUntilExit();
+	const leave = () => {
+		process.stdout.write('\x1b[?25h'); // Show cursor
+		process.stdout.write('\x1b[?1049l'); // Restore main screen
+	};
+
+	process.on('exit', leave);
+
+	try {
+		const { waitUntilExit } = render(<App />, {
+			exitOnCtrlC: true,
+		});
+
+		await waitUntilExit();
+	} finally {
+		leave();
+	}
 
 	// Print one-liner to main terminal on exit
 	try {
 		const state = readCurrentState();
-		console.log(`Threshold Release TUI \u2014 ${state.tauriVersionName} (v${state.tauriVersionName})`);
+		console.log(
+			`Threshold Release TUI \u2014 ${state.tauriVersionName} (v${state.tauriVersionName})`,
+		);
 	} catch {
 		// Ignore if state reading fails on exit
 	}

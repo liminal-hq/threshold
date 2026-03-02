@@ -33,11 +33,11 @@ export function TagConflict({
 	const date = localExists ? findLocalTagDate(tagName) : null;
 	const commit = localExists ? findLocalTagCommit(tagName) : null;
 
-	useInput((input) => {
+	useInput((input, key) => {
 		if (input === 'u') return onUpdate();
 		if (input === 't') return onRename();
 		if (input === 'b') return onBack();
-		if (input === 'q') return onQuit();
+		if (input === 'q' || key.escape) return onQuit();
 	});
 
 	return (

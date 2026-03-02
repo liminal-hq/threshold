@@ -77,7 +77,7 @@ export function Review({ currentState, draft, onApply, onBack, onHelp, onQuit }:
 	}
 
 	useInput((input, key) => {
-		if (input === 'q') return onQuit();
+		if (input === 'q' || key.escape) return onQuit();
 		if (input === '?' || (key.shift && input === '/')) return onHelp();
 		if (input === 'a' || key.return) return onApply();
 		if (input === 'd') return setShowDetails((prev) => !prev);

@@ -23,7 +23,7 @@ export function BuildOffer({ version, tagName, onBuild, onSkip, onHelp, onQuit }
 		if (input === 'b') return onBuild();
 		if (input === 's') return onSkip();
 		if (input === '?' || (key.shift && input === '/')) return onHelp();
-		if (input === 'q') return onQuit();
+		if (input === 'q' || key.escape) return onQuit();
 	});
 
 	return (

@@ -36,7 +36,7 @@ export function VersionBump({
 	const majorVer = bumpSemver(ver, 'major');
 
 	useInput((input, key) => {
-		if (input === 'q') return onQuit();
+		if (input === 'q' || key.escape) return onQuit();
 		if (input === '?' || (key.shift && input === '/')) return onHelp();
 		if (input === 'l') return onReleaseLog();
 		if (input === 'p') return onSelect({ mode: 'bump', version: patchVer });

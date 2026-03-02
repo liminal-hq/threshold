@@ -17,9 +17,9 @@ interface PreflightFailureProps {
 }
 
 export function PreflightFailure({ checks, onBack, onQuit }: PreflightFailureProps) {
-	useInput((input) => {
+	useInput((input, key) => {
 		if (input === 'b') return onBack();
-		if (input === 'q') return onQuit();
+		if (input === 'q' || key.escape) return onQuit();
 	});
 
 	return (
