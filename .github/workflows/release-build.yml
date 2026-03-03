@@ -295,6 +295,24 @@ jobs:
           key_alias_raw="$(printf '%s' "${ANDROID_UPLOAD_KEY_ALIAS:-}" | tr -d '\r\n')"
           keystore_password_raw="$(printf '%s' "${ANDROID_UPLOAD_KEYSTORE_PASSWORD:-}" | tr -d '\r\n')"
 
+          # Remove accidental wrapping quotes from copied secret values.
+          if [ "${key_alias_raw#\"}" != "$key_alias_raw" ] && [ "${key_alias_raw%\"}" != "$key_alias_raw" ]; then
+            key_alias_raw="${key_alias_raw#\"}"
+            key_alias_raw="${key_alias_raw%\"}"
+          fi
+          if [ "${key_alias_raw#\'}" != "$key_alias_raw" ] && [ "${key_alias_raw%\'}" != "$key_alias_raw" ]; then
+            key_alias_raw="${key_alias_raw#\'}"
+            key_alias_raw="${key_alias_raw%\'}"
+          fi
+          if [ "${keystore_password_raw#\"}" != "$keystore_password_raw" ] && [ "${keystore_password_raw%\"}" != "$keystore_password_raw" ]; then
+            keystore_password_raw="${keystore_password_raw#\"}"
+            keystore_password_raw="${keystore_password_raw%\"}"
+          fi
+          if [ "${keystore_password_raw#\'}" != "$keystore_password_raw" ] && [ "${keystore_password_raw%\'}" != "$keystore_password_raw" ]; then
+            keystore_password_raw="${keystore_password_raw#\'}"
+            keystore_password_raw="${keystore_password_raw%\'}"
+          fi
+
           key_alias_trimmed="$(printf '%s' "$key_alias_raw" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
           keystore_password_trimmed="$(printf '%s' "$keystore_password_raw" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
 
