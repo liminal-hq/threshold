@@ -551,6 +551,39 @@ jobs:
           name: android-artefacts
           path: release-assets/android
 
+      - name: Prepare release upload files
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets/publish
+
+          mapfile -t desktop_files < <(find release-assets/desktop -type f \( \
+            -name "*.AppImage" -o \
+            -name "*.deb" -o \
+            -name "*.rpm" -o \
+            -name "*.msi" -o \
+            -name "*setup*.exe" \
+          \) | sort)
+
+          mapfile -t android_files < <(find release-assets/android -type f \( \
+            -name "*.aab" -o \
+            -name "*.apk" -o \
+            -name "*.txt" -o \
+            -name "*.zip" \
+          \) | sort)
+
+          if [ "${#desktop_files[@]}" -eq 0 ] && [ "${#android_files[@]}" -eq 0 ]; then
+            echo "No release artefacts found to publish" >&2
+            exit 1
+          fi
+
+          for file in "${desktop_files[@]}" "${android_files[@]}"; do
+            [ -n "${file:-}" ] || continue
+            cp "$file" release-assets/publish/
+          done
+
+          echo "Prepared release upload files:"
+          ls -lah release-assets/publish
+
       - name: Publish GitHub release
         id: publish_release
         uses: softprops/action-gh-release@v2.5.0
@@ -559,8 +592,7 @@ jobs:
           name: Threshold ${{ needs.verify-release-source.outputs.release_tag }}
           generate_release_notes: true
           files: |
-            release-assets/desktop/**/*
-            release-assets/android/**/*
+            release-assets/publish/*
 
       - name: Summarise release publish
         if: always()
@@ -572,7 +604,7 @@ jobs:
 
           desktop_count=$(find release-assets/desktop -type f | wc -l | tr -d ' ')
           android_count=$(find release-assets/android -type f | wc -l | tr -d ' ')
-          total_count=$((desktop_count + android_count))
+          upload_count=$(find release-assets/publish -type f | wc -l | tr -d ' ')
 
           {
             echo "## Release Publish Summary"
@@ -580,12 +612,16 @@ jobs:
             echo "- Publish result: \`${PUBLISH_RESULT}\`"
             echo "- Release tag: \`${RELEASE_TAG}\`"
             echo "- Release URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}"
-            echo "- Assets staged: ${total_count} (${desktop_count} desktop, ${android_count} Android)"
+            echo "- Assets discovered: ${desktop_count} desktop, ${android_count} Android"
+            echo "- Assets uploaded: ${upload_count}"
             echo "- Run URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo ""
-            echo "### Desktop assets"
+            echo "### Uploaded assets"
+            find release-assets/publish -type f | sort | sed 's#^#- `#; s#$#`#'
+            echo ""
+            echo "### Desktop assets discovered"
             find release-assets/desktop -type f | sort | sed 's#^#- `#; s#$#`#'
             echo ""
-            echo "### Android assets"
+            echo "### Android assets discovered"
             find release-assets/android -type f | sort | sed 's#^#- `#; s#$#`#'
           } >> "${GITHUB_STEP_SUMMARY}"
