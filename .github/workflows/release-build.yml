@@ -97,32 +97,87 @@ jobs:
           echo "should_release=false" >> "$GITHUB_OUTPUT"
 
   build-desktop:
-    runs-on: ubuntu-24.04
     needs: verify-release-source
     if: needs.verify-release-source.outputs.should_release == 'true'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform_label: linux
+            arch_label: x64
+            tauri_args: ''
+            tauri_target: ''
+            bundle_path: target/release/bundle/**
+            artefact_name: desktop-linux-x64-artefacts
+          - runner: ubuntu-24.04-arm
+            platform_label: linux
+            arch_label: arm64
+            tauri_args: ''
+            tauri_target: ''
+            bundle_path: target/release/bundle/**
+            artefact_name: desktop-linux-arm64-artefacts
+          - runner: windows-latest
+            platform_label: windows
+            arch_label: x64
+            tauri_args: --target x86_64-pc-windows-msvc
+            tauri_target: x86_64-pc-windows-msvc
+            bundle_path: target/x86_64-pc-windows-msvc/release/bundle/**
+            artefact_name: desktop-windows-x64-artefacts
+          - runner: windows-latest
+            platform_label: windows
+            arch_label: arm64
+            tauri_args: --target aarch64-pc-windows-msvc
+            tauri_target: aarch64-pc-windows-msvc
+            bundle_path: target/aarch64-pc-windows-msvc/release/bundle/**
+            artefact_name: desktop-windows-arm64-artefacts
     defaults:
       run:
         shell: bash
-    container:
-      image: ghcr.io/${{ github.repository }}/ci-base:latest
-      options: --user 0
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - name: Normalise workspace permissions
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.2.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: 'pnpm'
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Rust target
+        if: matrix.tauri_target != ''
+        run: rustup target add ${{ matrix.tauri_target }}
+
+      - name: Install Linux system dependencies
+        if: startsWith(matrix.runner, 'ubuntu')
         run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          if command -v sudo >/dev/null 2>&1; then
-            sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
-          else
-            chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
-          fi
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf \
+            xdg-utils \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-bad \
+            fonts-noto-color-emoji \
+            pkg-config \
+            unzip
 
       - name: Cache Rust
         uses: swatinem/rust-cache@v2.8.2
@@ -136,15 +191,44 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build desktop app
-        run: pnpm build:desktop
+        id: build_tauri
+        uses: tauri-apps/tauri-action@v0.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_BUNDLER_NEW_APPIMAGE_FORMAT: "true"
+        with:
+          projectPath: apps/threshold
+          includeUpdaterJson: false
+          tauriScript: "pnpm tauri"
+          args: ${{ matrix.tauri_args }}
 
       - name: Upload desktop artefacts
+        id: upload_desktop_artefacts
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-artefacts
+          name: ${{ matrix.artefact_name }}
           path: |
-            apps/threshold/src-tauri/target/release/bundle/**
+            ${{ matrix.bundle_path }}
           if-no-files-found: error
+
+      - name: Summarise desktop build
+        if: always()
+        env:
+          BUILD_RESULT: ${{ steps.build_tauri.outcome }}
+          UPLOAD_RESULT: ${{ steps.upload_desktop_artefacts.outcome }}
+          RELEASE_TAG: ${{ needs.verify-release-source.outputs.release_tag }}
+        run: |
+          {
+            echo "## Desktop Build Summary"
+            echo ""
+            echo "- Platform: \`${{ matrix.platform_label }}\`"
+            echo "- Architecture: \`${{ matrix.arch_label }}\`"
+            echo "- Build and package: \`${BUILD_RESULT}\`"
+            echo "- Upload artefacts: \`${UPLOAD_RESULT}\`"
+            echo "- Release tag: \`${RELEASE_TAG}\`"
+            echo "- Release URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}"
+            echo "- Run URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
   build-android:
     runs-on: ubuntu-24.04
@@ -207,8 +291,33 @@ jobs:
           fi
 
           mkdir -p .ci/signing
-          echo "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 -d > .ci/signing/upload-keystore.jks
+
+          keystore_b64="${ANDROID_UPLOAD_KEYSTORE_BASE64:-}"
+          keystore_b64="${keystore_b64#data:*;base64,}"
+          keystore_b64="$(printf '%s' "$keystore_b64" | tr -d '\r\n\t ')"
+
+          # Support both standard and URL-safe base64 encodings.
+          if ! printf '%s' "$keystore_b64" | base64 --decode > .ci/signing/upload-keystore.jks 2>/dev/null; then
+            keystore_b64_urlsafe="$(printf '%s' "$keystore_b64" | tr '_-' '/+')"
+            padding=$(( (4 - ${#keystore_b64_urlsafe} % 4) % 4 ))
+            if [ "$padding" -gt 0 ]; then
+              keystore_b64_urlsafe="${keystore_b64_urlsafe}$(printf '=%.0s' $(seq 1 "$padding"))"
+            fi
+            if ! printf '%s' "$keystore_b64_urlsafe" | base64 --decode > .ci/signing/upload-keystore.jks 2>/dev/null; then
+              echo "Could not decode ANDROID_UPLOAD_KEYSTORE_BASE64 into a valid binary keystore payload" >&2
+              exit 1
+            fi
+          fi
+
           chmod 600 .ci/signing/upload-keystore.jks
+
+          if ! keytool -list \
+            -keystore .ci/signing/upload-keystore.jks \
+            -storepass "$ANDROID_UPLOAD_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_UPLOAD_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "Decoded Android keystore is unreadable or does not contain alias $ANDROID_UPLOAD_KEY_ALIAS with the provided password" >&2
+            exit 1
+          fi
 
           mkdir -p apps/threshold/src-tauri/gen/android
           {
@@ -224,13 +333,16 @@ jobs:
           } > apps/threshold-wear/keystore.properties
 
       - name: Build Android phone app
+        id: build_android_phone
         run: pnpm build:android
 
       - name: Build Android Wear app
+        id: build_android_wear
         run: |
           ./apps/threshold-wear/gradlew --project-dir apps/threshold-wear bundleRelease assembleRelease
 
       - name: Verify Android release signatures
+        id: verify_android_signatures
         run: |
           set -euo pipefail
           mapfile -d '' artefacts < <(find apps/threshold/src-tauri/gen/android/app/build/outputs apps/threshold-wear/build/outputs -type f \( -name "*.aab" -o -name "*.apk" \) -print0)
@@ -245,6 +357,7 @@ jobs:
           done
 
       - name: Collect Android release artefacts
+        id: collect_android_artefacts
         run: |
           set -euo pipefail
           mkdir -p release-assets/android
@@ -312,12 +425,51 @@ jobs:
           ls -lah release-assets/android
 
       - name: Upload Android artefacts
+        id: upload_android_artefacts
         uses: actions/upload-artifact@v7
         with:
           name: android-artefacts
           path: |
             release-assets/android/**
           if-no-files-found: error
+
+      - name: Summarise Android build
+        if: always()
+        env:
+          PHONE_BUILD_RESULT: ${{ steps.build_android_phone.outcome }}
+          WEAR_BUILD_RESULT: ${{ steps.build_android_wear.outcome }}
+          VERIFY_RESULT: ${{ steps.verify_android_signatures.outcome }}
+          COLLECT_RESULT: ${{ steps.collect_android_artefacts.outcome }}
+          UPLOAD_RESULT: ${{ steps.upload_android_artefacts.outcome }}
+          RELEASE_TAG: ${{ needs.verify-release-source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          android_count=0
+          if [ -d release-assets/android ]; then
+            android_count=$(find release-assets/android -type f | wc -l | tr -d ' ')
+          fi
+
+          {
+            echo "## Android Build Summary"
+            echo ""
+            echo "- Phone build: \`${PHONE_BUILD_RESULT}\`"
+            echo "- Wear build: \`${WEAR_BUILD_RESULT}\`"
+            echo "- Signature verification: \`${VERIFY_RESULT}\`"
+            echo "- Collect artefacts: \`${COLLECT_RESULT}\`"
+            echo "- Upload artefacts: \`${UPLOAD_RESULT}\`"
+            echo "- Android assets staged: ${android_count}"
+            echo "- Release tag: \`${RELEASE_TAG}\`"
+            echo "- Release URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}"
+            echo "- Run URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo ""
+            echo "### Android assets"
+            if [ "${android_count}" -gt 0 ]; then
+              find release-assets/android -type f | sort | sed 's#^#- `#; s#$#`#'
+            else
+              echo "- _No Android assets staged_"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Cleanup signing files
         if: always()
@@ -334,8 +486,9 @@ jobs:
       - name: Download desktop artefacts
         uses: actions/download-artifact@v8
         with:
-          name: desktop-artefacts
+          pattern: desktop-*-artefacts
           path: release-assets/desktop
+          merge-multiple: true
 
       - name: Download Android artefacts
         uses: actions/download-artifact@v8
@@ -344,6 +497,7 @@ jobs:
           path: release-assets/android
 
       - name: Publish GitHub release
+        id: publish_release
         uses: softprops/action-gh-release@v2.5.0
         with:
           tag_name: ${{ needs.verify-release-source.outputs.release_tag }}
@@ -352,3 +506,31 @@ jobs:
           files: |
             release-assets/desktop/**/*
             release-assets/android/**/*
+
+      - name: Summarise release publish
+        if: always()
+        env:
+          RELEASE_TAG: ${{ needs.verify-release-source.outputs.release_tag }}
+          PUBLISH_RESULT: ${{ steps.publish_release.outcome }}
+        run: |
+          set -euo pipefail
+
+          desktop_count=$(find release-assets/desktop -type f | wc -l | tr -d ' ')
+          android_count=$(find release-assets/android -type f | wc -l | tr -d ' ')
+          total_count=$((desktop_count + android_count))
+
+          {
+            echo "## Release Publish Summary"
+            echo ""
+            echo "- Publish result: \`${PUBLISH_RESULT}\`"
+            echo "- Release tag: \`${RELEASE_TAG}\`"
+            echo "- Release URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}"
+            echo "- Assets staged: ${total_count} (${desktop_count} desktop, ${android_count} Android)"
+            echo "- Run URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo ""
+            echo "### Desktop assets"
+            find release-assets/desktop -type f | sort | sed 's#^#- `#; s#$#`#'
+            echo ""
+            echo "### Android assets"
+            find release-assets/android -type f | sort | sed 's#^#- `#; s#$#`#'
+          } >> "${GITHUB_STEP_SUMMARY}"
