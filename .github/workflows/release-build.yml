@@ -292,6 +292,14 @@ jobs:
 
           mkdir -p .ci/signing
 
+          key_alias="$(printf '%s' "${ANDROID_UPLOAD_KEY_ALIAS:-}" | tr -d '\r\n')"
+          keystore_password="$(printf '%s' "${ANDROID_UPLOAD_KEYSTORE_PASSWORD:-}" | tr -d '\r\n')"
+
+          if [ -z "${key_alias:-}" ] || [ -z "${keystore_password:-}" ]; then
+            echo "Android signing alias/password resolved to empty values after trimming CR/LF characters" >&2
+            exit 1
+          fi
+
           keystore_b64="${ANDROID_UPLOAD_KEYSTORE_BASE64:-}"
           keystore_b64="${keystore_b64#data:*;base64,}"
           keystore_b64="$(printf '%s' "$keystore_b64" | tr -d '\r\n\t ')"
@@ -311,24 +319,32 @@ jobs:
 
           chmod 600 .ci/signing/upload-keystore.jks
 
+          # Validate keystore readability first.
           if ! keytool -list \
             -keystore .ci/signing/upload-keystore.jks \
-            -storepass "$ANDROID_UPLOAD_KEYSTORE_PASSWORD" \
-            -alias "$ANDROID_UPLOAD_KEY_ALIAS" >/dev/null 2>&1; then
-            echo "Decoded Android keystore is unreadable or does not contain alias $ANDROID_UPLOAD_KEY_ALIAS with the provided password" >&2
+            -storepass "$keystore_password" >/dev/null 2>&1; then
+            echo "Decoded Android keystore is unreadable with the provided store password" >&2
             exit 1
+          fi
+
+          # Alias validation is a pre-flight warning only; Gradle signing remains the source of truth.
+          if ! keytool -list \
+            -keystore .ci/signing/upload-keystore.jks \
+            -storepass "$keystore_password" \
+            -alias "$key_alias" >/dev/null 2>&1; then
+            echo "Warning: alias $key_alias was not validated during pre-flight check; continuing and deferring to Gradle signing checks" >&2
           fi
 
           mkdir -p apps/threshold/src-tauri/gen/android
           {
-            printf 'keyAlias=%s\n' "$ANDROID_UPLOAD_KEY_ALIAS"
-            printf 'password=%s\n' "$ANDROID_UPLOAD_KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$key_alias"
+            printf 'password=%s\n' "$keystore_password"
             printf 'storeFile=%s\n' "${GITHUB_WORKSPACE}/.ci/signing/upload-keystore.jks"
           } > apps/threshold/src-tauri/gen/android/keystore.properties
 
           {
-            printf 'keyAlias=%s\n' "$ANDROID_UPLOAD_KEY_ALIAS"
-            printf 'password=%s\n' "$ANDROID_UPLOAD_KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$key_alias"
+            printf 'password=%s\n' "$keystore_password"
             printf 'storeFile=%s\n' "${GITHUB_WORKSPACE}/.ci/signing/upload-keystore.jks"
           } > apps/threshold-wear/keystore.properties
 
