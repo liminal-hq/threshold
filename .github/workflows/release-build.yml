@@ -292,8 +292,14 @@ jobs:
 
           mkdir -p .ci/signing
 
-          key_alias="$(printf '%s' "${ANDROID_UPLOAD_KEY_ALIAS:-}" | tr -d '\r\n')"
-          keystore_password="$(printf '%s' "${ANDROID_UPLOAD_KEYSTORE_PASSWORD:-}" | tr -d '\r\n')"
+          key_alias_raw="$(printf '%s' "${ANDROID_UPLOAD_KEY_ALIAS:-}" | tr -d '\r\n')"
+          keystore_password_raw="$(printf '%s' "${ANDROID_UPLOAD_KEYSTORE_PASSWORD:-}" | tr -d '\r\n')"
+
+          key_alias_trimmed="$(printf '%s' "$key_alias_raw" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+          keystore_password_trimmed="$(printf '%s' "$keystore_password_raw" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+
+          key_alias="$key_alias_raw"
+          keystore_password="$keystore_password_raw"
 
           if [ -z "${key_alias:-}" ] || [ -z "${keystore_password:-}" ]; then
             echo "Android signing alias/password resolved to empty values after trimming CR/LF characters" >&2
@@ -319,10 +325,17 @@ jobs:
 
           chmod 600 .ci/signing/upload-keystore.jks
 
-          # Validate keystore readability first.
-          if ! keytool -list \
+          # Validate keystore readability first (exact value), then fallback to trimmed value.
+          if keytool -list \
             -keystore .ci/signing/upload-keystore.jks \
             -storepass "$keystore_password" >/dev/null 2>&1; then
+            :
+          elif [ "$keystore_password" != "$keystore_password_trimmed" ] && keytool -list \
+            -keystore .ci/signing/upload-keystore.jks \
+            -storepass "$keystore_password_trimmed" >/dev/null 2>&1; then
+            keystore_password="$keystore_password_trimmed"
+            echo "Warning: using trimmed Android store password after whitespace fallback during pre-flight validation" >&2
+          else
             echo "Decoded Android keystore is unreadable with the provided store password" >&2
             exit 1
           fi
@@ -332,7 +345,15 @@ jobs:
             -keystore .ci/signing/upload-keystore.jks \
             -storepass "$keystore_password" \
             -alias "$key_alias" >/dev/null 2>&1; then
-            echo "Warning: alias $key_alias was not validated during pre-flight check; continuing and deferring to Gradle signing checks" >&2
+            if [ "$key_alias" != "$key_alias_trimmed" ] && keytool -list \
+              -keystore .ci/signing/upload-keystore.jks \
+              -storepass "$keystore_password" \
+              -alias "$key_alias_trimmed" >/dev/null 2>&1; then
+              key_alias="$key_alias_trimmed"
+              echo "Warning: using trimmed Android key alias after whitespace fallback during pre-flight validation" >&2
+            else
+              echo "Warning: alias $key_alias was not validated during pre-flight check; continuing and deferring to Gradle signing checks" >&2
+            fi
           fi
 
           mkdir -p apps/threshold/src-tauri/gen/android
