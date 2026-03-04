@@ -584,6 +584,39 @@ jobs:
           echo "Prepared release upload files:"
           ls -lah release-assets/publish
 
+      - name: Remove existing release assets for tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.verify-release-source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG does not exist yet; skipping asset cleanup."
+            exit 0
+          fi
+
+          mapfile -t asset_ids < <(
+            gh release view "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json assets \
+              --jq '.assets[].id'
+          )
+
+          if [ "${#asset_ids[@]}" -eq 0 ]; then
+            echo "No existing assets to remove for release $RELEASE_TAG."
+            exit 0
+          fi
+
+          for asset_id in "${asset_ids[@]}"; do
+            echo "Deleting existing release asset id $asset_id"
+            gh api \
+              --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" >/dev/null
+          done
+
+          echo "Existing release assets cleared for $RELEASE_TAG."
+
       - name: Publish GitHub release
         id: publish_release
         uses: softprops/action-gh-release@v2.5.0
