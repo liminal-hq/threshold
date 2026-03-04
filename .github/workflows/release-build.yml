@@ -159,28 +159,28 @@ jobs:
             arch_label: x64
             tauri_args: ''
             tauri_target: ''
-            bundle_path: target/release/bundle/**
+            bundle_dir: target/release/bundle
             artefact_name: desktop-linux-x64-artefacts
           - runner: ubuntu-24.04-arm
             platform_label: linux
             arch_label: arm64
             tauri_args: ''
             tauri_target: ''
-            bundle_path: target/release/bundle/**
+            bundle_dir: target/release/bundle
             artefact_name: desktop-linux-arm64-artefacts
           - runner: windows-latest
             platform_label: windows
             arch_label: x64
             tauri_args: --target x86_64-pc-windows-msvc
             tauri_target: x86_64-pc-windows-msvc
-            bundle_path: target/x86_64-pc-windows-msvc/release/bundle/**
+            bundle_dir: target/x86_64-pc-windows-msvc/release/bundle
             artefact_name: desktop-windows-x64-artefacts
           - runner: windows-latest
             platform_label: windows
             arch_label: arm64
             tauri_args: --target aarch64-pc-windows-msvc
             tauri_target: aarch64-pc-windows-msvc
-            bundle_path: target/aarch64-pc-windows-msvc/release/bundle/**
+            bundle_dir: target/aarch64-pc-windows-msvc/release/bundle
             artefact_name: desktop-windows-arm64-artefacts
     defaults:
       run:
@@ -252,32 +252,79 @@ jobs:
           tauriScript: "pnpm tauri"
           args: ${{ matrix.tauri_args }}
 
+      - name: Collect desktop artefacts
+        id: collect_desktop_artefacts
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets/desktop
+
+          bundle_dir="${{ matrix.bundle_dir }}"
+          if [ ! -d "$bundle_dir" ]; then
+            echo "Desktop bundle directory not found: $bundle_dir" >&2
+            exit 1
+          fi
+
+          mapfile -t desktop_files < <(find "$bundle_dir" -type f \( \
+            -name "*.AppImage" -o \
+            -name "*.deb" -o \
+            -name "*.rpm" -o \
+            -name "*.msi" -o \
+            -name "*setup*.exe" \
+          \) | sort)
+
+          if [ "${#desktop_files[@]}" -eq 0 ]; then
+            echo "No releasable desktop artefacts found in $bundle_dir" >&2
+            exit 1
+          fi
+
+          for file in "${desktop_files[@]}"; do
+            cp "$file" release-assets/desktop/
+          done
+
+          echo "Prepared desktop release artefacts:"
+          ls -lah release-assets/desktop
+
       - name: Upload desktop artefacts
         id: upload_desktop_artefacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artefact_name }}
           path: |
-            ${{ matrix.bundle_path }}
+            release-assets/desktop/**
           if-no-files-found: error
 
       - name: Summarise desktop build
         if: always()
         env:
           BUILD_RESULT: ${{ steps.build_tauri.outcome }}
+          COLLECT_RESULT: ${{ steps.collect_desktop_artefacts.outcome }}
           UPLOAD_RESULT: ${{ steps.upload_desktop_artefacts.outcome }}
           RELEASE_TAG: ${{ needs.prepare-release.outputs.tag_name }}
         run: |
+          desktop_count=0
+          if [ -d release-assets/desktop ]; then
+            desktop_count=$(find release-assets/desktop -type f | wc -l | tr -d ' ')
+          fi
+
           {
             echo "## Desktop Build Summary"
             echo ""
             echo "- Platform: \`${{ matrix.platform_label }}\`"
             echo "- Architecture: \`${{ matrix.arch_label }}\`"
             echo "- Build and package: \`${BUILD_RESULT}\`"
+            echo "- Collect artefacts: \`${COLLECT_RESULT}\`"
             echo "- Upload artefacts: \`${UPLOAD_RESULT}\`"
+            echo "- Desktop assets staged: ${desktop_count}"
             echo "- Release tag: \`${RELEASE_TAG}\`"
             echo "- Release URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}"
             echo "- Run URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo ""
+            echo "### Desktop assets"
+            if [ "${desktop_count}" -gt 0 ]; then
+              find release-assets/desktop -type f | sort | sed 's#^#- `#; s#$#`#'
+            else
+              echo "- _No desktop assets staged_"
+            fi
           } >> "${GITHUB_STEP_SUMMARY}"
 
   build-android:
@@ -641,16 +688,19 @@ jobs:
         run: |
           set -euo pipefail
 
-          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          release_id="$(
+            gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" \
+              --jq '.id' 2>/dev/null || true
+          )"
+
+          if [ -z "${release_id:-}" ]; then
             echo "Release $RELEASE_TAG does not exist yet; skipping asset cleanup."
             exit 0
           fi
 
           mapfile -t asset_ids < <(
-            gh release view "$RELEASE_TAG" \
-              --repo "$GITHUB_REPOSITORY" \
-              --json assets \
-              --jq '.assets[].id'
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?per_page=100" \
+              --jq '.[].id'
           )
 
           if [ "${#asset_ids[@]}" -eq 0 ]; then
@@ -662,7 +712,9 @@ jobs:
             echo "Deleting existing release asset id $asset_id"
             gh api \
               --method DELETE \
-              "repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" >/dev/null
+              "repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" >/dev/null || {
+                echo "Warning: could not delete release asset id $asset_id; continuing"
+              }
           done
 
           echo "Existing release assets cleared for $RELEASE_TAG."
@@ -684,8 +736,19 @@ jobs:
         run: |
           set -euo pipefail
 
-          desktop_count=$(find release-assets/desktop -type f | wc -l | tr -d ' ')
-          android_count=$(find release-assets/android -type f | wc -l | tr -d ' ')
+          desktop_count=$(find release-assets/publish -maxdepth 1 -type f \( \
+            -name "*.AppImage" -o \
+            -name "*.deb" -o \
+            -name "*.rpm" -o \
+            -name "*.msi" -o \
+            -name "*setup*.exe" \
+          \) | wc -l | tr -d ' ')
+          android_count=$(find release-assets/publish -maxdepth 1 -type f \( \
+            -name "*.aab" -o \
+            -name "*.apk" -o \
+            -name "*.txt" -o \
+            -name "*.zip" \
+          \) | wc -l | tr -d ' ')
           upload_count=$(find release-assets/publish -type f | wc -l | tr -d ' ')
 
           {
@@ -694,16 +757,10 @@ jobs:
             echo "- Publish result: \`${PUBLISH_RESULT}\`"
             echo "- Release tag: \`${RELEASE_TAG}\`"
             echo "- Release URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}"
-            echo "- Assets discovered: ${desktop_count} desktop, ${android_count} Android"
+            echo "- Curated assets: ${desktop_count} desktop, ${android_count} Android"
             echo "- Assets uploaded: ${upload_count}"
             echo "- Run URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo ""
             echo "### Uploaded assets"
             find release-assets/publish -type f | sort | sed 's#^#- `#; s#$#`#'
-            echo ""
-            echo "### Desktop assets discovered"
-            find release-assets/desktop -type f | sort | sed 's#^#- `#; s#$#`#'
-            echo ""
-            echo "### Android assets discovered"
-            find release-assets/android -type f | sort | sed 's#^#- `#; s#$#`#'
           } >> "${GITHUB_STEP_SUMMARY}"
