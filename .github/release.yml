@@ -1,0 +1,25 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - internal
+  categories:
+    - title: Features
+      labels:
+        - enhancement
+    - title: Fixes
+      labels:
+        - bug
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Tests
+      labels:
+        - test
+    - title: CI and Build
+      labels:
+        - ci
+        - build
+    - title: Other Changes
+      labels:
+        - '*'

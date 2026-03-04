@@ -22,11 +22,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify-release-source:
+  prepare-release:
     runs-on: ubuntu-24.04
     outputs:
-      should_release: ${{ steps.resolve.outputs.should_release }}
-      release_tag: ${{ steps.resolve.outputs.release_tag }}
+      should_release: ${{ steps.meta.outputs.should_release }}
+      tag_name: ${{ steps.meta.outputs.tag_name }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+      release_id: ${{ steps.release.outputs.release_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -35,7 +37,7 @@ jobs:
           submodules: recursive
 
       - name: Resolve release trigger and tag
-        id: resolve
+        id: meta
         env:
           MANUAL_RELEASE_TAG: ${{ github.event.inputs.release_tag || '' }}
         run: |
@@ -56,12 +58,14 @@ jobs:
             if [ -n "${MANUAL_RELEASE_TAG:-}" ]; then
               echo "Manual release override requested; using tag ${MANUAL_RELEASE_TAG}"
               echo "should_release=true" >> "$GITHUB_OUTPUT"
-              echo "release_tag=${MANUAL_RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+              echo "tag_name=${MANUAL_RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+              echo "release_name=Threshold ${MANUAL_RELEASE_TAG}" >> "$GITHUB_OUTPUT"
             else
               version="$(node -p "require('./apps/threshold/package.json').version")"
               echo "Manual release override requested; using derived tag v$version"
               echo "should_release=true" >> "$GITHUB_OUTPUT"
-              echo "release_tag=v$version" >> "$GITHUB_OUTPUT"
+              echo "tag_name=v$version" >> "$GITHUB_OUTPUT"
+              echo "release_name=Threshold v$version" >> "$GITHUB_OUTPUT"
             fi
             exit 0
           fi
@@ -75,7 +79,8 @@ jobs:
 
             echo "Tag push on main history detected: $ref_name"
             echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "release_tag=$ref_name" >> "$GITHUB_OUTPUT"
+            echo "tag_name=$ref_name" >> "$GITHUB_OUTPUT"
+            echo "release_name=Threshold $ref_name" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -85,7 +90,8 @@ jobs:
               version="$(node -p "require('./apps/threshold/package.json').version")"
               echo "Release candidate merged to main; using tag v$version"
               echo "should_release=true" >> "$GITHUB_OUTPUT"
-              echo "release_tag=v$version" >> "$GITHUB_OUTPUT"
+              echo "tag_name=v$version" >> "$GITHUB_OUTPUT"
+              echo "release_name=Threshold v$version" >> "$GITHUB_OUTPUT"
             else
               echo "Push to main is not a release merge; skipping release"
               echo "should_release=false" >> "$GITHUB_OUTPUT"
@@ -96,9 +102,53 @@ jobs:
           echo "Unsupported release trigger context; skipping"
           echo "should_release=false" >> "$GITHUB_OUTPUT"
 
+      - name: Create or reuse release
+        id: release
+        if: steps.meta.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.meta.outputs.tag_name }}
+          RELEASE_NAME: ${{ steps.meta.outputs.release_name }}
+        run: |
+          set -euo pipefail
+
+          RELEASE_MATCH="$(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq ".[] | select(.tag_name == \"${TAG_NAME}\") | [.id, .draft] | @tsv" \
+              | head -n 1 || true
+          )"
+
+          if [[ -z "${RELEASE_MATCH}" ]]; then
+            RELEASE_ID="$(
+              gh api \
+                --method POST \
+                "repos/${GITHUB_REPOSITORY}/releases" \
+                -f tag_name="${TAG_NAME}" \
+                -f target_commitish="${GITHUB_SHA}" \
+                -f name="${RELEASE_NAME}" \
+                -f body='See assets below to download and install.' \
+                -F generate_release_notes=true \
+                -F draft=false \
+                -F prerelease=false \
+                --jq '.id'
+            )"
+          else
+            RELEASE_ID="$(awk '{print $1}' <<< "${RELEASE_MATCH}")"
+            EXISTING_DRAFT="$(awk '{print $2}' <<< "${RELEASE_MATCH}")"
+
+            if [[ "${EXISTING_DRAFT}" == "true" ]]; then
+              gh api \
+                --method PATCH \
+                "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+                -F draft=false > /dev/null
+            fi
+          fi
+
+          echo "release_id=${RELEASE_ID}" >> "${GITHUB_OUTPUT}"
+
   build-desktop:
-    needs: verify-release-source
-    if: needs.verify-release-source.outputs.should_release == 'true'
+    needs: prepare-release
+    if: needs.prepare-release.outputs.should_release == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -216,7 +266,7 @@ jobs:
         env:
           BUILD_RESULT: ${{ steps.build_tauri.outcome }}
           UPLOAD_RESULT: ${{ steps.upload_desktop_artefacts.outcome }}
-          RELEASE_TAG: ${{ needs.verify-release-source.outputs.release_tag }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag_name }}
         run: |
           {
             echo "## Desktop Build Summary"
@@ -232,8 +282,8 @@ jobs:
 
   build-android:
     runs-on: ubuntu-24.04
-    needs: verify-release-source
-    if: needs.verify-release-source.outputs.should_release == 'true'
+    needs: prepare-release
+    if: needs.prepare-release.outputs.should_release == 'true'
     defaults:
       run:
         shell: bash
@@ -496,7 +546,7 @@ jobs:
           VERIFY_RESULT: ${{ steps.verify_android_signatures.outcome }}
           COLLECT_RESULT: ${{ steps.collect_android_artefacts.outcome }}
           UPLOAD_RESULT: ${{ steps.upload_android_artefacts.outcome }}
-          RELEASE_TAG: ${{ needs.verify-release-source.outputs.release_tag }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag_name }}
         run: |
           set -euo pipefail
 
@@ -535,8 +585,8 @@ jobs:
 
   publish-release:
     runs-on: ubuntu-24.04
-    needs: [verify-release-source, build-desktop, build-android]
-    if: needs.verify-release-source.outputs.should_release == 'true'
+    needs: [prepare-release, build-desktop, build-android]
+    if: needs.prepare-release.outputs.should_release == 'true'
     steps:
       - name: Download desktop artefacts
         uses: actions/download-artifact@v8
@@ -587,7 +637,7 @@ jobs:
       - name: Remove existing release assets for tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ needs.verify-release-source.outputs.release_tag }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag_name }}
         run: |
           set -euo pipefail
 
@@ -621,16 +671,15 @@ jobs:
         id: publish_release
         uses: softprops/action-gh-release@v2.5.0
         with:
-          tag_name: ${{ needs.verify-release-source.outputs.release_tag }}
-          name: Threshold ${{ needs.verify-release-source.outputs.release_tag }}
-          generate_release_notes: true
+          tag_name: ${{ needs.prepare-release.outputs.tag_name }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
           files: |
             release-assets/publish/*
 
       - name: Summarise release publish
         if: always()
         env:
-          RELEASE_TAG: ${{ needs.verify-release-source.outputs.release_tag }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag_name }}
           PUBLISH_RESULT: ${{ steps.publish_release.outcome }}
         run: |
           set -euo pipefail
