@@ -4,15 +4,22 @@ This guide covers the release pipeline in `.github/workflows/release-build.yml`.
 
 ## Overview
 
-The release workflow runs when you push a version tag matching `v*`.
+The release workflow runs from three entry points:
+
+- pushes to `main`
+- pushed tags matching `v*`
+- manual runs via `workflow_dispatch` (optional `release_tag` input)
 
 It will:
 
-- verify the tagged commit is on `main`
+- resolve release metadata in `prepare-release` (`tag_name`, `release_name`)
+- verify the target commit is on `main`
+- create or reuse the GitHub Release before build jobs run
 - build desktop artefacts
 - build signed Android phone + Wear artefacts (`.aab`, `.apk`)
 - collect mapping files and native debug symbols (when available)
-- publish a GitHub Release with all artefacts attached
+- publish a GitHub Release with curated distributable artefacts attached
+- remove existing assets on reruns so release pages stay clean
 
 ## Container Base Image (`ci-base`)
 
@@ -27,6 +34,12 @@ If tooling in `.devcontainer/Dockerfile` changes, rebuild and push `ci-base` bef
 Related workflow:
 
 - `.github/workflows/build-ci-image.yml`
+
+## Node and Cache Behaviour
+
+- Desktop jobs install Node from `.node-version` (`actions/setup-node` + `node-version-file`)
+- `pnpm` dependency caching is enabled in desktop jobs
+- Rust caching is enabled in desktop and Android jobs (`swatinem/rust-cache`)
 
 ## Required GitHub Secrets
 
@@ -43,6 +56,12 @@ The Android Gradle configuration expects these keys in `keystore.properties`:
 - `storeFile`
 
 The workflow writes temporary `keystore.properties` files for both phone and Wear builds using those values.
+
+The signing step also normalises secret formatting to avoid common copy/paste issues:
+
+- strips CR/LF and wrapping quotes from alias/password values
+- supports standard and URL-safe base64 keystore payloads
+- performs keystore readability validation before Gradle build
 
 ## Create `ANDROID_UPLOAD_KEYSTORE_BASE64`
 
@@ -73,6 +92,8 @@ The workflow:
 
 ## Triggering a Release Build
 
+### Tag-triggered release
+
 1. Ensure your release commit is on `main`.
 2. Create and push a tag:
 
@@ -82,7 +103,21 @@ git push origin v0.1.9
 ```
 
 3. Watch `.github/workflows/release-build.yml` in Actions.
-4. Download artefacts from the generated GitHub Release for Play Console upload.
+
+### Main push release candidate
+
+On pushes to `main`, the workflow only releases when `apps/threshold/package.json` changed in that push. The tag is derived from that version as `v<version>`.
+
+### Manual release run
+
+From Actions, run `Release Build`:
+
+- leave `release_tag` empty to derive `v<apps/threshold/package.json version>`
+- set `release_tag` (for example `v0.1.9`) to override the derived value
+
+### After build completion
+
+Download artefacts from the generated GitHub Release for Play Console upload.
 
 ## Quick Dry-Run Pattern
 
@@ -99,3 +134,20 @@ After validation:
 git push --delete origin v0.0.0-ci-test
 git tag -d v0.0.0-ci-test
 ```
+
+## Generated Release Notes Labels
+
+Release notes are generated from `.github/release.yml` label categories.
+
+Use these canonical labels on PRs to influence changelog grouping:
+
+- `enhancement` for features
+- `bug` for fixes
+- `documentation` for docs updates
+- `test` for test changes
+- `ci` and `build` for pipeline/build changes
+
+To exclude a PR from generated notes, apply one of:
+
+- `skip-changelog`
+- `internal`
