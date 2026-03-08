@@ -35,6 +35,7 @@ import { AlarmService } from '../services/AlarmService';
 import { AlarmInput, AlarmMode } from '../types/alarm';
 import { alarmSoundPickerService } from '../services/AlarmSoundPickerService';
 import { showToast } from 'tauri-plugin-toast-api';
+import { UI } from '../theme/uiTokens';
 import { MusicNote as MusicNoteIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 import { Select, MenuItem, FormControl, SelectChangeEvent } from '@mui/material';
 
@@ -269,7 +270,7 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 							</ToggleButtonGroup>
 
 							{mode === AlarmMode.Fixed ? (
-								<Box sx={{ mb: 3 }}>
+								<Box sx={{ mb: 3, borderRadius: UI.card.borderRadius, overflow: 'hidden' }}>
 									{isMobile ? (
 										<MuiTimePicker
 											label="Time"
@@ -279,13 +280,13 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 											slotProps={{ textField: { fullWidth: true } }}
 										/>
 									) : (
-										<div style={{ display: 'flex', justifyContent: 'center' }}>
+										<Box sx={{ display: 'flex', justifyContent: 'center', borderRadius: UI.card.borderRadius }}>
 											<DesktopCustomTimePicker
 												value={fixedTime}
 												onChange={setFixedTime}
 												is24h={is24h}
 											/>
-										</div>
+										</Box>
 									)}
 								</Box>
 							) : (
@@ -355,7 +356,12 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 								onChange={(e) => setLabel(e.target.value)}
 								fullWidth
 								variant="outlined"
-								sx={{ mb: 3 }}
+								sx={{
+									mb: 3,
+									'& .MuiOutlinedInput-root': {
+										borderRadius: UI.card.borderRadius,
+									},
+								}}
 							/>
 
 							<Box>
@@ -390,7 +396,9 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 											alignItems: 'center',
 											cursor: 'pointer',
 											'&:hover': { bgcolor: 'action.hover' },
-											borderRadius: 1,
+											borderRadius: UI.card.borderRadius,
+											bgcolor: 'background.paper',
+											borderColor: 'divider',
 										}}
 									>
 										<MusicNoteIcon sx={{ mr: 2, color: 'text.secondary' }} />
