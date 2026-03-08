@@ -174,3 +174,19 @@ Each entry includes:
 
 **Speaker script**
 "Entry 08 cleans up the TitleBar. Instead of commented-out maximize buttons, the title bar now reads isMaximizable and isMinimizable from Tauri at runtime and renders buttons accordingly. The config drives the UI — no frontend changes needed if capabilities change."
+
+---
+
+### 09 — 2026-03-08 — Remove redundant unmaximize call from App.tsx
+
+**What happened**
+- Removed `win.unmaximize()` call in `App.tsx` `showWindow` function
+- This call was a legacy defensive measure to counteract the window-state plugin restoring a maximized state; it is now unreachable since the plugin is restricted to `StateFlags::POSITION` and can never restore a maximized state
+- The call was emitting a permission error (`window.unmaximize not allowed`) because `allow-unmaximize` was correctly removed from capabilities in entry 08
+
+**Why this matters**
+- Eliminates a startup permission error logged on every desktop launch
+- The capabilities file accurately reflects what the app actually needs — no phantom permissions, no phantom calls
+
+**Speaker script**
+"Entry 09 is a one-liner cleanup: a leftover unmaximize call from before we locked the window config was firing on every startup and hitting a permission wall. Removed it — the window-state plugin can't restore a maximized state anymore anyway."

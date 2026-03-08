@@ -84,7 +84,6 @@ const App: React.FC = () => {
 			try {
 				try {
 					await win.setDecorations(false); // Force removal of native title bar
-					await win.unmaximize();
 					// await win.setSize(new LogicalSize(450, 800));
 					await win.center();
 				} catch (e) {
