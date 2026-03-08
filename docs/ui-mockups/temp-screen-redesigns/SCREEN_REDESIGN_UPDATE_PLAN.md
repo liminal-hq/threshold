@@ -54,25 +54,25 @@ Use current alarm text patterns as source of truth (not mock filler text):
 
 ## 4) New mockups for review
 
-Current review set: `proposed-v2` (latest iteration)
+Current review set: `proposed-v3` (latest iteration)
 
 ### Home
 
-![Home mobile redesign](./proposed-v2/threshold-home-mobile-v2.svg)
+![Home mobile redesign](./proposed-v3/threshold-home-mobile-v3.svg)
 
-![Home desktop redesign](./proposed-v2/threshold-home-desktop-v2.svg)
+![Home desktop redesign](./proposed-v3/threshold-home-desktop-v3.svg)
 
 ### Edit / New Alarm
 
-![Edit mobile redesign](./proposed-v2/threshold-edit-mobile-v2.svg)
+![Edit mobile redesign](./proposed-v3/threshold-edit-mobile-v3.svg)
 
-![Edit desktop redesign](./proposed-v2/threshold-edit-desktop-v2.svg)
+![Edit desktop redesign](./proposed-v3/threshold-edit-desktop-v3.svg)
 
 ### Settings
 
-![Settings mobile redesign](./proposed-v2/threshold-settings-mobile-v2.svg)
+![Settings mobile redesign](./proposed-v3/threshold-settings-mobile-v3.svg)
 
-![Settings desktop redesign](./proposed-v2/threshold-settings-desktop-v2.svg)
+![Settings desktop redesign](./proposed-v3/threshold-settings-desktop-v3.svg)
 
 ## 5) What changes by screen
 
@@ -101,11 +101,12 @@ Current review set: `proposed-v2` (latest iteration)
 
 ### Settings
 
-- Keep existing setting groups and controls.
-- Improve grouping clarity and scan flow.
+- Mobile Settings is locked to remain close to current structure and behaviour.
+- Improve spacing and grouping clarity without introducing line-heavy or bubble-heavy visual noise.
 - Keep Android conditional Material You toggle behaviour.
 - Explicitly document that desktop never uses Material You extraction.
 - Keep Developer tools present, but visually scoped as advanced controls.
+- Desktop Settings uses left-side categories with right-side detail panels.
 
 ## 6) Theming integration plan (critical)
 
@@ -144,8 +145,10 @@ Material You support remains automatic through existing `ThemeContext` and setti
 - Update `EditAlarm.tsx` layout/styling only, preserve control logic.
 
 4. Settings redesign
-- Update `Settings.tsx` visual grouping and control spacing.
-- Scott: I don't like the bubble design here.  It's too much visual noise for a dense settings list.  I'd prefer to keep the current flat list but improve spacing and section grouping clarity to match the new designs.
+- Keep mobile close to current settings structure.
+- Improve spacing and grouping clarity.
+- Avoid bubble-heavy and line-heavy presentation treatments.
+- Apply left-category/right-panel composition for desktop concepts.
 
 5. Desktop polish pass
 - Validate desktop spacing, fixed action bars, and title bar interaction fit.

@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 860" width="1360" height="860">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1423"/>
+      <stop offset="100%" stop-color="#121f34"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b283e"/>
+      <stop offset="100%" stop-color="#162233"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff8f5d" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ff8f5d" stop-opacity="0.04"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .title { font-size: 34px; fill: #edf4ff; font-weight: 700; }
+      .body { font-size: 20px; fill: #9fb4d0; }
+      .small { font-size: 16px; fill: #7f95b6; }
+      .time { font-size: 44px; fill: #f3f7ff; font-weight: 700; letter-spacing: -1px; }
+    ]]></style>
+  </defs>
+
+  <rect width="1360" height="860" fill="url(#bg)"/>
+  <text class="t eyebrow" x="36" y="48">THRESHOLD REDESIGN V3 - HOME DESKTOP</text>
+
+  <!-- Borderless desktop shell using same palette as previous mockups -->
+  <g transform="translate(92 116)">
+    <rect width="860" height="640" rx="28" fill="url(#panel)" stroke="#2e4362"/>
+
+    <rect x="0" y="0" width="860" height="38" rx="28" fill="#17253b"/>
+    <rect x="0" y="22" width="860" height="16" fill="#17253b"/>
+    <text class="t small" x="22" y="25">Threshold</text>
+    <rect x="812" y="11" width="16" height="16" rx="3" fill="#2a3f5f"/>
+    <rect x="836" y="11" width="16" height="16" rx="3" fill="#2a3f5f"/>
+
+    <text class="t title" x="34" y="82">Threshold</text>
+
+    <rect x="32" y="104" width="796" height="70" rx="18" fill="url(#accent)" stroke="#ff8f5d" stroke-opacity="0.35"/>
+    <text class="t" x="58" y="146" style="font-size:24px;fill:#ff9f77;font-weight:700;">Next alarm in 6h 47m</text>
+    <text class="t body" x="58" y="166">Scheduled: 6:47 AM tomorrow</text>
+
+    <g transform="translate(32 198)">
+      <rect width="796" height="104" rx="18" fill="#26354c" stroke="#385072"/>
+      <rect x="0" y="16" width="6" height="70" rx="3" fill="#6f83a4"/>
+      <text class="t time" x="24" y="64">22:33</text>
+      <text class="t body" x="26" y="90">Alarm</text>
+      <text class="t small" x="590" y="38">Disabled</text>
+      <rect x="686" y="35" width="70" height="34" rx="17" fill="#425575"/>
+      <circle cx="703" cy="52" r="14" fill="#dce5f5"/>
+    </g>
+
+    <g transform="translate(32 316)">
+      <rect width="796" height="104" rx="18" fill="#2a3a52" stroke="#3e5679"/>
+      <rect x="0" y="16" width="6" height="70" rx="3" fill="#ff8f5d"/>
+      <text class="t" x="24" y="64" style="font-size:42px;fill:#f3f7ff;font-weight:700;letter-spacing:-1px;">09:27</text>
+      <text class="t body" x="26" y="90">Francis! - Sun 09:27</text>
+      <text class="t small" x="602" y="38">Enabled</text>
+      <rect x="686" y="35" width="70" height="34" rx="17" fill="#4d6393"/>
+      <circle cx="737" cy="52" r="14" fill="#bfd1ff"/>
+    </g>
+
+    <g transform="translate(32 434)">
+      <rect width="796" height="104" rx="18" fill="#26354c" stroke="#385072"/>
+      <rect x="0" y="16" width="6" height="70" rx="3" fill="#6f83a4"/>
+      <text class="t" x="24" y="64" style="font-size:40px;fill:#f0f6ff;font-weight:700;letter-spacing:-1px;">02:00 - 02:30</text>
+      <text class="t body" x="26" y="90">Test Alarm</text>
+      <text class="t small" x="590" y="38">Disabled</text>
+      <rect x="686" y="35" width="70" height="34" rx="17" fill="#425575"/>
+      <circle cx="703" cy="52" r="14" fill="#dce5f5"/>
+    </g>
+
+    <!-- Bottom action zone with existing add style + gear on right -->
+    <rect x="0" y="582" width="860" height="58" fill="#142132"/>
+    <rect x="250" y="594" width="360" height="34" rx="17" fill="#ff7a3d"/>
+    <text class="t" x="430" y="617" text-anchor="middle" style="font-size:19px;fill:#fff;font-weight:700;">Add Alarm</text>
+    <rect x="640" y="595" width="40" height="32" rx="10" fill="#1f334b" stroke="#345476"/>
+    <text class="t" x="660" y="616" text-anchor="middle" style="font-size:18px;fill:#ffb08b;">&#9881;</text>
+  </g>
+
+  <g transform="translate(986 186)">
+    <rect width="328" height="218" rx="18" fill="#16253a" stroke="#2e4362"/>
+    <text class="t" x="20" y="42" style="font-size:24px;fill:#dbe8fb;font-weight:700;">Desktop revision notes</text>
+    <text class="t body" x="20" y="78">- Not a literal screenshot clone</text>
+    <text class="t body" x="20" y="108">- Same dark comparison palette</text>
+    <text class="t body" x="20" y="138">- Bottom add style preserved</text>
+    <text class="t body" x="20" y="168">- Gear moved beside add action</text>
+    <text class="t small" x="20" y="196">Inspirational, not a direct replica</text>
+  </g>
+</svg>
