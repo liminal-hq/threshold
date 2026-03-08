@@ -14,6 +14,38 @@
 
 - create or edit a single alarm configuration, then save it back to the alarm service
 
+## Platform Concept Model
+
+### Shared Concepts
+
+- `EDIT-C1`: Alarm Editor Scaffold - single-screen form for alarm creation and editing
+- `EDIT-C2`: Mode Selection - fixed vs window alarm mode selector
+- `EDIT-C3`: Time Entry - mode-dependent time input controls
+- `EDIT-C4`: Repeat and Label Identity - day selection and label fields
+- `EDIT-C5`: Persist Intent - explicit save action and return to Home on success
+
+### Mobile Concepts
+
+- `EDIT-M1`: Header Save Pattern - top toolbar with close and save actions
+- `EDIT-M2`: Native-style Picker Interaction - MUI mobile time picker controls
+- `EDIT-M3`: Tap-to-Pick Sound Row - compact sound picker row with chevron affordance
+
+### Desktop Concepts
+
+- `EDIT-D1`: In-Page Header Pattern - page title within content region
+- `EDIT-D2`: Precision Time Editing - custom desktop time picker component
+- `EDIT-D3`: Fixed Footer Actions - bottom fixed `Cancel` and `Save Alarm`
+- `EDIT-D4`: Select-Driven Sound Source - full-width select menu for bundled and custom sounds
+
+## Platform Mapping Matrix
+
+| Concept ID | Mobile Expression | Desktop Expression |
+|---|---|---|
+| `EDIT-C1` | scrollable editor under toolbar | centred container with in-page title |
+| `EDIT-C2` | full-width toggle button group | full-width toggle button group |
+| `EDIT-C3` | MUI mobile `TimePicker` fields | desktop custom time picker |
+| `EDIT-C5` | toolbar save action | fixed footer save action |
+
 ## Platform Behaviour
 
 ### Mobile
@@ -42,7 +74,7 @@
 - sound control
 
 3. fixed action zone (desktop only)
-- cancel/save buttons fixed to bottom edge
+- cancel and save buttons fixed to bottom edge
 
 ## Content Contract
 
@@ -64,7 +96,7 @@
 
 - loading existing alarm: async fetch with silent fail to console
 - validation error: alert for missing repeat day
-- save error: alert shown + console error
+- save error: alert shown plus console error
 - populated edit: pre-filled values from `AlarmService.get`
 - new mode: defaults pre-filled from current time
 
@@ -86,5 +118,5 @@
 
 ## Open Questions
 
-1. should window-mode start/end distinct validation be added in redesign phase 1?
+1. should window-mode start and end distinct validation be added in redesign phase 1?
 2. should save button be disabled until form is valid, instead of alert-based feedback?

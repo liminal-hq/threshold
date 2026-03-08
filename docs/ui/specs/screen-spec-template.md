@@ -12,6 +12,29 @@
 
 - brief description of what this screen is responsible for
 
+## Platform Concept Model
+
+### Shared Concepts
+
+- `{SCREEN}-C1`: concept description
+- `{SCREEN}-C2`: concept description
+
+### Mobile Concepts
+
+- `{SCREEN}-M1`: concept description
+- `{SCREEN}-M2`: concept description
+
+### Desktop Concepts
+
+- `{SCREEN}-D1`: concept description
+- `{SCREEN}-D2`: concept description
+
+## Platform Mapping Matrix
+
+| Concept ID | Mobile Expression | Desktop Expression |
+|---|---|---|
+| `{SCREEN}-C1` | how it appears on mobile | how it appears on desktop |
+
 ## Platform Behaviour
 
 ### Mobile
@@ -38,7 +61,7 @@
 
 ## Interaction Contract
 
-- tap/click actions
+- tap or click actions
 - gesture actions
 - navigation actions
 
@@ -57,7 +80,7 @@
 
 ## Accessibility Contract
 
-- keyboard/focus rules
+- keyboard and focus rules
 - touch target expectations
 - contrast requirements
 - reduced motion handling
