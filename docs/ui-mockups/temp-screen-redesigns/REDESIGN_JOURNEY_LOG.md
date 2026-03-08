@@ -95,3 +95,20 @@ Each entry includes:
 
 **Speaker script**
 "We upgraded the spec system so mobile and desktop are first-class concepts, not side notes. Each screen now declares shared concepts, mobile concepts, desktop concepts, and a mapping matrix that shows how the same intent is expressed per platform. This gives us a stronger foundation for future UI rework."
+
+---
+
+### 2026-03-08 13:21 (EDT) - Confirmed redesign churn tracking policy
+
+**What happened**
+- confirmed that iterative SVG and redesign doc churn should stay tracked in git
+- decided not to add `.gitignore` rules for redesign iteration files
+- added explicit versioning policy language to the redesign update plan
+
+**Why this matters**
+- preserves the full chronology of design decisions and pivots
+- keeps exploration history reviewable for future retrospectives
+- supports storytelling and presentation of how the redesign matured over time
+
+**Speaker script**
+"We made a deliberate process decision: the churn is part of the story, so we are tracking iterative redesign assets in git instead of ignoring them. That gives us a clear chronology of how ideas evolved and why final choices were made."
