@@ -6,7 +6,7 @@ Status: Review and refine before implementation
 
 ## 1) What I reviewed
 
-- Redesign exploration assets in `docs/ui-mockups/temp-screen-redesigns/`:
+- Redesign exploration assets in `docs/ui/redesigns/screen-refresh-2026/mockups/archive/exploration/`:
   - `threshold-01-transitions.svg`
   - `threshold-02-bubbles.svg`
   - `threshold-03-colours.svg`
@@ -58,31 +58,31 @@ Current review set: `proposed-v4` — full consistent set across all screens and
 
 ### Home
 
-![Home mobile](./proposed-v4/threshold-home-mobile-v4.svg)
+![Home mobile](./mockups/v4/threshold-home-mobile-v4.svg)
 
-![Home desktop](./proposed-v4/threshold-home-desktop-v4.svg)
+![Home desktop](./mockups/v4/threshold-home-desktop-v4.svg)
 
 ### Edit / New Alarm — Fixed Time mode
 
-![Edit mobile (Fixed)](./proposed-v4/threshold-edit-mobile-v4.svg)
+![Edit mobile (Fixed)](./mockups/v4/threshold-edit-mobile-v4.svg)
 
-![Edit desktop (Fixed)](./proposed-v4/threshold-edit-desktop-v4.svg)
+![Edit desktop (Fixed)](./mockups/v4/threshold-edit-desktop-v4.svg)
 
 ### Edit / New Alarm — Window mode
 
-![Edit mobile (Window)](./proposed-v4/threshold-edit-window-mobile-v4.svg)
+![Edit mobile (Window)](./mockups/v4/threshold-edit-window-mobile-v4.svg)
 
-![Edit desktop (Window)](./proposed-v4/threshold-edit-window-desktop-v4.svg)
+![Edit desktop (Window)](./mockups/v4/threshold-edit-window-desktop-v4.svg)
 
 ### Settings
 
-![Settings mobile (code-faithful)](./proposed-v4/threshold-settings-mobile-v4.svg)
+![Settings mobile (code-faithful)](./mockups/v4/threshold-settings-mobile-v4.svg)
 
-![Settings desktop (concept direction)](./proposed-v4/threshold-settings-desktop-v4.svg)
+![Settings desktop (concept direction)](./mockups/v4/threshold-settings-desktop-v4.svg)
 
 ### Desktop Window Context (OS View)
 
-![Desktop window context](./proposed-v4/threshold-window-desktop-v4.svg)
+![Desktop window context](./mockups/v4/threshold-window-desktop-v4.svg)
 
 ## 5) What changes by screen
 

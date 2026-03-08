@@ -7,9 +7,9 @@ Use this prompt to hand off UI redesign implementation to an agent.
 You are implementing a UI redesign for the Threshold alarm app (Tauri v2 + React + MUI v7). All planning is complete — your job is to execute the plan exactly as written.
 
 **Start by reading these files in full before writing any code:**
-- `docs/ui/IMPLEMENTATION_PLAN.md` — your primary instruction set
-- `docs/ui-mockups/temp-screen-redesigns/SCREEN_REDESIGN_UPDATE_PLAN.md` — design decisions and rationale
-- `docs/ui-mockups/temp-screen-redesigns/proposed-v4/` — reference mockups for all screens
+- `docs/ui/redesigns/screen-refresh-2026/plan.md` — your primary instruction set
+- `docs/ui/redesigns/screen-refresh-2026/design-decisions.md` — design decisions and rationale
+- `docs/ui/redesigns/screen-refresh-2026/mockups/v4/` — reference mockups for all screens
 
 **Branch:** Create a new branch off `redesign/screen-refresh-journey` named `redesign/ui-implementation` before making any changes.
 
@@ -22,6 +22,8 @@ You are implementing a UI redesign for the Threshold alarm app (Tauri v2 + React
 - Commit after each phase is complete and passing — use Conventional Commits format
 
 **Verification:** After each phase, run `pnpm --filter threshold tsc --noEmit` to confirm no TypeScript errors before committing. Then check the acceptance criteria listed in the plan for that phase.
+
+**Implementation log:** Maintain `docs/ui/redesigns/screen-refresh-2026/implementation-log.md` as you work. After each phase commit, add a numbered entry using the same format as `journey-log.md` (what happened, why it matters, any decisions made). Create the file before your first commit if it does not exist.
 
 **If you encounter anything unclear or ambiguous:**
 - Do not guess — stop and ask before proceeding

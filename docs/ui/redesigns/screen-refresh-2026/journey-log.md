@@ -291,3 +291,23 @@ Each entry includes:
 "We reviewed every place window sizing is configured and settled the main window at 760 by 680. That's wide enough for the new Settings two-panel layout and matches the wider-than-tall proportion shown in the desktop OS context mockup. The ringing window stays at its existing 400 by 500 — that's a separate floating alarm window and shouldn't change."
 
 ---
+
+### 15 — 2026-03-08 — Restructured docs into permanent home and produced agent handoff artefacts
+
+**What happened**
+- moved all redesign artefacts out of `docs/ui-mockups/temp-screen-redesigns/` into a permanent structure under `docs/ui/redesigns/screen-refresh-2026/`
+- renamed files to calm, lowercase names: `IMPLEMENTATION_PLAN.md` → `plan.md`, `SCREEN_REDESIGN_UPDATE_PLAN.md` → `design-decisions.md`, `REDESIGN_JOURNEY_LOG.md` → `journey-log.md`, `AGENT_PROMPT.md` → `agent-prompt.md`
+- v4 mockups moved to `mockups/v4/`; v1–v3 and exploration assets moved to `mockups/archive/`
+- updated all internal path references across `plan.md`, `design-decisions.md`, and `agent-prompt.md`
+- added implementation log rule to `agent-prompt.md`: implementing agent must maintain `implementation-log.md` in the same folder using the same numbered entry format as this log
+- `docs/ui/specs/` stays in place — those are living documents tied to the current screen contracts, not the redesign initiative
+
+**Why this matters**
+- removes the "temp" framing — these are permanent project artefacts, not throwaway scaffolding
+- gives future redesign initiatives a clear pattern to follow (`docs/ui/redesigns/<initiative-name>/`)
+- the implementation log requirement means the agent's work will be traceable in the same way the planning work is
+
+**Speaker script**
+"We moved everything out of the temp folder and into a proper permanent home. The structure is clean: specs stay live, the redesign initiative lives in its own named folder, and v4 mockups are easy to find. We also updated the agent prompt to require an implementation log, so the agent's decisions and progress are tracked in the same format as this planning journal."
+
+---
