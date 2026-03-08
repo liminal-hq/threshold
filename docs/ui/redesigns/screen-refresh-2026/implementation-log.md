@@ -226,3 +226,19 @@ Each entry includes:
 
 **Speaker script**
 "Entry 11 fixes the Edit screen layout for the new window size. Window mode pickers are now side by side as the mockup intended, and vertical spacing is tightened so all fields — including Sound — are visible without scrolling. The desktop container is wider to use the extra room."
+
+---
+
+### 12 — 2026-03-08 — Fix edit screen width and scrollability
+
+**What happened**
+- Set desktop form max-width to 700px (matching the v4 mockup's centred form width) instead of full-width `maxWidth: false`
+- Removed `height: '100%'` from Container so content can exceed viewport height and trigger scrolling on the outer Box
+- Sound picker was cut off below the fixed footer because the container was constrained to viewport height — now scrollable
+
+**Why this matters**
+- The form no longer stretches edge-to-edge on the 760px window — it has proper horizontal breathing room
+- Sound picker and any future fields below it are now accessible via scroll
+
+**Speaker script**
+"Entry 12 pulls the form back to a centred 700px max-width for proper breathing room, and fixes scrollability so the Sound picker is no longer trapped behind the footer."

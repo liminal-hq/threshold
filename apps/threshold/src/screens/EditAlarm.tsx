@@ -195,11 +195,11 @@ const EditAlarm: React.FC = () => {
                 />
             )}
             <Box sx={{ flexGrow: 1 }}>
-                <Container maxWidth={isMobile ? 'sm' : false} sx={{
+                <Container maxWidth="sm" sx={{
                     py: isMobile ? 3 : 2,
-                    mt: !isMobile ? 0 : 0,
+                    mt: 0,
                     px: isMobile ? 2 : 4,
-                    height: '100%',
+                    ...(!isMobile && { maxWidth: 700 }),
                     display: 'flex',
                     flexDirection: 'column'
                 }}>
