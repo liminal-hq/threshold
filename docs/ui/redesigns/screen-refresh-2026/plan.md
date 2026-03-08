@@ -4,9 +4,9 @@ Date: 2026-03-08
 Branch: `redesign/screen-refresh-journey`
 Status: Ready for review before execution
 
-Reference mockups: `docs/ui-mockups/temp-screen-redesigns/proposed-v4/`
+Reference mockups: `docs/ui/redesigns/screen-refresh-2026/mockups/v4/`
 Reference specs: `docs/ui/specs/`
-Reference plan: `docs/ui-mockups/temp-screen-redesigns/SCREEN_REDESIGN_UPDATE_PLAN.md`
+Reference plan: `docs/ui/redesigns/screen-refresh-2026/design-decisions.md`
 
 ---
 
