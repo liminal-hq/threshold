@@ -259,3 +259,20 @@ Each entry includes:
 
 **Speaker script**
 "Entry 13 fixes the scroll issue — an intermediate wrapper Box was swallowing overflow so the page couldn't scroll past the footer. Removed it. Window pickers now scale down to 85% to centre neatly in the side-by-side layout."
+
+---
+
+### 14 — 2026-03-08 — Fix scroll and picker phantom padding
+
+**What happened**
+- Replaced `transform: scale(0.85)` on window pickers with CSS overrides targeting the picker's class names (`.time-picker-container`, `.time-value-input`, `.time-control-btn`) — reduces padding, input width, font size, and button size directly instead of using CSS transform
+- Removed `display: flex, flexDirection: column` from the outer scroll container — flex column was preventing the content from overflowing the parent height, blocking scroll
+- The outer Box now uses `height: 100%, overflowY: auto` as a simple scroll container
+
+**Why this matters**
+- CSS `transform: scale()` shrinks visually but doesn't reduce layout size — created ~27px of phantom padding below each picker
+- Flex column layout on the scroll container was constraining children to parent height, making the page unscrollable
+- Sound picker should now be fully visible via scroll
+
+**Speaker script**
+"Entry 14 swaps CSS transform scaling for direct class overrides on the time picker — no more phantom space. Also fixed the scroll container by removing flex column, which was preventing overflow."
