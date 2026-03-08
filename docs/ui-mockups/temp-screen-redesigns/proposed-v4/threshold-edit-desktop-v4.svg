@@ -11,7 +11,7 @@
     <style><![CDATA[
       .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
       .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
-      .fieldLabel { font-size: 17px; fill: #8fa8c8; font-weight: 600; }
+      .fieldLabel { font-size: 16px; fill: #8fa8c8; font-weight: 600; letter-spacing: 0.5px; }
       .noteTitle { font-size: 19px; fill: #dbe8fb; font-weight: 700; }
       .noteBody { font-size: 15px; fill: #a7bad5; }
     ]]></style>
@@ -34,31 +34,31 @@
     <text class="t" x="978" y="21" text-anchor="middle" style="font-size:12px;fill:#adc1dd;">✕</text>
 
     <!-- In-content title -->
-    <text class="t" x="36" y="78" style="font-size:30px;fill:#edf4ff;font-weight:700;">Edit Alarm</text>
+    <text class="t" x="36" y="74" style="font-size:28px;fill:#edf4ff;font-weight:700;">Edit Alarm</text>
 
-    <!-- Form region — centred, sm width -->
-    <g transform="translate(150 100)">
+    <!-- Form — centred sm container -->
+    <g transform="translate(150 96)">
 
       <!-- Mode toggle -->
-      <rect x="0" y="0" width="700" height="50" rx="13" fill="#26354c"/>
-      <rect x="4" y="4" width="348" height="42" rx="10" fill="#4c8dff"/>
-      <text class="t" x="178" y="31" text-anchor="middle" style="font-size:18px;fill:#fff;font-weight:700;">Fixed Time</text>
-      <text class="t" x="526" y="31" text-anchor="middle" style="font-size:18px;fill:#9ab0d0;">Window</text>
+      <rect x="0" y="0" width="700" height="46" rx="12" fill="#26354c"/>
+      <rect x="4" y="4" width="348" height="38" rx="9" fill="#4c8dff"/>
+      <text class="t" x="178" y="29" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">Fixed Time</text>
+      <text class="t" x="526" y="29" text-anchor="middle" style="font-size:17px;fill:#9ab0d0;">Window</text>
 
-      <!-- Time — custom desktop picker representation -->
-      <text class="t fieldLabel" x="0" y="90">Time</text>
-      <!-- Desktop custom time picker: two digit segments + colon -->
-      <rect x="0" y="100" width="700" height="100" rx="16" fill="#1c2b41" stroke="#324a6b"/>
-      <text class="t" x="350" y="166" text-anchor="middle" style="font-size:64px;fill:#f4f8ff;font-weight:700;letter-spacing:-2px;">07:00</text>
+      <!-- Time label + custom desktop picker -->
+      <text class="t fieldLabel" x="0" y="80">Time</text>
+      <rect x="0" y="88" width="700" height="92" rx="14" fill="#1c2b41" stroke="#324a6b"/>
+      <!-- Desktop custom TimePicker: large digit display -->
+      <text class="t" x="350" y="152" text-anchor="middle" style="font-size:58px;fill:#f4f8ff;font-weight:700;letter-spacing:-2px;">07:00</text>
 
       <!-- Label -->
-      <text class="t fieldLabel" x="0" y="238">Label</text>
-      <rect x="0" y="248" width="700" height="52" rx="12" fill="#1c2b41" stroke="#324a6b"/>
-      <text class="t" x="18" y="281" style="font-size:19px;fill:#95abc9;">Alarm Label (e.g. Wake Up)</text>
+      <text class="t fieldLabel" x="0" y="218">Label</text>
+      <rect x="0" y="226" width="700" height="48" rx="10" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t" x="16" y="257" style="font-size:18px;fill:#95abc9;">Alarm Label (e.g. Wake Up)</text>
 
-      <!-- Repeats -->
-      <text class="t fieldLabel" x="0" y="336">Repeats</text>
-      <g transform="translate(0 348)">
+      <!-- Repeats — Gnome-style circles, kept as per DaySelector in code -->
+      <text class="t fieldLabel" x="0" y="308">Repeats</text>
+      <g transform="translate(0 316)">
         <circle cx="26"  cy="26" r="22" fill="#4c8dff"/><text class="t" x="26"  y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">M</text>
         <circle cx="78"  cy="26" r="22" fill="#4c8dff"/><text class="t" x="78"  y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">T</text>
         <circle cx="130" cy="26" r="22" fill="#4c8dff"/><text class="t" x="130" y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">W</text>
@@ -68,49 +68,48 @@
         <circle cx="338" cy="26" r="22" fill="#324764"/><text class="t" x="338" y="33" text-anchor="middle" style="font-size:15px;fill:#b2c5dc;">S</text>
       </g>
 
-      <!-- Sound — select dropdown (desktop) -->
-      <text class="t fieldLabel" x="0" y="424">Sound</text>
-      <rect x="0" y="434" width="700" height="52" rx="12" fill="#1c2b41" stroke="#324a6b"/>
-      <text class="t" x="18" y="467" style="font-size:19px;fill:#e3edfc;">Ambient Drone</text>
-      <text class="t" x="688" y="467" text-anchor="end" style="font-size:20px;fill:#8fa8c8;">▾</text>
+      <!-- Sound — select (desktop) -->
+      <text class="t fieldLabel" x="0" y="394">Sound</text>
+      <rect x="0" y="402" width="700" height="48" rx="10" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t" x="16" y="433" style="font-size:18px;fill:#e3edfc;">Ambient Drone</text>
+      <text class="t" x="686" y="433" text-anchor="end" style="font-size:19px;fill:#8fa8c8;">▾</text>
     </g>
 
-    <!-- Fixed footer: Cancel + Save Alarm -->
-    <rect x="0" y="726" width="1000" height="54" fill="#142132"/>
-    <rect x="776" y="737" width="110" height="32" rx="8" fill="#1f334b" stroke="#2e4870"/>
-    <text class="t" x="831" y="758" text-anchor="middle" style="font-size:17px;fill:#d2dded;">Cancel</text>
-    <rect x="898" y="737" width="82" height="32" rx="8" fill="#4c8dff"/>
-    <text class="t" x="939" y="758" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">Save</text>
+    <!-- Fixed footer: Cancel (outlined) + Save Alarm (contained) -->
+    <rect x="0" y="724" width="1000" height="56" fill="#142132"/>
+    <rect x="750" y="734" width="110" height="34" rx="8" fill="none" stroke="#4c8dff" stroke-width="1.5"/>
+    <text class="t" x="805" y="756" text-anchor="middle" style="font-size:16px;fill:#7fb3ff;">Cancel</text>
+    <rect x="874" y="734" width="110" height="34" rx="8" fill="#4c8dff"/>
+    <text class="t" x="929" y="756" text-anchor="middle" style="font-size:16px;fill:#fff;font-weight:700;">Save Alarm</text>
   </g>
 
-  <!-- Annotation: title bar -->
-  <g transform="translate(1122 110)">
-    <rect width="206" height="110" rx="14" fill="#111c2f" stroke="#2e4362"/>
-    <text class="t noteTitle" x="14" y="34">TitleBar.tsx</text>
-    <text class="t noteBody" x="14" y="58">32px app-drawn bar.</text>
-    <text class="t noteBody" x="14" y="78">No native WM chrome.</text>
-    <text class="t noteBody" x="14" y="98">decorations: false.</text>
+  <!-- Annotation: day selector -->
+  <g transform="translate(1122 140)">
+    <rect width="210" height="130" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Day selector circles</text>
+    <text class="t noteBody" x="14" y="58">Gnome-style circular</text>
+    <text class="t noteBody" x="14" y="78">toggle buttons kept.</text>
+    <text class="t noteBody" x="14" y="98">DaySelector component</text>
+    <text class="t noteBody" x="14" y="118">unchanged in phase 1.</text>
   </g>
-  <line x1="1122" y1="138" x2="1082" y2="120" stroke="#4f6a8c" stroke-dasharray="4 4"/>
-
-  <!-- Annotation: footer actions -->
-  <g transform="translate(1122 450)">
-    <rect width="206" height="120" rx="14" fill="#111c2f" stroke="#2e4362"/>
-    <text class="t noteTitle" x="14" y="34">Footer actions</text>
-    <text class="t noteBody" x="14" y="58">Fixed bottom bar.</text>
-    <text class="t noteBody" x="14" y="78">Cancel (outlined) and</text>
-    <text class="t noteBody" x="14" y="98">Save (contained).</text>
-  </g>
-  <line x1="1122" y1="508" x2="1082" y2="762" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+  <line x1="1122" y1="210" x2="1082" y2="430" stroke="#4f6a8c" stroke-dasharray="4 4"/>
 
   <!-- Annotation: desktop time picker -->
-  <g transform="translate(1122 290)">
-    <rect width="206" height="130" rx="14" fill="#111c2f" stroke="#2e4362"/>
-    <text class="t noteTitle" x="14" y="34">Desktop time picker</text>
-    <text class="t noteBody" x="14" y="58">Custom TimePicker</text>
-    <text class="t noteBody" x="14" y="78">component — not MUI</text>
-    <text class="t noteBody" x="14" y="98">mobile picker. Digit</text>
-    <text class="t noteBody" x="14" y="118">segment interaction.</text>
+  <g transform="translate(1122 320)">
+    <rect width="210" height="110" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Custom time picker</text>
+    <text class="t noteBody" x="14" y="58">Desktop TimePicker.tsx</text>
+    <text class="t noteBody" x="14" y="78">— digit segment control,</text>
+    <text class="t noteBody" x="14" y="98">not MUI mobile picker.</text>
   </g>
-  <line x1="1122" y1="340" x2="1082" y2="280" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+  <line x1="1122" y1="368" x2="1082" y2="240" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: footer -->
+  <g transform="translate(1122 480)">
+    <rect width="210" height="100" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Footer actions</text>
+    <text class="t noteBody" x="14" y="58">Cancel outlined, right-</text>
+    <text class="t noteBody" x="14" y="78">aligned. Save contained.</text>
+  </g>
+  <line x1="1122" y1="528" x2="1082" y2="762" stroke="#4f6a8c" stroke-dasharray="4 4"/>
 </svg>

@@ -74,6 +74,10 @@ Current review set: `proposed-v4` — full consistent set across all screens and
 
 ![Settings desktop (concept direction)](./proposed-v4/threshold-settings-desktop-v4.svg)
 
+### Desktop Window Context (OS View)
+
+![Desktop window context](./proposed-v4/threshold-window-desktop-v4.svg)
+
 ## 5) What changes by screen
 
 ### Home
