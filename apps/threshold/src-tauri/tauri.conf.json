@@ -13,8 +13,8 @@
 		"windows": [
 			{
 				"title": "Threshold",
-				"width": 450,
-				"height": 800,
+				"width": 760,
+				"height": 680,
 				"resizable": true,
 				"maximizable": false,
 				"decorations": false,
