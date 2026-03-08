@@ -133,3 +133,24 @@ Each entry includes:
 
 **Speaker script**
 \"This v2 pass brings the mockups in line with our latest decisions: desktop Home now keeps the current bottom add button style and moves Settings gear into that same action zone, while Settings shifts to a flatter list layout to reduce visual noise. We also versioned the full set as v2 so we can compare evolution cleanly against v1.\"
+
+---
+
+### 2026-03-08 13:32 (EDT) - Shifted to proposed-v3 with updated desktop and settings direction
+
+**What happened**
+- created `proposed-v3` SVG review set with the original dark comparison palette
+- revised Home desktop concept to avoid literal screenshot replication while keeping:
+  - bottom add button style
+  - Settings gear to the right of add action zone
+- locked mobile Settings direction close to current structure, without line-heavy treatment
+- restored desktop Settings left-category/right-detail composition inspired by v1
+- updated plan image references and settings direction notes to point to `proposed-v3`
+
+**Why this matters**
+- keeps inspiration and final mockup direction separate to avoid overfitting to a single screenshot
+- confirms settings strategy for mobile and desktop before implementation
+- preserves clear `v1 -> v2 -> v3` chronology with explicit rationale per pivot
+
+**Speaker script**
+"This v3 pass intentionally steps back from screenshot cloning while still honouring the desktop constraints we agreed on. We kept the dark palette for easy comparison, locked mobile Settings close to current behaviour, and brought back the desktop left-nav/right-panel structure from v1. That gives us a cleaner, more intentional baseline for the next review round."
