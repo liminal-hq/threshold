@@ -54,27 +54,25 @@ Use current alarm text patterns as source of truth (not mock filler text):
 
 ## 4) New mockups for review
 
-Current review set: mixed — Home and Edit remain at `proposed-v3`; Settings mobile updated to `proposed-v4` (code-faithful baseline).
+Current review set: `proposed-v4` — full consistent set across all screens and platforms.
 
 ### Home
 
-![Home mobile redesign](./proposed-v3/threshold-home-mobile-v3.svg)
+![Home mobile](./proposed-v4/threshold-home-mobile-v4.svg)
 
-![Home desktop redesign](./proposed-v3/threshold-home-desktop-v3.svg)
+![Home desktop](./proposed-v4/threshold-home-desktop-v4.svg)
 
 ### Edit / New Alarm
 
-![Edit mobile redesign](./proposed-v3/threshold-edit-mobile-v3.svg)
+![Edit mobile](./proposed-v4/threshold-edit-mobile-v4.svg)
 
-![Edit desktop redesign](./proposed-v3/threshold-edit-desktop-v3.svg)
+![Edit desktop](./proposed-v4/threshold-edit-desktop-v4.svg)
 
-### Settings — Mobile (code-faithful baseline, v4)
+### Settings
 
-![Settings mobile code-faithful](./proposed-v4/threshold-settings-mobile-v4.svg)
+![Settings mobile (code-faithful)](./proposed-v4/threshold-settings-mobile-v4.svg)
 
-### Settings — Desktop (concept direction, v3)
-
-![Settings desktop redesign](./proposed-v3/threshold-settings-desktop-v3.svg)
+![Settings desktop (concept direction)](./proposed-v4/threshold-settings-desktop-v4.svg)
 
 ## 5) What changes by screen
 

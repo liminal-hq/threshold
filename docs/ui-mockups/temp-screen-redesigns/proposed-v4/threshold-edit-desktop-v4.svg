@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 960" width="1600" height="960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1423"/>
+      <stop offset="100%" stop-color="#121f34"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b283e"/>
+      <stop offset="100%" stop-color="#162233"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .fieldLabel { font-size: 17px; fill: #8fa8c8; font-weight: 600; }
+      .noteTitle { font-size: 19px; fill: #dbe8fb; font-weight: 700; }
+      .noteBody { font-size: 15px; fill: #a7bad5; }
+    ]]></style>
+  </defs>
+
+  <rect width="1600" height="960" fill="url(#bg)"/>
+  <text class="t eyebrow" x="48" y="48">THRESHOLD REDESIGN V4 — EDIT / NEW ALARM DESKTOP</text>
+
+  <!-- App window -->
+  <g transform="translate(80 72)">
+    <rect width="1000" height="780" rx="12" fill="url(#panel)" stroke="#2e4362"/>
+
+    <!-- TitleBar.tsx — 32px -->
+    <rect x="0" y="0" width="1000" height="32" rx="12" fill="#17253b"/>
+    <rect x="0" y="20" width="1000" height="12" fill="#17253b"/>
+    <text class="t" x="500" y="22" text-anchor="middle" style="font-size:13px;fill:#8faac8;font-weight:500;">Threshold</text>
+    <circle cx="952" cy="16" r="8" fill="#2a3f5f"/>
+    <text class="t" x="952" y="21" text-anchor="middle" style="font-size:11px;fill:#adc1dd;">−</text>
+    <circle cx="978" cy="16" r="8" fill="#2a3f5f"/>
+    <text class="t" x="978" y="21" text-anchor="middle" style="font-size:12px;fill:#adc1dd;">✕</text>
+
+    <!-- In-content title -->
+    <text class="t" x="36" y="78" style="font-size:30px;fill:#edf4ff;font-weight:700;">Edit Alarm</text>
+
+    <!-- Form region — centred, sm width -->
+    <g transform="translate(150 100)">
+
+      <!-- Mode toggle -->
+      <rect x="0" y="0" width="700" height="50" rx="13" fill="#26354c"/>
+      <rect x="4" y="4" width="348" height="42" rx="10" fill="#4c8dff"/>
+      <text class="t" x="178" y="31" text-anchor="middle" style="font-size:18px;fill:#fff;font-weight:700;">Fixed Time</text>
+      <text class="t" x="526" y="31" text-anchor="middle" style="font-size:18px;fill:#9ab0d0;">Window</text>
+
+      <!-- Time — custom desktop picker representation -->
+      <text class="t fieldLabel" x="0" y="90">Time</text>
+      <!-- Desktop custom time picker: two digit segments + colon -->
+      <rect x="0" y="100" width="700" height="100" rx="16" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t" x="350" y="166" text-anchor="middle" style="font-size:64px;fill:#f4f8ff;font-weight:700;letter-spacing:-2px;">07:00</text>
+
+      <!-- Label -->
+      <text class="t fieldLabel" x="0" y="238">Label</text>
+      <rect x="0" y="248" width="700" height="52" rx="12" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t" x="18" y="281" style="font-size:19px;fill:#95abc9;">Alarm Label (e.g. Wake Up)</text>
+
+      <!-- Repeats -->
+      <text class="t fieldLabel" x="0" y="336">Repeats</text>
+      <g transform="translate(0 348)">
+        <circle cx="26"  cy="26" r="22" fill="#4c8dff"/><text class="t" x="26"  y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">M</text>
+        <circle cx="78"  cy="26" r="22" fill="#4c8dff"/><text class="t" x="78"  y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">T</text>
+        <circle cx="130" cy="26" r="22" fill="#4c8dff"/><text class="t" x="130" y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">W</text>
+        <circle cx="182" cy="26" r="22" fill="#4c8dff"/><text class="t" x="182" y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">T</text>
+        <circle cx="234" cy="26" r="22" fill="#4c8dff"/><text class="t" x="234" y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">F</text>
+        <circle cx="286" cy="26" r="22" fill="#324764"/><text class="t" x="286" y="33" text-anchor="middle" style="font-size:15px;fill:#b2c5dc;">S</text>
+        <circle cx="338" cy="26" r="22" fill="#324764"/><text class="t" x="338" y="33" text-anchor="middle" style="font-size:15px;fill:#b2c5dc;">S</text>
+      </g>
+
+      <!-- Sound — select dropdown (desktop) -->
+      <text class="t fieldLabel" x="0" y="424">Sound</text>
+      <rect x="0" y="434" width="700" height="52" rx="12" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t" x="18" y="467" style="font-size:19px;fill:#e3edfc;">Ambient Drone</text>
+      <text class="t" x="688" y="467" text-anchor="end" style="font-size:20px;fill:#8fa8c8;">▾</text>
+    </g>
+
+    <!-- Fixed footer: Cancel + Save Alarm -->
+    <rect x="0" y="726" width="1000" height="54" fill="#142132"/>
+    <rect x="776" y="737" width="110" height="32" rx="8" fill="#1f334b" stroke="#2e4870"/>
+    <text class="t" x="831" y="758" text-anchor="middle" style="font-size:17px;fill:#d2dded;">Cancel</text>
+    <rect x="898" y="737" width="82" height="32" rx="8" fill="#4c8dff"/>
+    <text class="t" x="939" y="758" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">Save</text>
+  </g>
+
+  <!-- Annotation: title bar -->
+  <g transform="translate(1122 110)">
+    <rect width="206" height="110" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">TitleBar.tsx</text>
+    <text class="t noteBody" x="14" y="58">32px app-drawn bar.</text>
+    <text class="t noteBody" x="14" y="78">No native WM chrome.</text>
+    <text class="t noteBody" x="14" y="98">decorations: false.</text>
+  </g>
+  <line x1="1122" y1="138" x2="1082" y2="120" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: footer actions -->
+  <g transform="translate(1122 450)">
+    <rect width="206" height="120" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Footer actions</text>
+    <text class="t noteBody" x="14" y="58">Fixed bottom bar.</text>
+    <text class="t noteBody" x="14" y="78">Cancel (outlined) and</text>
+    <text class="t noteBody" x="14" y="98">Save (contained).</text>
+  </g>
+  <line x1="1122" y1="508" x2="1082" y2="762" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: desktop time picker -->
+  <g transform="translate(1122 290)">
+    <rect width="206" height="130" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Desktop time picker</text>
+    <text class="t noteBody" x="14" y="58">Custom TimePicker</text>
+    <text class="t noteBody" x="14" y="78">component — not MUI</text>
+    <text class="t noteBody" x="14" y="98">mobile picker. Digit</text>
+    <text class="t noteBody" x="14" y="118">segment interaction.</text>
+  </g>
+  <line x1="1122" y1="340" x2="1082" y2="280" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+</svg>
