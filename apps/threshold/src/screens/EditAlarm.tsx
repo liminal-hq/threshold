@@ -312,11 +312,17 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 										</>
 									) : (
 										<Box sx={{ display: 'flex', gap: 2 }}>
-											<Box sx={{ flex: 1 }}>
+											<Box sx={{ flex: 1, minWidth: 0 }}>
 												<Typography variant="subtitle2" gutterBottom>
 													Start Window
 												</Typography>
-												<Box sx={{ display: 'flex', justifyContent: 'center', borderRadius: UI.card.borderRadius }}>
+												<Box sx={{
+													display: 'flex',
+													justifyContent: 'center',
+													borderRadius: UI.card.borderRadius,
+													transform: 'scale(0.85)',
+													transformOrigin: 'top center',
+												}}>
 													<DesktopCustomTimePicker
 														value={windowStart}
 														onChange={setWindowStart}
@@ -324,11 +330,17 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 													/>
 												</Box>
 											</Box>
-											<Box sx={{ flex: 1 }}>
+											<Box sx={{ flex: 1, minWidth: 0 }}>
 												<Typography variant="subtitle2" gutterBottom>
 													End Window
 												</Typography>
-												<Box sx={{ display: 'flex', justifyContent: 'center', borderRadius: UI.card.borderRadius }}>
+												<Box sx={{
+													display: 'flex',
+													justifyContent: 'center',
+													borderRadius: UI.card.borderRadius,
+													transform: 'scale(0.85)',
+													transformOrigin: 'top center',
+												}}>
 													<DesktopCustomTimePicker
 														value={windowEnd}
 														onChange={setWindowEnd}

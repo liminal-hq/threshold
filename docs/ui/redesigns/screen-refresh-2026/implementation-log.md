@@ -242,3 +242,20 @@ Each entry includes:
 
 **Speaker script**
 "Entry 12 pulls the form back to a centred 700px max-width for proper breathing room, and fixes scrollability so the Sound picker is no longer trapped behind the footer."
+
+---
+
+### 13 — 2026-03-08 — Fix edit screen scrolling and scale window pickers
+
+**What happened**
+- Removed the intermediate `flexGrow: 1` wrapper Box that was preventing the outer scroll container from detecting overflow — content now flows naturally and scrolls
+- Removed `flexGrow: 1` from the Stack (no longer needed without the wrapper)
+- Added `transform: scale(0.85)` with `transformOrigin: 'top center'` to the side-by-side Window mode picker containers so they fit comfortably within each flex half and centre properly
+- Added `minWidth: 0` on each flex child to prevent overflow from the picker's intrinsic width
+
+**Why this matters**
+- The Sound picker was trapped behind the fixed footer because content couldn't scroll — now it scrolls naturally
+- Window mode pickers were left-aligned and overflowing their flex containers — scaling at 85% centres them and keeps them visually balanced
+
+**Speaker script**
+"Entry 13 fixes the scroll issue — an intermediate wrapper Box was swallowing overflow so the page couldn't scroll past the footer. Removed it. Window pickers now scale down to 85% to centre neatly in the side-by-side layout."
