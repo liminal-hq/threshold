@@ -163,7 +163,13 @@ Material You support remains automatic through existing `ThemeContext` and setti
 - Risk: cognitive load increase from dense settings lists.
   - Mitigation: stronger section grouping and spacing rhythm, no added setting complexity.
 
-## 10) Questions to settle before implementation
+## 10) Versioning Policy For Redesign Assets
+
+- Keep redesign SVG churn tracked in git as part of project chronology.
+- Do not add ignore rules for iterative redesign SVG updates in this workflow.
+- Treat the evolution of mockups and notes as first-class historical artefacts.
+
+## 11) Questions to settle before implementation
 
 1. On mobile `Home`, should we keep both refresh and overflow menu in the header exactly as now, or simplify to one action and move refresh into overflow?
 2. In `Settings`, should the `Developer` section be always expanded (current behaviour) or collapsed behind a single row by default?
