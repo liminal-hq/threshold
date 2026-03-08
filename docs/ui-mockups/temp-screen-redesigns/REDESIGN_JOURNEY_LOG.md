@@ -112,3 +112,24 @@ Each entry includes:
 
 **Speaker script**
 "We made a deliberate process decision: the churn is part of the story, so we are tracking iterative redesign assets in git instead of ignoring them. That gives us a clear chronology of how ideas evolved and why final choices were made."
+
+---
+
+### 2026-03-08 13:25 (EDT) - Published proposed-v2 SVG set for next review pass
+
+**What happened**
+- created `proposed-v2` SVGs and switched plan image references to the new set
+- updated Home desktop concept to show:
+  - borderless custom title bar context
+  - existing bottom add button style
+  - Settings gear positioned to the right in the bottom action zone
+- updated Settings mobile and desktop concepts to a flatter list-first direction (reduced bubble-card noise)
+- carried Edit and Home mobile forward into `proposed-v2` to keep a complete review set
+
+**Why this matters**
+- aligns mockups with latest desktop constraints and interaction expectations
+- tests the \"flat settings\" direction before implementation work begins
+- keeps review artefacts versioned by iteration (`v1` -> `v2`) for clearer chronology
+
+**Speaker script**
+\"This v2 pass brings the mockups in line with our latest decisions: desktop Home now keeps the current bottom add button style and moves Settings gear into that same action zone, while Settings shifts to a flatter list layout to reduce visual noise. We also versioned the full set as v2 so we can compare evolution cleanly against v1.\"

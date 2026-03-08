@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1280" width="900" height="1280">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#111b2e"/>
+    </linearGradient>
+    <linearGradient id="phoneScreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#151f33"/>
+      <stop offset="100%" stop-color="#0f1727"/>
+    </linearGradient>
+    <linearGradient id="banner" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff7a3d" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ff7a3d" stop-opacity="0.04"/>
+    </linearGradient>
+    <linearGradient id="fab" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff8f5d"/>
+      <stop offset="100%" stop-color="#e85f2f"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .h { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .label { font-size: 18px; fill: #9eb0c9; }
+      .note { font-size: 17px; fill: #95a8c2; }
+      .noteStrong { font-size: 17px; fill: #d7e3f4; font-weight: 600; }
+      .tiny { font-size: 14px; fill: #6f88a9; }
+      .time { font-size: 52px; fill: #f5f8ff; font-weight: 700; letter-spacing: -1px; }
+      .subtitle { font-size: 22px; fill: #a9bad1; }
+      .disabled { font-size: 20px; fill: #7f90a8; }
+    ]]></style>
+  </defs>
+
+  <rect width="900" height="1280" fill="url(#bg)"/>
+  <text class="t h" x="48" y="66">THRESHOLD REDESIGN V1 - HOME MOBILE</text>
+
+  <g transform="translate(250 98)" filter="url(#shadow)">
+    <rect x="0" y="0" width="400" height="1080" rx="52" fill="#0b101a" stroke="#1b2940" stroke-width="2"/>
+    <rect x="14" y="16" width="372" height="1048" rx="40" fill="url(#phoneScreen)"/>
+
+    <text class="t tiny" x="32" y="56">02:54</text>
+    <text class="t tiny" x="348" y="56" text-anchor="end">4G 17%</text>
+
+    <text class="t" x="32" y="114" style="font-size:42px;fill:#e9f0fa;font-weight:700;">Threshold</text>
+    <circle cx="326" cy="102" r="14" fill="#22314c"/>
+    <text class="t" x="326" y="108" text-anchor="middle" style="font-size:16px;fill:#adc1dd;">R</text>
+    <circle cx="360" cy="102" r="14" fill="#22314c"/>
+    <text class="t" x="360" y="108" text-anchor="middle" style="font-size:18px;fill:#adc1dd;">:</text>
+
+    <rect x="28" y="138" width="344" height="92" rx="24" fill="url(#banner)" stroke="#ff8f5d" stroke-opacity="0.35"/>
+    <circle cx="58" cy="184" r="15" fill="#ff8f5d" fill-opacity="0.22"/>
+    <text class="t" x="58" y="190" text-anchor="middle" style="font-size:16px;fill:#ff9a70;">A</text>
+    <text class="t" x="84" y="176" style="font-size:20px;fill:#ff9a70;font-weight:700;">Next alarm in 6h 47m</text>
+    <text class="t" x="84" y="202" style="font-size:17px;fill:#9cb1cc;">Scheduled: 6:47 AM tomorrow</text>
+
+    <g transform="translate(28 250)">
+      <rect width="344" height="152" rx="24" fill="#273245" stroke="#34455f"/>
+      <rect x="0" y="28" width="6" height="92" rx="3" fill="#6f83a4"/>
+      <text class="t time" x="22" y="74">22:33</text>
+      <text class="t subtitle" x="24" y="106">Alarm</text>
+      <text class="t disabled" x="24" y="132">Disabled</text>
+      <rect x="280" y="62" width="50" height="28" rx="14" fill="#3b4c66"/>
+      <circle cx="294" cy="76" r="12" fill="#d9e1ee"/>
+    </g>
+
+    <g transform="translate(28 420)">
+      <rect width="344" height="152" rx="24" fill="#273245" stroke="#34455f"/>
+      <rect x="0" y="28" width="6" height="92" rx="3" fill="#6f83a4"/>
+      <text class="t" x="22" y="74" style="font-size:48px;fill:#f1f6ff;font-weight:700;letter-spacing:-1px;">02:00 - 02:30</text>
+      <text class="t subtitle" x="24" y="106">Test Alarm</text>
+      <text class="t disabled" x="24" y="132">Disabled</text>
+      <rect x="280" y="62" width="50" height="28" rx="14" fill="#3b4c66"/>
+      <circle cx="294" cy="76" r="12" fill="#d9e1ee"/>
+    </g>
+
+    <g transform="translate(28 590)">
+      <rect width="344" height="152" rx="24" fill="#2a364b" stroke="#3e5272"/>
+      <rect x="0" y="28" width="6" height="92" rx="3" fill="#ff8f5d"/>
+      <text class="t time" x="22" y="74">09:27</text>
+      <text class="t subtitle" x="24" y="106">Francis!</text>
+      <text class="t" x="24" y="132" style="font-size:20px;fill:#9db4d4;">Sun 09:27</text>
+      <rect x="280" y="62" width="50" height="28" rx="14" fill="#4c6190"/>
+      <circle cx="316" cy="76" r="12" fill="#b9cbff"/>
+    </g>
+
+    <circle cx="334" cy="972" r="34" fill="url(#fab)"/>
+    <text class="t" x="334" y="982" text-anchor="middle" style="font-size:44px;fill:#fff;">+</text>
+
+    <rect x="132" y="1040" width="136" height="6" rx="3" fill="#ced9eb" fill-opacity="0.45"/>
+  </g>
+
+  <g transform="translate(48 170)">
+    <rect width="170" height="118" rx="16" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteStrong" x="14" y="34">Real text baseline</text>
+    <text class="t note" x="14" y="60">Time row keeps</text>
+    <text class="t note" x="14" y="82">current alarm copy</text>
+    <text class="t tiny" x="14" y="104">Not mock filler text</text>
+  </g>
+  <line x1="218" y1="230" x2="248" y2="298" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <g transform="translate(676 250)">
+    <rect width="176" height="140" rx="16" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteStrong" x="14" y="34">Theme tokens only</text>
+    <text class="t note" x="14" y="60">- primary / secondary</text>
+    <text class="t note" x="14" y="82">- background / paper</text>
+    <text class="t note" x="14" y="104">- text + divider</text>
+    <text class="t tiny" x="14" y="126">Material You compatible</text>
+  </g>
+  <line x1="676" y1="318" x2="648" y2="318" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <g transform="translate(670 470)">
+    <rect width="182" height="126" rx="16" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteStrong" x="14" y="34">Interaction language</text>
+    <text class="t note" x="14" y="60">Swipe row stays</text>
+    <text class="t note" x="14" y="82">soft spring motion</text>
+    <text class="t tiny" x="14" y="108">Reduced motion respected</text>
+  </g>
+  <line x1="670" y1="532" x2="648" y2="566" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <g transform="translate(50 910)">
+    <rect width="168" height="124" rx="16" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteStrong" x="14" y="34">One main action</text>
+    <text class="t note" x="14" y="60">FAB remains</text>
+    <text class="t note" x="14" y="82">thumb reachable</text>
+    <text class="t tiny" x="14" y="106">48dp+ touch target</text>
+  </g>
+  <line x1="218" y1="970" x2="250" y2="1038" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+</svg>

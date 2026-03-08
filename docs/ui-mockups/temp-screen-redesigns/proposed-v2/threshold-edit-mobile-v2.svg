@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1280" width="900" height="1280">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#101a2d"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#151f33"/>
+      <stop offset="100%" stop-color="#0f1727"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .h { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .title { font-size: 34px; fill: #edf4ff; font-weight: 700; }
+      .body { font-size: 20px; fill: #a7bad5; }
+      .small { font-size: 17px; fill: #7e93b4; }
+    ]]></style>
+  </defs>
+
+  <rect width="900" height="1280" fill="url(#bg)"/>
+  <text class="t h" x="48" y="66">THRESHOLD REDESIGN V1 - EDIT / NEW ALARM MOBILE</text>
+
+  <g transform="translate(250 98)">
+    <rect width="400" height="1080" rx="52" fill="#0b101a" stroke="#1b2940" stroke-width="2"/>
+    <rect x="14" y="16" width="372" height="1048" rx="40" fill="url(#screen)"/>
+
+    <rect x="24" y="34" width="348" height="70" rx="20" fill="#1f2d44"/>
+    <text class="t" x="42" y="76" style="font-size:26px;fill:#c5d5ea;">X</text>
+    <text class="t" x="198" y="78" text-anchor="middle" style="font-size:28px;fill:#eef4ff;font-weight:700;">Edit Alarm</text>
+    <text class="t" x="348" y="78" text-anchor="end" style="font-size:24px;fill:#ff9f77;font-weight:700;">Save</text>
+
+    <rect x="28" y="124" width="344" height="52" rx="16" fill="#26354c"/>
+    <rect x="32" y="128" width="168" height="44" rx="13" fill="#ff7a3d"/>
+    <text class="t" x="116" y="157" text-anchor="middle" style="font-size:20px;fill:#fff;font-weight:700;">Fixed Time</text>
+    <text class="t" x="282" y="157" text-anchor="middle" style="font-size:20px;fill:#9ab0d0;">Window</text>
+
+    <text class="t body" x="32" y="216">Time</text>
+    <rect x="28" y="228" width="344" height="94" rx="18" fill="#25344b" stroke="#385072"/>
+    <text class="t" x="200" y="288" text-anchor="middle" style="font-size:64px;fill:#f4f8ff;font-weight:700;letter-spacing:-1px;">07:00</text>
+
+    <text class="t body" x="32" y="366">Label</text>
+    <rect x="28" y="378" width="344" height="66" rx="16" fill="#25344b" stroke="#385072"/>
+    <text class="t" x="46" y="420" style="font-size:22px;fill:#94abc9;">Alarm Label (e.g. Wake Up)</text>
+
+    <text class="t body" x="32" y="484">Repeats</text>
+    <g transform="translate(28 498)">
+      <circle cx="26" cy="26" r="22" fill="#ff7a3d"/><text class="t" x="26" y="33" text-anchor="middle" style="font-size:18px;fill:#fff;font-weight:700;">M</text>
+      <circle cx="74" cy="26" r="22" fill="#ff7a3d"/><text class="t" x="74" y="33" text-anchor="middle" style="font-size:18px;fill:#fff;font-weight:700;">T</text>
+      <circle cx="122" cy="26" r="22" fill="#ff7a3d"/><text class="t" x="122" y="33" text-anchor="middle" style="font-size:18px;fill:#fff;font-weight:700;">W</text>
+      <circle cx="170" cy="26" r="22" fill="#ff7a3d"/><text class="t" x="170" y="33" text-anchor="middle" style="font-size:18px;fill:#fff;font-weight:700;">T</text>
+      <circle cx="218" cy="26" r="22" fill="#ff7a3d"/><text class="t" x="218" y="33" text-anchor="middle" style="font-size:18px;fill:#fff;font-weight:700;">F</text>
+      <circle cx="266" cy="26" r="22" fill="#324764"/><text class="t" x="266" y="33" text-anchor="middle" style="font-size:18px;fill:#b1c3da;">S</text>
+      <circle cx="314" cy="26" r="22" fill="#324764"/><text class="t" x="314" y="33" text-anchor="middle" style="font-size:18px;fill:#b1c3da;">S</text>
+    </g>
+
+    <text class="t body" x="32" y="588">Sound</text>
+    <rect x="28" y="600" width="344" height="74" rx="16" fill="#25344b" stroke="#385072"/>
+    <text class="t" x="52" y="644" style="font-size:22px;fill:#e4eefc;">Ambient Drone</text>
+    <text class="t" x="348" y="644" text-anchor="end" style="font-size:24px;fill:#9eb5d4;">></text>
+
+    <rect x="28" y="704" width="344" height="88" rx="18" fill="#1b283c" stroke="#2f4564"/>
+    <text class="t" x="46" y="744" style="font-size:20px;fill:#9db2d1;">Preview</text>
+    <text class="t" x="46" y="772" style="font-size:24px;fill:#eef5ff;font-weight:700;">07:00 - Mon Tue Wed Thu Fri</text>
+
+    <rect x="132" y="1040" width="136" height="6" rx="3" fill="#ced9eb" fill-opacity="0.45"/>
+  </g>
+
+  <g transform="translate(46 180)">
+    <rect width="172" height="134" rx="16" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t" x="14" y="34" style="font-size:20px;fill:#dbe8fb;font-weight:700;">Form rhythm</text>
+    <text class="t body" x="14" y="62">One dense panel</text>
+    <text class="t body" x="14" y="88">clear labels first</text>
+    <text class="t small" x="14" y="114">no hidden fields</text>
+  </g>
+  <line x1="218" y1="248" x2="250" y2="260" stroke="#58739b" stroke-dasharray="4 4"/>
+
+  <g transform="translate(676 260)">
+    <rect width="178" height="130" rx="16" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t" x="14" y="34" style="font-size:20px;fill:#dbe8fb;font-weight:700;">Theme ready</text>
+    <text class="t body" x="14" y="62">controls inherit</text>
+    <text class="t body" x="14" y="88">MUI palette + vars</text>
+    <text class="t small" x="14" y="114">no static colour map</text>
+  </g>
+  <line x1="676" y1="324" x2="648" y2="324" stroke="#58739b" stroke-dasharray="4 4"/>
+
+  <g transform="translate(676 496)">
+    <rect width="178" height="146" rx="16" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t" x="14" y="34" style="font-size:20px;fill:#dbe8fb;font-weight:700;">Behaviour</text>
+    <text class="t body" x="14" y="62">Fixed / Window</text>
+    <text class="t body" x="14" y="88">same validation</text>
+    <text class="t body" x="14" y="114">same save flow</text>
+    <text class="t small" x="14" y="136">UI only refresh</text>
+  </g>
+  <line x1="676" y1="568" x2="648" y2="642" stroke="#58739b" stroke-dasharray="4 4"/>
+</svg>
