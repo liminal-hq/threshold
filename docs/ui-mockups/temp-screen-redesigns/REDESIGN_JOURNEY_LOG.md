@@ -175,3 +175,26 @@ Each entry includes:
 
 **Speaker script**
 "We used this pass to settle the open questions and get honest about the mobile Settings baseline. Rather than designing over a concept, we drew the current code faithfully in the mockup palette. That gives us a clear before-state to compare any future iteration against, and closes the loop on decisions that were blocking the next phase."
+
+---
+
+### 2026-03-08 — Full consistent v4 mockup set across all screens
+
+**What happened**
+- regenerated all six mockups as a consistent `proposed-v4` set: Home mobile/desktop, Edit mobile/desktop, Settings mobile/desktop
+- all mockups share: wider phone shell (560px vs 400px in earlier passes), consistent deep-night dark comparison palette, correct `TitleBar.tsx` representation (32px bar, centred app title, platform window controls), and annotated theme token reminders
+- Home mobile: removed toolbar refresh icon (pull-to-refresh replaces it), added Next alarm banner, accent rail on alarm cards, overflow ⋮ menu only
+- Home desktop: full-width `+ ADD ALARM` button matching existing code style, Settings ⚙ gear moved into footer zone beside add button
+- Edit mobile: wider shell, correct toolbar pattern (✕ left / title centre / Save right), day selector properly spaced
+- Edit desktop: `TitleBar.tsx` drawn correctly, custom desktop time picker represented, fixed footer Cancel + Save actions
+- Settings mobile: carried forward unchanged from code-faithful v4 pass
+- Settings desktop: `TitleBar.tsx` bar, left nav rail (Appearance active, others inactive), right detail panel; Material You row greyed as desktop-unavailable
+- updated plan section 4 image references to point at `proposed-v4` across all screens
+
+**Why this matters**
+- all screens now tell a consistent visual story before implementation begins
+- mockups faithfully represent settled decisions rather than earlier conflicting assumptions
+- implementing agent has an accurate reference for each screen and platform
+
+**Speaker script**
+"This v4 pass brings the full set into alignment. Every screen shares the same palette, the same correct desktop title bar, the same phone shell proportions, and reflects every decision we settled. We are ready to move from mockup review into implementation planning."
