@@ -23,5 +23,7 @@ This folder contains baseline screen specifications for Threshold UI work.
 ## Usage Notes
 
 - update each screen spec when behaviour changes, not only when visuals change
-- keep platform differences explicit (mobile vs desktop)
+- model platform differences explicitly using:
+  - `Platform Concept Model` (Shared, Mobile, Desktop)
+  - `Platform Mapping Matrix`
 - include state handling and interaction rules, not just layout notes

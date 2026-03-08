@@ -76,3 +76,22 @@ Each entry includes:
 
 **Speaker script**
 "We corrected the desktop assumptions in the plan to match reality: borderless custom title bar, existing bottom add button style, and a Settings gear that will live beside that button. We also scaffolded baseline screen specs directly from current code, so future redesign work can move faster with clear UI contracts."
+
+---
+
+### 2026-03-08 13:15 (EDT) - Added explicit mobile vs desktop concept modelling to specs
+
+**What happened**
+- upgraded the UI taxonomy to include a dedicated platform concept layer
+- updated the screen spec template with:
+  - `Platform Concept Model` sections for Shared, Mobile, and Desktop concepts
+  - a `Platform Mapping Matrix` for cross-platform concept expression
+- refactored baseline screen specs (`Home`, `Edit/New Alarm`, `Settings`) to use the new concept-first structure
+
+**Why this matters**
+- turns platform differences into explicit contracts instead of incidental notes
+- makes future redesign passes easier by preserving concept intent across layout changes
+- improves review clarity by showing what is shared vs what is platform-specific
+
+**Speaker script**
+"We upgraded the spec system so mobile and desktop are first-class concepts, not side notes. Each screen now declares shared concepts, mobile concepts, desktop concepts, and a mapping matrix that shows how the same intent is expressed per platform. This gives us a stronger foundation for future UI rework."

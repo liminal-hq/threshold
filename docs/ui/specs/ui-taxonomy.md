@@ -8,66 +8,74 @@ This taxonomy defines common UI layers and naming used across Threshold screen s
 - navigation entry and exit points
 - route-level transition rules
 
-## 2. Window Shell Layer
+## 2. Platform Concept Layer
+
+- shared concepts: behaviours and structures that should feel consistent across mobile and desktop
+- mobile concepts: platform-first patterns for touch, compact headers, and gesture interactions
+- desktop concepts: platform-first patterns for wider layouts, keyboard use, and window-shell affordances
+- concept IDs should be stable across redesign passes (for example `HOME-C1`, `SETTINGS-C3`)
+
+## 3. Window Shell Layer
 
 - desktop custom title bar and drag region
-- mobile top app bar / safe-area handling
+- mobile top app bar and safe-area handling
 - screen container height and scroll strategy
 
-## 3. Screen Scaffold Layer
+## 4. Screen Scaffold Layer
 
 - primary page container
 - top header zone
 - content zone
 - fixed action zone (if present)
 
-## 4. Section Layer
+## 5. Section Layer
 
 - grouped content blocks within a screen
-- section title/subheader
+- section title or subheader
 - section-level spacing rhythm
 
-## 5. Row / Item Layer
+## 6. Row / Item Layer
 
 - repeatable units inside sections and lists
 - row anatomy (leading content, supporting text, trailing actions)
-- states (enabled/disabled/selected/pressed)
+- states (enabled, disabled, selected, pressed)
 
-## 6. Control Layer
+## 7. Control Layer
 
 - direct controls (switches, buttons, toggles, pickers)
 - control placement rules
 - touch target and keyboard focus requirements
 
-## 7. Feedback Layer
+## 8. Feedback Layer
 
 - inline validation messages
-- error alerts/dialogues
+- error alerts or dialogues
 - transient feedback (toasts, loading, disabled states)
 
-## 8. Theme Layer
+## 9. Theme Layer
 
 - colour and typography usage through theme tokens
 - dynamic theme behaviour by platform
 - explicit non-support areas (for example Material You on desktop)
 
-## 9. State Layer
+## 10. State Layer
 
 - loading
 - empty
 - populated
 - validation error
 - action-in-progress
-- unavailable/offline (where applicable)
+- unavailable or offline (where applicable)
 
-## 10. Motion Layer
+## 11. Motion Layer
 
 - route transitions
 - gesture-driven interactions
 - reduced motion behaviour
 
-## 11. Spec Policy
+## 12. Spec Policy
 
-- each screen spec should map to this taxonomy
-- deviations should be documented in a "Local Exceptions" section
+- each screen spec should include a platform concept model with shared, mobile, and desktop concepts
+- each screen spec should include a platform mapping matrix
+- deviations should be documented in a `Local Exceptions` section
 - baseline specs should reflect current code first, then planned updates
