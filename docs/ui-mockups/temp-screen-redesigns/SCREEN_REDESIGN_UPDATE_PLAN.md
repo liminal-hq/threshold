@@ -185,10 +185,12 @@ Material You support remains automatic through existing `ThemeContext` and setti
 5. **Desktop Home add button** — keep the full-width `+ ADD ALARM` button style as it exists in the current desktop screenshot. Settings gear moves beside it in the footer zone. Mockups should reflect this existing button shape, not introduce a new pill or centred variant.
 6. **Theming in mockups** — mockup colour scheme uses `deep-night` dark palette for comparison consistency only. Implementing agents must use MUI palette roles and CSS vars from `ThemeContext`, never hardcoded hex values copied from mockups.
 
-## 12) Open questions
+## 12) Settled — previously open questions
 
-1. Should the `Next alarm` banner on Home read from an existing data field, or does it require new computed state?
+1. **Next alarm banner data source** — no new state needed. `nextTrigger` (Unix ms timestamp) is already present on every `AlarmRecord`, computed by the Rust backend and returned by all alarm mutations. The banner derives from filtering `alarms` to enabled entries with `nextTrigger > Date.now()`, sorting ascending, and taking the first. `TimeFormatHelper.format()` handles display. `AlarmsContext` keeps the list live via `alarms:batch:updated` subscription, so no polling or manual refresh is required.
 
 ---
 
-Once the mockup review pass is complete, the next step is a phase-by-phase implementation plan with explicit file-level change sets and acceptance checks per screen.
+## 13) What's next
+
+The mockup review pass is complete. Next step: produce the phase-by-phase implementation plan with explicit file-level change sets and acceptance checks per screen, ready to hand to an implementing agent.
