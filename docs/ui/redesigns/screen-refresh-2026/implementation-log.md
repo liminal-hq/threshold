@@ -136,3 +136,41 @@ Each entry includes:
 
 **Speaker script**
 "Phase 6 closes the loop on accessibility — SwipeToDeleteRow now respects reduced motion, all interactive elements have proper aria labels, and touch targets meet minimum size requirements. Every colour reference uses palette roles, so contrast adapts automatically across all themes."
+
+---
+
+### 07 — 2026-03-08 — Window size lock and position-only persistence
+
+**What happened**
+- Set `resizable: false` in `tauri.conf.json` to prevent users from resizing the window
+- Changed `tauri-plugin-window-state` from saving all flags to `StateFlags::POSITION` only, so window size is never overwritten by the persisted state file
+- Updated the stale `"main"` entry in `~/.config/ca.liminalhq.threshold/.window-state.json` (was 614×1524 from a previous HiDPI session) to the correct 760×680
+- Removed `core:window:allow-set-size` from `desktop.json` capabilities (no longer needed since size is not restored)
+- Confirmed `maximizable: false` was already set in `tauri.conf.json`
+
+**Why this matters**
+- The app was opening at the wrong size due to a stale HiDPI-scaled entry in the window state file overriding the config default
+- With position-only persistence, screen position is remembered across sessions while the window always opens at the designed 760×680 size
+- `resizable: false` removes the OS resize handle so users can never drift the window to an unexpected size
+
+**Speaker script**
+"Entry 07 locks the window to 760×680. Previously a stale window-state file from a HiDPI session was overriding the config. The fix: persist position only, not size, and set resizable to false so the size is always exactly what the design specifies."
+
+---
+
+### 08 — 2026-03-08 — TitleBar: capability-driven minimize/maximize buttons
+
+**What happened**
+- Added `isMaximizable` and `isMinimizable` state to `TitleBar`, queried from Tauri (`appWindow.isMaximizable()`, `appWindow.isMinimizable()`) on mount and on `tauri://resize`
+- Restore `isMaximized` state tracking (was commented out)
+- All three platform control variants (Mac, Windows, Linux) now conditionally render minimize and maximize buttons based on these flags — no more hardcoded commented-out blocks
+- Context menu maximize/restore item and minimize item are likewise gated on the same flags
+- Added `WindowMaximizeIcon` and `WindowRestoreIcon` to TitleBar imports (were unused while buttons were commented out)
+- Removed `core:window:allow-maximize`, `allow-unmaximize`, `allow-toggle-maximize` from `default.json` capabilities — maximizing is disabled at the config level and the permissions are no longer needed
+
+**Why this matters**
+- The title bar now flexibly reflects whatever the Tauri config declares — setting `maximizable: true` later would automatically re-enable the button with no frontend code change
+- Removes dead commented-out code in favour of a live data-driven pattern
+
+**Speaker script**
+"Entry 08 cleans up the TitleBar. Instead of commented-out maximize buttons, the title bar now reads isMaximizable and isMinimizable from Tauri at runtime and renders buttons accordingly. The config drives the UI — no frontend changes needed if capabilities change."
