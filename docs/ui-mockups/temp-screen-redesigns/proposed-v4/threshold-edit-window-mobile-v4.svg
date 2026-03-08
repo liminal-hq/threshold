@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 1640" width="1100" height="1640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#101a2d"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#151f33"/>
+      <stop offset="100%" stop-color="#0f1727"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .label { font-size: 17px; fill: #8fa8c8; font-weight: 600; }
+      .helper { font-size: 15px; fill: #6f88a9; }
+      .noteTitle { font-size: 19px; fill: #dbe8fb; font-weight: 700; }
+      .noteBody { font-size: 15px; fill: #a7bad5; }
+    ]]></style>
+  </defs>
+
+  <rect width="1100" height="1640" fill="url(#bg)"/>
+  <text class="t eyebrow" x="48" y="56">THRESHOLD REDESIGN V4 — EDIT / WINDOW ALARM MOBILE</text>
+
+  <!-- Phone shell -->
+  <g transform="translate(230 80)">
+    <rect width="560" height="1460" rx="56" fill="#0a0f1a" stroke="#1b2940" stroke-width="2"/>
+    <rect x="14" y="16" width="532" height="1428" rx="44" fill="url(#screen)"/>
+
+    <!-- Status bar -->
+    <text class="t" x="36" y="60" style="font-size:14px;fill:#6f88a9;">02:54</text>
+    <text class="t" x="510" y="60" text-anchor="end" style="font-size:14px;fill:#6f88a9;">4G 17%</text>
+
+    <!-- MobileToolbar -->
+    <rect x="14" y="70" width="532" height="56" fill="#151f33"/>
+    <text class="t" x="36" y="108" style="font-size:26px;fill:#adc1dd;">✕</text>
+    <text class="t" x="290" y="108" text-anchor="middle" style="font-size:22px;fill:#f0f6ff;font-weight:700;">Edit Alarm</text>
+    <text class="t" x="526" y="108" text-anchor="end" style="font-size:20px;fill:#4c8dff;font-weight:700;">Save</text>
+
+    <!-- Mode toggle — Window tab active -->
+    <rect x="28" y="146" width="504" height="50" rx="14" fill="#26354c"/>
+    <!-- Fixed Time — inactive -->
+    <text class="t" x="156" y="177" text-anchor="middle" style="font-size:19px;fill:#7a94b4;">Fixed Time</text>
+    <!-- Window — active -->
+    <rect x="282" y="150" width="246" height="42" rx="12" fill="#4c8dff"/>
+    <text class="t" x="405" y="177" text-anchor="middle" style="font-size:19px;fill:#fff;font-weight:700;">Window</text>
+
+    <!-- Start Window label + MUI TimePicker field -->
+    <text class="t label" x="32" y="234">Start Window</text>
+    <rect x="28" y="244" width="504" height="62" rx="14" fill="#25344b" stroke="#385072"/>
+    <text class="t" x="48" y="283" style="font-size:22px;fill:#f0f6ff;font-weight:600;">02:00</text>
+    <text class="t" x="516" y="283" text-anchor="end" style="font-size:14px;fill:#6f88a9;">Start Window</text>
+
+    <!-- End Window label + MUI TimePicker field -->
+    <text class="t label" x="32" y="336">End Window</text>
+    <rect x="28" y="346" width="504" height="62" rx="14" fill="#25344b" stroke="#385072"/>
+    <text class="t" x="48" y="385" style="font-size:22px;fill:#f0f6ff;font-weight:600;">02:30</text>
+    <text class="t" x="516" y="385" text-anchor="end" style="font-size:14px;fill:#6f88a9;">End Window</text>
+
+    <!-- Helper text -->
+    <text class="t helper" x="290" y="426" text-anchor="middle">Alarm will ring once randomly between these times.</text>
+
+    <!-- Label field -->
+    <text class="t label" x="32" y="468">Label</text>
+    <rect x="28" y="478" width="504" height="62" rx="14" fill="#25344b" stroke="#385072"/>
+    <text class="t" x="48" y="516" style="font-size:20px;fill:#94abc9;">Alarm Label (e.g. Wake Up)</text>
+
+    <!-- Repeats -->
+    <text class="t label" x="32" y="580">Repeats</text>
+    <g transform="translate(28 592)">
+      <circle cx="32"  cy="28" r="24" fill="#4c8dff"/><text class="t" x="32"  y="35" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">M</text>
+      <circle cx="96"  cy="28" r="24" fill="#4c8dff"/><text class="t" x="96"  y="35" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">T</text>
+      <circle cx="160" cy="28" r="24" fill="#4c8dff"/><text class="t" x="160" y="35" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">W</text>
+      <circle cx="224" cy="28" r="24" fill="#4c8dff"/><text class="t" x="224" y="35" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">T</text>
+      <circle cx="288" cy="28" r="24" fill="#4c8dff"/><text class="t" x="288" y="35" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">F</text>
+      <circle cx="352" cy="28" r="24" fill="#324764"/><text class="t" x="352" y="35" text-anchor="middle" style="font-size:17px;fill:#b1c3da;">S</text>
+      <circle cx="416" cy="28" r="24" fill="#324764"/><text class="t" x="416" y="35" text-anchor="middle" style="font-size:17px;fill:#b1c3da;">S</text>
+    </g>
+
+    <!-- Sound row -->
+    <text class="t label" x="32" y="678">Sound</text>
+    <rect x="28" y="688" width="504" height="62" rx="14" fill="#25344b" stroke="#385072"/>
+    <text class="t" x="52" y="726" style="font-size:20px;fill:#adc1dd;">♪</text>
+    <text class="t" x="80" y="726" style="font-size:20px;fill:#e4eefc;">Ambient Drone</text>
+    <text class="t" x="516" y="726" text-anchor="end" style="font-size:24px;fill:#9eb5d4;">›</text>
+
+    <!-- Preview card -->
+    <rect x="28" y="774" width="504" height="82" rx="16" fill="#1b283c" stroke="#2f4564"/>
+    <text class="t" x="48" y="810" style="font-size:18px;fill:#9db2d1;">Preview</text>
+    <text class="t" x="48" y="840" style="font-size:20px;fill:#eef5ff;font-weight:700;">02:00 – 02:30  ·  Mon Tue Wed Thu Fri</text>
+
+    <!-- Home bar -->
+    <rect x="200" y="1416" width="160" height="6" rx="3" fill="#ced9eb" fill-opacity="0.35"/>
+  </g>
+
+  <!-- Annotation: window mode -->
+  <g transform="translate(44 280)">
+    <rect width="164" height="150" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Window mode</text>
+    <text class="t noteBody" x="14" y="58">Two MUI TimePicker</text>
+    <text class="t noteBody" x="14" y="78">fields: Start Window</text>
+    <text class="t noteBody" x="14" y="98">and End Window.</text>
+    <text class="t noteBody" x="14" y="118">Helper text explains</text>
+    <text class="t noteBody" x="14" y="138">random ring behaviour.</text>
+  </g>
+  <line x1="208" y1="348" x2="228" y2="348" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: preview reflects window -->
+  <g transform="translate(830 720)">
+    <rect width="186" height="100" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Preview card</text>
+    <text class="t noteBody" x="14" y="58">Shows start–end range</text>
+    <text class="t noteBody" x="14" y="78">and active day summary.</text>
+  </g>
+  <line x1="830" y1="768" x2="796" y2="826" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+</svg>
