@@ -18,13 +18,20 @@ Reference plan: `docs/ui-mockups/temp-screen-redesigns/SCREEN_REDESIGN_UPDATE_PL
 - Keep all existing `isMobile` branching unless explicitly noted.
 - Keep existing licence headers in any source file that has one.
 - Canadian English in all strings, comments, and commit messages.
-- Commit after each phase is complete and passing.
+- Execute all phases in sequence. Commit after each phase is complete and passing.
 
 ---
 
-## Phase 1 — Foundation: shared style helpers
+## Phase 1 — Foundation: window size + shared style helpers
 
-**Goal:** Establish the reusable style constants and helpers that every subsequent phase will consume. No visible UI change yet.
+**Goal:** Establish the reusable style constants and helpers that every subsequent phase will consume, and update the desktop window dimensions. No visible UI change beyond window size.
+
+### `apps/threshold/src-tauri/tauri.conf.json`
+
+- Change main window `width` from `450` to `760` and `height` from `800` to `680`.
+- Ringing window (`AlarmManagerService.ts`) and test alarm window (`Settings.tsx`) both stay at 400 × 500 — do not change.
+
+**Acceptance check:** App opens at 760 × 680 on desktop. Ringing window still opens at 400 × 500.
 
 ### Files to create
 
@@ -189,9 +196,8 @@ This screen is a visual refresh only. Logic, validation, and save flow are uncha
 **Files:** `apps/threshold/src/screens/Settings.tsx`
 
 **Changes:**
-- Add `overflowY: 'auto'` to the inner scroll container if not already present (confirm — currently `height: '100%', overflowY: 'auto'` is on the outer `Box`; the inner `Container` does not scroll independently — this is fine as-is).
-- Verify scrolling works end-to-end on a real device or simulator. If the inner `Container` clips the Developer section, adjust the outer `Box` height and overflow chain.
-- No structural or visual changes to mobile Settings in phase 1.
+- No structural or visual changes to mobile Settings. The existing flat transparent `List` layout under `ListSubheader` labels is the target state.
+- Confirm the outer `Box` (`height: '100%', overflowY: 'auto'`) scrolls correctly end-to-end so the Developer section is reachable. No code change needed unless testing reveals clipping.
 
 **Acceptance check:**
 - All settings rows visible and reachable by scrolling on mobile.
@@ -201,13 +207,36 @@ This screen is a visual refresh only. Logic, validation, and save flow are uncha
 
 **Files:** `apps/threshold/src/screens/Settings.tsx`
 
-The current desktop Settings layout is a centred `Container maxWidth="sm"` — a single scrollable column. The v4 mockup proposes a left nav rail + right detail panel. This is a **structural change** and is scope for a later pass (noted in specs as `SETTINGS-D1` concept, not yet implemented).
+Replace the current single-column `Container maxWidth="sm"` desktop layout with a left nav rail + right detail panel. Mobile path is completely unchanged — all changes are inside `!isMobile` branches.
 
-**Phase 4 desktop scope:** No structural change. Verify the existing layout renders correctly after the accent rail and banner work in phases 2–3 (no regressions from shared token changes).
+**Layout structure:**
+
+- The outer `Box` (`height: '100%'`) gains `display: 'flex', flexDirection: 'column'` as before. Inside, below the back-arrow/heading row, add a `Box` with `display: 'flex', flexDirection: 'row', flexGrow: 1, gap: 2, overflow: 'hidden', px: 3, pb: 3`.
+- **Left nav rail** — a `Box` with `width: 220, flexShrink: 0, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: '14px', p: 1`. Contains four `ListItemButton` entries: Appearance, Alarm Settings, General, Developer. Selected item: `bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: '10px'`. Unselected: `borderRadius: '10px'`.
+- **Right detail panel** — a `Box` with `flexGrow: 1, overflowY: 'auto', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: '14px', p: 3`. Renders only the content for the active section.
+
+**Active section state:**
+
+Add `const [activeSection, setActiveSection] = useState<'appearance' | 'alarmSettings' | 'general' | 'developer'>('appearance')` (desktop only — not used on mobile).
+
+**Section content mapping:**
+
+- `appearance` — Theme `Select`, Material You `Switch` (shown but disabled/greyed with "Android only" `secondary` text on desktop — do not hide it, condition on `isAndroid` for the enabled state only), Force Dark Mode `Switch`.
+- `alarmSettings` — Silence After `Select`, Snooze Length `ListItemButton`.
+- `general` — 24-Hour Time `Switch`.
+- `developer` — Test Alarm Ring `IconButton`, Force Synchronise `IconButton`, Test Notification `IconButton`, Download Event Logs `IconButton`. Test Watch Ring remains mobile-only (keep existing `isMobile` guard).
+
+**Heading:** Remove the back-arrow + `Typography h4` "Settings" block that currently sits above the list. Replace with a back-arrow `IconButton` + `Typography h4` row that sits above the rail+panel flex row — same visual position, just outside the two-column layout.
+
+**`mt` correction:** Current desktop uses `mt: 2` on the `Container`. With the new layout, set `mt: 0` on the outer `Box` — `RootLayout` already provides `marginTop: '32px'` for the `TitleBar`.
 
 **Acceptance check:**
-- Desktop Settings loads without visual regressions.
-- Developer section visible without needing to scroll past it (current behaviour preserved).
+- Nav rail shows four items; active item highlighted in `primary.main`.
+- Clicking each nav item switches the right panel content without navigation.
+- Material You row visible on desktop but clearly labelled "Android only" and non-interactive.
+- Developer section fully visible under the Developer nav tab — no scrolling past unrelated rows to reach it.
+- All rows function correctly (switches toggle, selects open, dialogs open).
+- Mobile layout completely unchanged.
 
 ---
 
@@ -241,6 +270,7 @@ The current desktop Settings layout is a centred `Container maxWidth="sm"` — a
 
 | File | Phase | Type |
 |---|---|---|
+| `src-tauri/tauri.conf.json` | 1 | Edit (window size) |
 | `src/theme/uiTokens.ts` | 1 | New |
 | `src/theme/alarmCardStyles.ts` | 1 | New |
 | `src/components/AlarmItem.tsx` | 2a | Edit |
@@ -249,13 +279,13 @@ The current desktop Settings layout is a centred `Container maxWidth="sm"` — a
 | `src/screens/Home.tsx` | 2b, 2c, 2d | Edit |
 | `src/components/DaySelector.tsx` | 3 | Edit (bug fix) |
 | `src/screens/EditAlarm.tsx` | 3 | Edit |
-| `src/screens/Settings.tsx` | 4 | Edit (verify only) |
+| `src/screens/Settings.tsx` | 4 | Edit (desktop nav rail + mobile verify) |
 
 ---
 
-## Open questions before execution
+## Settled decisions (closed before execution)
 
-1. **Accent rail colour for disabled alarms** — use `palette.action.disabled` (MUI built-in, adapts across themes) or `palette.text.disabled`? Both are theme-aware. Recommend `action.disabled` as it reads more as a UI state than text.
-2. **`NextAlarmBanner` background treatment** — low-opacity `primary.main` fill, or a subtle left-border-only accent like the card rail? The mockup shows a faint filled band. Recommend `alpha(theme.palette.primary.main, 0.12)` as fill with a `1px solid` left border at `primary.main` for structure.
-3. **`PullToRefresh` spinner style** — MUI `CircularProgress` in `primary` colour, or a simple animated chevron? Recommend `CircularProgress` to stay within existing component set.
-4. **Desktop Settings nav rail** — confirmed out of scope for phase 1. Should this be tracked as a separate branch/issue now, or noted in the spec only?
+1. **Accent rail colour for disabled alarms** — `palette.action.disabled`. Reads as a UI state, adapts across all themes.
+2. **`NextAlarmBanner` background treatment** — `alpha(theme.palette.primary.main, 0.12)` fill with a `1px solid` left border at `primary.main` for structure.
+3. **`PullToRefresh` spinner style** — MUI `CircularProgress` in `primary` colour. Stays within existing component set.
+4. **Desktop Settings nav rail** — implemented in phase 4. Left rail (`background.default` surface, `primary.main` active highlight) + right detail panel (`background.paper` surface), both with `borderRadius: '14px'` and `border: 1px solid divider`. Material You row visible on desktop but non-interactive with "Android only" label.
