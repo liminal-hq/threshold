@@ -178,6 +178,26 @@ Each entry includes:
 
 ---
 
+### 2026-03-08 — Produced implementation plan and settled all open decisions
+
+**What happened**
+- produced `docs/ui/IMPLEMENTATION_PLAN.md` — a 6-phase engineering execution plan with explicit file-level change sets and acceptance checks per phase
+- settled all four open questions: disabled accent rail uses `palette.action.disabled`; `NextAlarmBanner` background uses `alpha(primary.main, 0.12)` fill + `1px solid` left border; `PullToRefresh` spinner uses MUI `CircularProgress`; desktop Settings nav rail is in scope for phase 4 (not deferred)
+- upgraded phase 4 desktop Settings from "verify only" to a full structural change: left nav rail + right detail panel layout, replacing the current single-column `Container maxWidth="sm"`
+- nav rail: four sections (Appearance, Alarm Settings, General, Developer), active item highlighted in `primary.main`, both panels use `borderRadius: '14px'` and `border: 1px solid divider` card language; right panel uses `background.paper` surface, left rail uses `background.default`
+- Material You row shown on desktop but non-interactive with "Android only" label — not hidden
+- confirmed phase execution: all phases run in sequence with a commit after each phase
+
+**Why this matters**
+- plan is fully ready to hand to an implementing agent with no open questions remaining
+- desktop Settings nav rail gives developers a proper two-panel layout that scales as settings grow, rather than deferring the structural work to a later pass
+- settled decisions are locked in both the implementation plan and the journey log so future agents have the full rationale
+
+**Speaker script**
+"This session closed the loop on planning. We produced the full phase-by-phase implementation plan and settled every open question before handing off to an implementing agent. The biggest decision was pulling the desktop Settings nav rail into scope now — it adds real structural work to phase 4 but gives us a layout that actually fits the app's desktop character rather than a re-skinned mobile column."
+
+---
+
 ### 2026-03-08 — Full consistent v4 mockup set across all screens
 
 **What happened**
