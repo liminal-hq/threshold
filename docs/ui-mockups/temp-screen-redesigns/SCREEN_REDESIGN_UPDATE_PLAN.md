@@ -62,11 +62,17 @@ Current review set: `proposed-v4` — full consistent set across all screens and
 
 ![Home desktop](./proposed-v4/threshold-home-desktop-v4.svg)
 
-### Edit / New Alarm
+### Edit / New Alarm — Fixed Time mode
 
-![Edit mobile](./proposed-v4/threshold-edit-mobile-v4.svg)
+![Edit mobile (Fixed)](./proposed-v4/threshold-edit-mobile-v4.svg)
 
-![Edit desktop](./proposed-v4/threshold-edit-desktop-v4.svg)
+![Edit desktop (Fixed)](./proposed-v4/threshold-edit-desktop-v4.svg)
+
+### Edit / New Alarm — Window mode
+
+![Edit mobile (Window)](./proposed-v4/threshold-edit-window-mobile-v4.svg)
+
+![Edit desktop (Window)](./proposed-v4/threshold-edit-window-desktop-v4.svg)
 
 ### Settings
 
