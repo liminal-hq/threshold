@@ -198,6 +198,25 @@ Each entry includes:
 
 ---
 
+### 2026-03-08 — Settled desktop window dimensions at 760 × 680
+
+**What happened**
+- reviewed all window size configuration points in the codebase: main app window in `tauri.conf.json` (450 × 800), ringing window in `AlarmManagerService.ts` (400 × 500), test alarm window in `Settings.tsx` (400 × 500)
+- decided main app window should be wider than tall to match the mockup canvas proportions (1100 × 790 in the OS context view)
+- settled on 760 × 680 (width × height) for the main window — wider-than-tall, compact but comfortable for the nav rail layout
+- ringing and test alarm windows stay at 400 × 500 unchanged
+- window resize added to phase 1 of the implementation plan; `tauri.conf.json` change deferred to implementation
+
+**Why this matters**
+- the current 450 × 800 portrait window is too narrow for the Settings nav rail + detail panel layout
+- 760 × 680 gives the left rail (220px) and right panel (remaining ~490px) comfortable room without making the app feel oversized on a desktop
+- locking the size now prevents the implementing agent from inheriting a window shape that conflicts with the new layout
+
+**Speaker script**
+"We reviewed every place window sizing is configured and settled the main window at 760 by 680. That's wide enough for the new Settings two-panel layout and matches the wider-than-tall proportion shown in the desktop OS context mockup. The ringing window stays at its existing 400 by 500 — that's a separate floating alarm window and shouldn't change."
+
+---
+
 ### 2026-03-08 — Full consistent v4 mockup set across all screens
 
 **What happened**
