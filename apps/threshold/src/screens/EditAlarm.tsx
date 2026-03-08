@@ -194,14 +194,11 @@ const EditAlarm: React.FC = () => {
                     }
                 />
             )}
-            <Box sx={{ flexGrow: 1 }}>
                 <Container maxWidth="sm" sx={{
                     py: isMobile ? 3 : 2,
                     mt: 0,
                     px: isMobile ? 2 : 4,
                     ...(!isMobile && { maxWidth: 700 }),
-                    display: 'flex',
-                    flexDirection: 'column'
                 }}>
                     {!isMobile && (
                         <Box sx={{ mb: 2 }}>
@@ -211,7 +208,7 @@ const EditAlarm: React.FC = () => {
                         </Box>
                     )}
 
-                    <Stack spacing={2} sx={{ flexGrow: 1, pb: !isMobile ? 10 : 0 }}>
+                    <Stack spacing={2} sx={{ pb: !isMobile ? 10 : 0 }}>
                         <Paper elevation={0} sx={{ p: 0, bgcolor: 'transparent' }}>
                             <ToggleButtonGroup
                                 value={mode}
@@ -266,9 +263,15 @@ const EditAlarm: React.FC = () => {
                                         </>
                                     ) : (
                                         <Box sx={{ display: 'flex', gap: 2 }}>
-                                            <Box sx={{ flex: 1 }}>
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
                                                 <Typography variant="subtitle2" gutterBottom>Start Window</Typography>
-                                                <Box sx={{ display: 'flex', justifyContent: 'center', borderRadius: UI.card.borderRadius }}>
+                                                <Box sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    borderRadius: UI.card.borderRadius,
+                                                    transform: 'scale(0.85)',
+                                                    transformOrigin: 'top center',
+                                                }}>
                                                     <DesktopCustomTimePicker
                                                         value={windowStart}
                                                         onChange={setWindowStart}
@@ -276,9 +279,15 @@ const EditAlarm: React.FC = () => {
                                                     />
                                                 </Box>
                                             </Box>
-                                            <Box sx={{ flex: 1 }}>
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
                                                 <Typography variant="subtitle2" gutterBottom>End Window</Typography>
-                                                <Box sx={{ display: 'flex', justifyContent: 'center', borderRadius: UI.card.borderRadius }}>
+                                                <Box sx={{
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    borderRadius: UI.card.borderRadius,
+                                                    transform: 'scale(0.85)',
+                                                    transformOrigin: 'top center',
+                                                }}>
                                                     <DesktopCustomTimePicker
                                                         value={windowEnd}
                                                         onChange={setWindowEnd}
@@ -415,7 +424,6 @@ const EditAlarm: React.FC = () => {
                         </Box>
                     )}
                 </Container>
-            </Box>
         </Box>
     );
 };
