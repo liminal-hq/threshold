@@ -31,7 +31,8 @@ export const DaySelector: React.FC<DaySelectorProps> = ({ selectedDays, onChange
                     key={index}
                     aria-label={label}
                     sx={{
-                        border: '1px solid rgba(0, 0, 0, 0.12)',
+                        border: '1px solid',
+                        borderColor: 'divider',
                         '&.Mui-selected': {
                             backgroundColor: 'primary.main',
                             color: 'primary.contrastText',
