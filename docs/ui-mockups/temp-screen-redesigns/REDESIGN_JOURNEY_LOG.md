@@ -54,3 +54,25 @@ Each entry includes:
 
 **Speaker script**
 "I added a living redesign journal that records what changed, why it changed, and a short script for each step. As we continue, this will double as both our decision trail and a ready-made walkthrough guide."
+
+---
+
+### 2026-03-08 12:52 (EDT) - Documented desktop constraints and scaffolded UI screen specs
+
+**What happened**
+- updated the redesign plan to reflect desktop constraints from current app behaviour
+- captured that desktop uses a borderless window with a custom title bar (not native window manager chrome)
+- documented that desktop should keep the existing bottom add button style and place Settings gear to its right
+- clarified in the plan that Material You is Android-only
+- scaffolded baseline UI specs from current code under `docs/ui/specs/`:
+  - shared taxonomy
+  - reusable screen spec template
+  - baseline specs for Home, Edit/New Alarm, and Settings
+
+**Why this matters**
+- aligns redesign docs with how desktop actually works today
+- reduces design drift by locking baseline behaviour before visual rework
+- gives us repeatable structure for future UI changes without re-discovering page anatomy each time
+
+**Speaker script**
+"We corrected the desktop assumptions in the plan to match reality: borderless custom title bar, existing bottom add button style, and a Settings gear that will live beside that button. We also scaffolded baseline screen specs directly from current code, so future redesign work can move faster with clear UI contracts."

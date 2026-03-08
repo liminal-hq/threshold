@@ -42,7 +42,7 @@ Status: Review and refine before implementation
 - Existing app theming system stays authoritative:
   - Theme presets
   - System theme
-  - Material You (Android conditional flow)
+  - Material You (Android only, not desktop)
 
 ## 3) Content baseline decisions
 
@@ -82,7 +82,8 @@ Use current alarm text patterns as source of truth (not mock filler text):
   - Alarm cards with status accent rail
   - Primary add action
 - Preserve swipe-to-delete behaviour and spring feel on mobile.
-- Keep desktop fixed footer add action pattern.
+- Keep desktop bottom add button style and placement as implemented today.
+- Move the desktop Settings gear into the same bottom action zone, positioned to the right of the add button.
 
 ### Edit/New Alarm
 
@@ -101,6 +102,7 @@ Use current alarm text patterns as source of truth (not mock filler text):
 - Keep existing setting groups and controls.
 - Improve grouping clarity and scan flow.
 - Keep Android conditional Material You toggle behaviour.
+- Explicitly document that desktop never uses Material You extraction.
 - Keep Developer tools present, but visually scoped as advanced controls.
 
 ## 6) Theming integration plan (critical)
@@ -113,7 +115,7 @@ Every refreshed component should consume existing theme primitives, not hardcode
 - Primary/secondary actions: existing palette + CSS vars from `ThemeContext`
 - State accents (enabled/disabled rails): derived from theme palette, not fixed orange/blue
 
-Material You support remains automatic through existing `ThemeContext` and settings flow.
+Material You support remains automatic through existing `ThemeContext` and settings flow on Android only.
 
 ## 7) Mobile vs desktop behaviour
 
@@ -122,9 +124,9 @@ Material You support remains automatic through existing `ThemeContext` and setti
   - Thumb-friendly primary action placement
   - Compact grouped settings layout
 - Desktop keeps:
-  - Custom title bar pattern
+  - Borderless window with custom in-app title bar (no native window manager chrome)
   - Wider centred content rhythm
-  - Fixed bottom action bars where already established
+  - Existing bottom desktop button style, with Settings gear aligned to its right on Home
 
 ## 8) Proposed implementation phases
 
@@ -141,6 +143,7 @@ Material You support remains automatic through existing `ThemeContext` and setti
 
 4. Settings redesign
 - Update `Settings.tsx` visual grouping and control spacing.
+- Scott: I don't like the bubble design here.  It's too much visual noise for a dense settings list.  I'd prefer to keep the current flat list but improve spacing and section grouping clarity to match the new designs.
 
 5. Desktop polish pass
 - Validate desktop spacing, fixed action bars, and title bar interaction fit.
@@ -164,7 +167,6 @@ Material You support remains automatic through existing `ThemeContext` and setti
 
 1. On mobile `Home`, should we keep both refresh and overflow menu in the header exactly as now, or simplify to one action and move refresh into overflow?
 2. In `Settings`, should the `Developer` section be always expanded (current behaviour) or collapsed behind a single row by default?
-3. For desktop `Settings`, do you prefer the two-column section navigation shown in the mockup, or to stay with a single centred column and only update styling?
 
 ---
 
