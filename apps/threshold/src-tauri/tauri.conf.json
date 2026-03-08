@@ -15,7 +15,7 @@
 				"title": "Threshold",
 				"width": 760,
 				"height": 680,
-				"resizable": true,
+				"resizable": false,
 				"maximizable": false,
 				"decorations": false,
 				"visible": true
