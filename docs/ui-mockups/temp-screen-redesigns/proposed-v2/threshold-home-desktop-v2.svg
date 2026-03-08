@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 860" width="1360" height="860">
+  <defs>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #c64632; font-weight: 700; }
+      .title { font-size: 22px; fill: #2d3a4b; font-weight: 600; }
+      .time { font-size: 60px; fill: #2d3a4b; font-weight: 700; letter-spacing: -1px; }
+      .body { font-size: 18px; fill: #6b7280; }
+      .noteTitle { font-size: 20px; fill: #1f2937; font-weight: 700; }
+      .noteBody { font-size: 16px; fill: #4b5563; }
+    ]]></style>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect width="1360" height="860" fill="#f5f4f2"/>
+  <text class="t eyebrow" x="36" y="46">THRESHOLD REDESIGN V2 - HOME DESKTOP</text>
+
+  <!-- Borderless window shell with custom title bar -->
+  <g transform="translate(40 70)" filter="url(#shadow)">
+    <rect width="980" height="730" rx="16" fill="#efedeb" stroke="#d6d3d1"/>
+    <rect width="980" height="52" rx="16" fill="#f8f8f8"/>
+    <rect y="36" width="980" height="16" fill="#f8f8f8"/>
+    <text class="t" x="490" y="34" text-anchor="middle" style="font-size:44px; fill:#374151; font-weight:500;">Threshold</text>
+    <text class="t" x="892" y="34" style="font-size:34px; fill:#4b5563;">-</text>
+    <text class="t" x="940" y="34" style="font-size:34px; fill:#4b5563;">x</text>
+
+    <!-- Settings gear currently in content, planned for bottom action zone -->
+    <text class="t" x="932" y="136" text-anchor="middle" style="font-size:52px; fill:#6b7280;">&#9881;</text>
+
+    <g transform="translate(36 178)">
+      <rect width="908" height="218" rx="10" fill="#ffffff" stroke="#d4d4d8"/>
+      <text class="t time" x="28" y="84">03:00 - 03:30</text>
+      <text class="t" x="30" y="136" style="font-size:48px; fill:#6b7280;">Alarm</text>
+      <text class="t" x="30" y="188" style="font-size:44px; fill:#6b7280;">Sun 02:17</text>
+
+      <text class="t" x="770" y="136" style="font-size:62px; fill:#71717a;">&#128465;</text>
+      <rect x="810" y="104" width="96" height="42" rx="21" fill="#9ca3af"/>
+      <circle cx="867" cy="125" r="20" fill="#344054"/>
+    </g>
+
+    <!-- Bottom action zone: keep button style, place gear on right -->
+    <rect x="0" y="660" width="980" height="70" fill="#f5f5f5" stroke="#d4d4d8"/>
+    <rect x="140" y="674" width="620" height="42" rx="8" fill="#c62839"/>
+    <text class="t" x="450" y="703" text-anchor="middle" style="font-size:44px; fill:#ffffff; font-weight:600;">+  ADD ALARM</text>
+    <rect x="840" y="676" width="46" height="38" rx="8" fill="#e5e7eb" stroke="#d1d5db"/>
+    <text class="t" x="863" y="704" text-anchor="middle" style="font-size:28px; fill:#4b5563;">&#9881;</text>
+  </g>
+
+  <g transform="translate(1060 140)">
+    <rect width="260" height="180" rx="16" fill="#ffffff" stroke="#d1d5db"/>
+    <text class="t noteTitle" x="16" y="36">Desktop intent</text>
+    <text class="t noteBody" x="16" y="64">- Borderless shell with</text>
+    <text class="t noteBody" x="16" y="86">  custom title bar</text>
+    <text class="t noteBody" x="16" y="112">- Preserve bottom add</text>
+    <text class="t noteBody" x="16" y="134">  button style</text>
+    <text class="t noteBody" x="16" y="158">- Gear beside add action</text>
+  </g>
+
+  <line x1="1020" y1="250" x2="1060" y2="250" stroke="#9ca3af" stroke-dasharray="4 4"/>
+</svg>

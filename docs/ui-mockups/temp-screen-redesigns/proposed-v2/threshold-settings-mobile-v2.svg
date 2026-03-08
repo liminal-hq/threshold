@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1280" width="900" height="1280">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .section { font-size: 16px; letter-spacing: 1px; fill: #94a3b8; font-weight: 700; }
+      .rowTitle { font-size: 22px; fill: #e2e8f0; }
+      .rowSub { font-size: 16px; fill: #94a3b8; }
+      .noteTitle { font-size: 20px; fill: #e2e8f0; font-weight: 700; }
+      .noteBody { font-size: 16px; fill: #cbd5e1; }
+    ]]></style>
+  </defs>
+
+  <rect width="900" height="1280" fill="url(#bg)"/>
+  <text class="t eyebrow" x="48" y="64">THRESHOLD REDESIGN V2 - SETTINGS MOBILE (FLAT LIST DIRECTION)</text>
+
+  <g transform="translate(250 92)">
+    <rect width="400" height="1088" rx="48" fill="#0b1220" stroke="#334155"/>
+    <rect x="14" y="16" width="372" height="1056" rx="34" fill="#111827"/>
+
+    <rect x="24" y="34" width="348" height="62" rx="14" fill="#1f2937"/>
+    <text class="t" x="44" y="74" style="font-size:30px;fill:#cbd5e1;">&lt;</text>
+    <text class="t" x="198" y="74" text-anchor="middle" style="font-size:28px;fill:#f8fafc;font-weight:700;">Settings</text>
+
+    <!-- Flat section list -->
+    <g transform="translate(28 120)">
+      <text class="t section" x="0" y="18">APPEARANCE</text>
+      <line x1="0" y1="30" x2="344" y2="30" stroke="#334155"/>
+
+      <text class="t rowTitle" x="0" y="66">Theme</text>
+      <text class="t rowSub" x="344" y="66" text-anchor="end">System (Auto)</text>
+      <line x1="0" y1="82" x2="344" y2="82" stroke="#334155"/>
+
+      <text class="t rowTitle" x="0" y="118">Use Material You</text>
+      <rect x="292" y="95" width="52" height="28" rx="14" fill="#4f46e5"/>
+      <circle cx="328" cy="109" r="11" fill="#e0e7ff"/>
+      <text class="t rowSub" x="0" y="140">Android + System theme only</text>
+      <line x1="0" y1="156" x2="344" y2="156" stroke="#334155"/>
+
+      <text class="t rowTitle" x="0" y="192">Force Dark Mode</text>
+      <rect x="292" y="170" width="52" height="28" rx="14" fill="#475569"/>
+      <circle cx="306" cy="184" r="11" fill="#e2e8f0"/>
+      <line x1="0" y1="208" x2="344" y2="208" stroke="#334155"/>
+
+      <text class="t section" x="0" y="252">ALARM SETTINGS</text>
+      <line x1="0" y1="264" x2="344" y2="264" stroke="#334155"/>
+      <text class="t rowTitle" x="0" y="300">Silence After</text>
+      <text class="t rowSub" x="344" y="300" text-anchor="end">20 minutes</text>
+      <line x1="0" y1="316" x2="344" y2="316" stroke="#334155"/>
+      <text class="t rowTitle" x="0" y="352">Snooze Length</text>
+      <text class="t rowSub" x="344" y="352" text-anchor="end">10 minutes</text>
+      <line x1="0" y1="368" x2="344" y2="368" stroke="#334155"/>
+
+      <text class="t section" x="0" y="412">GENERAL</text>
+      <line x1="0" y1="424" x2="344" y2="424" stroke="#334155"/>
+      <text class="t rowTitle" x="0" y="460">24-Hour Time</text>
+      <rect x="292" y="438" width="52" height="28" rx="14" fill="#475569"/>
+      <circle cx="306" cy="452" r="11" fill="#e2e8f0"/>
+      <line x1="0" y1="476" x2="344" y2="476" stroke="#334155"/>
+
+      <text class="t section" x="0" y="520">DEVELOPER</text>
+      <line x1="0" y1="532" x2="344" y2="532" stroke="#334155"/>
+      <text class="t rowTitle" x="0" y="568">Test Alarm Ring</text>
+      <text class="t rowSub" x="344" y="568" text-anchor="end">Run</text>
+      <line x1="0" y1="584" x2="344" y2="584" stroke="#334155"/>
+      <text class="t rowTitle" x="0" y="620">Test Watch Ring</text>
+      <text class="t rowSub" x="344" y="620" text-anchor="end">Run</text>
+      <line x1="0" y1="636" x2="344" y2="636" stroke="#334155"/>
+      <text class="t rowTitle" x="0" y="672">Download Event Logs</text>
+      <text class="t rowSub" x="344" y="672" text-anchor="end">Save</text>
+      <line x1="0" y1="688" x2="344" y2="688" stroke="#334155"/>
+    </g>
+  </g>
+
+  <g transform="translate(676 252)">
+    <rect width="178" height="146" rx="16" fill="#0f172a" stroke="#334155"/>
+    <text class="t noteTitle" x="14" y="34">Settings direction</text>
+    <text class="t noteBody" x="14" y="60">Flat list rows</text>
+    <text class="t noteBody" x="14" y="82">with spacing rhythm</text>
+    <text class="t noteBody" x="14" y="104">not stacked bubbles</text>
+    <text class="t noteBody" x="14" y="126">for dense controls</text>
+  </g>
+  <line x1="676" y1="324" x2="648" y2="380" stroke="#64748b" stroke-dasharray="4 4"/>
+</svg>

@@ -54,23 +54,25 @@ Use current alarm text patterns as source of truth (not mock filler text):
 
 ## 4) New mockups for review
 
+Current review set: `proposed-v2` (latest iteration)
+
 ### Home
 
-![Home mobile redesign](./proposed-v1/threshold-home-mobile-v1.svg)
+![Home mobile redesign](./proposed-v2/threshold-home-mobile-v2.svg)
 
-![Home desktop redesign](./proposed-v1/threshold-home-desktop-v1.svg)
+![Home desktop redesign](./proposed-v2/threshold-home-desktop-v2.svg)
 
 ### Edit / New Alarm
 
-![Edit mobile redesign](./proposed-v1/threshold-edit-mobile-v1.svg)
+![Edit mobile redesign](./proposed-v2/threshold-edit-mobile-v2.svg)
 
-![Edit desktop redesign](./proposed-v1/threshold-edit-desktop-v1.svg)
+![Edit desktop redesign](./proposed-v2/threshold-edit-desktop-v2.svg)
 
 ### Settings
 
-![Settings mobile redesign](./proposed-v1/threshold-settings-mobile-v1.svg)
+![Settings mobile redesign](./proposed-v2/threshold-settings-mobile-v2.svg)
 
-![Settings desktop redesign](./proposed-v1/threshold-settings-desktop-v1.svg)
+![Settings desktop redesign](./proposed-v2/threshold-settings-desktop-v2.svg)
 
 ## 5) What changes by screen
 
