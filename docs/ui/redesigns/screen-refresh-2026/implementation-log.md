@@ -190,3 +190,18 @@ Each entry includes:
 
 **Speaker script**
 "Entry 09 is a one-liner cleanup: a leftover unmaximize call from before we locked the window config was firing on every startup and hitting a permission wall. Removed it — the window-state plugin can't restore a maximized state anymore anyway."
+
+---
+
+### 10 — 2026-03-08 — Fix position persistence and maximize button visibility
+
+**What happened**
+- `App.tsx`: `win.center()` was called unconditionally on every startup, overwriting the position restored by `tauri-plugin-window-state`. Now only centres if `outerPosition` is `(0, 0)` (i.e. first launch, no saved position yet)
+- `TitleBar.tsx`: `isMaximizable()` returns `true` on some platforms even when `maximizable: false` in config (OS window manager does not always reflect the config flag back to the query). Added `isResizable` state (which reliably returns `false` when `resizable: false`) and gate the maximize button on `isMaximizable && isResizable`
+
+**Why this matters**
+- Window position was never actually persisted across sessions because `center()` reset it on every launch
+- The maximize button was appearing in the custom title bar despite being disabled in config
+
+**Speaker script**
+"Entry 10 fixes two regressions: the window was always centring on startup instead of restoring saved position, and the maximize button was showing because the OS doesn't always reflect the maximizable config flag back to the isMaximizable query. Both fixed — position now persists, maximize button stays hidden."
