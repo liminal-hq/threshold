@@ -195,37 +195,38 @@ const EditAlarm: React.FC = () => {
                 />
             )}
             <Box sx={{ flexGrow: 1 }}>
-                <Container maxWidth="sm" sx={{
-                    py: 3,
-                    mt: !isMobile ? 2 : 0,
+                <Container maxWidth={isMobile ? 'sm' : false} sx={{
+                    py: isMobile ? 3 : 2,
+                    mt: !isMobile ? 0 : 0,
+                    px: isMobile ? 2 : 4,
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column'
                 }}>
                     {!isMobile && (
-                        <Box sx={{ mb: 4 }}>
+                        <Box sx={{ mb: 2 }}>
                             <Typography variant="h4" gutterBottom>
                                 {isNew ? 'New Alarm' : 'Edit Alarm'}
                             </Typography>
                         </Box>
                     )}
 
-                    <Stack spacing={3} sx={{ flexGrow: 1, pb: !isMobile ? 10 : 0 }}>
-                        <Paper elevation={0} sx={{ p: isMobile ? 0 : 3, bgcolor: 'transparent' }}>
+                    <Stack spacing={2} sx={{ flexGrow: 1, pb: !isMobile ? 10 : 0 }}>
+                        <Paper elevation={0} sx={{ p: 0, bgcolor: 'transparent' }}>
                             <ToggleButtonGroup
                                 value={mode}
                                 exclusive
                                 onChange={(_, val) => { if (val) setMode(val); }}
                                 fullWidth
                                 color="primary"
-                                sx={{ mb: 3 }}
+                                sx={{ mb: 2 }}
                             >
                                 <ToggleButton value={AlarmMode.Fixed}>Fixed Time</ToggleButton>
                                 <ToggleButton value={AlarmMode.RandomWindow}>Window</ToggleButton>
                             </ToggleButtonGroup>
 
                             {mode === AlarmMode.Fixed ? (
-                                <Box sx={{ mb: 3, borderRadius: UI.card.borderRadius, overflow: 'hidden' }}>
+                                <Box sx={{ mb: 2, borderRadius: UI.card.borderRadius, overflow: 'hidden' }}>
                                     {isMobile ? (
                                         <MuiTimePicker
                                             label="Time"
@@ -245,7 +246,7 @@ const EditAlarm: React.FC = () => {
                                     )}
                                 </Box>
                             ) : (
-                                <Stack spacing={2} sx={{ mb: 3 }}>
+                                <Stack spacing={2} sx={{ mb: 2 }}>
                                     {isMobile ? (
                                         <>
                                             <MuiTimePicker
@@ -264,24 +265,28 @@ const EditAlarm: React.FC = () => {
                                             />
                                         </>
                                     ) : (
-                                        <>
-                                            <Typography variant="subtitle2" align="center">Start Window</Typography>
-                                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                <DesktopCustomTimePicker
-                                                    value={windowStart}
-                                                    onChange={setWindowStart}
-                                                    is24h={is24h}
-                                                />
-                                            </div>
-                                            <Typography variant="subtitle2" align="center">End Window</Typography>
-                                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                <DesktopCustomTimePicker
-                                                    value={windowEnd}
-                                                    onChange={setWindowEnd}
-                                                    is24h={is24h}
-                                                />
-                                            </div>
-                                        </>
+                                        <Box sx={{ display: 'flex', gap: 2 }}>
+                                            <Box sx={{ flex: 1 }}>
+                                                <Typography variant="subtitle2" gutterBottom>Start Window</Typography>
+                                                <Box sx={{ display: 'flex', justifyContent: 'center', borderRadius: UI.card.borderRadius }}>
+                                                    <DesktopCustomTimePicker
+                                                        value={windowStart}
+                                                        onChange={setWindowStart}
+                                                        is24h={is24h}
+                                                    />
+                                                </Box>
+                                            </Box>
+                                            <Box sx={{ flex: 1 }}>
+                                                <Typography variant="subtitle2" gutterBottom>End Window</Typography>
+                                                <Box sx={{ display: 'flex', justifyContent: 'center', borderRadius: UI.card.borderRadius }}>
+                                                    <DesktopCustomTimePicker
+                                                        value={windowEnd}
+                                                        onChange={setWindowEnd}
+                                                        is24h={is24h}
+                                                    />
+                                                </Box>
+                                            </Box>
+                                        </Box>
                                     )}
                                     <FormHelperText sx={{ textAlign: 'center' }}>
                                         Alarm will ring once randomly between these times.
@@ -297,7 +302,7 @@ const EditAlarm: React.FC = () => {
                                 fullWidth
                                 variant="outlined"
                                 sx={{
-                                    mb: 3,
+                                    mb: 2,
                                     '& .MuiOutlinedInput-root': {
                                         borderRadius: UI.card.borderRadius,
                                     },

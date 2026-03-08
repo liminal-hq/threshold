@@ -205,3 +205,24 @@ Each entry includes:
 
 **Speaker script**
 "Entry 10 fixes two regressions: the window was always centring on startup instead of restoring saved position, and the maximize button was showing because the OS doesn't always reflect the maximizable config flag back to the isMaximizable query. Both fixed — position now persists, maximize button stays hidden."
+
+---
+
+### 11 — 2026-03-08 — Edit screen layout fixes for 760×680 desktop window
+
+**What happened**
+- Window mode: changed desktop pickers from stacked vertical to **side by side** (flex row with `gap: 2`, each `flex: 1`) — matches v4 mockup
+- Reduced title heading margin from `mb: 4` to `mb: 2`
+- Reduced `Stack spacing` from `3` to `2` for tighter vertical rhythm
+- Reduced all section bottom margins (`mb: 3` → `mb: 2`) for mode toggle, time picker box, window pickers stack, and label field
+- Removed `Paper p: 3` padding on desktop (was adding 24px of unnecessary inset)
+- Widened desktop container: removed `maxWidth="sm"` (600px) to use full window width with `px: 4` padding
+- Mobile layout unchanged
+
+**Why this matters**
+- With the 760×680 window, all form fields (time picker, label, repeats, sound) now fit on screen without scrolling in Fixed Time mode
+- Window mode pickers side by side use horizontal space efficiently and match the v4 mockup exactly
+- Sound selector was previously cut off below the footer — now visible
+
+**Speaker script**
+"Entry 11 fixes the Edit screen layout for the new window size. Window mode pickers are now side by side as the mockup intended, and vertical spacing is tightened so all fields — including Sound — are visible without scrolling. The desktop container is wider to use the extra room."
