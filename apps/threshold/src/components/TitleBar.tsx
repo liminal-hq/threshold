@@ -22,6 +22,7 @@ export const TitleBar: React.FC = () => {
 	const [isMaximized, setIsMaximized] = useState(false);
 	const [isMaximizable, setIsMaximizable] = useState(false);
 	const [isMinimizable, setIsMinimizable] = useState(true);
+	const [isResizable, setIsResizable] = useState(false);
 	const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -44,6 +45,7 @@ export const TitleBar: React.FC = () => {
 				setIsMaximized(await appWindow.isMaximized());
 				setIsMaximizable(await appWindow.isMaximizable());
 				setIsMinimizable(await appWindow.isMinimizable());
+				setIsResizable(await appWindow.isResizable());
 				setIsAlwaysOnTop(await appWindow.isAlwaysOnTop());
 			} catch (e) {
 				console.error('Failed to check window state', e);
@@ -106,7 +108,7 @@ export const TitleBar: React.FC = () => {
 		sections: [
 			{
 				items: [
-					...(isMaximizable ? [{
+					...(isMaximizable && isResizable ? [{
 						id: isMaximized ? 'restore' : 'maximize',
 						label: isMaximized ? 'Restore' : 'Maximize',
 						icon: isMaximized ? 'WindowRestoreIcon' : 'WindowMaximizeIcon',
@@ -139,7 +141,7 @@ export const TitleBar: React.FC = () => {
 		<div className="window-controls mac">
 			<button onClick={close} className="control-button mac-close" title="Close" />
 			{isMinimizable && <button onClick={minimize} className="control-button mac-minimize" title="Minimize" />}
-			{isMaximizable && <button onClick={toggleMaximize} className="control-button mac-maximize" title={isMaximized ? 'Restore' : 'Maximize'} />}
+			{isMaximizable && isResizable && <button onClick={toggleMaximize} className="control-button mac-maximize" title={isMaximized ? 'Restore' : 'Maximize'} />}
 		</div>
 	);
 
@@ -151,7 +153,7 @@ export const TitleBar: React.FC = () => {
 					<WindowMinimizeIcon />
 				</button>
 			)}
-			{isMaximizable && (
+			{isMaximizable && isResizable && (
 				<button
 					onClick={toggleMaximize}
 					className="control-button win-maximize"
@@ -174,7 +176,7 @@ export const TitleBar: React.FC = () => {
 					<WindowMinimizeIcon />
 				</button>
 			)}
-			{isMaximizable && (
+			{isMaximizable && isResizable && (
 				<button
 					onClick={toggleMaximize}
 					className="control-button linux-maximize"
