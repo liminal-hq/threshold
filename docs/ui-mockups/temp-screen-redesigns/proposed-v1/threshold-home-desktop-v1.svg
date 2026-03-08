@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 860" width="1360" height="860">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1423"/>
+      <stop offset="100%" stop-color="#121f34"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b283e"/>
+      <stop offset="100%" stop-color="#162233"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff8f5d" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#ff8f5d" stop-opacity="0.03"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .h { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .title { font-size: 34px; fill: #edf4ff; font-weight: 700; }
+      .body { font-size: 20px; fill: #9fb4d0; }
+      .small { font-size: 16px; fill: #7f95b6; }
+      .time { font-size: 44px; fill: #f3f7ff; font-weight: 700; letter-spacing: -1px; }
+    ]]></style>
+  </defs>
+
+  <rect width="1360" height="860" fill="url(#bg)"/>
+  <text class="t h" x="36" y="48">THRESHOLD REDESIGN V1 - HOME DESKTOP</text>
+
+  <rect x="28" y="66" width="1304" height="34" rx="8" fill="#17253b" stroke="#2a3e5c"/>
+  <text class="t small" x="56" y="89">Threshold</text>
+  <rect x="1242" y="74" width="22" height="18" rx="3" fill="#2b3f5f"/>
+  <rect x="1270" y="74" width="22" height="18" rx="3" fill="#2b3f5f"/>
+
+  <g transform="translate(120 140)">
+    <rect width="760" height="620" rx="28" fill="url(#panel)" stroke="#2e4362"/>
+    <text class="t title" x="34" y="58">Threshold</text>
+
+    <rect x="32" y="84" width="696" height="76" rx="18" fill="url(#accent)" stroke="#ff8f5d" stroke-opacity="0.35"/>
+    <text class="t" x="60" y="126" style="font-size:24px;fill:#ff9f77;font-weight:700;">Next alarm in 6h 47m</text>
+    <text class="t body" x="60" y="148">Scheduled: 6:47 AM tomorrow</text>
+
+    <g transform="translate(32 184)">
+      <rect width="696" height="110" rx="18" fill="#26354c" stroke="#385072"/>
+      <rect x="0" y="18" width="6" height="74" rx="3" fill="#6f83a4"/>
+      <text class="t time" x="24" y="68">22:33</text>
+      <text class="t body" x="26" y="96">Alarm</text>
+      <text class="t small" x="510" y="42">Disabled</text>
+      <rect x="590" y="40" width="70" height="34" rx="17" fill="#425575"/>
+      <circle cx="607" cy="57" r="14" fill="#dce5f5"/>
+    </g>
+
+    <g transform="translate(32 308)">
+      <rect width="696" height="110" rx="18" fill="#2a3a52" stroke="#3e5679"/>
+      <rect x="0" y="18" width="6" height="74" rx="3" fill="#ff8f5d"/>
+      <text class="t" x="24" y="66" style="font-size:42px;fill:#f3f7ff;font-weight:700;letter-spacing:-1px;">09:27</text>
+      <text class="t body" x="26" y="96">Francis! - Sun 09:27</text>
+      <text class="t small" x="522" y="42">Enabled</text>
+      <rect x="590" y="40" width="70" height="34" rx="17" fill="#4d6393"/>
+      <circle cx="641" cy="57" r="14" fill="#bfd1ff"/>
+    </g>
+
+    <g transform="translate(32 432)">
+      <rect width="696" height="110" rx="18" fill="#26354c" stroke="#385072"/>
+      <rect x="0" y="18" width="6" height="74" rx="3" fill="#6f83a4"/>
+      <text class="t" x="24" y="66" style="font-size:40px;fill:#f0f6ff;font-weight:700;letter-spacing:-1px;">02:00 - 02:30</text>
+      <text class="t body" x="26" y="96">Test Alarm</text>
+      <text class="t small" x="510" y="42">Disabled</text>
+      <rect x="590" y="40" width="70" height="34" rx="17" fill="#425575"/>
+      <circle cx="607" cy="57" r="14" fill="#dce5f5"/>
+    </g>
+
+    <rect x="0" y="562" width="760" height="58" rx="0" fill="#142132"/>
+    <rect x="288" y="574" width="184" height="34" rx="17" fill="#ff7a3d"/>
+    <text class="t" x="380" y="597" text-anchor="middle" style="font-size:19px;fill:#fff;font-weight:700;">Add Alarm</text>
+  </g>
+
+  <g transform="translate(922 170)">
+    <rect width="320" height="220" rx="18" fill="#16253a" stroke="#2e4362"/>
+    <text class="t" x="20" y="42" style="font-size:24px;fill:#dbe8fb;font-weight:700;">Desktop adaptation</text>
+    <text class="t body" x="20" y="78">- keeps custom title bar</text>
+    <text class="t body" x="20" y="108">- centred content column</text>
+    <text class="t body" x="20" y="138">- fixed footer primary action</text>
+    <text class="t small" x="20" y="174">Same interaction language as mobile</text>
+    <text class="t small" x="20" y="198">with wider reading rhythm</text>
+  </g>
+
+  <g transform="translate(922 420)">
+    <rect width="320" height="190" rx="18" fill="#16253a" stroke="#2e4362"/>
+    <text class="t" x="20" y="42" style="font-size:24px;fill:#dbe8fb;font-weight:700;">Theme integrity</text>
+    <text class="t body" x="20" y="78">No hardcoded hex in app code</text>
+    <text class="t body" x="20" y="108">Use existing theme tokens + MUI</text>
+    <text class="t small" x="20" y="142">Material You remains opt-in</text>
+    <text class="t small" x="20" y="164">through Settings screen</text>
+  </g>
+
+  <line x1="880" y1="280" x2="922" y2="280" stroke="#57729a" stroke-dasharray="4 4"/>
+  <line x1="880" y1="520" x2="922" y2="520" stroke="#57729a" stroke-dasharray="4 4"/>
+</svg>

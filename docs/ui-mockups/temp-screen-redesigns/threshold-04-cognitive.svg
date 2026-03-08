@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 420" width="600" height="420" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1b2a"/>
+      <stop offset="100%" stop-color="#162840"/>
+    </linearGradient>
+    <linearGradient id="btnGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff8a65"/>
+      <stop offset="100%" stop-color="#e64a19"/>
+    </linearGradient>
+    <filter id="btnGlow">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="phoneShadow">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <linearGradient id="phoneScreenGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a3352"/>
+      <stop offset="100%" stop-color="#0d1b2a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="420" fill="url(#bg4)"/>
+  <pattern id="dots4" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+    <circle cx="15" cy="15" r="1" fill="#ffffff" fill-opacity="0.04"/>
+  </pattern>
+  <rect width="600" height="420" fill="url(#dots4)"/>
+
+  <text x="30" y="38" font-size="10" fill="#FF7043" letter-spacing="3" font-weight="600">04 — MINIMAL COGNITIVE LOAD</text>
+
+  <!-- === PHONE MOCKUP — main focus === -->
+  <g transform="translate(175, 58)" filter="url(#phoneShadow)">
+    <!-- Phone body -->
+    <rect width="160" height="292" rx="24" fill="#1a2f48" stroke="#2a5080" stroke-width="1.5"/>
+    <!-- Camera bar -->
+    <rect x="52" y="9" width="56" height="7" rx="3.5" fill="#0d1b2a"/>
+    <!-- Screen -->
+    <rect x="8" y="22" width="144" height="252" rx="14" fill="url(#phoneScreenGrad)"/>
+
+    <!-- Status bar -->
+    <text x="16" y="38" font-size="8" fill="#ffffff" opacity="0.4">9:07</text>
+    <text x="144" y="38" font-size="8" fill="#ffffff" opacity="0.4" text-anchor="end">●●●</text>
+
+    <!-- Screen title -->
+    <text x="72" y="64" font-size="11" fill="#7ca0bf" text-anchor="middle" letter-spacing="1">ALARMS</text>
+
+    <!-- ONE primary alarm display (glanceable) -->
+    <text x="72" y="108" font-size="38" fill="#ffffff" text-anchor="middle" font-weight="700" letter-spacing="-2">7:00</text>
+    <text x="72" y="126" font-size="10" fill="#FF7043" text-anchor="middle" opacity="0.9">± 30 min · Mon–Fri</text>
+
+    <!-- Divider line -->
+    <line x1="28" y1="140" x2="116" y2="140" stroke="#1e3a5f" stroke-width="1"/>
+
+    <!-- Secondary info — minimal -->
+    <text x="28" y="158" font-size="9" fill="#4a6a80">Next alarm in</text>
+    <text x="116" y="158" font-size="9" fill="#a0c0df" text-anchor="end" font-weight="600">~6h 45m</text>
+
+    <!-- Spacer / breathing room (shows whitespace intentionally) -->
+    <rect x="28" y="168" width="88" height="1" rx="0.5" fill="#1e3a5f" opacity="0.4"/>
+
+    <!-- SINGLE PRIMARY ACTION BUTTON -->
+    <rect x="20" y="192" width="120" height="52" rx="26" fill="url(#btnGrad)" filter="url(#btnGlow)"/>
+    <text x="80" y="221" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" letter-spacing="0.5">Add Alarm</text>
+    <text x="80" y="234" font-size="8" fill="#ffffff" text-anchor="middle" opacity="0.7">One action. Always.</text>
+
+    <!-- Bottom home indicator -->
+    <rect x="55" y="264" width="50" height="4" rx="2" fill="#ffffff" opacity="0.2"/>
+  </g>
+
+  <!-- === 48dp Touch Target annotation === -->
+  <!-- Circle showing oversized tap target around the button -->
+  <circle cx="255" cy="228" r="56" fill="none" stroke="#FF7043" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <text x="320" y="210" font-size="8" fill="#FF7043" opacity="0.7">min. 48dp</text>
+  <text x="320" y="221" font-size="8" fill="#FF7043" opacity="0.7">touch target</text>
+  <line x1="308" y1="215" x2="294" y2="218" stroke="#FF7043" stroke-width="1" opacity="0.4"/>
+
+  <!-- === ANNOTATIONS right side === -->
+
+  <!-- ONE ACTION annotation -->
+  <g transform="translate(360, 90)">
+    <rect width="186" height="50" rx="10" fill="#0a1929" stroke="#1e3a5f" stroke-width="1"/>
+    <!-- Icon -->
+    <circle cx="24" cy="25" r="14" fill="#FF7043" opacity="0.15" stroke="#FF7043" stroke-width="1"/>
+    <text x="24" y="29" font-size="14" text-anchor="middle" fill="#FF7043">1</text>
+    <text x="46" y="20" font-size="9" fill="#a0c0df" font-weight="600">One primary action</text>
+    <text x="46" y="33" font-size="8" fill="#4a6a80">per screen. No decision</text>
+    <text x="46" y="44" font-size="8" fill="#4a6a80">fatigue.</text>
+  </g>
+
+  <!-- HIGH CONTRAST annotation -->
+  <g transform="translate(360, 156)">
+    <rect width="186" height="50" rx="10" fill="#0a1929" stroke="#1e3a5f" stroke-width="1"/>
+    <!-- Contrast demo boxes -->
+    <rect x="8" y="12" width="22" height="28" rx="4" fill="#ffffff"/>
+    <rect x="8" y="12" width="11" height="28" fill="#162840" rx="4"/>
+    <text x="40" y="20" font-size="9" fill="#a0c0df" font-weight="600">High contrast</text>
+    <text x="40" y="33" font-size="8" fill="#4a6a80">Outdoor readable.</text>
+    <text x="40" y="44" font-size="8" fill="#4a6a80">WCAG AA minimum.</text>
+  </g>
+
+  <!-- GLANCEABLE annotation -->
+  <g transform="translate(360, 222)">
+    <rect width="186" height="50" rx="10" fill="#0a1929" stroke="#1e3a5f" stroke-width="1"/>
+    <!-- Eye icon -->
+    <ellipse cx="24" cy="25" rx="14" ry="9" fill="none" stroke="#7ca0bf" stroke-width="1.5"/>
+    <circle cx="24" cy="25" r="4" fill="#FF7043" opacity="0.7"/>
+    <text x="46" y="20" font-size="9" fill="#a0c0df" font-weight="600">Glanceable layout</text>
+    <text x="46" y="33" font-size="8" fill="#4a6a80">Key info above the fold,</text>
+    <text x="46" y="44" font-size="8" fill="#4a6a80">no scanning required.</text>
+  </g>
+
+  <!-- 48dp annotation -->
+  <g transform="translate(360, 288)">
+    <rect width="186" height="50" rx="10" fill="#0a1929" stroke="#1e3a5f" stroke-width="1"/>
+    <!-- Target icon -->
+    <circle cx="24" cy="25" r="13" fill="none" stroke="#FF7043" stroke-width="1" opacity="0.4"/>
+    <circle cx="24" cy="25" r="8" fill="none" stroke="#FF7043" stroke-width="1" opacity="0.6"/>
+    <circle cx="24" cy="25" r="3" fill="#FF7043"/>
+    <text x="46" y="20" font-size="9" fill="#a0c0df" font-weight="600">48dp min. targets</text>
+    <text x="46" y="33" font-size="8" fill="#4a6a80">No precision needed.</text>
+    <text x="46" y="44" font-size="8" fill="#4a6a80">Inclusive &amp; accessible.</text>
+  </g>
+
+  <!-- Breathing room label -->
+  <!-- Arrow pointing to whitespace between alarm time and button -->
+  <line x1="170" y1="168" x2="152" y2="168" stroke="#2a5080" stroke-width="1" stroke-dasharray="3,2" opacity="0.7"/>
+  <text x="165" y="172" font-size="7.5" fill="#2a5080" text-anchor="end">breathing</text>
+  <text x="165" y="181" font-size="7.5" fill="#2a5080" text-anchor="end">room</text>
+
+  <!-- Bottom rule -->
+  <line x1="30" y1="388" x2="570" y2="388" stroke="#2a4060" stroke-width="1"/>
+  <text x="30" y="408" font-size="10" fill="#4a6a80">Threshold · Liminal HQ</text>
+  <text x="570" y="408" font-size="10" fill="#4a6a80" text-anchor="end">Absorb at a glance</text>
+</svg>
