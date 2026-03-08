@@ -154,3 +154,24 @@ Each entry includes:
 
 **Speaker script**
 "This v3 pass intentionally steps back from screenshot cloning while still honouring the desktop constraints we agreed on. We kept the dark palette for easy comparison, locked mobile Settings close to current behaviour, and brought back the desktop left-nav/right-panel structure from v1. That gives us a cleaner, more intentional baseline for the next review round."
+
+---
+
+### 2026-03-08 — Settled key decisions and produced code-faithful mobile Settings mockup (v4)
+
+**What happened**
+- reviewed the v3 mockup set against the actual source code and desktop screenshot
+- settled five design decisions that were previously open questions (see plan section 11)
+- identified that the v3 mobile Settings SVG was already a redesign concept, not a faithful representation of current code
+- produced `proposed-v4/threshold-settings-mobile-v4.svg` — a code-faithful rendering of `Settings.tsx` in the `deep-night` dark comparison palette
+- v4 mobile Settings includes all rows present in code: Theme select, conditional Material You toggle, Force Dark Mode, Silence After select, Snooze Length tap-to-open row, 24-Hour Time toggle, and all five Developer rows (Test Alarm Ring, Test Watch Ring, Test Notification, Force Synchronise, Download Event Logs)
+- developer icon button colours are mapped to correct MUI palette roles: `primary.main` (#4c8dff), `secondary.main` (#2563eb), `info.main` (#0288d1)
+- updated plan section 5 (Settings), section 11 (settled decisions), and section 12 (open questions)
+
+**Why this matters**
+- establishes an honest baseline before any mobile Settings redesign work begins
+- ensures the implementing agent works from the actual screen structure, not a redesigned approximation
+- locks theming-in-mockups policy: deep-night dark for comparison consistency, palette roles in code
+
+**Speaker script**
+"We used this pass to settle the open questions and get honest about the mobile Settings baseline. Rather than designing over a concept, we drew the current code faithfully in the mockup palette. That gives us a clear before-state to compare any future iteration against, and closes the loop on decisions that were blocking the next phase."
