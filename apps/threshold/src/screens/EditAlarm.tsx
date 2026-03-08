@@ -177,7 +177,7 @@ const EditAlarm: React.FC = () => {
     };
 
     return (
-        <Box sx={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ height: '100%', overflowY: 'auto' }}>
             {/* Mobile Header: Placed OUTSIDE IonContent to avoid scrolling issues and overlay */}
             {isMobile && (
                 <MobileToolbar
@@ -269,8 +269,19 @@ const EditAlarm: React.FC = () => {
                                                     display: 'flex',
                                                     justifyContent: 'center',
                                                     borderRadius: UI.card.borderRadius,
-                                                    transform: 'scale(0.85)',
-                                                    transformOrigin: 'top center',
+                                                    '& .time-picker-container': {
+                                                        padding: '8px',
+                                                        gap: '8px',
+                                                    },
+                                                    '& .time-value-input': {
+                                                        width: '60px',
+                                                        fontSize: '1.6rem',
+                                                        padding: '8px 0',
+                                                    },
+                                                    '& .time-control-btn': {
+                                                        width: '32px',
+                                                        height: '26px',
+                                                    },
                                                 }}>
                                                     <DesktopCustomTimePicker
                                                         value={windowStart}
@@ -285,8 +296,19 @@ const EditAlarm: React.FC = () => {
                                                     display: 'flex',
                                                     justifyContent: 'center',
                                                     borderRadius: UI.card.borderRadius,
-                                                    transform: 'scale(0.85)',
-                                                    transformOrigin: 'top center',
+                                                    '& .time-picker-container': {
+                                                        padding: '8px',
+                                                        gap: '8px',
+                                                    },
+                                                    '& .time-value-input': {
+                                                        width: '60px',
+                                                        fontSize: '1.6rem',
+                                                        padding: '8px 0',
+                                                    },
+                                                    '& .time-control-btn': {
+                                                        width: '32px',
+                                                        height: '26px',
+                                                    },
                                                 }}>
                                                     <DesktopCustomTimePicker
                                                         value={windowEnd}
