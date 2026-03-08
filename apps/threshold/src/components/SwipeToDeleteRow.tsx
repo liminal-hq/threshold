@@ -66,10 +66,12 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
         } else {
             // Spring back to start
             if (prefersReducedMotion) {
-                controls.start({ x: 0, transition: { duration: 0 } });
+                await controls.start({ x: 0, transition: { duration: 0 } });
             } else {
-                controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } });
+                await controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } });
             }
+            // Reset drag flag so subsequent taps register as clicks
+            isDrag.current = false;
         }
     };
 
