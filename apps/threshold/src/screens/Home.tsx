@@ -71,7 +71,7 @@ const Home: React.FC = () => {
             )}
 
             <Container maxWidth={false} sx={{
-                mt: !isMobile ? 0 : 0,
+                mt: 0,
                 pt: isMobile ? 2 : 0,
                 pb: 10,
                 px: 2,
