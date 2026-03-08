@@ -54,7 +54,7 @@ Use current alarm text patterns as source of truth (not mock filler text):
 
 ## 4) New mockups for review
 
-Current review set: `proposed-v3` (latest iteration)
+Current review set: mixed — Home and Edit remain at `proposed-v3`; Settings mobile updated to `proposed-v4` (code-faithful baseline).
 
 ### Home
 
@@ -68,9 +68,11 @@ Current review set: `proposed-v3` (latest iteration)
 
 ![Edit desktop redesign](./proposed-v3/threshold-edit-desktop-v3.svg)
 
-### Settings
+### Settings — Mobile (code-faithful baseline, v4)
 
-![Settings mobile redesign](./proposed-v3/threshold-settings-mobile-v3.svg)
+![Settings mobile code-faithful](./proposed-v4/threshold-settings-mobile-v4.svg)
+
+### Settings — Desktop (concept direction, v3)
 
 ![Settings desktop redesign](./proposed-v3/threshold-settings-desktop-v3.svg)
 
@@ -101,12 +103,12 @@ Current review set: `proposed-v3` (latest iteration)
 
 ### Settings
 
-- Mobile Settings is locked to remain close to current structure and behaviour.
-- Improve spacing and grouping clarity without introducing line-heavy or bubble-heavy visual noise.
-- Keep Android conditional Material You toggle behaviour.
-- Explicitly document that desktop never uses Material You extraction.
-- Keep Developer tools present, but visually scoped as advanced controls.
-- Desktop Settings uses left-side categories with right-side detail panels.
+- **Mobile Settings: no structural changes.** The current in-code layout (flat transparent `List` under `ListSubheader` labels) is the target. Only scrolling needs to be added if not already present.
+- Keep all existing rows, their types (Switch, Select, tap-to-open row, icon button), and their conditional logic exactly as in `Settings.tsx`.
+- Developer section stays always expanded on mobile. No collapse gate.
+- Keep Android conditional Material You toggle (`theme === 'system' && isAndroid` guard).
+- Explicitly: desktop never uses Material You extraction.
+- Desktop Settings uses left-side category rail with right-side detail panel — this is open for concept exploration in mockups; no code direction locked yet.
 
 ## 6) Theming integration plan (critical)
 
@@ -174,11 +176,19 @@ Material You support remains automatic through existing `ThemeContext` and setti
 - Do not add ignore rules for iterative redesign SVG updates in this workflow.
 - Treat the evolution of mockups and notes as first-class historical artefacts.
 
-## 11) Questions to settle before implementation
+## 11) Settled decisions
 
-1. On mobile `Home`, should we keep both refresh and overflow menu in the header exactly as now, or simplify to one action and move refresh into overflow?
-2. In `Settings`, should the `Developer` section be always expanded (current behaviour) or collapsed behind a single row by default?
+1. **Mobile `Home` refresh action** — remove the toolbar refresh `IconButton`. Replace with pull-to-refresh gesture. No refresh control on desktop. Rationale: event-driven design keeps the list current automatically; pull-to-refresh is the natural mobile gesture and removes toolbar clutter.
+2. **Developer section** — always expanded on both mobile and desktop. No collapse gate. On desktop it will appear as one of the left-rail category panels.
+3. **Mobile Settings** — no structural redesign. Scrolling to be added if absent. Layout otherwise stays as-is in code.
+4. **Desktop title bar** — drawn by `TitleBar.tsx` (app-owned, `decorations: false`). Mockups must represent the custom 32px title bar (centred app name, platform-appropriate window controls), not native WM chrome.
+5. **Desktop Home add button** — keep the full-width `+ ADD ALARM` button style as it exists in the current desktop screenshot. Settings gear moves beside it in the footer zone. Mockups should reflect this existing button shape, not introduce a new pill or centred variant.
+6. **Theming in mockups** — mockup colour scheme uses `deep-night` dark palette for comparison consistency only. Implementing agents must use MUI palette roles and CSS vars from `ThemeContext`, never hardcoded hex values copied from mockups.
+
+## 12) Open questions
+
+1. Should the `Next alarm` banner on Home read from an existing data field, or does it require new computed state?
 
 ---
 
-If this direction looks right, the next step is a phase-by-phase implementation PR plan with explicit file-level change sets and acceptance checks per screen.
+Once the mockup review pass is complete, the next step is a phase-by-phase implementation plan with explicit file-level change sets and acceptance checks per screen.
