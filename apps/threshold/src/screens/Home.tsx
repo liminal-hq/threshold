@@ -72,7 +72,7 @@ const Home: React.FC = () => {
 
             <Container maxWidth={false} sx={{
                 mt: 0,
-                pt: isMobile ? 2 : 0,
+                pt: 2,
                 pb: 10,
                 px: 2,
                 flexGrow: 1
@@ -125,18 +125,19 @@ const Home: React.FC = () => {
                 zIndex: 1000
             }}>
                 {!isMobile ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            fullWidth
-                            startIcon={<AddIcon />}
-                            onClick={handleAdd}
-                            sx={{ maxWidth: 400, display: 'flex' }}
-                        >
-                            Add Alarm
-                        </Button>
-                        <IconButton onClick={handleSettingsClick} aria-label="settings">
+                    <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                            <Button
+                                variant="contained"
+                                color="secondary"
+                                startIcon={<AddIcon />}
+                                onClick={handleAdd}
+                                sx={{ maxWidth: 400, width: '100%' }}
+                            >
+                                Add Alarm
+                            </Button>
+                        </Box>
+                        <IconButton onClick={handleSettingsClick} aria-label="settings" sx={{ position: 'absolute', right: 0 }}>
                             <SettingsOutlinedIcon />
                         </IconButton>
                     </Box>
