@@ -41,9 +41,7 @@ export const NextAlarmBanner: React.FC<NextAlarmBannerProps> = ({ alarms, is24h 
 			role="status"
 			aria-label={ariaLabel}
 			sx={{
-				bgcolor: alpha(theme.palette.primary.main, 0.12),
-				borderLeft: `2px solid`,
-				borderColor: 'primary.main',
+				background: `linear-gradient(to right, ${alpha(theme.palette.primary.main, 0.16)}, ${alpha(theme.palette.primary.main, 0.03)})`,
 				borderRadius: UI.banner.borderRadius,
 				px: 2,
 				py: 1.5,
@@ -54,14 +52,9 @@ export const NextAlarmBanner: React.FC<NextAlarmBannerProps> = ({ alarms, is24h 
 			}}
 		>
 			<AccessTimeIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-			<Box>
-				<Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-					Next alarm in {countdown}
-				</Typography>
-				<Typography variant="caption" color="text.secondary">
-					{formattedTime}
-				</Typography>
-			</Box>
+			<Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+				Next alarm in {countdown}  ·  Scheduled: {formattedTime}
+			</Typography>
 		</Box>
 	);
 };

@@ -276,3 +276,22 @@ Each entry includes:
 
 **Speaker script**
 "Entry 14 swaps CSS transform scaling for direct class overrides on the time picker — no more phantom space. Also fixed the scroll container by removing flex column, which was preventing overflow."
+
+---
+
+### 15 — 2026-03-08 — Home screen: banner style, spacing, and footer layout
+
+**What happened**
+- `NextAlarmBanner`: replaced solid `bgcolor` and `borderLeft` with a horizontal gradient (`alpha(primary.main, 0.16)` to `alpha(primary.main, 0.03)`) matching the v4 mockup
+- `NextAlarmBanner`: merged two-line layout (title + caption) into a single line: "Next alarm in Xh Ym · Scheduled: TIME"
+- `NextAlarmBanner`: changed text colour from `text.primary` to `primary.main` to match the mockup's tinted text
+- `Home.tsx`: added `pt: 2` on desktop container so the banner is not flush against the TitleBar
+- `Home.tsx`: restructured footer so the Add Alarm button is truly centred (`flex: 1` wrapper with `justifyContent: 'center'`) and the settings gear is absolutely positioned to the right — no longer grouped with the button
+
+**Why this matters**
+- The banner now matches the v4 mockup: gradient fill, no left border accent, single-line format
+- The footer gear no longer shifts the Add Alarm button off-centre — the button is always centred regardless of gear presence
+- Top padding prevents the banner from being visually jammed against the TitleBar
+
+**Speaker script**
+"Entry 15 brings the Home screen in line with the v4 mockup — the next-alarm banner now uses a gradient fill and single-line format, the footer button is truly centred with the gear independently anchored to the right, and there's breathing room between the TitleBar and banner."
