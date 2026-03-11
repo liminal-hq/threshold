@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1280" width="900" height="1280">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1423"/>
+      <stop offset="100%" stop-color="#121f34"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b283e"/>
+      <stop offset="100%" stop-color="#162233"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .section { font-size: 14px; fill: #7f95b6; font-weight: 700; letter-spacing: 1px; }
+      .rowTitle { font-size: 22px; fill: #dbe8fb; }
+      .rowSub { font-size: 16px; fill: #9fb4d0; }
+      .noteTitle { font-size: 20px; fill: #dbe8fb; font-weight: 700; }
+      .noteBody { font-size: 16px; fill: #a7bad5; }
+    ]]></style>
+  </defs>
+
+  <rect width="900" height="1280" fill="url(#bg)"/>
+  <text class="t eyebrow" x="48" y="64">THRESHOLD REDESIGN V3 - SETTINGS MOBILE</text>
+
+  <g transform="translate(250 92)">
+    <rect width="400" height="1088" rx="48" fill="#0b101a" stroke="#2e4362"/>
+    <rect x="14" y="16" width="372" height="1056" rx="34" fill="url(#panel)"/>
+
+    <rect x="24" y="34" width="348" height="62" rx="14" fill="#1f2d44"/>
+    <text class="t" x="44" y="74" style="font-size:30px;fill:#c5d5ea;">&lt;</text>
+    <text class="t" x="198" y="74" text-anchor="middle" style="font-size:28px;fill:#f8fafc;font-weight:700;">Settings</text>
+
+    <!-- Flat, current-style grouped list with spacing (no divider-heavy lines) -->
+    <g transform="translate(28 122)">
+      <text class="t section" x="0" y="14">APPEARANCE</text>
+      <g transform="translate(0 30)">
+        <rect width="344" height="126" rx="14" fill="#1a2a42" stroke="#2f4b6f"/>
+        <text class="t rowTitle" x="18" y="36">Theme</text>
+        <text class="t rowSub" x="326" y="36" text-anchor="end">System (Auto)</text>
+        <text class="t rowTitle" x="18" y="76">Use Material You</text>
+        <rect x="274" y="56" width="52" height="28" rx="14" fill="#4d6393"/>
+        <circle cx="310" cy="70" r="11" fill="#bfd1ff"/>
+        <text class="t rowTitle" x="18" y="114">Force Dark Mode</text>
+        <rect x="274" y="94" width="52" height="28" rx="14" fill="#3e4f6f"/>
+        <circle cx="288" cy="108" r="11" fill="#dbe5f3"/>
+      </g>
+
+      <text class="t section" x="0" y="188">ALARM SETTINGS</text>
+      <g transform="translate(0 204)">
+        <rect width="344" height="86" rx="14" fill="#1a2a42" stroke="#2f4b6f"/>
+        <text class="t rowTitle" x="18" y="34">Silence After</text>
+        <text class="t rowSub" x="326" y="34" text-anchor="end">20 minutes</text>
+        <text class="t rowTitle" x="18" y="72">Snooze Length</text>
+        <text class="t rowSub" x="326" y="72" text-anchor="end">10 minutes</text>
+      </g>
+
+      <text class="t section" x="0" y="324">GENERAL</text>
+      <g transform="translate(0 340)">
+        <rect width="344" height="50" rx="14" fill="#1a2a42" stroke="#2f4b6f"/>
+        <text class="t rowTitle" x="18" y="33">24-Hour Time</text>
+        <rect x="274" y="11" width="52" height="28" rx="14" fill="#3e4f6f"/>
+        <circle cx="288" cy="25" r="11" fill="#dbe5f3"/>
+      </g>
+
+      <text class="t section" x="0" y="430">DEVELOPER</text>
+      <g transform="translate(0 446)">
+        <rect width="344" height="182" rx="14" fill="#1a2a42" stroke="#2f4b6f"/>
+        <text class="t rowTitle" x="18" y="34">Test Alarm Ring</text>
+        <text class="t rowSub" x="326" y="34" text-anchor="end">Run</text>
+        <text class="t rowTitle" x="18" y="72">Test Watch Ring</text>
+        <text class="t rowSub" x="326" y="72" text-anchor="end">Run</text>
+        <text class="t rowTitle" x="18" y="110">Force Synchronise</text>
+        <text class="t rowSub" x="326" y="110" text-anchor="end">Run</text>
+        <text class="t rowTitle" x="18" y="148">Download Event Logs</text>
+        <text class="t rowSub" x="326" y="148" text-anchor="end">Save</text>
+      </g>
+    </g>
+  </g>
+
+  <g transform="translate(676 246)">
+    <rect width="178" height="162" rx="16" fill="#16253a" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Settings lock</text>
+    <text class="t noteBody" x="14" y="60">Mobile stays close</text>
+    <text class="t noteBody" x="14" y="82">to current structure.</text>
+    <text class="t noteBody" x="14" y="104">No line-heavy pass.</text>
+    <text class="t noteBody" x="14" y="126">Spacing and grouping</text>
+    <text class="t noteBody" x="14" y="148">carry most of the work.</text>
+  </g>
+</svg>

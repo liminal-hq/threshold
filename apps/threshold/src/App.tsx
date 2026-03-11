@@ -84,9 +84,12 @@ const App: React.FC = () => {
 			try {
 				try {
 					await win.setDecorations(false); // Force removal of native title bar
-					await win.unmaximize();
 					// await win.setSize(new LogicalSize(450, 800));
-					await win.center();
+					// Only centre on first launch (no saved position yet)
+					const pos = await win.outerPosition();
+					if (pos.x === 0 && pos.y === 0) {
+						await win.center();
+					}
 				} catch (e) {
 					console.error('Failed to resize/decorate window:', e);
 				}

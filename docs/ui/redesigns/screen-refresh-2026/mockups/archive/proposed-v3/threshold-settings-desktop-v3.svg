@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 860" width="1360" height="860">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1423"/>
+      <stop offset="100%" stop-color="#121f34"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b283e"/>
+      <stop offset="100%" stop-color="#162233"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .title { font-size: 34px; fill: #edf4ff; font-weight: 700; }
+      .body { font-size: 20px; fill: #a7bad5; }
+      .small { font-size: 16px; fill: #7f95b6; }
+    ]]></style>
+  </defs>
+
+  <rect width="1360" height="860" fill="url(#bg)"/>
+  <text class="t eyebrow" x="36" y="48">THRESHOLD REDESIGN V3 - SETTINGS DESKTOP</text>
+
+  <g transform="translate(120 130)">
+    <rect width="1120" height="650" rx="28" fill="url(#panel)" stroke="#2e4362"/>
+    <text class="t title" x="36" y="58">Settings</text>
+
+    <!-- Left categories / Right content revived from v1 direction -->
+    <g transform="translate(36 98)">
+      <rect width="248" height="516" rx="20" fill="#1a273b" stroke="#2f4564"/>
+      <text class="t small" x="18" y="42">SECTIONS</text>
+      <rect x="14" y="58" width="220" height="44" rx="12" fill="#ff7a3d"/>
+      <text class="t" x="124" y="86" text-anchor="middle" style="font-size:18px;fill:#fff;font-weight:700;">Appearance</text>
+      <rect x="14" y="112" width="220" height="44" rx="12" fill="#24344d"/>
+      <text class="t" x="124" y="140" text-anchor="middle" style="font-size:18px;fill:#c7d6ea;">Alarm Settings</text>
+      <rect x="14" y="166" width="220" height="44" rx="12" fill="#24344d"/>
+      <text class="t" x="124" y="194" text-anchor="middle" style="font-size:18px;fill:#c7d6ea;">General</text>
+      <rect x="14" y="220" width="220" height="44" rx="12" fill="#24344d"/>
+      <text class="t" x="124" y="248" text-anchor="middle" style="font-size:18px;fill:#c7d6ea;">Developer</text>
+    </g>
+
+    <g transform="translate(308 98)">
+      <rect width="776" height="516" rx="20" fill="#223148" stroke="#365073"/>
+
+      <text class="t" x="24" y="42" style="font-size:26px;fill:#deebfd;font-weight:700;">Appearance</text>
+      <rect x="24" y="62" width="728" height="64" rx="12" fill="#1b2b43" stroke="#314e73"/>
+      <text class="t body" x="42" y="102">Theme</text>
+      <text class="t small" x="726" y="102" text-anchor="end">System (Auto)</text>
+
+      <rect x="24" y="138" width="728" height="64" rx="12" fill="#1b2b43" stroke="#314e73"/>
+      <text class="t body" x="42" y="178">Use Material You</text>
+      <text class="t small" x="726" y="178" text-anchor="end">Android only when theme is System</text>
+
+      <rect x="24" y="214" width="728" height="64" rx="12" fill="#1b2b43" stroke="#314e73"/>
+      <text class="t body" x="42" y="254">Force Dark Mode</text>
+      <rect x="690" y="234" width="52" height="28" rx="14" fill="#3e4f6f"/>
+      <circle cx="704" cy="248" r="11" fill="#dbe5f3"/>
+
+      <text class="t" x="24" y="336" style="font-size:24px;fill:#deebfd;font-weight:700;">Alarm Settings</text>
+      <rect x="24" y="354" width="352" height="60" rx="12" fill="#1b2b43" stroke="#314e73"/>
+      <text class="t body" x="42" y="392">Silence After</text>
+      <text class="t small" x="356" y="392" text-anchor="end">20 minutes</text>
+
+      <rect x="400" y="354" width="352" height="60" rx="12" fill="#1b2b43" stroke="#314e73"/>
+      <text class="t body" x="418" y="392">Snooze Length</text>
+      <text class="t small" x="732" y="392" text-anchor="end">10 minutes</text>
+
+      <text class="t" x="24" y="466" style="font-size:18px;fill:#9eb4d4;">Desktop keeps category navigation on left and content detail on right.</text>
+    </g>
+  </g>
+
+  <g transform="translate(986 186)">
+    <rect width="328" height="198" rx="18" fill="#16253a" stroke="#2e4362"/>
+    <text class="t" x="20" y="42" style="font-size:24px;fill:#dbe8fb;font-weight:700;">Review alignment</text>
+    <text class="t body" x="20" y="78">- Return to left category rail</text>
+    <text class="t body" x="20" y="108">- Keep dark comparison palette</text>
+    <text class="t body" x="20" y="138">- Avoid literal screenshot match</text>
+    <text class="t small" x="20" y="170">Concept-first desktop direction</text>
+  </g>
+</svg>

@@ -19,6 +19,9 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
     const x = useMotionValue(0);
     const controls = useAnimation();
     const [isDeleting, setIsDeleting] = useState(false);
+    const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -49,17 +52,26 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 
         if ((isPastThreshold || isFastFling) && !isDeleting) {
             setIsDeleting(true);
-            // Animate off screen in the direction of the swipe
-            const direction = offset > 0 ? 1 : -1;
-            await controls.start({
-                x: direction * width * 1.5,
-                transition: { duration: 0.2 }
-            });
-            // Trigger delete callback
-            onDelete();
+            if (prefersReducedMotion) {
+                onDelete();
+            } else {
+                // Animate off screen in the direction of the swipe
+                const direction = offset > 0 ? 1 : -1;
+                await controls.start({
+                    x: direction * width * 1.5,
+                    transition: { duration: 0.2 }
+                });
+                onDelete();
+            }
         } else {
             // Spring back to start
-            controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } });
+            if (prefersReducedMotion) {
+                await controls.start({ x: 0, transition: { duration: 0 } });
+            } else {
+                await controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } });
+            }
+            // Reset drag flag so subsequent taps register as clicks
+            isDrag.current = false;
         }
     };
 

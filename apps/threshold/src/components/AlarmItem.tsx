@@ -6,6 +6,8 @@ import { format } from 'date-fns';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SwipeToDeleteRow } from './SwipeToDeleteRow';
+import { accentRailSx } from '../theme/alarmCardStyles';
+import { UI } from '../theme/uiTokens';
 
 interface AlarmItemProps {
 	alarm: AlarmRecord;
@@ -49,21 +51,23 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 			onClick={!isMobile ? onClick : undefined}
 			sx={{
 				width: '100%',
-				// Mobile "bubble" styling is handled by the wrapper now
 				mb: isMobile ? 0 : undefined,
 				display: 'flex',
 				justifyContent: 'space-between',
 				alignItems: 'center',
 				p: 2,
+				pl: 1.5,
 				cursor: 'pointer',
-				borderRadius: isMobile ? '16px' : undefined, // Bubble look on mobile, default on desktop
-				// Ionic items are usually list items.
-				// Let's keep card look but maybe reduced elevation or spacing on mobile
-				boxShadow: isMobile ? 'none' : undefined, // Remove shadow inside the swipe row
+				position: 'relative',
+				overflow: 'hidden',
+				borderRadius: isMobile ? UI.card.borderRadius : undefined,
+				boxShadow: isMobile ? 'none' : undefined,
 				bgcolor: 'background.paper',
-				borderBottom: isMobile ? 'none' : undefined, // Remove list separator look
+				borderBottom: isMobile ? 'none' : undefined,
 			}}
 		>
+			{/* Accent rail */}
+			<Box sx={accentRailSx(alarm.enabled)} />
 			<Box sx={{ display: 'flex', flexDirection: 'column' }}>
 				<Typography variant="h5" component="div" sx={{ fontWeight: 'bold' }}>
 					{timeDisplay}

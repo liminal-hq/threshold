@@ -35,6 +35,15 @@ import { AlarmService } from '../services/AlarmService';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { eventLogService } from '../services/EventLogService';
 
+type SettingsSection = 'appearance' | 'alarmSettings' | 'general' | 'developer';
+
+const NAV_ITEMS: { key: SettingsSection; label: string }[] = [
+	{ key: 'appearance', label: 'Appearance' },
+	{ key: 'alarmSettings', label: 'Alarm Settings' },
+	{ key: 'general', label: 'General' },
+	{ key: 'developer', label: 'Developer' },
+];
+
 const Settings: React.FC = () => {
 	const navigate = useNavigate();
 	const { theme, setTheme, forceDark, setForceDark, useMaterialYou, setUseMaterialYou } =
@@ -42,6 +51,7 @@ const Settings: React.FC = () => {
 	const [is24h, setIs24h] = useState<boolean>(SettingsService.getIs24h());
 	const [isMobile, setIsMobile] = useState(false);
 	const [isAndroid, setIsAndroid] = useState(false);
+	const [activeSection, setActiveSection] = useState<SettingsSection>('appearance');
 
 	// New Settings State
 	const [silenceAfter, setSilenceAfter] = useState<number>(SettingsService.getSilenceAfter());
@@ -69,9 +79,331 @@ const Settings: React.FC = () => {
 		}
 	};
 
+	// --- Shared section content renderers ---
+
+	const renderAppearance = (px: number) => (
+		<List
+			subheader={isMobile ? <ListSubheader sx={{ bgcolor: 'transparent' }}>Appearance</ListSubheader> : undefined}
+		>
+			<ListItem sx={{ px }}>
+				<FormControl fullWidth>
+					<InputLabel id="theme-select-label">Theme</InputLabel>
+					<Select
+						labelId="theme-select-label"
+						value={theme}
+						label="Theme"
+						onChange={(e) => setTheme(e.target.value as Theme)}
+					>
+						<MenuItem value="system">System (Auto)</MenuItem>
+						<MenuItem value="deep-night">Deep Night (Default)</MenuItem>
+						<MenuItem value="canadian-cottage-winter">Canadian Cottage Winter</MenuItem>
+						<MenuItem value="georgian-bay-plunge">Georgian Bay Plunge</MenuItem>
+						<MenuItem value="boring-light">Boring Light</MenuItem>
+						<MenuItem value="boring-dark">Boring Dark</MenuItem>
+					</Select>
+				</FormControl>
+			</ListItem>
+
+			{/* Material You Toggle: visible on mobile only when system theme + Android; always visible on desktop */}
+			{isMobile ? (
+				theme === 'system' && isAndroid && (
+					<ListItem sx={{ px }}>
+						<ListItemText primary="Use Material You" secondary="Use dynamic system colours" />
+						<Switch
+							edge="end"
+							checked={useMaterialYou}
+							onChange={(e) => setUseMaterialYou(e.target.checked)}
+						/>
+					</ListItem>
+				)
+			) : (
+				<ListItem sx={{ px }}>
+					<ListItemText
+						primary="Use Material You"
+						secondary={isAndroid ? 'Use dynamic system colours' : 'Android only'}
+					/>
+					<Switch
+						edge="end"
+						checked={useMaterialYou}
+						onChange={(e) => setUseMaterialYou(e.target.checked)}
+						disabled={!isAndroid}
+					/>
+				</ListItem>
+			)}
+
+			<ListItem sx={{ px }}>
+				<ListItemText primary="Force Dark Mode" secondary="Override system colour scheme" />
+				<Switch
+					edge="end"
+					checked={forceDark}
+					onChange={(e) => setForceDark(e.target.checked)}
+				/>
+			</ListItem>
+		</List>
+	);
+
+	const renderAlarmSettings = (px: number) => (
+		<List
+			subheader={
+				isMobile ? <ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Alarm Settings</ListSubheader> : undefined
+			}
+		>
+			<ListItem sx={{ px }}>
+				<FormControl fullWidth>
+					<InputLabel id="silence-after-label">Silence After</InputLabel>
+					<Select
+						labelId="silence-after-label"
+						value={silenceAfter}
+						label="Silence After"
+						onChange={(e) => {
+							const val = Number(e.target.value);
+							SettingsService.setSilenceAfter(val);
+							setSilenceAfter(val);
+						}}
+					>
+						<MenuItem value={1}>1 minute</MenuItem>
+						<MenuItem value={5}>5 minutes</MenuItem>
+						<MenuItem value={10}>10 minutes</MenuItem>
+						<MenuItem value={15}>15 minutes</MenuItem>
+						<MenuItem value={20}>20 minutes</MenuItem>
+						<MenuItem value={-1}>Never</MenuItem>
+					</Select>
+				</FormControl>
+			</ListItem>
+
+			<ListItemButton
+				onClick={() => setSnoozeDialogOpen(true)}
+				sx={{ px }}
+			>
+				<ListItemText
+					primary="Snooze Length"
+					secondary={`${snoozeLength} minute${snoozeLength > 1 ? 's' : ''}`}
+				/>
+			</ListItemButton>
+		</List>
+	);
+
+	const renderGeneral = (px: number) => (
+		<List
+			subheader={
+				isMobile ? <ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>General</ListSubheader> : undefined
+			}
+		>
+			<ListItem sx={{ px }}>
+				<ListItemText
+					primary="24-Hour Time"
+					secondary="Use 24-hour format for time display"
+				/>
+				<Switch
+					edge="end"
+					checked={is24h}
+					onChange={(e) => handleTimeFormatChange(e.target.checked)}
+				/>
+			</ListItem>
+		</List>
+	);
+
+	const renderDeveloper = (px: number) => (
+		<List
+			subheader={
+				isMobile ? <ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Developer</ListSubheader> : undefined
+			}
+		>
+			<ListItem sx={{ px }}>
+				<ListItemText
+					primary="Test Alarm Ring"
+					secondary="Trigger a sample alarm to test the ringing window"
+				/>
+				<IconButton
+					edge="end"
+					onClick={async () => {
+						if (isMobile) {
+							// Mobile doesn't support multiple windows, navigate in-app
+							navigate({ to: '/ringing/$id', params: { id: '999' } });
+							return;
+						}
+
+						try {
+							// Dynamically import to avoid issues on mobile
+							const { WebviewWindow, getAllWebviewWindows } =
+								await import('@tauri-apps/api/webviewWindow');
+
+							// Cleanup previous test windows
+							const allWindows = await getAllWebviewWindows();
+							const existingTestWindows = allWindows.filter((w: any) =>
+								w.label.startsWith('test-alarm-'),
+							);
+							for (const w of existingTestWindows) {
+								try {
+									await w.close();
+								} catch (e) {
+									console.warn('Failed to close previous test window', e);
+								}
+							}
+
+							const timestamp = Date.now();
+							const label = `test-alarm-${timestamp}`;
+
+							console.log('Creating test alarm window with URL: /ringing/999');
+
+							const webview = new WebviewWindow(label, {
+								url: '/ringing/999',
+								title: 'Test Alarm',
+								width: 400,
+								height: 500,
+								resizable: false,
+								alwaysOnTop: true,
+								center: true,
+								skipTaskbar: false,
+								decorations: false,
+								transparent: true,
+								focus: true,
+							});
+
+							webview.once('tauri://created', () => {
+								console.log('Test alarm window created successfully');
+							});
+
+							webview.once('tauri://error', (e) => {
+								console.error('Test alarm window error:', e);
+								console.error('Error details:', JSON.stringify(e, null, 2));
+							});
+						} catch (err) {
+							console.error('Failed to open test alarm window:', err);
+							console.error('Error type:', typeof err);
+							console.error('Error details:', (err as Error).stack);
+						}
+					}}
+					sx={{
+						bgcolor: 'primary.main',
+						color: 'primary.contrastText',
+						'&:hover': {
+							bgcolor: 'primary.dark',
+						},
+					}}
+				>
+					<span style={{ fontSize: '1.2rem' }}>🔔</span>
+				</IconButton>
+			</ListItem>
+
+			{isMobile && (
+				<ListItem sx={{ px }}>
+					<ListItemText
+						primary="Test Watch Ring"
+						secondary="Send a test ring event to the connected watch"
+					/>
+					<IconButton
+						edge="end"
+						onClick={async () => {
+							try {
+								await invoke('test_watch_ring');
+							} catch (e) {
+								console.error('Failed to test watch ring:', e);
+							}
+						}}
+						sx={{
+							bgcolor: 'secondary.main',
+							color: 'secondary.contrastText',
+							'&:hover': {
+								bgcolor: 'secondary.dark',
+							},
+						}}
+					>
+						<span style={{ fontSize: '1.2rem' }}>⌚</span>
+					</IconButton>
+				</ListItem>
+			)}
+
+			<ListItem sx={{ px }}>
+				<ListItemText
+					primary="Force Synchronise"
+					secondary="Request an immediate watch sync"
+				/>
+				<IconButton
+					edge="end"
+					onClick={async () => {
+						try {
+							await AlarmService.requestSync('FORCE_SYNC');
+						} catch (e) {
+							console.error('Failed to request sync:', e);
+						}
+					}}
+					sx={{
+						bgcolor: 'secondary.main',
+						color: 'secondary.contrastText',
+						'&:hover': {
+							bgcolor: 'secondary.dark',
+						},
+					}}
+				>
+					<span style={{ fontSize: '1.1rem' }}>🔄</span>
+				</IconButton>
+			</ListItem>
+
+			<ListItem sx={{ px }}>
+				<ListItemText
+					primary="Test Notification"
+					secondary="Send a test notification with actions"
+				/>
+				<IconButton
+					edge="end"
+					onClick={() => SettingsService.sendTestNotification()}
+					sx={{
+						bgcolor: 'secondary.main',
+						color: 'secondary.contrastText',
+						'&:hover': {
+							bgcolor: 'secondary.dark',
+						},
+					}}
+				>
+					<span style={{ fontSize: '1.2rem' }}>📩</span>
+				</IconButton>
+			</ListItem>
+
+			<ListItem sx={{ px }}>
+				<ListItemText
+					primary="Download Event Logs"
+					secondary="Save event logs to send to the developer"
+				/>
+				<IconButton
+					edge="end"
+					onClick={handleExportLogs}
+					disabled={isExportingLogs}
+					sx={{
+						bgcolor: 'info.main',
+						color: 'info.contrastText',
+						'&:hover': {
+							bgcolor: 'info.dark',
+						},
+					}}
+				>
+					{isExportingLogs ? (
+						<CircularProgress size={20} color="inherit" />
+					) : (
+						<FileDownloadIcon />
+					)}
+				</IconButton>
+			</ListItem>
+		</List>
+	);
+
+	const renderDesktopSectionContent = () => {
+		const px = 2;
+		switch (activeSection) {
+			case 'appearance':
+				return renderAppearance(px);
+			case 'alarmSettings':
+				return renderAlarmSettings(px);
+			case 'general':
+				return renderGeneral(px);
+			case 'developer':
+				return renderDeveloper(px);
+		}
+	};
+
 	return (
 		<Box sx={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-			{/* Mobile Header: Placed OUTSIDE IonContent to avoid scrolling issues and overlay */}
+			{/* Mobile Header */}
 			{isMobile && (
 				<MobileToolbar
 					startAction={
@@ -82,303 +414,86 @@ const Settings: React.FC = () => {
 					title="Settings"
 				/>
 			)}
-			<Box sx={{ flexGrow: 1 }}>
-				{/* Desktop Spacing Fix: Adjusted mt to 2 to work with RootLayout spacing */}
-				<Container maxWidth="sm" sx={{ py: 3, mt: !isMobile ? 2 : 0 }}>
-					{!isMobile && (
-						<Box sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
+			<Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+				{isMobile ? (
+					/* --- Mobile layout: unchanged flat list --- */
+					<Container maxWidth="sm" sx={{ py: 3 }}>
+						<Paper elevation={0} sx={{ bgcolor: 'transparent' }}>
+							{renderAppearance(2)}
+							{renderAlarmSettings(2)}
+							{renderGeneral(2)}
+							{renderDeveloper(2)}
+						</Paper>
+					</Container>
+				) : (
+					/* --- Desktop layout: nav rail + detail panel --- */
+					<>
+						<Box sx={{ px: 3, pt: 2, display: 'flex', alignItems: 'center' }}>
 							<IconButton onClick={() => navigate({ to: '/home' })} sx={{ mr: 2 }}>
 								<ArrowBackIcon />
 							</IconButton>
 							<Typography variant="h4">Settings</Typography>
 						</Box>
-					)}
 
-					<Paper elevation={0} sx={{ bgcolor: 'transparent' }}>
-						<List
-							subheader={<ListSubheader sx={{ bgcolor: 'transparent' }}>Appearance</ListSubheader>}
-						>
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<FormControl fullWidth>
-									<InputLabel id="theme-select-label">Theme</InputLabel>
-									<Select
-										labelId="theme-select-label"
-										value={theme}
-										label="Theme"
-										onChange={(e) => setTheme(e.target.value as Theme)}
-									>
-										<MenuItem value="system">System (Auto)</MenuItem>
-										<MenuItem value="deep-night">Deep Night (Default)</MenuItem>
-										<MenuItem value="canadian-cottage-winter">Canadian Cottage Winter</MenuItem>
-										<MenuItem value="georgian-bay-plunge">Georgian Bay Plunge</MenuItem>
-										<MenuItem value="boring-light">Boring Light</MenuItem>
-										<MenuItem value="boring-dark">Boring Dark</MenuItem>
-									</Select>
-								</FormControl>
-							</ListItem>
+						<Box sx={{
+							display: 'flex',
+							flexDirection: 'row',
+							flexGrow: 1,
+							gap: 2,
+							overflow: 'hidden',
+							px: 3,
+							pb: 3,
+							pt: 2,
+						}}>
+							{/* Left nav rail */}
+							<Box sx={{
+								width: 220,
+								flexShrink: 0,
+								bgcolor: 'background.default',
+								border: '1px solid',
+								borderColor: 'divider',
+								borderRadius: '14px',
+								p: 1,
+							}}>
+								<List disablePadding>
+									{NAV_ITEMS.map((item) => (
+										<ListItemButton
+											key={item.key}
+											selected={activeSection === item.key}
+											onClick={() => setActiveSection(item.key)}
+											sx={{
+												borderRadius: '10px',
+												mb: 0.5,
+												'&.Mui-selected': {
+													bgcolor: 'primary.main',
+													color: 'primary.contrastText',
+													'&:hover': {
+														bgcolor: 'primary.dark',
+													},
+												},
+											}}
+										>
+											<ListItemText primary={item.label} />
+										</ListItemButton>
+									))}
+								</List>
+							</Box>
 
-							{/* Material You Toggle: Only visible for System Theme on Android */}
-							{theme === 'system' && isAndroid && (
-								<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-									<ListItemText primary="Use Material You" secondary="Use dynamic system colours" />
-									<Switch
-										edge="end"
-										checked={useMaterialYou}
-										onChange={(e) => setUseMaterialYou(e.target.checked)}
-									/>
-								</ListItem>
-							)}
-
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<ListItemText primary="Force Dark Mode" secondary="Override system colour scheme" />
-								<Switch
-									edge="end"
-									checked={forceDark}
-									onChange={(e) => setForceDark(e.target.checked)}
-								/>
-							</ListItem>
-						</List>
-
-						<List
-							subheader={
-								<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Alarm Settings</ListSubheader>
-							}
-						>
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<FormControl fullWidth>
-									<InputLabel id="silence-after-label">Silence After</InputLabel>
-									<Select
-										labelId="silence-after-label"
-										value={silenceAfter}
-										label="Silence After"
-										onChange={(e) => {
-											const val = Number(e.target.value);
-											SettingsService.setSilenceAfter(val);
-											setSilenceAfter(val);
-										}}
-									>
-										<MenuItem value={1}>1 minute</MenuItem>
-										<MenuItem value={5}>5 minutes</MenuItem>
-										<MenuItem value={10}>10 minutes</MenuItem>
-										<MenuItem value={15}>15 minutes</MenuItem>
-										<MenuItem value={20}>20 minutes</MenuItem>
-										<MenuItem value={-1}>Never</MenuItem>
-									</Select>
-								</FormControl>
-							</ListItem>
-
-							<ListItemButton
-								onClick={() => setSnoozeDialogOpen(true)}
-								sx={{ px: isMobile ? 2 : 0 }}
-							>
-								<ListItemText
-									primary="Snooze Length"
-									secondary={`${snoozeLength} minute${snoozeLength > 1 ? 's' : ''}`}
-								/>
-							</ListItemButton>
-						</List>
-
-						<List
-							subheader={
-								<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>General</ListSubheader>
-							}
-						>
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<ListItemText
-									primary="24-Hour Time"
-									secondary="Use 24-hour format for time display"
-								/>
-								<Switch
-									edge="end"
-									checked={is24h}
-									onChange={(e) => handleTimeFormatChange(e.target.checked)}
-								/>
-							</ListItem>
-						</List>
-
-						<List
-							subheader={
-								<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Developer</ListSubheader>
-							}
-						>
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<ListItemText
-									primary="Test Alarm Ring"
-									secondary="Trigger a sample alarm to test the ringing window"
-								/>
-								<IconButton
-									edge="end"
-									onClick={async () => {
-										if (isMobile) {
-											// Mobile doesn't support multiple windows, navigate in-app
-											navigate({ to: '/ringing/$id', params: { id: '999' } });
-											return;
-										}
-
-										try {
-											// Dynamically import to avoid issues on mobile
-											const { WebviewWindow, getAllWebviewWindows } =
-												await import('@tauri-apps/api/webviewWindow');
-
-											// Cleanup previous test windows
-											const allWindows = await getAllWebviewWindows();
-											const existingTestWindows = allWindows.filter((w: any) =>
-												w.label.startsWith('test-alarm-'),
-											);
-											for (const w of existingTestWindows) {
-												try {
-													await w.close();
-												} catch (e) {
-													console.warn('Failed to close previous test window', e);
-												}
-											}
-
-											const timestamp = Date.now();
-											const label = `test-alarm-${timestamp}`;
-
-											console.log('Creating test alarm window with URL: /ringing/999');
-
-											const webview = new WebviewWindow(label, {
-												url: '/ringing/999',
-												title: 'Test Alarm',
-												width: 400,
-												height: 500,
-												resizable: false,
-												alwaysOnTop: true,
-												center: true,
-												skipTaskbar: false,
-												decorations: false,
-												transparent: true,
-												focus: true,
-											});
-
-											webview.once('tauri://created', () => {
-												console.log('Test alarm window created successfully');
-											});
-
-											webview.once('tauri://error', (e) => {
-												console.error('Test alarm window error:', e);
-												console.error('Error details:', JSON.stringify(e, null, 2));
-											});
-										} catch (err) {
-											console.error('Failed to open test alarm window:', err);
-											console.error('Error type:', typeof err);
-											console.error('Error details:', (err as Error).stack);
-										}
-									}}
-									sx={{
-										bgcolor: 'primary.main',
-										color: 'primary.contrastText',
-										'&:hover': {
-											bgcolor: 'primary.dark',
-										},
-									}}
-								>
-									<span style={{ fontSize: '1.2rem' }}>🔔</span>
-								</IconButton>
-							</ListItem>
-
-							{isMobile && (
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<ListItemText
-									primary="Test Watch Ring"
-									secondary="Send a test ring event to the connected watch"
-								/>
-								<IconButton
-									edge="end"
-									onClick={async () => {
-										try {
-											await invoke('test_watch_ring');
-										} catch (e) {
-											console.error('Failed to test watch ring:', e);
-										}
-									}}
-									sx={{
-										bgcolor: 'secondary.main',
-										color: 'secondary.contrastText',
-										'&:hover': {
-											bgcolor: 'secondary.dark',
-										},
-									}}
-								>
-									<span style={{ fontSize: '1.2rem' }}>⌚</span>
-								</IconButton>
-							</ListItem>
-						)}
-
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<ListItemText
-									primary="Force Synchronise"
-									secondary="Request an immediate watch sync"
-								/>
-								<IconButton
-									edge="end"
-									onClick={async () => {
-										try {
-											await AlarmService.requestSync('FORCE_SYNC');
-										} catch (e) {
-											console.error('Failed to request sync:', e);
-										}
-									}}
-									sx={{
-										bgcolor: 'secondary.main',
-										color: 'secondary.contrastText',
-										'&:hover': {
-											bgcolor: 'secondary.dark',
-										},
-									}}
-								>
-									<span style={{ fontSize: '1.1rem' }}>🔄</span>
-								</IconButton>
-							</ListItem>
-
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<ListItemText
-									primary="Test Notification"
-									secondary="Send a test notification with actions"
-								/>
-								<IconButton
-									edge="end"
-									onClick={() => SettingsService.sendTestNotification()}
-									sx={{
-										bgcolor: 'secondary.main',
-										color: 'secondary.contrastText',
-										'&:hover': {
-											bgcolor: 'secondary.dark',
-										},
-									}}
-								>
-									<span style={{ fontSize: '1.2rem' }}>📩</span>
-								</IconButton>
-							</ListItem>
-
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<ListItemText
-									primary="Download Event Logs"
-									secondary="Save event logs to send to the developer"
-								/>
-								<IconButton
-									edge="end"
-									onClick={handleExportLogs}
-									disabled={isExportingLogs}
-									sx={{
-										bgcolor: 'info.main',
-										color: 'info.contrastText',
-										'&:hover': {
-											bgcolor: 'info.dark',
-										},
-									}}
-								>
-									{isExportingLogs ? (
-										<CircularProgress size={20} color="inherit" />
-									) : (
-										<FileDownloadIcon />
-									)}
-								</IconButton>
-							</ListItem>
-						</List>
-					</Paper>
-				</Container>
+							{/* Right detail panel */}
+							<Box sx={{
+								flexGrow: 1,
+								overflowY: 'auto',
+								bgcolor: 'background.paper',
+								border: '1px solid',
+								borderColor: 'divider',
+								borderRadius: '14px',
+								p: 3,
+							}}>
+								{renderDesktopSectionContent()}
+							</Box>
+						</Box>
+					</>
+				)}
 
 				<Dialog open={snoozeDialogOpen} onClose={() => setSnoozeDialogOpen(false)}>
 					<DialogTitle>Snooze Length</DialogTitle>
