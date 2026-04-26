@@ -138,12 +138,13 @@ describe('AlarmService', () => {
     });
 
     describe('snooze', () => {
-        it('should invoke snooze_alarm with minutes', async () => {
+        it('should invoke snooze_alarm with snoozedUntil timestamp', async () => {
             (invoke as any).mockResolvedValue(undefined);
+            const snoozedUntil = Date.now() + 10 * 60_000;
 
-            await AlarmService.snooze(1, 10);
+            await AlarmService.snooze(1, snoozedUntil);
 
-            expect(invoke).toHaveBeenCalledWith('snooze_alarm', { id: 1, minutes: 10 });
+            expect(invoke).toHaveBeenCalledWith('snooze_alarm', { id: 1, snoozedUntil });
         });
     });
 

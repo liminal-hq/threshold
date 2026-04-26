@@ -113,7 +113,7 @@ export class AlarmManagerService {
 				});
 				console.log('[AlarmManager] Event listener 1/4 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 2/4: alarms:batch:updated...');
+				console.log('[AlarmManager] Setting up event listener 2/5: alarms:batch:updated...');
 				// Listen for batch events and refresh native schedule
 				await listen('alarms:batch:updated', async () => {
 					console.log('[AlarmManager] Received alarms:batch:updated event');
@@ -123,9 +123,22 @@ export class AlarmManagerService {
 						reason: 'alarm-batch-updated',
 					});
 				});
-				console.log('[AlarmManager] Event listener 2/4 registered.');
+				console.log('[AlarmManager] Event listener 2/5 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 3/4: settings-changed...');
+				console.log('[AlarmManager] Setting up event listener 3/5: alarm:cancelled...');
+				// Eagerly cancel native alarm and upcoming notification when Rust emits alarm:cancelled.
+				// This fires before alarms:batch:updated and closes the race window where a cancelled
+				// alarm could still fire if the BroadcastReceiver was already dispatched.
+				await listen<{ id: number; reason: string }>('alarm:cancelled', async (event) => {
+					const { id } = event.payload;
+					console.log(`[AlarmManager] Received alarm:cancelled for id=${id}, reason=${event.payload.reason}`);
+					await this.cancelNativeAlarm(id);
+					await alarmNotificationService.cancelUpcomingNotification(id);
+					this.scheduledSignatures.delete(id);
+				});
+				console.log('[AlarmManager] Event listener 3/5 registered.');
+
+				console.log('[AlarmManager] Setting up event listener 4/5: settings-changed...');
 				await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
 					if (event.payload?.key !== 'is24h') return;
 					if (!PlatformUtils.isMobile()) return;
@@ -135,16 +148,16 @@ export class AlarmManagerService {
 						reason: 'settings-24h-changed',
 					});
 				});
-				console.log('[AlarmManager] Event listener 3/4 registered.');
+				console.log('[AlarmManager] Event listener 4/5 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 4/4: notifications:upcoming:resync...');
+				console.log('[AlarmManager] Setting up event listener 5/5: notifications:upcoming:resync...');
 				await listen<NotificationUpcomingResyncEvent>(
 					'notifications:upcoming:resync',
 					async (event) => {
 						await this.resyncUpcomingNotifications(event.payload);
 					},
 				);
-				console.log('[AlarmManager] Event listener 4/4 registered.');
+				console.log('[AlarmManager] Event listener 5/5 registered.');
 
 				console.log('[AlarmManager] Checking for native imports...');
 				await this.checkImports();
@@ -173,10 +186,11 @@ export class AlarmManagerService {
 								console.log('[AlarmManager] Action: Dismiss');
 								await this.stopRinging();
 							},
-							onSnoozeRinging: async () => {
-								console.log('[AlarmManager] Action: Snooze');
-								// Keep existing behaviour until ringing notifications include alarm IDs.
-								await this.stopRinging();
+							onSnoozeRinging: async (alarmId: number) => {
+								console.log('[AlarmManager] Action: Snooze ringing', alarmId);
+								const snoozeLength = SettingsService.getSnoozeLength();
+								await this.snoozeRinging(alarmId, snoozeLength);
+								await this.emitUpcomingSnoozeToast(alarmId, snoozeLength);
 							},
 							onDismissUpcoming: async (alarmId) => {
 								console.log('[AlarmManager] Action: Dismiss upcoming alarm', alarmId);
@@ -184,7 +198,7 @@ export class AlarmManagerService {
 							},
 							onSnoozeUpcoming: async (alarmId, snoozeLength) => {
 								console.log('[AlarmManager] Action: Snooze upcoming alarm', alarmId);
-								await this.snoozeAlarm(alarmId, snoozeLength, false);
+								await this.snoozeUpcoming(alarmId, snoozeLength);
 								await this.emitUpcomingSnoozeToast(alarmId, snoozeLength);
 							},
 						});
@@ -376,17 +390,26 @@ export class AlarmManagerService {
 	}
 
 	async deleteAlarm(id: number) {
+		// Cancellation is handled by the alarm:cancelled listener registered in init().
 		await AlarmService.delete(id);
-		await alarmNotificationService.cancelUpcomingNotification(id);
 	}
 
-	async snoozeAlarm(id: number, minutes: number, stopCurrentRinging: boolean = true) {
-		console.log(`[AlarmManager] Snoozing alarm ${id} for ${minutes} minutes`);
+	async snoozeRinging(id: number, minutes: number) {
+		console.log(`[AlarmManager] Snoozing ringing alarm ${id} for ${minutes} minutes`);
+		const snoozedUntil = Date.now() + minutes * 60_000;
 		await alarmNotificationService.cancelUpcomingNotification(id);
-		await AlarmService.snooze(id, minutes);
-		if (stopCurrentRinging) {
-			await this.stopRinging();
-		}
+		await AlarmService.snooze(id, snoozedUntil);
+		await this.stopRinging();
+	}
+
+	async snoozeUpcoming(id: number, minutes: number) {
+		console.log(`[AlarmManager] Snoozing upcoming alarm ${id} for ${minutes} minutes`);
+		const alarm = await AlarmService.get(id);
+		const anchor = alarm?.nextTrigger ?? Date.now();
+		// Floor ensures the new trigger is always in the future even if the alarm was slow to dismiss.
+		const snoozedUntil = Math.max(Date.now() + 60_000, anchor + minutes * 60_000);
+		await alarmNotificationService.cancelUpcomingNotification(id);
+		await AlarmService.snooze(id, snoozedUntil);
 	}
 
 	private async scheduleNativeAlarm(

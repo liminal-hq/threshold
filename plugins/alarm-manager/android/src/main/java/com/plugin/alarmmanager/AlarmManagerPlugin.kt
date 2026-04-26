@@ -63,9 +63,15 @@ class AlarmEventHandlerArgs {
     lateinit var handler: Channel
 }
 
+@InvokeArg
+class SnoozeEventHandlerArgs {
+    lateinit var handler: Channel
+}
+
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
     private var alarmEventChannel: Channel? = null
+    private var snoozeEventChannel: Channel? = null
     @Volatile
     private var alarmPipelineReady: Boolean = false
 
@@ -73,6 +79,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         private const val TAG = "AlarmManagerPlugin"
         private const val CALLBACK_PREFS = "AlarmManagerCallbacks"
         private const val KEY_PENDING_ALARM_EVENTS = "pending_alarm_events"
+        private const val KEY_PENDING_SNOOZE_EVENTS = "pending_snooze_events"
 
         @Volatile
         var instance: AlarmManagerPlugin? = null
@@ -93,6 +100,20 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         }
 
         @Synchronized
+        fun notifySnoozeRequested(context: Context, alarmId: Int) {
+            if (alarmId <= 0) return
+
+            val plugin = instance
+            if (plugin != null && plugin.dispatchSnoozeRequestedEvent(alarmId)) {
+                Log.d(TAG, "Dispatched snooze requested immediately: id=$alarmId")
+                return
+            }
+
+            queueSnoozeEvent(context, alarmId)
+            Log.i(TAG, "Queued snooze requested event (plugin/channel not ready): id=$alarmId")
+        }
+
+        @Synchronized
         private fun queueAlarmEvent(context: Context, alarmId: Int, actualFiredAt: Long) {
             val prefs = context.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
             val queue = JSONArray(prefs.getString(KEY_PENDING_ALARM_EVENTS, "[]"))
@@ -102,6 +123,16 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             })
             prefs.edit().putString(KEY_PENDING_ALARM_EVENTS, queue.toString()).apply()
         }
+
+        @Synchronized
+        private fun queueSnoozeEvent(context: Context, alarmId: Int) {
+            val prefs = context.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
+            val queue = JSONArray(prefs.getString(KEY_PENDING_SNOOZE_EVENTS, "[]"))
+            queue.put(JSONObject().apply {
+                put("id", alarmId)
+            })
+            prefs.edit().putString(KEY_PENDING_SNOOZE_EVENTS, queue.toString()).apply()
+        }
     }
     
     override fun load(webview: WebView) {
@@ -109,6 +140,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         instance = this
         Log.d(TAG, "Plugin loaded.")
         drainPendingAlarmEvents()
+        drainPendingSnoozeEvents()
     }
 
     @Command
@@ -167,10 +199,19 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     }
 
     @Command
+    fun set_snooze_event_handler(invoke: Invoke) {
+        val args = invoke.parseArgs(SnoozeEventHandlerArgs::class.java)
+        snoozeEventChannel = args.handler
+        Log.d(TAG, "Snooze event handler channel registered")
+        invoke.resolve()
+    }
+
+    @Command
     fun mark_alarm_pipeline_ready(invoke: Invoke) {
         alarmPipelineReady = true
         Log.d(TAG, "Alarm pipeline marked ready")
         drainPendingAlarmEvents()
+        drainPendingSnoozeEvents()
         invoke.resolve()
     }
 
@@ -278,6 +319,21 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         invoke.resolve(ret)
     }
 
+    private fun dispatchSnoozeRequestedEvent(alarmId: Int): Boolean {
+        if (!alarmPipelineReady) return false
+        val channel = snoozeEventChannel ?: return false
+        return try {
+            val event = JSObject().apply {
+                put("id", alarmId)
+            }
+            channel.send(event)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to dispatch snooze requested event", e)
+            false
+        }
+    }
+
     private fun dispatchAlarmFiredEvent(alarmId: Int, actualFiredAt: Long): Boolean {
         if (!alarmPipelineReady) return false
         val channel = alarmEventChannel ?: return false
@@ -324,5 +380,35 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         prefs.edit().putString(KEY_PENDING_ALARM_EVENTS, remaining.toString()).apply()
         Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued native alarm fired event(s)")
+    }
+
+    @Synchronized
+    private fun drainPendingSnoozeEvents() {
+        if (!alarmPipelineReady) return
+        val channel = snoozeEventChannel ?: return
+        val prefs = activity.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
+        val rawQueue = prefs.getString(KEY_PENDING_SNOOZE_EVENTS, "[]") ?: "[]"
+        val queue = JSONArray(rawQueue)
+        if (queue.length() == 0) return
+
+        val remaining = JSONArray()
+        for (i in 0 until queue.length()) {
+            val item = queue.optJSONObject(i) ?: continue
+            val id = item.optInt("id", -1)
+            if (id <= 0) continue
+
+            try {
+                val event = JSObject().apply {
+                    put("id", id)
+                }
+                channel.send(event)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to replay queued snooze requested event id=$id", e)
+                remaining.put(item)
+            }
+        }
+
+        prefs.edit().putString(KEY_PENDING_SNOOZE_EVENTS, remaining.toString()).apply()
+        Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued snooze requested event(s)")
     }
 }

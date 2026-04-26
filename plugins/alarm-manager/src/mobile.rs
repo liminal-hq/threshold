@@ -20,6 +20,12 @@ struct AlarmEventHandler {
     handler: Channel,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SnoozeEventHandler {
+    handler: Channel,
+}
+
 // Initialize the plugin
 pub fn init<R: Runtime>(
     app: &tauri::AppHandle<R>,
@@ -50,6 +56,32 @@ pub fn init<R: Runtime>(
                         let _ = app_handle.emit("alarm-manager:native-fired", &payload);
                     } else {
                         log::warn!("alarm-manager: failed to parse native alarm fired payload");
+                    }
+                    Ok(())
+                }),
+            },
+        )?;
+
+        // Register a channel for snooze-from-notification events. The ringing service posts
+        // ACTION_SNOOZE which Kotlin forwards here; we re-emit as a Tauri event so the TS layer
+        // can compute the snoozed_until timestamp and invoke snooze_alarm.
+        let snooze_app_handle = app.clone();
+        handle.run_mobile_plugin::<()>(
+            "set_snooze_event_handler",
+            SnoozeEventHandler {
+                handler: Channel::new(move |event| {
+                    let payload = match event {
+                        InvokeResponseBody::Json(payload) => {
+                            serde_json::from_str::<NativeSnoozeRequestedPayload>(&payload).ok()
+                        }
+                        _ => None,
+                    };
+
+                    if let Some(payload) = payload {
+                        log::info!("alarm-manager: snooze requested id={}", payload.id);
+                        let _ = snooze_app_handle.emit("alarm-manager:snooze-requested", &payload);
+                    } else {
+                        log::warn!("alarm-manager: failed to parse snooze requested payload");
                     }
                     Ok(())
                 }),

@@ -22,7 +22,7 @@ vi.mock('../services/AlarmManagerService', () => ({
 		isInitialized: vi.fn(() => true),
 		loadAlarms: vi.fn(),
 		stopRinging: vi.fn(),
-		snoozeAlarm: vi.fn(),
+		snoozeRinging: vi.fn(),
 	},
 }));
 
@@ -237,7 +237,7 @@ describe('Ringing Screen Logic', () => {
 
 		// Assert
 		await waitFor(() => {
-			expect(alarmManagerService.snoozeAlarm).toHaveBeenCalledWith(1, 10);
+			expect(alarmManagerService.snoozeRinging).toHaveBeenCalledWith(1, 10);
 			expect(mockWindow.close).toHaveBeenCalled();
 		});
 		expect(appManagementService.minimizeApp).not.toHaveBeenCalled();
@@ -256,7 +256,7 @@ describe('Ringing Screen Logic', () => {
 
 		// Assert
 		await waitFor(() => {
-			expect(alarmManagerService.snoozeAlarm).toHaveBeenCalledWith(1, 10);
+			expect(alarmManagerService.snoozeRinging).toHaveBeenCalledWith(1, 10);
 			expect(appManagementService.minimizeApp).toHaveBeenCalled();
 		});
 		expect(mockWindow.close).not.toHaveBeenCalled();
