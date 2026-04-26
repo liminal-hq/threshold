@@ -67,7 +67,7 @@ class AlarmRingingService : Service() {
         if (intent.action == ACTION_SNOOZE) {
             val alarmId = intent.getIntExtra("ALARM_ID", -1)
             Log.d(TAG, "Snooze action received for alarm $alarmId")
-            AlarmManagerPlugin.notifySnoozeRequested(alarmId)
+            AlarmManagerPlugin.notifySnoozeRequested(applicationContext, alarmId)
             stopSelf()
             return START_NOT_STICKY
         }
