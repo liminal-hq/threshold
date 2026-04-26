@@ -189,7 +189,7 @@ const Ringing: React.FC = () => {
 
 	const handleSnooze = async () => {
 		console.log('Snoozing Alarm', alarmId, 'for', snoozeLength, 'minutes');
-		await alarmManagerService.snoozeAlarm(alarmId, snoozeLength);
+		await alarmManagerService.snoozeRinging(alarmId, snoozeLength);
 		await closeRingingWindow();
 	};
 

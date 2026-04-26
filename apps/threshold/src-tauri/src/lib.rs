@@ -394,7 +394,10 @@ pub fn run() {
                         }
 
                         if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
-                            match coord.snooze_alarm(&handle, cmd.alarm_id, cmd.snooze_length_minutes).await {
+                            // Watch snooze is always now-anchored (ringing alarm)
+                            let snoozed_until = chrono::Utc::now().timestamp_millis()
+                                + cmd.snooze_length_minutes * 60 * 1000;
+                            match coord.snooze_alarm(&handle, cmd.alarm_id, snoozed_until).await {
                                 Ok(_) => log::info!("watch: snoozed alarm {} for {} min", cmd.alarm_id, cmd.snooze_length_minutes),
                                 Err(e) => log::error!("watch: failed to snooze alarm {}: {e}", cmd.alarm_id),
                             }
