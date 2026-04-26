@@ -1,3 +1,8 @@
+// Native alarm scheduling, cancellation, and SharedPreferences-backed live-alarm state
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package com.plugin.alarmmanager
 
 import android.app.AlarmManager
@@ -89,6 +94,11 @@ object AlarmUtils {
             remove("alarm_sound_$id")
             apply()
         }
+    }
+
+    fun isAlarmLive(context: Context, id: Int): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.contains("alarm_$id")
     }
 
     fun loadAllFromPrefs(context: Context): List<Triple<Int, Long, String?>> {
