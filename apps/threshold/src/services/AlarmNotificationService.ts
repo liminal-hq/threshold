@@ -19,7 +19,7 @@ const EVENT_NOTIFICATIONS_TOAST = 'notifications:toast';
 
 type NotificationActionHandlers = {
 	onDismissRinging: () => Promise<void>;
-	onSnoozeRinging: () => Promise<void>;
+	onSnoozeRinging: (alarmId: number) => Promise<void>;
 	onDismissUpcoming: (alarmId: number) => Promise<void>;
 	onSnoozeUpcoming: (alarmId: number, snoozeMinutes: number) => Promise<void>;
 };
@@ -249,6 +249,14 @@ export class AlarmNotificationService {
 			}
 
 			await handler(parsed.actionId, { id: parsed.notificationId });
+		});
+
+		// Listen for snooze-from-ringing-notification events bridged from AlarmRingingService.
+		// The Android service emits ACTION_SNOOZE which Kotlin routes through the plugin channel.
+		await listen<{ id: number }>('alarm-manager:snooze-requested', async (event) => {
+			const { id } = event.payload;
+			console.log(`[AlarmNotifications] Snooze requested from ringing notification for alarm ${id}`);
+			await handlers.onSnoozeRinging(id);
 		});
 	}
 
