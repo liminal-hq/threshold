@@ -64,3 +64,9 @@ pub struct ActiveAlarmResponse {
     pub is_alarm: bool,
     pub alarm_id: Option<i32>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeSnoozeRequestedPayload {
+    pub id: i32,
+}

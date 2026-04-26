@@ -63,9 +63,15 @@ class AlarmEventHandlerArgs {
     lateinit var handler: Channel
 }
 
+@InvokeArg
+class SnoozeEventHandlerArgs {
+    lateinit var handler: Channel
+}
+
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
     private var alarmEventChannel: Channel? = null
+    private var snoozeEventChannel: Channel? = null
     @Volatile
     private var alarmPipelineReady: Boolean = false
 
@@ -90,6 +96,13 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
             queueAlarmEvent(context, alarmId, actualFiredAt)
             Log.i(TAG, "Queued native alarm fired event (plugin/channel not ready): id=$alarmId")
+        }
+
+        @Synchronized
+        fun notifySnoozeRequested(alarmId: Int) {
+            if (alarmId <= 0) return
+            val plugin = instance ?: return
+            plugin.dispatchSnoozeRequestedEvent(alarmId)
         }
 
         @Synchronized
@@ -163,6 +176,14 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         val args = invoke.parseArgs(AlarmEventHandlerArgs::class.java)
         alarmEventChannel = args.handler
         Log.d(TAG, "Alarm event handler channel registered")
+        invoke.resolve()
+    }
+
+    @Command
+    fun set_snooze_event_handler(invoke: Invoke) {
+        val args = invoke.parseArgs(SnoozeEventHandlerArgs::class.java)
+        snoozeEventChannel = args.handler
+        Log.d(TAG, "Snooze event handler channel registered")
         invoke.resolve()
     }
 
@@ -276,6 +297,22 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         ret.put("value", array)
         invoke.resolve(ret)
+    }
+
+    private fun dispatchSnoozeRequestedEvent(alarmId: Int) {
+        val channel = snoozeEventChannel ?: run {
+            Log.w(TAG, "Snooze event channel not registered — dropping snooze request for alarm $alarmId")
+            return
+        }
+        try {
+            val event = JSObject().apply {
+                put("id", alarmId)
+            }
+            channel.send(event)
+            Log.d(TAG, "Dispatched snooze requested event: id=$alarmId")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to dispatch snooze requested event", e)
+        }
     }
 
     private fun dispatchAlarmFiredEvent(alarmId: Int, actualFiredAt: Long): Boolean {
