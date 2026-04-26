@@ -311,13 +311,32 @@ describe('AlarmManagerService', () => {
 		expect(scheduleCalls).toHaveLength(2);
 	});
 
-	it('snoozes alarms and stops the current ring by default', async () => {
+	it('snoozes ringing alarm with now-anchored timestamp and stops ringing', async () => {
 		const service = new AlarmManagerService();
+		const before = Date.now();
 
-		await service.snoozeAlarm(42, 10);
+		await service.snoozeRinging(42, 10);
 
-		expect(AlarmService.snooze).toHaveBeenCalledWith(42, 10);
+		const after = Date.now();
+		const [calledId, calledTimestamp] = (AlarmService.snooze as any).mock.calls[0];
+		expect(calledId).toBe(42);
+		expect(calledTimestamp).toBeGreaterThanOrEqual(before + 10 * 60_000);
+		expect(calledTimestamp).toBeLessThanOrEqual(after + 10 * 60_000);
 		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
+	});
+
+	it('snoozes upcoming alarm with trigger-anchored timestamp without stopping ringing', async () => {
+		const service = new AlarmManagerService();
+		const nextTrigger = Date.now() + 5 * 60_000;
+		(AlarmService.get as any).mockResolvedValue({ id: 42, nextTrigger });
+
+		await service.snoozeUpcoming(42, 10);
+
+		const [calledId, calledTimestamp] = (AlarmService.snooze as any).mock.calls[0];
+		expect(calledId).toBe(42);
+		// Anchored to nextTrigger + 10 min, with a floor of now + 60s
+		expect(calledTimestamp).toBe(nextTrigger + 10 * 60_000);
+		expect(invoke).not.toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
 	});
 
 	it('dismisses upcoming actions by mapping notification ID to alarm ID', async () => {
@@ -377,6 +396,7 @@ describe('AlarmManagerService', () => {
 	it('snoozes upcoming actions without stopping active ringing', async () => {
 		const service = new AlarmManagerService();
 		let actionCallback: ((notification: any) => Promise<void>) | null = null;
+		const nextTrigger = Date.now() + 10 * 60_000;
 
 		(PlatformUtils.isMobile as any).mockReturnValue(true);
 		(PlatformUtils.getPlatform as any).mockReturnValue('android');
@@ -384,11 +404,13 @@ describe('AlarmManagerService', () => {
 			actionCallback = cb;
 			return undefined;
 		});
+		(AlarmService.get as any).mockResolvedValue({ id: 11, nextTrigger });
 
 		await service.init();
 		expect(actionCallback).not.toBeNull();
 
 		(invoke as any).mockClear();
+		const before = Date.now();
 		await actionCallback!({
 			actionId: 'snooze_alarm',
 			notification: {
@@ -397,9 +419,13 @@ describe('AlarmManagerService', () => {
 			},
 		});
 
-		expect(AlarmService.snooze).toHaveBeenCalledWith(11, 10);
+		// Upcoming snooze anchors to nextTrigger + snoozeLength
+		const [calledId, calledTimestamp] = (AlarmService.snooze as any).mock.calls[0];
+		expect(calledId).toBe(11);
+		expect(calledTimestamp).toBe(nextTrigger + 10 * 60_000);
 		expect(invoke).not.toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
 		expect(showToast).toHaveBeenCalled();
+		void before;
 	});
 
 	it('clears upcoming notification when alarm starts ringing', async () => {
@@ -505,5 +531,76 @@ describe('AlarmManagerService', () => {
 				actionTypeId: 'upcoming_alarm',
 			}),
 		);
+	});
+
+	it('cancels native alarm and upcoming notification when alarm:cancelled fires', async () => {
+		const service = new AlarmManagerService();
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+
+		// Pre-populate the signature map as if the alarm had been scheduled
+		(service as any).scheduledSignatures.set(5, '12345|');
+
+		await service.init();
+
+		const cancelledHandlers = eventListeners.get('alarm:cancelled') ?? [];
+		expect(cancelledHandlers.length).toBe(1);
+
+		for (const handler of cancelledHandlers) {
+			await handler({ payload: { id: 5, reason: 'DELETED' } });
+		}
+
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel', { payload: { id: 5 } });
+		expect(cancel).toHaveBeenCalledWith([1_000_005]);
+		expect(removeActive).toHaveBeenCalledWith([{ id: 1_000_005 }]);
+		expect((service as any).scheduledSignatures.has(5)).toBe(false);
+	});
+
+	it('deleteAlarm only calls AlarmService.delete and relies on alarm:cancelled listener', async () => {
+		const service = new AlarmManagerService();
+		await service.deleteAlarm(99);
+
+		expect(AlarmService.delete).toHaveBeenCalledWith(99);
+		// cancelNativeAlarm is NOT called directly — handled by alarm:cancelled event
+		expect(invoke).not.toHaveBeenCalledWith('plugin:alarm-manager|cancel', expect.anything());
+	});
+
+	it('snoozeUpcoming floors snoozedUntil to now+60s when nextTrigger+N is in the past', async () => {
+		const service = new AlarmManagerService();
+		// Simulate: alarm originally at T-5m, snooze 3 minutes → T-2m = past
+		const nextTrigger = Date.now() - 5 * 60_000;
+		(AlarmService.get as any).mockResolvedValue({ id: 7, nextTrigger });
+
+		const before = Date.now();
+		await service.snoozeUpcoming(7, 3);
+		const after = Date.now();
+
+		const [, calledTimestamp] = (AlarmService.snooze as any).mock.calls[0];
+		// Floor: must be at least now + 60s
+		expect(calledTimestamp).toBeGreaterThanOrEqual(before + 60_000);
+		expect(calledTimestamp).toBeLessThanOrEqual(after + 60_000 + 100);
+	});
+
+	it('snooze-from-ringing-notification calls snoozeRinging with the alarm ID', async () => {
+		const service = new AlarmManagerService();
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+
+		localStorageState.set('threshold_snooze_length', '10');
+		await service.init();
+
+		// Simulate the alarm-manager:snooze-requested event from the Android bridge
+		const snoozeRequestHandlers = eventListeners.get('alarm-manager:snooze-requested') ?? [];
+		expect(snoozeRequestHandlers.length).toBe(1);
+
+		const before = Date.now();
+		for (const handler of snoozeRequestHandlers) {
+			await handler({ payload: { id: 15 } });
+		}
+		const after = Date.now();
+
+		const [calledId, calledTimestamp] = (AlarmService.snooze as any).mock.calls[0];
+		expect(calledId).toBe(15);
+		expect(calledTimestamp).toBeGreaterThanOrEqual(before + 10 * 60_000);
+		expect(calledTimestamp).toBeLessThanOrEqual(after + 10 * 60_000);
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
 	});
 });
