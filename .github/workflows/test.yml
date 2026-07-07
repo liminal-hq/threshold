@@ -173,7 +173,7 @@ jobs:
               print substr($0, RSTART + 1, RLENGTH - 2);
               exit
             }
-          ' apps/threshold/src-tauri/Cargo.lock)"
+          ' Cargo.lock)"
           if [ -z "${TAURI_VERSION}" ]; then
             echo "Failed to determine tauri version from Cargo.lock"
             exit 1
@@ -199,8 +199,8 @@ jobs:
             resolutionStrategy {
               eachPlugin {
                 when (requested.id.id) {
-                  "com.android.library" -> useVersion("8.0.2")
-                  "org.jetbrains.kotlin.android" -> useVersion("1.8.20")
+                  "com.android.library" -> useVersion("8.11.0")
+                  "org.jetbrains.kotlin.android" -> useVersion("1.9.25")
                 }
               }
             }
@@ -232,10 +232,10 @@ jobs:
                   eachPlugin {
                       switch (requested.id.id) {
                           case "com.android.library":
-                              useVersion("8.0.2")
+                              useVersion("8.11.0")
                               break
                           case "org.jetbrains.kotlin.android":
-                              useVersion("1.8.20")
+                              useVersion("1.9.25")
                               break
                       }
                   }
