@@ -44,7 +44,7 @@ pub fn init<R: Runtime>(
         // directly to Rust via JNI, bypassing the WebView/JS layer entirely.
         let app_handle = app.clone();
         handle.run_mobile_plugin::<()>(
-            "set_watch_message_handler",
+            "setWatchMessageHandler",
             WatchMessageHandler {
                 handler: Channel::new(move |event| {
                     let msg = match event {
@@ -105,7 +105,7 @@ impl<R: Runtime> WearSync<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("publish_to_watch", request)
+            .run_mobile_plugin("publishToWatch", request)
             .map_err(Into::into)
     }
 
@@ -121,7 +121,7 @@ impl<R: Runtime> WearSync<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("request_sync_from_watch", request)
+            .run_mobile_plugin("requestSyncFromWatch", request)
             .map_err(Into::into)
     }
 
@@ -139,7 +139,7 @@ impl<R: Runtime> WearSync<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("send_alarm_ring", request)
+            .run_mobile_plugin("sendAlarmRing", request)
             .map_err(Into::into)
     }
 
@@ -157,7 +157,7 @@ impl<R: Runtime> WearSync<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("send_alarm_dismiss", request)
+            .run_mobile_plugin("sendAlarmDismiss", request)
             .map_err(Into::into)
     }
 
@@ -175,7 +175,7 @@ impl<R: Runtime> WearSync<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("send_alarm_snooze", request)
+            .run_mobile_plugin("sendAlarmSnooze", request)
             .map_err(Into::into)
     }
 
@@ -194,7 +194,7 @@ impl<R: Runtime> WearSync<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("mark_watch_pipeline_ready", ())
+            .run_mobile_plugin("markWatchPipelineReady", ())
             .map_err(Into::into)
     }
 }

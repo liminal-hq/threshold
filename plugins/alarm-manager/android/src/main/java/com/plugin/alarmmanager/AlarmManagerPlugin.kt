@@ -149,7 +149,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     }
 
     @Command
-    fun stop_ringing(invoke: Invoke) {
+    fun stopRinging(invoke: Invoke) {
         Log.d(TAG, "Stopping ringing service via Intent")
         val intent = Intent(activity, AlarmRingingService::class.java).apply {
             action = AlarmRingingService.ACTION_DISMISS
@@ -159,7 +159,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     }
 
     @Command
-    fun set_alarm_event_handler(invoke: Invoke) {
+    fun setAlarmEventHandler(invoke: Invoke) {
         val args = invoke.parseArgs(AlarmEventHandlerArgs::class.java)
         alarmEventChannel = args.handler
         Log.d(TAG, "Alarm event handler channel registered")
@@ -167,7 +167,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     }
 
     @Command
-    fun mark_alarm_pipeline_ready(invoke: Invoke) {
+    fun markAlarmPipelineReady(invoke: Invoke) {
         alarmPipelineReady = true
         Log.d(TAG, "Alarm pipeline marked ready")
         drainPendingAlarmEvents()
@@ -209,27 +209,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     }
 
     @Command
-    fun check_active_alarm(invoke: Invoke) {
-        val intent = activity.intent
-        val isAlarm = intent?.getBooleanExtra("isAlarmTriggered", false) ?: false
-        val alarmId = intent?.getIntExtra("ALARM_ID", -1) ?: -1
-        
-        val ret = JSObject()
-        ret.put("isAlarm", isAlarm)
-        if (isAlarm && alarmId != -1) {
-            ret.put("alarmId", alarmId)
-        } else {
-             ret.put("alarmId", null)
-        }
-        
-        // Optional: clear the intent flag so it doesn't trigger again on reload? 
-        // For now, keep it simple.
-        
-        invoke.resolve(ret)
-    }
-
-    @Command
-    fun get_launch_args(invoke: Invoke) {
+    fun getLaunchArgs(invoke: Invoke) {
         // Check for imported alarms from SetAlarmActivity
         val prefs = activity.getSharedPreferences("ThresholdImports", Context.MODE_PRIVATE)
         val allImports = prefs.all

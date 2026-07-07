@@ -92,7 +92,8 @@ the **webview** invokes (Rust-side `run_mobile_plugin` calls bypass the ACL); ne
 plugins must be added to the root `Cargo.toml` workspace members and registered in
 `apps/threshold/src-tauri/src/lib.rs`. TS calls plugin commands with raw
 `invoke('plugin:<name>|<command>')` strings — grep for the command name across
-`src/services/` when renaming anything.
+`src/services/` when renaming anything. See `/docs/plugins/command-conventions.md` for
+the full `COMMANDS`-scope rule and the Kotlin `@Command` naming convention (camelCase).
 
 ## Gotchas
 

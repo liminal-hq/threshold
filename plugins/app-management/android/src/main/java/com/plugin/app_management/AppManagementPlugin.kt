@@ -10,7 +10,7 @@ import app.tauri.plugin.Invoke
 class AppManagementPlugin(private val activity: Activity): Plugin(activity) {
 
     @Command
-    fun minimize_app(invoke: Invoke) {
+    fun minimizeApp(invoke: Invoke) {
         // moveTaskToBack(true) minimizes the activity without killing it.
         // It effectively behaves like the Home button.
         val success = activity.moveTaskToBack(true)

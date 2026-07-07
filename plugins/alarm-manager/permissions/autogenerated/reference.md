@@ -22,32 +22,6 @@ Default permissions for the alarm-manager plugin
 <tr>
 <td>
 
-`alarm-manager:allow-android`
-
-</td>
-<td>
-
-Enables the android command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:deny-android`
-
-</td>
-<td>
-
-Denies the android command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `alarm-manager:allow-cancel`
 
 </td>
@@ -74,32 +48,6 @@ Denies the cancel command without any pre-configured scope.
 <tr>
 <td>
 
-`alarm-manager:allow-check-active-alarm`
-
-</td>
-<td>
-
-Enables the check_active_alarm command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:deny-check-active-alarm`
-
-</td>
-<td>
-
-Denies the check_active_alarm command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `alarm-manager:allow-get-launch-args`
 
 </td>
@@ -119,32 +67,6 @@ Enables the get_launch_args command without any pre-configured scope.
 <td>
 
 Denies the get_launch_args command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:allow-mark-alarm-pipeline-ready`
-
-</td>
-<td>
-
-Enables the mark_alarm_pipeline_ready command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:deny-mark-alarm-pipeline-ready`
-
-</td>
-<td>
-
-Denies the mark_alarm_pipeline_ready command without any pre-configured scope.
 
 </td>
 </tr>
@@ -197,32 +119,6 @@ Enables the schedule command without any pre-configured scope.
 <td>
 
 Denies the schedule command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:allow-set-alarm-event-handler`
-
-</td>
-<td>
-
-Enables the set_alarm_event_handler command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:deny-set-alarm-event-handler`
-
-</td>
-<td>
-
-Denies the set_alarm_event_handler command without any pre-configured scope.
 
 </td>
 </tr>

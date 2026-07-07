@@ -103,12 +103,6 @@ impl<R: Runtime> AlarmManager<R> {
         Err(crate::Error::Runtime("Unsupported platform".into()))
     }
 
-    pub fn check_active_alarm(&self) -> crate::Result<ActiveAlarmResponse> {
-        Ok(ActiveAlarmResponse {
-            is_alarm: false,
-            alarm_id: None,
-        })
-    }
     pub fn stop_ringing(&self) -> crate::Result<()> {
         println!("Desktop: Stop ringing request received");
         Ok(())

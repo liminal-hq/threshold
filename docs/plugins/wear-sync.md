@@ -99,7 +99,7 @@ plugins/wear-sync/
 4. Background task emits `wear:sync:batch_ready` event
 5. App crate listener calls `AlarmCoordinator.emit_sync_needed(BatchComplete)` which fetches all alarms
 6. `alarms:sync:needed` fires with `allAlarmsJson` + `snoozeLengthMinutes` → `PublishCommand::Immediate` → `SyncResponse::FullSync`
-7. Tauri bridges to `WearSyncPlugin.publish_to_watch()` (Kotlin) with alarm data + snooze duration
+7. Tauri bridges to `WearSyncPlugin.publishToWatch()` (Kotlin) with alarm data + snooze duration
 8. Kotlin writes `PutDataMapRequest` to `/threshold/alarms` via `DataClient` (includes `snoozeLengthMinutes` in DataMap)
 9. Watch `DataLayerListenerService` receives the `DataItem` change
 
@@ -129,7 +129,7 @@ plugins/wear-sync/
 2. wear-sync `lib.rs` listener receives the event
 3. Builds `AlarmRingRequest` with alarm ID, label, time, and snooze duration
 4. Calls `WearSync::send_alarm_ring()` → Kotlin bridge
-5. `WearSyncPlugin.send_alarm_ring()` sends `/threshold/alarm_ring` message to all connected watches
+5. `WearSyncPlugin.sendAlarmRing()` sends `/threshold/alarm_ring` message to all connected watches
 6. Watch `DataLayerListenerService.onMessageReceived()` starts `WearRingingService`
 
 ## Sync Protocol
@@ -175,8 +175,8 @@ When the app is closed:
 - **Offline reads (`/threshold/sync_request`)** are served directly from `WearSyncCache` without booting Tauri
 - **Offline writes (`/threshold/save_alarm`, `/threshold/delete_alarm`)** are persisted in `WearSyncQueue`, then `WearSyncService` boots the runtime and waits for readiness
 - Queue drain occurs only after:
-  - Channel registration (`set_watch_message_handler`)
-  - Explicit readiness signal (`mark_watch_pipeline_ready`) from the app crate after watch listeners are registered
+  - Channel registration (`setWatchMessageHandler`)
+  - Explicit readiness signal (`markWatchPipelineReady`) from the app crate after watch listeners are registered
 
 For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-os-companion.md).
 
@@ -184,17 +184,21 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 
 | Command | Description |
 |---------|-------------|
-| `publish_to_watch` | Write alarm data to Wear Data Layer `DataItem` |
-| `request_sync_from_watch` | Send sync request message to all connected watch nodes |
-| `set_watch_message_handler` | Register Kotlin → Rust Channel handler |
-| `mark_watch_pipeline_ready` | Mark app listener readiness and drain queued messages |
-| `send_alarm_ring` | Send `/threshold/alarm_ring` message to all connected watches |
+| `publishToWatch` | Write alarm data to Wear Data Layer `DataItem` |
+| `requestSyncFromWatch` | Send sync request message to all connected watch nodes |
+| `setWatchMessageHandler` | Register Kotlin → Rust Channel handler |
+| `markWatchPipelineReady` | Mark app listener readiness and drain queued messages |
+| `sendAlarmRing` | Send `/threshold/alarm_ring` message to all connected watches |
 
 ## Naming Conventions
 
-- Command identifiers use `snake_case` (for example, `publish_to_watch`).
-- Generated permission identifiers use `allow-`/`deny-` prefixes with dash-cased command names (for example, `allow-publish-to-watch`).
-- Custom non-command permissions keep plugin-specific names (for example, `allow-event-listeners`).
+- Kotlin `@Command` method names use `camelCase` (for example, `publishToWatch`), matching
+  Kotlin's own convention and every official Tauri plugin. See
+  [command-conventions](command-conventions.md) for the full rule.
+- The Rust `COMMANDS` list in `build.rs` (and therefore generated permission identifiers,
+  which use `allow-`/`deny-` prefixes with dash-cased names, e.g. `allow-publish-to-watch`)
+  stays `snake_case` — it's a separate, Rust-side list decoupled from the Kotlin bridge
+  string above it feeds `run_mobile_plugin(...)`.
 
 ## Events
 

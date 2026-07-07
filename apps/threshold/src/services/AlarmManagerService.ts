@@ -159,10 +159,6 @@ export class AlarmManagerService {
 
 				console.log('[AlarmManager] Service initialisation complete.');
 
-				// Check if app was launched by an alarm notification (do this AFTER init completes)
-				console.log('[AlarmManager] Checking for active alarm...');
-				await this.checkActiveAlarm();
-
 				// Register Notification Actions (Mobile Only)
 				if (PlatformUtils.isMobile()) {
 					console.log('[AlarmManager] Registering notification actions...');
@@ -205,31 +201,6 @@ export class AlarmManagerService {
 		})();
 
 		return this.initPromise;
-	}
-
-	// Check if the app was launched by an alarm notification
-	// This is called AFTER init() completes to avoid interrupting alarm loading
-	private async checkActiveAlarm() {
-		try {
-			if (window.location.pathname.includes('/ringing')) return;
-
-			const result = await invoke<{ isAlarm: boolean; alarmId: number | null }>(
-				'plugin:alarm-manager|check_active_alarm',
-			).catch(() => null);
-
-			if (result && result.isAlarm && result.alarmId) {
-				await alarmNotificationService.cancelUpcomingNotification(result.alarmId);
-				console.log(`[AlarmManager] Active alarm detected: ${result.alarmId}. Redirecting...`);
-
-				if (this.router) {
-					this.router.navigate({ to: '/ringing/$id', params: { id: result.alarmId.toString() } });
-				} else {
-					console.error('[AlarmManager] Router not initialised, cannot navigate to ringing screen');
-				}
-			}
-		} catch (e) {
-			console.error('Failed to check active alarm', e);
-		}
 	}
 
 	private async dismissNextOccurrence(alarmId: number): Promise<void> {
