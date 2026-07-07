@@ -35,6 +35,9 @@ impl<R: Runtime, T: Manager<R>> AlarmManagerExt<R> for T {
 /// Initializes the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("alarm-manager")
+        // Keep this list in sync with `acl_tests::WEBVIEW_COMMANDS` below — that test
+        // can't read this macro invocation directly, so the two lists are maintained
+        // by hand in parallel.
         .invoke_handler(tauri::generate_handler![
             commands::schedule,
             commands::cancel,
@@ -77,11 +80,13 @@ fn setup_event_listener<R: Runtime>(app: AppHandle<R>) {
 
 #[cfg(test)]
 mod acl_tests {
-    // Every command registered in `generate_handler!` above is reachable from the
-    // webview and therefore MUST have a matching `allow-*` permission in
+    // Mirrors the command list passed to `generate_handler!` in `init()` above —
+    // kept as a separate literal because macro invocations aren't readable at test
+    // time. If you add/remove a webview command, update both lists.
+    //
+    // Every command here MUST have a matching `allow-*` permission in
     // `permissions/default.toml`, or the ACL silently denies it at runtime (the
-    // exact bug fixed in Threshold issue #195). This guards against that drift
-    // recurring for any future webview-invokable command.
+    // exact bug fixed in Threshold issue #195).
     const WEBVIEW_COMMANDS: &[&str] = &[
         "schedule",
         "cancel",
