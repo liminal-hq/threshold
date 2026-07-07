@@ -85,7 +85,14 @@ jobs:
           fi
 
           if [ "$event_name" = "push" ] && [ "$ref_name" = "main" ]; then
-            changed_files="$(git diff --name-only "${{ github.event.before }}" "${GITHUB_SHA}")"
+            before_sha="${{ github.event.before }}"
+            if [ -z "$before_sha" ] || ! git cat-file -e "$before_sha" 2>/dev/null; then
+              echo "Cannot resolve previous commit (force-push or unknown history); skipping automatic release detection"
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            changed_files="$(git diff --name-only "$before_sha" "${GITHUB_SHA}")"
             if echo "$changed_files" | grep -q '^apps/threshold/package.json$'; then
               version="$(node -p "require('./apps/threshold/package.json').version")"
               echo "Release candidate merged to main; using tag v$version"
