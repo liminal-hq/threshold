@@ -7,6 +7,10 @@ Spindle). All findings verified against `main` at `3ed6d5a`.
 **Test baseline:** TypeScript 40/40 pass, Rust workspace passes (exit 0). The suites are
 green — every bug below is a logic/wiring gap the suites don't cover.
 
+**Tracking:** epic [#193](https://github.com/liminal-hq/threshold/issues/193) with
+sub-issues #194–#210 covering every actionable finding, including blocking
+relationships (#198 ← #197, #205 ← #204).
+
 ---
 
 ## Executive summary
