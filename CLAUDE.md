@@ -35,8 +35,8 @@ pnpm workspace monorepo + Cargo workspace:
 pnpm install                      # setup (Node 20+, pnpm, Rust stable)
 pnpm dev:desktop                  # run desktop app
 pnpm dev:android                  # run on Android (needs SDK/NDK)
-pnpm test                         # all workspace JS/TS tests (vitest)
-pnpm --filter threshold test      # app tests only (watch mode locally — Ctrl+C to exit)
+pnpm test                         # all workspace JS/TS tests (vitest run, single pass)
+pnpm --filter threshold test:watch  # app tests in watch mode
 cargo test --workspace            # Rust tests (app + plugins)
 pnpm format                       # prettier
 pnpm build:desktop | build:android | build:wear
@@ -96,8 +96,6 @@ plugins must be added to the root `Cargo.toml` workspace members and registered 
 
 ## Gotchas
 
-- `apps/threshold`'s `pnpm test` runs vitest in watch mode locally; CI passes because
-  vitest detects `CI`.
 - Capabilities live in `apps/threshold/src-tauri/capabilities/*.json`; a plugin command
   that works in Rust can still be ACL-denied from TS, and service code often swallows
   the error — check the ACL first when an invoke "does nothing".
