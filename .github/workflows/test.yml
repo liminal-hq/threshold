@@ -180,7 +180,7 @@ jobs:
           fi
 
           mkdir -p .ci
-          curl -LsSf "https://crates.io/api/v1/crates/tauri/${TAURI_VERSION}/download" | tar -xz -C .ci
+          curl -LsSf -A "liminal-hq/threshold CI (https://github.com/liminal-hq/threshold)" "https://crates.io/api/v1/crates/tauri/${TAURI_VERSION}/download" | tar -xz -C .ci
           TAURI_ANDROID_PATH="$(pwd)/.ci/tauri-${TAURI_VERSION}/mobile/android"
           if [ ! -f "${TAURI_ANDROID_PATH}/build.gradle.kts" ]; then
             echo "tauri-android source not found at ${TAURI_ANDROID_PATH}"
