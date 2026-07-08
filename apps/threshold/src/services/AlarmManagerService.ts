@@ -4,8 +4,13 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import { APP_NAME } from '../constants';
-import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
+import {
+	schedule as scheduleNative,
+	cancel as cancelNative,
+	getLaunchArgs,
+	stopRinging as stopRingingNative,
+} from 'tauri-plugin-alarm-manager-api';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { Alarm } from '@threshold/core/types';
@@ -19,14 +24,6 @@ import {
 	type NotificationUpcomingResyncEvent,
 } from './AlarmNotificationService';
 import { notificationToastService } from './NotificationToastService';
-
-// Define the plugin invoke types manually since we can't import from the plugin in this environment
-interface ImportedAlarm {
-	id: number;
-	hour: number;
-	minute: number;
-	label: string;
-}
 
 type NotificationUpcomingResyncPayload = NotificationUpcomingResyncEvent | null | undefined;
 
@@ -334,8 +331,7 @@ export class AlarmManagerService {
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
 	private async checkImports() {
 		try {
-			const imports =
-				(await invoke<ImportedAlarm[]>('plugin:alarm-manager|get_launch_args')) ?? [];
+			const imports = await getLaunchArgs();
 			if (imports.length > 0) {
 				console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
 				for (const imp of imports) {
@@ -410,9 +406,7 @@ export class AlarmManagerService {
 	): Promise<boolean> {
 		console.log(`Scheduling alarm ${id} for ${new Date(timestamp).toLocaleString()}`);
 		try {
-			await invoke('plugin:alarm-manager|schedule', {
-				payload: { id, triggerAt: timestamp, soundUri },
-			});
+			await scheduleNative({ id, triggerAt: timestamp, soundUri });
 			return true;
 		} catch (e: any) {
 			console.error('Failed to schedule native alarm', e.message || e.toString());
@@ -493,7 +487,7 @@ export class AlarmManagerService {
 	async stopRinging() {
 		try {
 			console.log('[AlarmManager] Stopping ringing...');
-			await invoke('plugin:alarm-manager|stop_ringing');
+			await stopRingingNative();
 		} catch (e) {
 			console.error('Failed to stop ringing', e);
 		}
@@ -501,9 +495,7 @@ export class AlarmManagerService {
 
 	private async cancelNativeAlarm(id: number) {
 		try {
-			await invoke('plugin:alarm-manager|cancel', {
-				payload: { id },
-			});
+			await cancelNative({ id });
 		} catch (e) {
 			console.error('Failed to cancel native alarm', e);
 		}
