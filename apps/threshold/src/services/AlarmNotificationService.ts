@@ -18,10 +18,10 @@ const EVENT_NOTIFICATIONS_UPCOMING_RESYNC = 'notifications:upcoming:resync';
 const EVENT_NOTIFICATIONS_TOAST = 'notifications:toast';
 
 type NotificationActionHandlers = {
-	onDismissRinging: () => Promise<void>;
 	// The JS-driven 'alarm_trigger' notification action (unlike the native
-	// AlarmRingingService channel bridge) doesn't carry an alarm ID yet, so this
-	// must tolerate being called with none.
+	// AlarmRingingService channel bridge) doesn't carry an alarm ID yet, so both
+	// of these must tolerate being called with none.
+	onDismissRinging: (alarmId?: number) => Promise<void>;
 	onSnoozeRinging: (alarmId?: number) => Promise<void>;
 	onDismissUpcoming: (alarmId: number) => Promise<void>;
 	onSnoozeUpcoming: (alarmId: number, snoozeMinutes: number) => Promise<void>;
@@ -260,6 +260,15 @@ export class AlarmNotificationService {
 			const { id } = event.payload;
 			console.log(`[AlarmNotifications] Snooze requested from ringing notification for alarm ${id}`);
 			await handlers.onSnoozeRinging(id);
+		});
+
+		// Listen for dismiss-from-ringing-notification events bridged from AlarmRingingService.
+		// The Android service emits ACTION_DISMISS (with a real alarm ID) which Kotlin routes
+		// through the plugin channel.
+		await listen<{ id: number }>('alarm-manager:dismiss-requested', async (event) => {
+			const { id } = event.payload;
+			console.log(`[AlarmNotifications] Dismiss requested from ringing notification for alarm ${id}`);
+			await handlers.onDismissRinging(id);
 		});
 	}
 

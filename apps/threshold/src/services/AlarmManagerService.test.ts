@@ -639,4 +639,49 @@ describe('AlarmManagerService', () => {
 		expect(AlarmService.snooze).not.toHaveBeenCalled();
 		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
 	});
+
+	it('dismiss-from-ringing-notification calls AlarmService.dismiss with the alarm ID', async () => {
+		const service = new AlarmManagerService();
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+
+		await service.init();
+
+		// Simulate the alarm-manager:dismiss-requested event from the Android bridge
+		const dismissRequestHandlers = eventListeners.get('alarm-manager:dismiss-requested') ?? [];
+		expect(dismissRequestHandlers.length).toBe(1);
+
+		for (const handler of dismissRequestHandlers) {
+			await handler({ payload: { id: 21 } });
+		}
+
+		expect(AlarmService.dismiss).toHaveBeenCalledWith(21);
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
+	});
+
+	it('falls back to stopping ringing when the alarm_trigger dismiss action has no alarm ID', async () => {
+		const service = new AlarmManagerService();
+		let actionCallback: ((notification: any) => Promise<void>) | null = null;
+
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+		(onAction as any).mockImplementation(async (cb: (notification: any) => Promise<void>) => {
+			actionCallback = cb;
+			return undefined;
+		});
+
+		await service.init();
+		expect(actionCallback).not.toBeNull();
+
+		(invoke as any).mockClear();
+		// The JS-driven 'alarm_trigger' notification carries no alarm ID (unlike the
+		// native AlarmRingingService channel bridge, tested above).
+		await actionCallback!({
+			actionId: 'dismiss',
+			notification: {
+				actionTypeId: 'alarm_trigger',
+			},
+		});
+
+		expect(AlarmService.dismiss).not.toHaveBeenCalled();
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
+	});
 });

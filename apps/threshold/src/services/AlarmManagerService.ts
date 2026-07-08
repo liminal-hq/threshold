@@ -178,9 +178,16 @@ export class AlarmManagerService {
 					try {
 						this.registerNotificationActionTypes();
 						await alarmNotificationService.initialiseMobileNotificationActions({
-							onDismissRinging: async () => {
-								console.log('[AlarmManager] Action: Dismiss');
-								await this.stopRinging();
+							onDismissRinging: async (alarmId) => {
+								console.log('[AlarmManager] Action: Dismiss', alarmId);
+								if (alarmId == null) {
+									// The JS-driven ringing notification action has no alarm ID to
+									// re-arm against yet — fall back to stopping ringing only, same
+									// as before this alarm ID plumbing existed.
+									await this.stopRinging();
+									return;
+								}
+								await this.dismissRinging(alarmId);
 							},
 							onSnoozeRinging: async (alarmId) => {
 								console.log('[AlarmManager] Action: Snooze ringing', alarmId);
@@ -370,6 +377,13 @@ export class AlarmManagerService {
 	async deleteAlarm(id: number) {
 		// Cancellation is handled by the alarm:cancelled listener registered in init().
 		await AlarmService.delete(id);
+	}
+
+	async dismissRinging(id: number) {
+		console.log(`[AlarmManager] Dismissing ringing alarm ${id}`);
+		await alarmNotificationService.cancelUpcomingNotification(id);
+		await AlarmService.dismiss(id);
+		await this.stopRinging();
 	}
 
 	async snoozeRinging(id: number, minutes: number) {
