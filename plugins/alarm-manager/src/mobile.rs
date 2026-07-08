@@ -31,7 +31,7 @@ pub fn init<R: Runtime>(
         let app_handle = app.clone();
 
         handle.run_mobile_plugin::<()>(
-            "set_alarm_event_handler",
+            "setAlarmEventHandler",
             AlarmEventHandler {
                 handler: Channel::new(move |event| {
                     let payload = match event {
@@ -91,7 +91,7 @@ impl<R: Runtime> AlarmManager<R> {
     pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
         let payload: serde_json::Value = self
             .handle
-            .run_mobile_plugin("get_launch_args", ())
+            .run_mobile_plugin("getLaunchArgs", ())
             .map_err(crate::Error::from)?;
 
         // Compatibility: accept either direct array payloads or `{ value: [...] }`
@@ -120,15 +120,9 @@ impl<R: Runtime> AlarmManager<R> {
             .map_err(Into::into)
     }
 
-    pub fn check_active_alarm(&self) -> crate::Result<ActiveAlarmResponse> {
-        self.handle
-            .run_mobile_plugin("check_active_alarm", ())
-            .map_err(Into::into)
-    }
-
     pub fn stop_ringing(&self) -> crate::Result<()> {
         self.handle
-            .run_mobile_plugin("stop_ringing", ())
+            .run_mobile_plugin("stopRinging", ())
             .map_err(Into::into)
     }
 
@@ -143,7 +137,7 @@ impl<R: Runtime> AlarmManager<R> {
 
         #[cfg(target_os = "android")]
         self.handle
-            .run_mobile_plugin("mark_alarm_pipeline_ready", ())
+            .run_mobile_plugin("markAlarmPipelineReady", ())
             .map_err(Into::into)
     }
 

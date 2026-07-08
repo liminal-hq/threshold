@@ -137,9 +137,13 @@ This plugin requires these permissions:
 
 ### Naming Conventions
 
-- Command identifiers use `snake_case` (for example, `publish_to_watch`).
-- Generated permission identifiers use `allow-`/`deny-` prefixes with dash-cased command names (for example, `allow-publish-to-watch`).
-- Custom non-command permissions keep plugin-specific names (for example, `allow-event-listeners`).
+- Kotlin `@Command` method names use `camelCase` (for example, `publishToWatch`), matching
+  Kotlin's own convention and every official Tauri plugin. See
+  [command-conventions](../../docs/plugins/command-conventions.md) for the full rule.
+- The Rust `COMMANDS` list in `build.rs` (and therefore generated permission identifiers,
+  which use `allow-`/`deny-` prefixes with dash-cased names, e.g. `allow-publish-to-watch`)
+  stays `snake_case` — it's a separate, Rust-side list decoupled from the Kotlin bridge
+  string above it feeds `run_mobile_plugin(...)`.
 
 ## Android Permissions
 

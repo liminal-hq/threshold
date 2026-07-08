@@ -106,9 +106,6 @@ describe('AlarmManagerService', () => {
 			if (command === 'plugin:alarm-manager|get_launch_args') {
 				return Promise.resolve([]);
 			}
-			if (command === 'plugin:alarm-manager|check_active_alarm') {
-				return Promise.resolve({ isAlarm: false, alarmId: null });
-			}
 			return Promise.resolve(null);
 		});
 
@@ -167,6 +164,18 @@ describe('AlarmManagerService', () => {
 		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|schedule', {
 			payload: { id: 12, triggerAt: nextTrigger, soundUri: null },
 		});
+	});
+
+	it('never invokes the removed check_active_alarm command during init', async () => {
+		const service = new AlarmManagerService();
+
+		await service.init();
+
+		expect(invoke).not.toHaveBeenCalledWith(
+			'plugin:alarm-manager|check_active_alarm',
+			expect.anything(),
+		);
+		expect(invoke).not.toHaveBeenCalledWith('plugin:alarm-manager|check_active_alarm');
 	});
 
 	it('schedules upcoming notifications for enabled mobile alarms', async () => {

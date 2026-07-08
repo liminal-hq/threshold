@@ -29,11 +29,6 @@ pub async fn pick_alarm_sound<R: Runtime>(
 }
 
 #[command]
-pub async fn check_active_alarm<R: Runtime>(app: AppHandle<R>) -> Result<ActiveAlarmResponse> {
-    app.alarm_manager().check_active_alarm()
-}
-
-#[command]
 pub async fn stop_ringing<R: Runtime>(app: AppHandle<R>) -> Result<()> {
     app.alarm_manager().stop_ringing()
 }

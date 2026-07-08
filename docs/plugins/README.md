@@ -18,6 +18,7 @@ Specifications and development patterns for Threshold's custom Tauri plugins.
 | [plugin-manifest-quickstart](plugin-manifest-quickstart.md) | Quick start template for manifest injection |
 | [plugin-manifest-pattern](plugin-manifest-pattern.md) | Full reference for the injection pattern |
 | [plugin-manifest-pr-checklist](plugin-manifest-pr-checklist.md) | PR review checklist for plugin changes |
+| [command-conventions](command-conventions.md) | `COMMANDS` scope (webview-invokable only) and Kotlin `@Command` naming (camelCase) |
 
 ## Reference Implementation
 

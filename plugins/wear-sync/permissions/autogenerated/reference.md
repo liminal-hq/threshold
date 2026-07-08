@@ -4,7 +4,6 @@ Default permissions for the wear-sync plugin
 
 #### This default permission set includes the following:
 
-- `allow-event-listeners`
 - `allow-set-watch-message-handler`
 - `allow-mark-watch-pipeline-ready`
 
@@ -195,32 +194,6 @@ Enables the set_watch_message_handler command without any pre-configured scope.
 <td>
 
 Denies the set_watch_message_handler command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`wear-sync:allow-event-listeners`
-
-</td>
-<td>
-
-Allows wear-sync to receive alarm batch and sync events
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`wear-sync:deny-event-listeners`
-
-</td>
-<td>
-
-Denies wear-sync access to alarm batch and sync events
 
 </td>
 </tr>

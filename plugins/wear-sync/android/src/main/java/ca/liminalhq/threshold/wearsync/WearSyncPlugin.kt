@@ -104,7 +104,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * receives it through its `WearableListenerService`.
      */
     @Command
-    fun publish_to_watch(invoke: Invoke) {
+    fun publishToWatch(invoke: Invoke) {
         val args = invoke.parseArgs(PublishRequest::class.java)
         scope.launch {
             try {
@@ -146,7 +146,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * node, prompting them to request a full or incremental sync.
      */
     @Command
-    fun request_sync_from_watch(invoke: Invoke) {
+    fun requestSyncFromWatch(invoke: Invoke) {
         val args = invoke.parseArgs(SyncRequest::class.java)
         scope.launch {
             try {
@@ -174,7 +174,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * own [WearRingingService] to show the ringing UI and vibrate.
      */
     @Command
-    fun send_alarm_ring(invoke: Invoke) {
+    fun sendAlarmRing(invoke: Invoke) {
         val args = invoke.parseArgs(AlarmRingRequest::class.java)
         scope.launch {
             try {
@@ -220,7 +220,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * active watch ringing can stop immediately.
      */
     @Command
-    fun send_alarm_dismiss(invoke: Invoke) {
+    fun sendAlarmDismiss(invoke: Invoke) {
         val args = invoke.parseArgs(AlarmDismissRequest::class.java)
         scope.launch {
             try {
@@ -255,7 +255,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * active watch ringing can stop immediately.
      */
     @Command
-    fun send_alarm_snooze(invoke: Invoke) {
+    fun sendAlarmSnooze(invoke: Invoke) {
         val args = invoke.parseArgs(AlarmSnoozeRequest::class.java)
         scope.launch {
             try {
@@ -292,7 +292,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * going through the WebView/JS layer.
      */
     @Command
-    fun set_watch_message_handler(invoke: Invoke) {
+    fun setWatchMessageHandler(invoke: Invoke) {
         val args = invoke.parseArgs(WatchMessageHandlerArgs::class.java)
         watchMessageChannel = args.handler
         Log.d(TAG, "Watch message handler channel registered")
@@ -307,7 +307,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * Called by Rust after the app crate has registered watch event listeners.
      */
     @Command
-    fun mark_watch_pipeline_ready(invoke: Invoke) {
+    fun markWatchPipelineReady(invoke: Invoke) {
         watchPipelineReady = true
         Log.d(TAG, "Watch pipeline marked ready")
         drainQueuedMessages()

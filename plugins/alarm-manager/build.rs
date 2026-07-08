@@ -3,15 +3,15 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+// Webview-invokable surface only. Commands reached exclusively via
+// `run_mobile_plugin` from Rust (e.g. the pipeline-ready handshake) bypass the
+// ACL entirely and must not be listed here.
 const COMMANDS: &[&str] = &[
     "schedule",
     "cancel",
     "get_launch_args",
     "pick_alarm_sound",
-    "check_active_alarm",
     "stop_ringing",
-    "set_alarm_event_handler",
-    "mark_alarm_pipeline_ready",
 ];
 
 fn main() {

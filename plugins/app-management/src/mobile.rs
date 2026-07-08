@@ -28,7 +28,7 @@ impl<R: Runtime> AppManagement<R> {
     #[cfg(target_os = "android")]
     return self
       .0
-      .run_mobile_plugin("minimize_app", ())
+      .run_mobile_plugin("minimizeApp", ())
       .map_err(Into::into);
 
     #[cfg(not(target_os = "android"))]
