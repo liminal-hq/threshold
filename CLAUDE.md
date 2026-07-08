@@ -37,13 +37,15 @@ pnpm dev:desktop                  # run desktop app
 pnpm dev:android                  # run on Android (needs SDK/NDK)
 pnpm test                         # all workspace JS/TS tests (vitest run, single pass)
 pnpm --filter threshold test:watch  # app tests in watch mode
+pnpm -r run typecheck              # tsc --noEmit across all TS packages (CI-gated; vitest alone won't catch type errors)
 cargo test --workspace            # Rust tests (app + plugins)
 pnpm format                       # prettier
 pnpm build:desktop | build:android | build:wear
 pnpm version:release              # interactive release TUI (phone + wear versions)
 ```
 
-CI (`.github/workflows/test.yml`) runs vitest and `cargo nextest` with JUnit output.
+CI (`.github/workflows/test.yml`) runs a TS type-check, vitest, and `cargo nextest` with
+JUnit output.
 
 ## Architecture — the key things to understand
 

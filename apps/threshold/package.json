@@ -10,7 +10,8 @@
 		"tauri": "tauri",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:ci": "vitest run --reporter=junit --reporter=default --outputFile.junit=junit.xml"
+		"test:ci": "vitest run --reporter=junit --reporter=default --outputFile.junit=junit.xml",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@emotion/react": "^11.14.0",
