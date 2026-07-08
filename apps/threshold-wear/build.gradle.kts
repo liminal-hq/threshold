@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "ca.liminalhq.threshold.wear"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "ca.liminalhq.threshold"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1000001009
         versionName = "0.1.9"
     }
@@ -57,7 +57,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 }
 
@@ -90,7 +90,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     // Kotlin
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.25")
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")

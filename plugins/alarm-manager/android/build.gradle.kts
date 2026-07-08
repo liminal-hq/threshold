@@ -5,10 +5,10 @@ plugins {
 
 android {
     namespace = "com.plugin.alarmmanager"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 26
         consumerProguardFiles("proguard-rules.pro")
     }
 
@@ -29,7 +29,7 @@ android {
 
 dependencies {
     compileOnly(project(":tauri-android"))
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.25")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.activity:activity:1.8.0")
 }

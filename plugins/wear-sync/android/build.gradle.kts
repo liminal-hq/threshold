@@ -5,10 +5,10 @@ plugins {
 
 android {
     namespace = "ca.liminalhq.threshold.wearsync"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 26
     }
 
     buildTypes {
@@ -28,7 +28,7 @@ android {
 
 dependencies {
     compileOnly(project(":tauri-android"))
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.25")
     implementation("com.google.android.gms:play-services-wearable:18.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")

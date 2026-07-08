@@ -5,10 +5,10 @@ plugins {
 
 android {
     namespace = "ca.liminalhq.threshold.timeprefs"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 26
     }
 
     buildTypes {
@@ -28,5 +28,5 @@ android {
 
 dependencies {
     compileOnly(project(":tauri-android"))
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.25")
 }
