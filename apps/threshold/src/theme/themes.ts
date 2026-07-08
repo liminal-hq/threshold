@@ -1,21 +1,13 @@
+import type { MaterialYouResponse } from 'tauri-plugin-theme-utils-api';
+
+export type { MaterialYouResponse };
+
 export type ThemeId = 'deep-night' | 'canadian-cottage-winter' | 'georgian-bay-plunge' | 'boring-light' | 'boring-dark' | 'system';
 
 export interface ThemeDefinition {
     id: ThemeId;
     variables: Record<string, string>;
     muiPalette: any; // Using any for flexibility in passing to createTheme
-}
-
-export interface MaterialYouResponse {
-    supported: boolean;
-    apiLevel: number;
-    palettes: {
-        system_accent1?: Record<string, string>;
-        system_accent2?: Record<string, string>;
-        system_accent3?: Record<string, string>;
-        system_neutral1?: Record<string, string>;
-        system_neutral2?: Record<string, string>;
-    };
 }
 
 // Convert Android ARGB hex (#AARRGGBB) to CSS RGBA hex (#RRGGBBAA)

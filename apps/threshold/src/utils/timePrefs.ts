@@ -1,17 +1,11 @@
-import { invoke } from '@tauri-apps/api/core';
+import { getTimeFormat } from 'tauri-plugin-time-prefs-api';
 import { PlatformUtils } from './PlatformUtils';
-
-interface TimeFormatResponse {
-    is24Hour: boolean;
-}
 
 export const TimePrefs = {
     getSystemTimeFormat: async (): Promise<{ is24Hour: boolean; source: 'android' | 'ios' | 'intl' }> => {
         if (PlatformUtils.isMobile()) {
             try {
-                // plugin:time-prefs matches the name in lib.rs Builder::new("time-prefs")
-                // get_time_format matches the function name in commands.rs
-                const response = await invoke<TimeFormatResponse>('plugin:time-prefs|get_time_format');
+                const response = await getTimeFormat();
                 const os = PlatformUtils.getPlatform();
                 return {
                     is24Hour: response.is24Hour,
