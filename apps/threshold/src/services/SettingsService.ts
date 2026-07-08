@@ -90,7 +90,15 @@ export const SettingsService = {
 	setSnoozeLength: (minutes: number) => {
 		localStorage.setItem(KEY_SNOOZE_LENGTH, String(minutes));
 		emit('settings-changed', { key: 'snoozeLength', value: minutes });
-		// Sync to Rust state so alarm:fired events include the correct duration
+		SettingsService.syncSnoozeLengthToRust(minutes);
+	},
+
+	// Rust's snooze-length state starts at a hardcoded default (10) and is only
+	// ever updated reactively when the user changes the setting — it's never
+	// seeded from the persisted value at startup. Call this once during app
+	// init so a snooze requested natively (no TS round-trip) before the user
+	// has touched Settings this session still uses their actual preference.
+	syncSnoozeLengthToRust: (minutes: number) => {
 		invoke('set_snooze_length', { minutes }).catch((e) =>
 			console.warn('[Settings] Failed to sync snooze length to Rust:', e),
 		);

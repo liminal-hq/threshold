@@ -103,17 +103,23 @@ export class AlarmManagerService {
 			try {
 				console.log('[AlarmManager] Starting service initialisation...');
 
+				// Seed Rust's snooze-length state from the persisted setting. Rust only
+				// otherwise learns this reactively when the user changes it in Settings,
+				// so without this, a native (Kotlin-to-Rust) snooze early in a session
+				// would use the hardcoded default instead of the user's preference.
+				SettingsService.syncSnoozeLengthToRust(SettingsService.getSnoozeLength());
+
 				await notificationToastService.init();
 
-				console.log('[AlarmManager] Setting up event listener 1/4: alarm-ring...');
+				console.log('[AlarmManager] Setting up event listener 1/6: alarm-ring...');
 				// Listen for alarms ringing from the Rust Backend (Desktop)
 				await listen<{ id: number }>('alarm-ring', (event) => {
 					console.log(`[AlarmManager] Received alarm-ring event for ID: ${event.payload.id}`);
 					this.handleAlarmRing(event.payload.id);
 				});
-				console.log('[AlarmManager] Event listener 1/4 registered.');
+				console.log('[AlarmManager] Event listener 1/6 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 2/5: alarms:batch:updated...');
+				console.log('[AlarmManager] Setting up event listener 2/6: alarms:batch:updated...');
 				// Listen for batch events and refresh native schedule
 				await listen('alarms:batch:updated', async () => {
 					console.log('[AlarmManager] Received alarms:batch:updated event');
@@ -123,9 +129,9 @@ export class AlarmManagerService {
 						reason: 'alarm-batch-updated',
 					});
 				});
-				console.log('[AlarmManager] Event listener 2/5 registered.');
+				console.log('[AlarmManager] Event listener 2/6 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 3/5: alarm:cancelled...');
+				console.log('[AlarmManager] Setting up event listener 3/6: alarm:cancelled...');
 				// Eagerly cancel native alarm and upcoming notification when Rust emits alarm:cancelled.
 				// This fires before alarms:batch:updated and closes the race window where a cancelled
 				// alarm could still fire if the BroadcastReceiver was already dispatched.
@@ -136,9 +142,9 @@ export class AlarmManagerService {
 					await alarmNotificationService.cancelUpcomingNotification(id);
 					this.scheduledSignatures.delete(id);
 				});
-				console.log('[AlarmManager] Event listener 3/5 registered.');
+				console.log('[AlarmManager] Event listener 3/6 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 4/5: settings-changed...');
+				console.log('[AlarmManager] Setting up event listener 4/6: settings-changed...');
 				await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
 					if (event.payload?.key !== 'is24h') return;
 					if (!PlatformUtils.isMobile()) return;
@@ -148,16 +154,29 @@ export class AlarmManagerService {
 						reason: 'settings-24h-changed',
 					});
 				});
-				console.log('[AlarmManager] Event listener 4/5 registered.');
+				console.log('[AlarmManager] Event listener 4/6 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 5/5: notifications:upcoming:resync...');
+				console.log('[AlarmManager] Setting up event listener 5/6: notifications:upcoming:resync...');
 				await listen<NotificationUpcomingResyncEvent>(
 					'notifications:upcoming:resync',
 					async (event) => {
 						await this.resyncUpcomingNotifications(event.payload);
 					},
 				);
-				console.log('[AlarmManager] Event listener 5/5 registered.');
+				console.log('[AlarmManager] Event listener 5/6 registered.');
+
+				console.log('[AlarmManager] Setting up event listener 6/6: alarm:snoozed...');
+				// Unified snooze confirmation toast — Rust emits alarm:snoozed for every
+				// snooze regardless of source (native ringing notification, watch, upcoming
+				// notification, in-app Ringing screen), so one listener here covers all of
+				// them instead of each call site publishing its own toast.
+				await listen<{ id: number; originalTrigger: number; snoozedUntil: number }>(
+					'alarm:snoozed',
+					async (event) => {
+						await this.publishSnoozeToast(event.payload);
+					},
+				);
+				console.log('[AlarmManager] Event listener 6/6 registered.');
 
 				console.log('[AlarmManager] Checking for native imports...');
 				await this.checkImports();
@@ -178,29 +197,19 @@ export class AlarmManagerService {
 					try {
 						this.registerNotificationActionTypes();
 						await alarmNotificationService.initialiseMobileNotificationActions({
-							onDismissRinging: async (alarmId) => {
-								console.log('[AlarmManager] Action: Dismiss', alarmId);
-								if (alarmId == null) {
-									// The JS-driven ringing notification action has no alarm ID to
-									// re-arm against yet — fall back to stopping ringing only, same
-									// as before this alarm ID plumbing existed.
-									await this.stopRinging();
-									return;
-								}
-								await this.dismissRinging(alarmId);
+							onDismissRinging: async () => {
+								// The native AlarmRingingService dismiss action is handled entirely
+								// in Rust (apps/threshold/src-tauri/src/lib.rs); this only fires
+								// from the older JS-driven 'alarm_trigger' notification action, which
+								// has no alarm ID to re-arm against.
+								console.log('[AlarmManager] Action: Dismiss');
+								await this.stopRinging();
 							},
-							onSnoozeRinging: async (alarmId) => {
-								console.log('[AlarmManager] Action: Snooze ringing', alarmId);
-								if (alarmId == null) {
-									// The JS-driven ringing notification action has no alarm ID to
-									// recalculate against yet — fall back to stopping ringing only,
-									// same as before this alarm ID plumbing existed.
-									await this.stopRinging();
-									return;
-								}
-								const snoozeLength = SettingsService.getSnoozeLength();
-								await this.snoozeRinging(alarmId, snoozeLength);
-								await this.emitUpcomingSnoozeToast(alarmId, snoozeLength);
+							onSnoozeRinging: async () => {
+								// Same story as onDismissRinging — the native snooze action is
+								// handled entirely in Rust; this is the ID-less JS fallback only.
+								console.log('[AlarmManager] Action: Snooze');
+								await this.stopRinging();
 							},
 							onDismissUpcoming: async (alarmId) => {
 								console.log('[AlarmManager] Action: Dismiss upcoming alarm', alarmId);
@@ -209,7 +218,7 @@ export class AlarmManagerService {
 							onSnoozeUpcoming: async (alarmId, snoozeLength) => {
 								console.log('[AlarmManager] Action: Snooze upcoming alarm', alarmId);
 								await this.snoozeUpcoming(alarmId, snoozeLength);
-								await this.emitUpcomingSnoozeToast(alarmId, snoozeLength);
+								// Toast is published by the alarm:snoozed listener registered in init().
 							},
 						});
 						console.log('[AlarmManager] Notification actions registered.');
@@ -236,18 +245,15 @@ export class AlarmManagerService {
 		await AlarmService.dismiss(alarmId);
 	}
 
-	private async emitUpcomingSnoozeToast(alarmId: number, durationMinutes: number): Promise<void> {
-		let message = `Alarm snoozed for ${durationMinutes} min`;
-		try {
-			const alarm = await AlarmService.get(alarmId);
-			if (alarm?.nextTrigger) {
-				const is24h = SettingsService.getIs24h();
-				const formattedTime = TimeFormatHelper.format(alarm.nextTrigger, is24h);
-				message = `${message} and will go off at ${formattedTime}`;
-			}
-		} catch (e) {
-			console.warn('[AlarmManager] Failed to load snoozed alarm details for toast', e);
-		}
+	private async publishSnoozeToast(payload: {
+		id: number;
+		originalTrigger: number;
+		snoozedUntil: number;
+	}): Promise<void> {
+		const durationMinutes = Math.round((payload.snoozedUntil - payload.originalTrigger) / 60_000);
+		const is24h = SettingsService.getIs24h();
+		const formattedTime = TimeFormatHelper.format(payload.snoozedUntil, is24h);
+		const message = `Alarm snoozed for ${durationMinutes} min and will go off at ${formattedTime}`;
 
 		try {
 			await alarmNotificationService.publishToast({
@@ -377,13 +383,6 @@ export class AlarmManagerService {
 	async deleteAlarm(id: number) {
 		// Cancellation is handled by the alarm:cancelled listener registered in init().
 		await AlarmService.delete(id);
-	}
-
-	async dismissRinging(id: number) {
-		console.log(`[AlarmManager] Dismissing ringing alarm ${id}`);
-		await alarmNotificationService.cancelUpcomingNotification(id);
-		await AlarmService.dismiss(id);
-		await this.stopRinging();
 	}
 
 	async snoozeRinging(id: number, minutes: number) {

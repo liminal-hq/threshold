@@ -436,6 +436,69 @@ pub fn run() {
                 }
             });
 
+            // Native phone alarm-dismissed callback from alarm-manager plugin (notification
+            // Dismiss action on AlarmRingingService). Handled directly in Rust core, same
+            // as alarm-manager:native-fired and the wear:alarm:* listeners above — no TS
+            // round-trip needed since dismiss_alarm requires nothing but the alarm ID.
+            let native_dismiss_handle = app.handle().clone();
+            app.handle().listen("alarm-manager:dismiss-requested", move |event| {
+                #[derive(serde::Deserialize)]
+                struct NativeDismissRequested {
+                    id: i32,
+                }
+
+                if let Ok(payload) = serde_json::from_str::<NativeDismissRequested>(event.payload()) {
+                    let handle = native_dismiss_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            if let Err(error) = coord.dismiss_alarm(&handle, payload.id).await {
+                                log::error!(
+                                    "alarm-manager: failed to dismiss native-requested alarm {}: {error}",
+                                    payload.id
+                                );
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Native phone alarm-snoozed callback from alarm-manager plugin (notification
+            // Snooze action on AlarmRingingService). Handled directly in Rust core, mirroring
+            // wear:alarm:snooze — reads the same SnoozeLengthState the frontend keeps synced
+            // via set_snooze_length, so no TS round-trip is needed here either.
+            let native_snooze_handle = app.handle().clone();
+            app.handle().listen("alarm-manager:snooze-requested", move |event| {
+                #[derive(serde::Deserialize)]
+                struct NativeSnoozeRequested {
+                    id: i32,
+                }
+
+                if let Ok(payload) = serde_json::from_str::<NativeSnoozeRequested>(event.payload()) {
+                    let handle = native_snooze_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let minutes = handle
+                            .try_state::<SnoozeLengthState>()
+                            .map(|s| s.load(std::sync::atomic::Ordering::Relaxed))
+                            .unwrap_or(10) as i64;
+                        let snoozed_until = chrono::Utc::now().timestamp_millis() + minutes * 60 * 1000;
+
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            match coord.snooze_alarm(&handle, payload.id, snoozed_until).await {
+                                Ok(_) => log::info!(
+                                    "alarm-manager: snoozed native-requested alarm {} for {} min",
+                                    payload.id,
+                                    minutes
+                                ),
+                                Err(error) => log::error!(
+                                    "alarm-manager: failed to snooze native-requested alarm {}: {error}",
+                                    payload.id
+                                ),
+                            }
+                        }
+                    });
+                }
+            });
+
             #[cfg(mobile)]
             if let Err(error) = app.handle().wear_sync().mark_watch_pipeline_ready() {
                 log::warn!("watch: failed to mark watch pipeline ready: {error}");
