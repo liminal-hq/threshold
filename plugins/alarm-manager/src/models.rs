@@ -28,12 +28,20 @@ pub struct ImportedAlarm {
     pub label: String,
 }
 
+// Kotlin's PickAlarmSoundOptions arg class declares non-null fields with
+// defaults (e.g. `showSilent: Boolean = true`); a JSON `null` fails to
+// deserialise into them, so every field here must be omitted when absent
+// rather than sent as `null`.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PickAlarmSoundOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub existing_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub show_silent: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub show_default: Option<bool>,
 }
 

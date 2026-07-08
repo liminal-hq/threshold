@@ -50,8 +50,11 @@ class SyncRequest {
 class AlarmRingRequest {
     var alarmId: Int = -1
     var label: String = ""
-    var hour: Int = 0
-    var minute: Int = 0
+    // Null means "use the device's current time"; the Rust side omits the
+    // key entirely rather than sending JSON null (see AlarmRingRequest in
+    // wear-sync's models.rs).
+    var hour: Int? = null
+    var minute: Int? = null
     var snoozeLengthMinutes: Int = 10
     var is24Hour: Boolean = false
     var is24HourKnown: Boolean = false
@@ -187,8 +190,8 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
 
                 // Use current device time if Rust didn't provide explicit hour/minute
                 val cal = java.util.Calendar.getInstance()
-                val hour = if (args.hour < 0) cal.get(java.util.Calendar.HOUR_OF_DAY) else args.hour
-                val minute = if (args.minute < 0) cal.get(java.util.Calendar.MINUTE) else args.minute
+                val hour = args.hour ?: cal.get(java.util.Calendar.HOUR_OF_DAY)
+                val minute = args.minute ?: cal.get(java.util.Calendar.MINUTE)
 
                 val json = JSONObject().apply {
                     put("alarmId", args.alarmId)

@@ -158,8 +158,13 @@ fn default_is_24_hour_known() -> bool {
 pub struct AlarmRingRequest {
     pub alarm_id: i32,
     pub label: String,
-    pub hour: i32,
-    pub minute: i32,
+    /// `None` means "use the device's current time" — the Kotlin side falls
+    /// back to `Calendar`. Omitted from the JSON entirely rather than sent
+    /// as `null`, since the Kotlin arg class's `hour`/`minute` are non-null.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hour: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minute: Option<i32>,
     pub snooze_length_minutes: i32,
     #[serde(default = "default_is_24_hour")]
     pub is_24_hour: bool,
