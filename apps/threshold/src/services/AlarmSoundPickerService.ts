@@ -1,5 +1,8 @@
-import { pickAlarmSound as pickAlarmSoundNative } from 'tauri-plugin-alarm-manager-api';
-import type { PickAlarmSoundOptions, PickedAlarmSound } from 'tauri-plugin-alarm-manager-api';
+import {
+	pickAlarmSound as pickAlarmSoundNative,
+	type PickAlarmSoundOptions,
+	type PickedAlarmSound,
+} from 'tauri-plugin-alarm-manager-api';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { open } from '@tauri-apps/plugin-dialog';
 
