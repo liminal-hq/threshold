@@ -88,7 +88,7 @@ impl AlarmCoordinator {
         if is_new {
             self.emit_alarm_created(app, &alarm, revision).await?;
         } else {
-            let snapshot = previous.as_ref().map(|p| AlarmSnapshot::from_alarm(p));
+            let snapshot = previous.as_ref().map(AlarmSnapshot::from_alarm);
             self.emit_alarm_updated(app, &alarm, snapshot, revision)
                 .await?;
         }
