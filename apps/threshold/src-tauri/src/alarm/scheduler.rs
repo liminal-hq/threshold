@@ -414,7 +414,17 @@ mod tests {
 
     #[test]
     fn test_window_samples_remaining_time_when_already_open() {
-        let now = Local::now();
+        // Use a synthetic mid-day "now" (rather than the real wall clock) so
+        // this can't flake when the suite happens to run within 20 minutes
+        // of local midnight, where a naive "now +/- offset" window would
+        // straddle the date boundary that .format("%H:%M") silently drops.
+        let now = Local::now()
+            .date_naive()
+            .and_hms_opt(12, 0, 0)
+            .unwrap()
+            .and_local_timezone(Local)
+            .earliest()
+            .unwrap();
         let today_idx = now.weekday().num_days_from_sunday() as i32;
         let start = (now - chrono::Duration::minutes(10)).format("%H:%M").to_string();
         let end = (now + chrono::Duration::minutes(20)).format("%H:%M").to_string();
@@ -428,7 +438,7 @@ mod tests {
             ..Default::default()
         };
 
-        let trigger_ts = calculate_next_trigger(&input).unwrap().unwrap();
+        let trigger_ts = calculate_next_trigger_from(&input, now, ReferenceKind::Fresh).unwrap().unwrap();
         let trigger_dt = DateTime::from_timestamp_millis(trigger_ts).unwrap().with_timezone(&Local);
 
         // Should sample from the remaining time of today's window, not skip to next week.
@@ -474,7 +484,14 @@ mod tests {
 
     #[test]
     fn test_after_occurrence_does_not_resample_open_window() {
-        let now = Local::now();
+        // Synthetic mid-day "now" for the same reason as the sibling test above.
+        let now = Local::now()
+            .date_naive()
+            .and_hms_opt(12, 0, 0)
+            .unwrap()
+            .and_local_timezone(Local)
+            .earliest()
+            .unwrap();
         let today_idx = now.weekday().num_days_from_sunday() as i32;
         let start = (now - chrono::Duration::minutes(10)).format("%H:%M").to_string();
         let end = (now + chrono::Duration::minutes(20)).format("%H:%M").to_string();
