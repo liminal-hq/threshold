@@ -38,11 +38,9 @@ impl<R: Runtime> AlarmManager<R> {
             let enabled = alarm["enabled"].as_bool().unwrap_or(false);
             let next_trigger = alarm["nextTrigger"].as_i64();
 
-            if enabled && next_trigger.is_some() {
-                let trigger = next_trigger.unwrap();
-                self.schedule_internal(id, trigger);
-            } else {
-                self.cancel_internal(id);
+            match next_trigger {
+                Some(trigger) if enabled => self.schedule_internal(id, trigger),
+                _ => self.cancel_internal(id),
             }
         }
     }
