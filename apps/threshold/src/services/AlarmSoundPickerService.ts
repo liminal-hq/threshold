@@ -1,3 +1,8 @@
+// Wraps the native/desktop alarm sound picker
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import {
 	pickAlarmSound as pickAlarmSoundNative,
 	type PickAlarmSoundOptions,

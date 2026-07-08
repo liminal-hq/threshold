@@ -1,3 +1,8 @@
+// Main alarm list screen
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React, { useState, useEffect } from 'react';
 import { IconButton, Fab, List, Box, Button, Container } from '@mui/material';
 import { MobileToolbar } from '../components/MobileToolbar';

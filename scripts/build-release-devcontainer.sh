@@ -1,4 +1,9 @@
 #!/bin/bash
+# Builds phone and Wear OS release artefacts inside the devcontainer
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 # Build script for use with VS Code Dev Containers
 # Builds both the phone app (Tauri) and the Wear OS companion app
 # Automatically uses keystore.properties from /keys mount

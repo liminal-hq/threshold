@@ -1,3 +1,8 @@
+// Exports Rust event logs to a user-chosen file
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { invoke } from '@tauri-apps/api/core';
 import { message, save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';

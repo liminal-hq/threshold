@@ -1,3 +1,8 @@
+// Handles deep-link URL routing to in-app screens
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import type { router as routerType } from '../router';
 import { DEEP_LINK_SCHEME } from '../constants';

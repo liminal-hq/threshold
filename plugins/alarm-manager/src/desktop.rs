@@ -1,3 +1,8 @@
+// Desktop (non-native) alarm scheduling backend
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use crate::models::*;
 use serde_json::Value;
 use std::collections::HashMap;

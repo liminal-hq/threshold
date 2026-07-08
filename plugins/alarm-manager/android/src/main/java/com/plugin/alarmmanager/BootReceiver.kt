@@ -1,3 +1,8 @@
+// Reschedules alarms after device boot
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package com.plugin.alarmmanager
 
 import android.content.BroadcastReceiver

@@ -77,6 +77,17 @@ jobs:
       - name: Lint Mermaid diagrams
         run: pnpm run lint:mermaid
 
+  check-license-headers:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Check licence headers
+        run: bash scripts/check-headers.sh
+
   test-rust:
     runs-on: ubuntu-24.04
     steps:
@@ -317,7 +328,15 @@ jobs:
   report:
     runs-on: ubuntu-24.04
     if: always()
-    needs: [test-js, test-rust, test-kotlin-wear, test-kotlin-plugins, lint-mermaid]
+    needs:
+      [
+        test-js,
+        test-rust,
+        test-kotlin-wear,
+        test-kotlin-plugins,
+        lint-mermaid,
+        check-license-headers,
+      ]
     permissions:
       contents: read
       checks: write

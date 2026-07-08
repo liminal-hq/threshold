@@ -1,3 +1,8 @@
+// Wraps a row with a swipe-to-reveal delete action
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'motion/react';
 import { Box, ButtonBase } from '@mui/material';

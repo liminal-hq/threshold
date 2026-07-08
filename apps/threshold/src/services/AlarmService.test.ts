@@ -1,3 +1,8 @@
+// Tests for the alarm CRUD and subscription service
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AlarmService } from './AlarmService';
 import { invoke } from '@tauri-apps/api/core';

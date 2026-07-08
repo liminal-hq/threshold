@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Builds and installs the Wear OS debug APK to a connected device/emulator
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 
 set -euo pipefail
 

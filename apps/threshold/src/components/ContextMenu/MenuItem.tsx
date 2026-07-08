@@ -1,3 +1,8 @@
+// Single menu item row within the context menu
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React from 'react';
 import type { MenuItem as MenuItemType } from './types';
 import { getIconByName } from './iconMapper';

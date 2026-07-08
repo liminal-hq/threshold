@@ -1,3 +1,8 @@
+// Tests for the alarm sound picker service
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { alarmSoundPickerService } from './AlarmSoundPickerService';
 import { invoke } from '@tauri-apps/api/core';

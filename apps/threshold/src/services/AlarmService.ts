@@ -1,3 +1,8 @@
+// CRUD and change-subscription client for alarm data
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { invoke } from '@tauri-apps/api/core';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import type { AlarmRecord, AlarmInput } from '../types/alarm';

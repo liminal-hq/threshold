@@ -1,3 +1,8 @@
+// Type definitions for the context menu's data model
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 /**
  * Single menu item
  */

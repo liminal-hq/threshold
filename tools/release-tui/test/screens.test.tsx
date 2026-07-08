@@ -1,3 +1,8 @@
+// Tests for the release TUI's screen components
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { describe, it, expect, vi } from 'vitest';
 import { render, waitFor } from 'ink-testing-library';
 import { VersionBump } from '../src/screens/VersionBump.js';
