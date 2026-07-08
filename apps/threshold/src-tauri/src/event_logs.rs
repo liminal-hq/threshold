@@ -57,7 +57,7 @@ fn collect_event_logs(app: &AppHandle) -> Result<String, String> {
         entries.push((path, modified));
     }
 
-    entries.sort_by(|a, b| b.1.cmp(&a.1));
+    entries.sort_by_key(|b| std::cmp::Reverse(b.1));
 
     let mut output = String::new();
     output.push_str(&format!("{app_name} event logs\n"));
