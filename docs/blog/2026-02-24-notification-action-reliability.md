@@ -1,16 +1,16 @@
 ---
-title: "Fixing Notification Action Reliability on Android"
-date: "2026-02-24"
-slug: "notification-action-reliability-android"
+title: 'Fixing Notification Action Reliability on Android'
+date: '2026-02-24'
+slug: 'notification-action-reliability-android'
 excerpt: "A bug in Tauri's Android notification plugin was silently dropping action events. What started as debugging a single dropped event across Kotlin, Rust, and JavaScript turned into an opportunity to build a more stable architecture for everyone."
 tags:
-  - "Threshold"
-  - "Tauri"
-  - "Android"
-  - "Notifications"
-  - "Rust"
-  - "Kotlin"
-  - "Open Source"
+  - 'Threshold'
+  - 'Tauri'
+  - 'Android'
+  - 'Notifications'
+  - 'Rust'
+  - 'Kotlin'
+  - 'Open Source'
 draft: false
 ---
 
@@ -28,13 +28,13 @@ Using notification actions involves three steps. First, action types are registe
 
 ```typescript
 await registerActionTypes([
-  {
-    id: "alarm-actions",
-    actions: [
-      { id: "dismiss", title: "Dismiss" },
-      { id: "snooze", title: "Snooze" },
-    ],
-  },
+	{
+		id: 'alarm-actions',
+		actions: [
+			{ id: 'dismiss', title: 'Dismiss' },
+			{ id: 'snooze', title: 'Snooze' },
+		],
+	},
 ]);
 ```
 
@@ -42,9 +42,9 @@ The plugin persists these to storage on Android so it can look them up later whe
 
 ```typescript
 await sendNotification({
-  title: "Alarm",
-  body: "7:00 AM",
-  actionTypeId: "alarm-actions",
+	title: 'Alarm',
+	body: '7:00 AM',
+	actionTypeId: 'alarm-actions',
 });
 ```
 
@@ -52,12 +52,12 @@ Third, the app registers a handler to receive action events:
 
 ```typescript
 await onAction((event) => {
-  if (event.actionId === "dismiss") {
-    /* ... */
-  }
-  if (event.actionId === "snooze") {
-    /* ... */
-  }
+	if (event.actionId === 'dismiss') {
+		/* ... */
+	}
+	if (event.actionId === 'snooze') {
+		/* ... */
+	}
 });
 ```
 
@@ -142,10 +142,10 @@ But when a notification is reconstructed after a channel reset, or when the extr
 
 ```json
 {
-  "nameValuePairs": {
-    "actionId": "dismiss",
-    "notification": { "nameValuePairs": { "id": 42 } }
-  }
+	"nameValuePairs": {
+		"actionId": "dismiss",
+		"notification": { "nameValuePairs": { "id": 42 } }
+	}
 }
 ```
 
@@ -155,12 +155,12 @@ The fix was a normalisation pass in the guest JS layer. A `normalisePendingActio
 
 ```typescript
 const toRecord = (value: unknown): Record<string, unknown> | null => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const record = value as Record<string, unknown>;
-  // Unwrap Android's internal JSONObject serialisation artefact
-  const wrapped = record.nameValuePairs;
-  if (wrapped && typeof wrapped === "object") return toRecord(wrapped);
-  return record;
+	if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+	const record = value as Record<string, unknown>;
+	// Unwrap Android's internal JSONObject serialisation artefact
+	const wrapped = record.nameValuePairs;
+	if (wrapped && typeof wrapped === 'object') return toRecord(wrapped);
+	return record;
 };
 ```
 
@@ -198,28 +198,22 @@ private fun dispatchActionPerformed(payload: JSObject) {
 On the JavaScript side, `onAction()` now calls `register_action_listener_ready` immediately after attaching the listener. The plugin responds with any events buffered during startup, which are replayed through the same callback:
 
 ```typescript
-async function onAction(
-  cb: (notification: ActionPerformedNotification) => void,
-) {
-  const listener = await addPluginListener(
-    "notification",
-    "actionPerformed",
-    cb,
-  );
+async function onAction(cb: (notification: ActionPerformedNotification) => void) {
+	const listener = await addPluginListener('notification', 'actionPerformed', cb);
 
-  try {
-    const pendingResult = await invoke<unknown>(
-      "plugin:notification|register_action_listener_ready",
-    );
-    const pending = normalisePendingActions(pendingResult);
-    for (const notification of pending) {
-      cb(notification); // replay buffered events
-    }
-  } catch {
-    // Older plugin versions and non-Android targets won't implement this command
-  }
+	try {
+		const pendingResult = await invoke<unknown>(
+			'plugin:notification|register_action_listener_ready',
+		);
+		const pending = normalisePendingActions(pendingResult);
+		for (const notification of pending) {
+			cb(notification); // replay buffered events
+		}
+	} catch {
+		// Older plugin versions and non-Android targets won't implement this command
+	}
 
-  return listener;
+	return listener;
 }
 ```
 

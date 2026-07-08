@@ -279,32 +279,32 @@ const Settings: React.FC = () => {
 							</ListItem>
 
 							{isMobile && (
-							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
-								<ListItemText
-									primary="Test Watch Ring"
-									secondary="Send a test ring event to the connected watch"
-								/>
-								<IconButton
-									edge="end"
-									onClick={async () => {
-										try {
-											await invoke('test_watch_ring');
-										} catch (e) {
-											console.error('Failed to test watch ring:', e);
-										}
-									}}
-									sx={{
-										bgcolor: 'secondary.main',
-										color: 'secondary.contrastText',
-										'&:hover': {
-											bgcolor: 'secondary.dark',
-										},
-									}}
-								>
-									<span style={{ fontSize: '1.2rem' }}>⌚</span>
-								</IconButton>
-							</ListItem>
-						)}
+								<ListItem sx={{ px: isMobile ? 2 : 0 }}>
+									<ListItemText
+										primary="Test Watch Ring"
+										secondary="Send a test ring event to the connected watch"
+									/>
+									<IconButton
+										edge="end"
+										onClick={async () => {
+											try {
+												await invoke('test_watch_ring');
+											} catch (e) {
+												console.error('Failed to test watch ring:', e);
+											}
+										}}
+										sx={{
+											bgcolor: 'secondary.main',
+											color: 'secondary.contrastText',
+											'&:hover': {
+												bgcolor: 'secondary.dark',
+											},
+										}}
+									>
+										<span style={{ fontSize: '1.2rem' }}>⌚</span>
+									</IconButton>
+								</ListItem>
+							)}
 
 							<ListItem sx={{ px: isMobile ? 2 : 0 }}>
 								<ListItemText

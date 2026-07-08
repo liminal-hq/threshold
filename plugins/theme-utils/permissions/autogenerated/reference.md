@@ -14,7 +14,6 @@ Default permissions for the theme-utils plugin
 <th>Description</th>
 </tr>
 
-
 <tr>
 <td>
 

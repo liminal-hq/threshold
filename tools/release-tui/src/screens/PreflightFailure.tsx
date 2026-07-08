@@ -3,7 +3,6 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-
 import { Text, useInput } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { HotkeyBar } from '../components/HotkeyHint.js';
@@ -27,7 +26,13 @@ export function PreflightFailure({ checks, onBack, onQuit }: PreflightFailurePro
 			headerLeft="Pre-flight"
 			footerLeft="Build prerequisites failed"
 			footerRight={
-				<HotkeyBar hints={[{ label: 'Back', hotkey: 'b' }, { label: 'Help', hotkey: '?' }, { label: 'Quit', hotkey: 'q' }]} />
+				<HotkeyBar
+					hints={[
+						{ label: 'Back', hotkey: 'b' },
+						{ label: 'Help', hotkey: '?' },
+						{ label: 'Quit', hotkey: 'q' },
+					]}
+				/>
 			}
 		>
 			<Text> </Text>
@@ -41,20 +46,21 @@ export function PreflightFailure({ checks, onBack, onQuit }: PreflightFailurePro
 					) : (
 						<Text color={palette.red}>{'\u2717'}</Text>
 					)}
-					{'  '}{check.label}
+					{'  '}
+					{check.label}
 				</Text>
 			))}
 			<Text> </Text>
 			<Text color={palette.yellow}> Setup required:</Text>
 			<Text> </Text>
-			<Text>   1. On your HOST machine, create ~/threshold-keys/keystore.properties:</Text>
-			<Text>        keyAlias=google-play-upload</Text>
-			<Text>        password=YOUR_KEYSTORE_PASSWORD</Text>
-			<Text>        storeFile=/keys/upload-keystore.jks</Text>
+			<Text> 1. On your HOST machine, create ~/threshold-keys/keystore.properties:</Text>
+			<Text> keyAlias=google-play-upload</Text>
+			<Text> password=YOUR_KEYSTORE_PASSWORD</Text>
+			<Text> storeFile=/keys/upload-keystore.jks</Text>
 			<Text> </Text>
-			<Text>   2. Ensure .devcontainer/devcontainer.json has the /keys mount</Text>
+			<Text> 2. Ensure .devcontainer/devcontainer.json has the /keys mount</Text>
 			<Text> </Text>
-			<Text>   3. Rebuild your dev container</Text>
+			<Text> 3. Rebuild your dev container</Text>
 		</Layout>
 	);
 }

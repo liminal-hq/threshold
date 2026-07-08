@@ -20,10 +20,12 @@ export class AlarmSoundPickerService {
 				const selected = await open({
 					multiple: false,
 					title: options.title || 'Select Alarm Sound',
-					filters: [{
-						name: 'Audio',
-						extensions: ['mp3', 'wav', 'ogg', 'flac']
-					}]
+					filters: [
+						{
+							name: 'Audio',
+							extensions: ['mp3', 'wav', 'ogg', 'flac'],
+						},
+					],
 				});
 
 				if (!selected) {
@@ -38,7 +40,7 @@ export class AlarmSoundPickerService {
 				return {
 					uri: path,
 					isSilent: false,
-					title
+					title,
 				};
 			} catch (error) {
 				throw error;

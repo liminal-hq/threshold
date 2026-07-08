@@ -9,6 +9,7 @@
 ## Purpose
 
 Tauri v2 does not expose a unified API for system time preferences. This plugin bridges that gap by:
+
 1.  Using native Android APIs (`DateFormat.is24HourFormat`).
 2.  Providing a stub/roadmap for iOS.
 3.  Allowing a desktop fallback via `Intl` inference.
@@ -37,19 +38,22 @@ The plugin exposes a single command:
 ## Platform Implementation
 
 ### Android
+
 - **Source**: `android.text.format.DateFormat.is24HourFormat(context)`
 - **Permissions**: Requires `time-prefs:default` capability.
 
 ### iOS
+
 - **Current Status**: Rust-side stub. Returns `false` (12-hour) by default.
 - **Future Work**: Implement Swift native class to query `DateFormatter` or `Locale`.
 
 ### Desktop (Linux/macOS/Windows)
+
 - **Implementation**: The Rust plugin returns a default `false`.
 - **Actual Logic**: The frontend wrapper (`utils/timePrefs.ts`) detects it is running on desktop and bypasses the plugin to use `Intl.DateTimeFormat().resolvedOptions()`.
-    - Prefers `hourCycle` (`h23`/`h24` => 24h).
-    - Fallback to `hour12`.
-    - Default: 12-hour.
+  - Prefers `hourCycle` (`h23`/`h24` => 24h).
+  - Fallback to `hour12`.
+  - Default: 12-hour.
 
 ## Setup
 

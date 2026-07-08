@@ -1,14 +1,14 @@
 ---
-title: "Building a Wear OS Companion App for a Tauri Android Application"
-date: "2026-02-17"
-slug: "wear-os-tauri"
-excerpt: "Tauri v2 brought first-class Android support to the Rust-based app framework. This post walks through adding Wear OS support to Threshold by building a standalone companion app."
+title: 'Building a Wear OS Companion App for a Tauri Android Application'
+date: '2026-02-17'
+slug: 'wear-os-tauri'
+excerpt: 'Tauri v2 brought first-class Android support to the Rust-based app framework. This post walks through adding Wear OS support to Threshold by building a standalone companion app.'
 tags:
-  - "Rust"
-  - "Tauri"
-  - "Android"
-  - "Wear OS"
-  - "Kotlin"
+  - 'Rust'
+  - 'Tauri'
+  - 'Android'
+  - 'Wear OS'
+  - 'Kotlin'
 draft: false
 ---
 

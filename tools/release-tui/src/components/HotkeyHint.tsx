@@ -3,7 +3,6 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-
 import { Text } from 'ink';
 import { palette } from '../lib/theme.js';
 

@@ -45,11 +45,13 @@ This document describes how alarm ringing and rescheduling work **today** on the
 Source: `packages/core/src/scheduler.ts` (`calculateNextTrigger` → `getFixedTrigger`).
 
 **Inputs**
+
 - `fixedTime` (`HH:MM`)
 - `activeDays` (`0..6`, Sunday = 0)
 - current local time
 
 **Steps**
+
 1. Parse `fixedTime`.
 2. For `daysAhead` from **0 to 7**:
    - Build `candidate = now + daysAhead`.
@@ -78,12 +80,14 @@ flowchart TD
 Source: `packages/core/src/scheduler.ts` (`calculateNextTrigger` → `getRandomWindowTrigger`).
 
 **Inputs**
+
 - `windowStart` (`HH:MM`)
 - `windowEnd` (`HH:MM`)
 - `activeDays` (`0..6`, Sunday = 0)
 - current local time
 
 **Steps**
+
 1. Parse `windowStart` and `windowEnd`.
 2. If the window crosses midnight, check **yesterday's window** first:
    - If `now` is still inside yesterday’s window and yesterday is active, schedule within that window.

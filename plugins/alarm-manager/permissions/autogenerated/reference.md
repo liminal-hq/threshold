@@ -18,7 +18,6 @@ Default permissions for the alarm-manager plugin
 <th>Description</th>
 </tr>
 
-
 <tr>
 <td>
 

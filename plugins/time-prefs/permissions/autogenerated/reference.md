@@ -14,7 +14,6 @@ Default permissions for the time-prefs plugin
 <th>Description</th>
 </tr>
 
-
 <tr>
 <td>
 

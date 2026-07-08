@@ -5,11 +5,7 @@ import { writeTextFile } from '@tauri-apps/plugin-fs';
 const buildDefaultFileName = () => {
 	const now = new Date();
 	const pad = (value: number) => value.toString().padStart(2, '0');
-	const stamp = [
-		now.getFullYear(),
-		pad(now.getMonth() + 1),
-		pad(now.getDate()),
-	].join('-');
+	const stamp = [now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate())].join('-');
 	const time = [pad(now.getHours()), pad(now.getMinutes()), pad(now.getSeconds())].join('-');
 	return `threshold-event-logs-${stamp}_${time}.txt`;
 };

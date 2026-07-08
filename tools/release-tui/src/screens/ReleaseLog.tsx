@@ -3,7 +3,6 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-
 import { Box, Text, useInput } from 'ink';
 import { Layout, Divider } from '../components/Layout.js';
 import { HotkeyBar } from '../components/HotkeyHint.js';
@@ -41,7 +40,9 @@ export function ReleaseLog({ onBack, onQuit }: ReleaseLogProps) {
 			<Box>
 				<Text bold color={palette.muted}>
 					{' '}
-					{'Tag'.padEnd(18)}{'Version'.padEnd(14)}{'Date'}
+					{'Tag'.padEnd(18)}
+					{'Version'.padEnd(14)}
+					{'Date'}
 				</Text>
 			</Box>
 			<Divider />

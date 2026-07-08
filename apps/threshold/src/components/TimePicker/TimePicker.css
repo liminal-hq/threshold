@@ -27,7 +27,9 @@
 	width: 80px;
 	text-align: center;
 	color: var(--app-text-colour, #000);
-	transition: background-color 0.2s, border-color 0.2s;
+	transition:
+		background-color 0.2s,
+		border-color 0.2s;
 	outline: none;
 	appearance: none;
 	-webkit-appearance: none;
@@ -85,7 +87,9 @@
 	border: none;
 	cursor: pointer;
 	color: var(--app-text-colour-step-400, #666);
-	transition: background-color 0.2s, color 0.2s;
+	transition:
+		background-color 0.2s,
+		color 0.2s;
 }
 
 .ampm-btn.selected {

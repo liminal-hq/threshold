@@ -252,11 +252,11 @@ jobs:
         uses: tauri-apps/tauri-action@v0.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_BUNDLER_NEW_APPIMAGE_FORMAT: "true"
+          TAURI_BUNDLER_NEW_APPIMAGE_FORMAT: 'true'
         with:
           projectPath: apps/threshold
           includeUpdaterJson: false
-          tauriScript: "pnpm tauri"
+          tauriScript: 'pnpm tauri'
           args: ${{ matrix.tauri_args }}
 
       - name: Collect desktop artefacts

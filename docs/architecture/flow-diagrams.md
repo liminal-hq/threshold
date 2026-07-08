@@ -95,15 +95,15 @@ sequenceDiagram
     Service->>IPC: invoke('save_alarm', {alarm})
     IPC->>Cmd: save_alarm(app, coordinator, alarm)
     Cmd->>Coord: save_alarm(app, input)
-    
+
     Coord->>Sched: calculate_next_trigger(input)
     Sched-->>Coord: next_trigger: 1737885420000
-    
+
     Coord->>DB: save(app, input, next_trigger)
     DB-->>Coord: AlarmRecord (saved)
-    
+
     Coord->>Coord: emit_alarms_changed(app)
-    
+
     Coord-->>Cmd: Result<AlarmRecord>
     Cmd-->>IPC: AlarmRecord (serialized)
     IPC-->>Service: AlarmRecord
@@ -115,16 +115,16 @@ sequenceDiagram
 ```mermaid
 graph LR
     UI[TypeScript UI]
-    
+
     UI -->|get_alarms| Rust
     UI -->|get_alarm id| Rust
     UI -->|save_alarm input| Rust
     UI -->|toggle_alarm id enabled| Rust
     UI -->|delete_alarm id| Rust
     UI -->|dismiss_alarm id| Rust
-    
+
     Rust[Rust Core]
-    
+
     style UI fill:#99ff99
     style Rust fill:#99ccff
 ```
@@ -156,7 +156,7 @@ sequenceDiagram
     participant WearSync as Wear Sync Plugin
 
     Coord->>Tauri: emit("alarms:changed", alarms)
-    
+
     par Broadcast to All Listeners
         Tauri->>UI: Event{payload: AlarmRecord[]}
         Tauri->>AlarmMgr: Event{payload: AlarmRecord[]}
@@ -173,16 +173,16 @@ sequenceDiagram
 ```mermaid
 graph TD
     Rust[Rust Core] -->|alarms:changed| Event[Event System]
-    
+
     Event --> UI[TypeScript UI]
     Event --> AlarmMgr[alarm-manager]
     Event --> WearSync[wear-sync<br/>Android only]
-    
+
     UI --> ReactState[React State Update]
     AlarmMgr --> Android[Android AlarmManager]
     AlarmMgr --> Desktop[Desktop Notifications]
     WearSync --> DataLayer[Wear Data Layer]
-    
+
     style Rust fill:#99ccff
     style Event fill:#ffcc99
 ```
@@ -191,8 +191,8 @@ graph TD
 
 ```typescript
 interface AlarmsChangedEvent {
-    event: "alarms:changed";
-    payload: AlarmRecord[];  // Complete list of all alarms
+	event: 'alarms:changed';
+	payload: AlarmRecord[]; // Complete list of all alarms
 }
 ```
 
@@ -221,39 +221,39 @@ sequenceDiagram
     User->>UI: Taps "Save"
     UI->>Service: saveAlarm(input)
     Service->>Rust: invoke('save_alarm', {alarm})
-    
+
     Rust->>Rust: Validate input
     Rust->>Sched: calculate_next_trigger()
     Sched-->>Rust: 1737885420000 (7:17 AM tomorrow)
-    
+
     Rust->>DB: INSERT/UPDATE alarm
     DB-->>Rust: Saved ✓
-    
+
     Rust->>Events: emit("alarms:changed", alarms)
-    
+
     par Event Listeners (Concurrent)
         Events->>UI: alarms:changed event
         Events->>AlarmMgr: alarms:changed event
         Events->>WearSync: alarms:changed event
     end
-    
+
     UI->>UI: setAlarms(payload)
     UI-->>User: Shows updated list
-    
+
     AlarmMgr->>AlarmMgr: schedule_alarm(7:17 AM)
-    
+
     alt Android
         AlarmMgr->>Android: AlarmManager.setAlarmClock()
         AlarmMgr->>Android: SharedPreferences.save()
     else Desktop
         AlarmMgr->>Desktop: Schedule local notification
     end
-    
+
     alt Android
         WearSync->>DataLayer: putDataItem("/threshold/state/alarms")
         DataLayer-->>Watch: DataItem delivered
     end
-    
+
     Service-->>UI: AlarmRecord
 ```
 
@@ -275,22 +275,22 @@ sequenceDiagram
 
     User->>Toggle: Swipes OFF
     Toggle->>Rust: invoke('toggle_alarm', {id: 1, enabled: false})
-    
+
     Rust->>DB: Load alarm #1
     DB-->>Rust: AlarmRecord
-    
+
     Rust->>Rust: Set enabled = false
     Rust->>Rust: Set next_trigger = null
-    
+
     Rust->>DB: UPDATE alarm #1
     DB-->>Rust: Updated ✓
-    
+
     Rust->>Events: emit("alarms:changed")
     Events->>Toggle: Event
     Events->>AlarmMgr: Event
-    
+
     Toggle->>Toggle: Switch shows OFF
-    
+
     AlarmMgr->>AlarmMgr: handle_alarms_changed()
     AlarmMgr->>Android: AlarmManager.cancel(id: 1)
     AlarmMgr->>Android: SharedPreferences.remove(id: 1)
@@ -310,21 +310,21 @@ sequenceDiagram
 
     User->>Watch: Taps toggle
     Watch->>WearSync: MessageClient.send("/cmd/alarm_set_enabled", {id: 1, enabled: true})
-    
+
     WearSync->>Rust: invoke('toggle_alarm', {id: 1, enabled: true})
-    
+
     Rust->>Rust: Load, update, save alarm
     Rust->>Events: emit("alarms:changed")
-    
+
     par Event Broadcast
         Events->>WearSync: alarms:changed
         Events->>AlarmMgr: alarms:changed
     end
-    
+
     WearSync->>DataLayer: putDataItem (updated state)
     DataLayer-->>Watch: New state delivered
     Watch->>Watch: Toggle shows ON ✓
-    
+
     AlarmMgr->>Android: AlarmManager.setAlarmClock()
 ```
 
@@ -361,14 +361,14 @@ graph TB
     Events -->|alarms:changed| Listener
     Listener -->|Android only| Dispatch
     Dispatch -->|JNI call| AlarmUtils
-    
+
     AlarmUtils -->|Save metadata| SharedPrefs
     AlarmUtils -->|setAlarmClock| AlarmMgrAPI
-    
+
     AlarmMgrAPI -.->|Fires at trigger time| AlarmReceiver
     AlarmReceiver -->|startForegroundService| RingingService
     RingingService -->|Launch app| Tauri[Tauri App]
-    
+
     style Coordinator fill:#99ccff
     style AlarmUtils fill:#ffcc99
 ```
@@ -388,7 +388,7 @@ sequenceDiagram
 
     System->>Receiver: onReceive(ALARM_TRIGGER)
     Receiver->>Receiver: Extract alarm_id, sound_uri
-    
+
     Receiver->>Service: startForegroundService(intent)
     Service->>Service: onCreate()
     Service->>Service: startForeground(notification)
@@ -396,19 +396,19 @@ sequenceDiagram
     Service->>Service: Request Audio Focus
     Service->>Service: Start MediaPlayer (sound)
     Service->>Service: Start Vibration
-    
+
     Service->>App: Launch via deep link
     App->>UI: Navigate to /ringing/:id
-    
+
     UI-->>User: Full screen ringing UI
-    
+
     Note over Service: Sound playing, vibrating
-    
+
     User->>UI: Taps "Dismiss"
     UI->>Rust: invoke('dismiss_alarm', {id})
     Rust->>Rust: Recalculate next occurrence
     Rust->>Events: emit("alarms:changed")
-    
+
     UI->>Service: Stop ringing (via intent)
     Service->>Service: Stop MediaPlayer
     Service->>Service: Stop Vibration
@@ -430,15 +430,15 @@ graph LR
     end
 
     EventListener -->|On every alarms:changed| Cache
-    
+
     Cache -->|alarm_1| Trigger1[1737885420000]
     Cache -->|alarm_sound_1| Sound1[content://media/28]
     Cache -->|alarm_2| Trigger2[1737892340000]
     Cache -->|alarm_sound_2| Sound2[null]
-    
+
     BootReceiver[BootReceiver] -->|Read on boot| Cache
     BootReceiver -->|Reschedule| AlarmManager[Android AlarmManager]
-    
+
     style Cache fill:#ffffcc
 ```
 
@@ -458,18 +458,18 @@ sequenceDiagram
 
     Rust->>Events: emit("alarms:changed")
     Events->>AlarmMgr: alarms:changed event
-    
+
     AlarmMgr->>AlarmMgr: handle_alarms_changed()
-    
+
     loop For each enabled alarm
         AlarmMgr->>Scheduler: schedule_notification(trigger_time, alarm_id)
     end
-    
+
     Note over Scheduler: Waits until trigger time
-    
+
     Scheduler->>System: show_notification("Wake up!")
     System-->>User: Notification banner
-    
+
     User->>System: Clicks notification
     System->>App: Launch/focus app
     App->>UI: Navigate to /ringing/:id
@@ -484,23 +484,23 @@ graph TB
     end
 
     EventListener -->|Platform dispatch| Choice{Platform?}
-    
+
     Choice -->|Android| AndroidPath[Android Implementation]
     Choice -->|Desktop| DesktopPath[Desktop Implementation]
-    
+
     subgraph "Android Path"
         AndroidPath --> AlarmManager[AlarmManager API]
         AndroidPath --> SharedPrefs[(SharedPreferences)]
         AndroidPath --> Foreground[Foreground Service]
         Foreground -.->|Wakes device| Device[Device from Doze]
     end
-    
+
     subgraph "Desktop Path"
         DesktopPath --> LocalSched[Local Timer/Scheduler]
         DesktopPath --> SystemNotif[System Notifications]
         LocalSched -.->|No wake guarantee| NoWake[Device stays asleep]
     end
-    
+
     style AndroidPath fill:#a8e6cf
     style DesktopPath fill:#ffd3b6
 ```
@@ -522,15 +522,15 @@ sequenceDiagram
 
     Rust->>Events: emit("alarms:changed", alarms)
     Events->>WearSync: alarms:changed event
-    
+
     WearSync->>WearSync: Sort alarms by next_trigger
     WearSync->>WearSync: Build AlarmState JSON
-    
+
     WearSync->>DataClient: putDataItem("/threshold/state/alarms")
     DataClient->>DataLayer: Sync to watch
-    
+
     Note over DataLayer: Automatic sync<br/>~1-2 seconds
-    
+
     DataLayer->>Watch: onDataChanged(DataItem)
     Watch->>Watch: Parse AlarmState
     Watch->>Watch: Update UI
@@ -551,16 +551,16 @@ sequenceDiagram
 
     User->>Watch: Long press alarm to delete
     Watch->>MessageClient: sendMessage("/cmd/alarm_delete", {id: 1})
-    
+
     Note over MessageClient: Message travels<br/>phone-watch link
-    
+
     MessageClient->>WearSync: onMessageReceived(event)
     WearSync->>WearSync: Parse message payload
     WearSync->>Rust: invoke('delete_alarm', {id: 1})
-    
+
     Rust->>Rust: Delete from SQLite
     Rust->>Events: emit("alarms:changed")
-    
+
     Events->>WearSync: alarms:changed event
     WearSync->>DataLayer: putDataItem (updated state)
     DataLayer-->>Watch: DataItem delivered
@@ -572,21 +572,21 @@ sequenceDiagram
 ```mermaid
 graph LR
     Watch[Wear OS App]
-    
+
     Watch -->|/cmd/alarm_set_enabled| Toggle[Toggle Alarm]
     Watch -->|/cmd/alarm_delete| Delete[Delete Alarm]
     Watch -->|/cmd/alarm_create| Create[Create Alarm<br/>Future]
     Watch -->|/cmd/pick_mood| Mood[Pick Mood<br/>Ritual Mode]
-    
+
     Toggle --> Rust[Rust Core]
     Delete --> Rust
     Create --> Rust
     Mood --> Rust
-    
+
     Rust -->|alarms:changed| Event[Event System]
     Event -->|State update| DataLayer[Data Layer]
     DataLayer --> Watch
-    
+
     style Watch fill:#ffcc99
     style Rust fill:#99ccff
 ```
@@ -613,12 +613,12 @@ sequenceDiagram
 
     Device->>System: Device boots
     System->>BootReceiver: BOOT_COMPLETED broadcast
-    
+
     BootReceiver->>SharedPrefs: Read all alarm_* keys
     SharedPrefs-->>BootReceiver: alarm_1: 1737885420000<br/>alarm_sound_1: "content://..."<br/>alarm_2: 1737892340000
-    
+
     BootReceiver->>BootReceiver: Current time: 1737880000000
-    
+
     loop For each cached alarm
         alt trigger_time > current_time
             BootReceiver->>AlarmUtils: scheduleAlarm(id, trigger, sound)
@@ -627,9 +627,9 @@ sequenceDiagram
             BootReceiver->>BootReceiver: Skip (past alarm)
         end
     end
-    
+
     Note over BootReceiver: App NOT launched<br/>Uses cached data only
-    
+
     alt User later opens app
     User->>App: Launch Threshold
         App->>Rust: Initialize, load from SQLite
@@ -643,27 +643,27 @@ sequenceDiagram
 ```mermaid
 graph TB
     Problem[Problem: Boot Recovery]
-    
+
     Problem --> Option1{Option 1:<br/>Launch app on boot}
     Problem --> Option2{Option 2:<br/>SharedPreferences cache}
-    
+
     Option1 --> Launch[App starts in background]
     Launch --> LoadDB[Load SQLite]
     LoadDB --> Fail1[❌ Restricted on Android 12+]
     LoadDB --> Fail2[❌ Slow user boot]
     LoadDB --> Fail3[❌ Not guaranteed]
-    
+
     Option2 --> Cache[Cache minimal data]
     Cache --> Read[BootReceiver reads cache]
     Read --> Schedule[Reschedule alarms]
     Schedule --> Success1[✅ Fast]
     Schedule --> Success2[✅ Reliable]
     Schedule --> Success3[✅ No app launch needed]
-    
+
     Success1 --> Validate[App validates later]
     Success2 --> Validate
     Success3 --> Validate
-    
+
     style Success1 fill:#a8e6cf
     style Success2 fill:#a8e6cf
     style Success3 fill:#a8e6cf
@@ -708,7 +708,7 @@ graph TB
         C4[✅ Event-Driven Architecture]
         C5[✅ TypeScript UI]
     end
-    
+
     style Android fill:#a8e6cf
     style Desktop fill:#ffd3b6
     style Common fill:#dfe6e9
@@ -732,7 +732,7 @@ graph TB
         AndroidPlugin --> AlarmMgr[AlarmManager]
         AndroidPlugin --> SharedPrefs[(SharedPreferences)]
         AndroidPlugin --> Foreground[Foreground Service]
-        
+
         Events -->|alarms:changed| WearPlugin[wear-sync<br/>Android only]
         WearPlugin --> DataLayer[Wear Data Layer]
         DataLayer <--> Watch[Wear OS App]
@@ -771,38 +771,38 @@ sequenceDiagram
     User->>UI: Opens app
     User->>UI: Taps "+" to add alarm
     UI->>UI: Navigate to /edit
-    
+
     User->>UI: Sets window: 7:00 to 7:30
     User->>UI: Selects days: Mon to Fri
     User->>UI: Taps "Save"
-    
+
     UI->>Rust: invoke('save_alarm', input)
-    
+
     Rust->>Rust: Validate input
     Rust->>Rust: calculate_next_trigger()
     Note over Rust: Random: 7:17 AM tomorrow
-    
+
     Rust->>DB: INSERT alarm
     DB-->>Rust: id: 1
-    
+
     Rust->>Events: emit("alarms:changed", [alarm])
-    
+
     par Event Handling
         Events->>UI: Event
         Events->>AlarmMgr: Event
         Events->>WearSync: Event
     end
-    
+
     UI->>UI: Navigate to /home
     UI->>UI: Show alarm in list
-    
+
     AlarmMgr->>Android: AlarmManager.setAlarmClock(7:17 AM)
     AlarmMgr->>Android: SharedPrefs.save({id:1, trigger:...})
-    
+
     WearSync->>DataLayer: putDataItem("/threshold/state/alarms")
     DataLayer-->>Watch: Sync alarm list
     Watch->>Watch: Update UI
-    
+
     Note over Android: Tomorrow at 7:17 AM alarm will fire
     Note over Watch: Alarm visible on watch
 ```
@@ -822,39 +822,39 @@ sequenceDiagram
     participant User
 
     Note over Android: 7:17 AM - Trigger time!
-    
+
     Android->>Receiver: ALARM_TRIGGER broadcast
     Receiver->>Service: startForegroundService()
-    
+
     Service->>Service: Show foreground notification
     Service->>Service: Acquire WakeLock
     Service->>Service: Play sound
     Service->>Service: Vibrate
-    
+
     Service->>App: Launch via deep link
     App->>UI: Navigate to /ringing/1
     UI-->>User: Full screen ringing UI
-    
+
     Note over Service,User: Sound playing & vibrating
-    
+
     User->>UI: Swipes "Dismiss"
     UI->>Rust: invoke('dismiss_alarm', {id: 1})
-    
+
     Rust->>Rust: Load alarm #1
     Rust->>Rust: Recalculate next trigger
     Note over Rust: Next: 7:22 AM tomorrow<br/>(new random time)
-    
+
     Rust->>DB: UPDATE alarm set next_trigger
     Rust->>Events: emit("alarms:changed")
-    
+
     Events->>UI: Event
     UI->>UI: Navigate to /home
     UI->>UI: Show updated "Tomorrow 7:22"
-    
+
     Events->>AlarmMgr: Event
     AlarmMgr->>Android: AlarmManager.setAlarmClock(7:22 AM)
     AlarmMgr->>Android: SharedPrefs.update({trigger: 7:22})
-    
+
     UI->>Service: Stop ringing intent
     Service->>Service: Stop sound
     Service->>Service: Stop vibration
@@ -880,30 +880,30 @@ sequenceDiagram
     User->>Watch: Taps toggle switch
     Watch->>Watch: Optimistic UI update
     Watch->>Messages: sendMessage("/cmd/alarm_set_enabled", {id:1, enabled:false})
-    
+
     Note over Messages: Message travels to phone
-    
+
     Messages->>WearSync: onMessageReceived()
     WearSync->>Rust: invoke('toggle_alarm', {id:1, enabled:false})
-    
+
     Rust->>DB: UPDATE alarm set enabled=false, next_trigger=null
     Rust->>Events: emit("alarms:changed")
-    
+
     par Event Propagation
         Events->>UI: Event
         Events->>AlarmMgr: Event
         Events->>WearSync: Event
     end
-    
+
     UI->>UI: Toggle shows OFF
-    
+
     AlarmMgr->>Android: AlarmManager.cancel(id:1)
     AlarmMgr->>Android: SharedPrefs.remove(id:1)
-    
+
     WearSync->>DataLayer: putDataItem (updated state)
     DataLayer-->>Watch: DataItem sync
     Watch->>Watch: Confirm toggle OFF ✓
-    
+
     Note over Watch,UI: Total roundtrip: ~2 seconds
 ```
 
@@ -917,22 +917,22 @@ sequenceDiagram
 graph TB
     Rust[Rust Core]
     Events[Event System]
-    
+
     Rust -->|emit| Events
-    
+
     Events --> AlarmMgr[alarm-manager Plugin]
     Events --> WearSync[wear-sync Plugin]
     Events --> UI[TypeScript UI]
-    
+
     AlarmMgr -.->|❌ No direct communication| WearSync
     WearSync -.->|❌ No direct communication| AlarmMgr
-    
+
     AlarmMgr -->|✅ Can call| Rust
     WearSync -->|✅ Can call| Rust
-    
+
     style Rust fill:#99ccff
     style Events fill:#ffcc99
-    
+
     Note1[All coordination<br/>through events]
     Note2[Plugins invoke commands<br/>like normal callers]
 ```
@@ -949,9 +949,9 @@ sequenceDiagram
     Main->>Plugin: init(app)
     Plugin->>App: app.listen("alarms:changed", handler)
     App->>Listener: Register handler
-    
+
     Note over Listener: Listener is now registered
-    
+
     loop On every emit
         Rust->>App: emit("alarms:changed", payload)
         App->>Listener: Call handler(event)
@@ -972,15 +972,15 @@ sequenceDiagram
     participant DB as SQLite
 
     UI->>Rust: invoke('save_alarm', invalid_input)
-    
+
     Rust->>Rust: Validate input
     Note over Rust: Validation fails:<br/>window_end <= window_start
-    
+
     Rust-->>UI: Err("Window end must be after start")
-    
+
     UI->>UI: Show error toast
     UI-->>User: "Window end must be after start"
-    
+
     Note over User: User corrects input and retries
 ```
 
@@ -995,19 +995,19 @@ sequenceDiagram
     participant UI as TypeScript UI
 
     Rust->>Events: emit("alarms:changed", alarms)
-    
+
     par Concurrent Delivery
         Events->>Plugin1: alarms:changed
         Events->>Plugin2: alarms:changed
         Events->>UI: alarms:changed
     end
-    
+
     Plugin1->>Plugin1: Process event
     Plugin1--xPlugin1: Error! (e.g., JNI crash)
-    
+
     Plugin2->>Plugin2: Process event ✓
     UI->>UI: Update state ✓
-    
+
     Note over Plugin1: Error isolated<br/>Doesn't affect others
     Note over Plugin2,UI: Continue working normally
 ```
@@ -1025,7 +1025,7 @@ graph TB
     Tokio[Tokio Async Runtime]
     Command[Command Handler]
     DB[SQLite]
-    
+
     UI -->|invoke| IPC
     IPC -->|Spawn task| Tokio
     Tokio --> Command
@@ -1034,7 +1034,7 @@ graph TB
     Command -->|Result| Tokio
     Tokio -->|Serialize| IPC
     IPC -->|Promise resolve| UI
-    
+
     style Tokio fill:#ffcc99
     style UI fill:#99ff99
 ```
@@ -1046,13 +1046,13 @@ graph LR
     Command[Command Handler]
     Emit[app.emit]
     Listeners[All Listeners]
-    
+
     Command -->|Synchronous call| Emit
     Emit -->|Broadcast immediately| Listeners
     Emit -->|Returns immediately| Command
-    
+
     Note1["Events do not wait<br/>for listener completion"]
-    
+
     style Emit fill:#ffcc99
 ```
 
@@ -1065,24 +1065,24 @@ graph LR
 ```mermaid
 graph TB
     SQLite[(SQLite Database)]
-    
+
     SQLite -->|emit event| Event[Event System]
-    
+
     Event --> UI[TypeScript UI]
     Event --> AlarmMgr[alarm-manager]
     Event --> WearSync[wear-sync]
-    
+
     UI -->|invoke command| Rust[Rust Core]
     WearSync -->|invoke command| Rust
-    
+
     Rust -->|Read/Write| SQLite
-    
+
     AlarmMgr -.->|Cached metadata| SharedPrefs[(SharedPreferences)]
-    
+
     Note1[SQLite is source of truth]
     Note2[SharedPrefs is cache only]
     Note3[All writes go through Rust]
-    
+
     style SQLite fill:#ffffcc
 ```
 
@@ -1103,21 +1103,21 @@ sequenceDiagram
     Boot->>Cache: Read cached alarms
     Cache-->>Boot: {id:1, trigger:...}
     Boot->>Android: Reschedule from cache
-    
+
     Note over Boot,Android: Alarms restored from cache
-    
+
     User->>App: Launch app (later)
     App->>Rust: Initialize
     Rust->>DB: Load all alarms
     DB-->>Rust: [AlarmRecord, ...]
-    
+
     Rust->>Events: emit("alarms:changed")
     Events->>AlarmMgr: Resync from source of truth
-    
+
     AlarmMgr->>AlarmMgr: Compare DB vs. cache
     AlarmMgr->>Cache: Update cache to match DB
     AlarmMgr->>Android: Reschedule if needed
-    
+
     Note over AlarmMgr,Cache: Cache validated and synced
 ```
 
@@ -1160,33 +1160,33 @@ graph TB
 
     User -->|Interact| UI
     User -->|Interact| Watch
-    
+
     UI -->|invoke commands| Commands
     Watch -->|send messages| WearSync
-    
+
     Commands --> Coordinator
     Coordinator --> Scheduler
     Coordinator --> DB
     Coordinator --> Events
-    
+
     Events --> UI
     Events --> AlarmMgr
     Events --> WearSync
-    
+
     AlarmMgr -->|Android| AlarmAPI
     AlarmMgr -->|Android| SharedPrefs
     AlarmMgr -->|Android| ForegroundSvc
     AlarmMgr -->|Desktop| LocalTimer
     AlarmMgr -->|Desktop| SystemNotif
-    
+
     WearSync --> DataLayer
     DataLayer <--> Watch
-    
+
     AlarmAPI -.->|Fires| ForegroundSvc
     ForegroundSvc -.->|Launches| UI
-    
+
     SharedPrefs -.->|Boot recovery| AlarmAPI
-    
+
     style Coordinator fill:#99ccff
     style Scheduler fill:#ff9999
     style DB fill:#ffffcc
@@ -1221,26 +1221,31 @@ graph TB
 ## Key Takeaways
 
 ### 1. **Command → Event Pattern**
+
 - Commands are **synchronous requests** (TypeScript → Rust)
 - Events are **asynchronous broadcasts** (Rust → Everyone)
 - Plugins never call each other directly
 
 ### 2. **Single Source of Truth**
+
 - SQLite is the source of truth
 - SharedPreferences is a **cache** for boot recovery only
 - All writes go through Rust Core
 
 ### 3. **Platform Abstraction**
+
 - alarm-manager has Android and Desktop implementations
 - Same event, different platform behaviours
 - wear-sync is Android-only
 
 ### 4. **Event-Driven Coordination**
+
 - Rust doesn't know about plugins
 - Plugins don't know about each other
 - Events coordinate everything
 
 ### 5. **Reliability Mechanisms**
+
 - Android: AlarmManager + SharedPreferences + Foreground Service
 - Desktop: Best-effort local scheduler + system notifications
 
@@ -1253,6 +1258,7 @@ graph TB
 **Status:** Production Ready
 
 **Next Steps:**
+
 - Use these diagrams during implementation
 - Reference specific flows when debugging
 - Update diagrams if architecture changes
@@ -1260,6 +1266,7 @@ graph TB
 ---
 
 **All diagrams are Mermaid-compatible and can be rendered in:**
+
 - GitHub Markdown
 - VS Code (with Mermaid extension)
 - Documentation sites (MkDocs, Docusaurus, etc.)

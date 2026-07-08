@@ -3,7 +3,14 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-import { registerActionTypes, onAction, Schedule, cancel, removeActive, sendNotification } from '@tauri-apps/plugin-notification';
+import {
+	registerActionTypes,
+	onAction,
+	Schedule,
+	cancel,
+	removeActive,
+	sendNotification,
+} from '@tauri-apps/plugin-notification';
 import { emit, listen } from '@tauri-apps/api/event';
 import { AlarmMode } from '@threshold/core/types';
 import type { AlarmRecord } from '../types/alarm';
@@ -238,7 +245,9 @@ export class AlarmNotificationService {
 
 		await onAction(async (notification) => {
 			const parsed = this.parseActionPayload(notification);
-			console.log(`[AlarmNotifications] Action performed: ${this.serialiseForLog(parsed.diagnosticPayload)}`);
+			console.log(
+				`[AlarmNotifications] Action performed: ${this.serialiseForLog(parsed.diagnosticPayload)}`,
+			);
 
 			if (!parsed.actionTypeId || !parsed.actionId) {
 				console.warn(
@@ -268,13 +277,19 @@ export class AlarmNotificationService {
 		try {
 			await cancel([notificationId]);
 		} catch (e) {
-			console.warn(`[AlarmNotifications] Failed to cancel pending upcoming notification ${notificationId}`, e);
+			console.warn(
+				`[AlarmNotifications] Failed to cancel pending upcoming notification ${notificationId}`,
+				e,
+			);
 		}
 
 		try {
 			await removeActive([{ id: notificationId }]);
 		} catch (e) {
-			console.warn(`[AlarmNotifications] Failed to clear active upcoming notification ${notificationId}`, e);
+			console.warn(
+				`[AlarmNotifications] Failed to clear active upcoming notification ${notificationId}`,
+				e,
+			);
 		}
 	}
 
@@ -297,7 +312,10 @@ export class AlarmNotificationService {
 				schedule: shouldSendImmediately ? undefined : Schedule.at(new Date(notifyAt), false, true),
 			});
 		} catch (e) {
-			console.error(`[AlarmNotifications] Failed to schedule upcoming notification for alarm ${alarm.id}`, e);
+			console.error(
+				`[AlarmNotifications] Failed to schedule upcoming notification for alarm ${alarm.id}`,
+				e,
+			);
 		}
 	}
 }

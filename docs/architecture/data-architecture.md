@@ -13,6 +13,7 @@
 This document defines data models, storage strategies, and synchronisation protocols for Threshold's Rust-core architecture.
 
 **Key Principles:**
+
 - SQLite (via Rust) is the single source of truth
 - Events propagate state changes to all listeners
 - SharedPreferences provides boot recovery cache
@@ -28,6 +29,7 @@ This document defines data models, storage strategies, and synchronisation proto
 **Purpose:** Complete alarm configuration shared across all layers
 
 **Rust Definition:**
+
 ```rust
 // src-tauri/src/alarm/models.rs
 use serde::{Deserialize, Serialize};
@@ -57,24 +59,26 @@ pub enum AlarmMode {
 ```
 
 **TypeScript Definition:**
+
 ```typescript
 // apps/threshold/src/types/alarm.ts
 export interface AlarmRecord {
-    id: number;
-    label: string | null;
-    enabled: boolean;
-    mode: 'FIXED' | 'WINDOW';
-    fixedTime: string | null;
-    windowStart: string | null;
-    windowEnd: string | null;
-    activeDays: number[];
-    nextTrigger: number | null;
-    soundUri: string | null;
-    soundTitle: string | null;
+	id: number;
+	label: string | null;
+	enabled: boolean;
+	mode: 'FIXED' | 'WINDOW';
+	fixedTime: string | null;
+	windowStart: string | null;
+	windowEnd: string | null;
+	activeDays: number[];
+	nextTrigger: number | null;
+	soundUri: string | null;
+	soundTitle: string | null;
 }
 ```
 
 **Kotlin/JSON (Wear Sync):**
+
 ```kotlin
 @Serializable
 data class AlarmRecord(
@@ -93,19 +97,20 @@ data class AlarmRecord(
 ```
 
 **JSON Example (Window Alarm):**
+
 ```json
 {
-  "id": 1,
-  "label": "Wake Window",
-  "enabled": true,
-  "mode": "WINDOW",
-  "fixedTime": null,
-  "windowStart": "07:00",
-  "windowEnd": "07:30",
-  "activeDays": [1, 2, 3, 4, 5],
-  "nextTrigger": 1737885420000,
-  "soundUri": "content://media/internal/audio/media/28",
-  "soundTitle": "Argon"
+	"id": 1,
+	"label": "Wake Window",
+	"enabled": true,
+	"mode": "WINDOW",
+	"fixedTime": null,
+	"windowStart": "07:00",
+	"windowEnd": "07:30",
+	"activeDays": [1, 2, 3, 4, 5],
+	"nextTrigger": 1737885420000,
+	"soundUri": "content://media/internal/audio/media/28",
+	"soundTitle": "Argon"
 }
 ```
 
@@ -116,6 +121,7 @@ data class AlarmRecord(
 **Purpose:** Data structure for creating/updating alarms from UI
 
 **Rust Definition:**
+
 ```rust
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -134,18 +140,19 @@ pub struct AlarmInput {
 ```
 
 **TypeScript Definition:**
+
 ```typescript
 export interface AlarmInput {
-    id?: number;
-    label?: string | null;
-    enabled: boolean;
-    mode: 'FIXED' | 'WINDOW';
-    fixedTime?: string | null;
-    windowStart?: string | null;
-    windowEnd?: string | null;
-    activeDays: number[];
-    soundUri?: string | null;
-    soundTitle?: string | null;
+	id?: number;
+	label?: string | null;
+	enabled: boolean;
+	mode: 'FIXED' | 'WINDOW';
+	fixedTime?: string | null;
+	windowStart?: string | null;
+	windowEnd?: string | null;
+	activeDays: number[];
+	soundUri?: string | null;
+	soundTitle?: string | null;
 }
 ```
 
@@ -158,6 +165,7 @@ export interface AlarmInput {
 **Purpose:** Complete state snapshot published to watch
 
 **Kotlin Definition:**
+
 ```kotlin
 @Serializable
 data class AlarmState(
@@ -167,24 +175,25 @@ data class AlarmState(
 ```
 
 **JSON Example:**
+
 ```json
 {
-  "updatedAtMs": 1737885420000,
-  "alarms": [
-    {
-      "id": 1,
-      "label": "Morning",
-      "enabled": true,
-      "mode": "FIXED",
-      "fixedTime": "07:00",
-      "windowStart": null,
-      "windowEnd": null,
-      "activeDays": [1, 2, 3, 4, 5],
-      "nextTrigger": 1737885420000,
-      "soundUri": null,
-      "soundTitle": null
-    }
-  ]
+	"updatedAtMs": 1737885420000,
+	"alarms": [
+		{
+			"id": 1,
+			"label": "Morning",
+			"enabled": true,
+			"mode": "FIXED",
+			"fixedTime": "07:00",
+			"windowStart": null,
+			"windowEnd": null,
+			"activeDays": [1, 2, 3, 4, 5],
+			"nextTrigger": 1737885420000,
+			"soundUri": null,
+			"soundTitle": null
+		}
+	]
 }
 ```
 
@@ -201,6 +210,7 @@ data class AlarmState(
 **Managed By:** Rust (`src-tauri/src/alarm/database.rs`)
 
 **Schema:**
+
 ```sql
 CREATE TABLE IF NOT EXISTS alarms (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -218,11 +228,13 @@ CREATE TABLE IF NOT EXISTS alarms (
 ```
 
 **Access Pattern:**
+
 - **Rust:** Direct SQL queries via `tauri-plugin-sql`
 - **TypeScript:** Via Rust commands (`get_alarms`, `save_alarm`, etc.)
 - **Plugins:** Via `alarms:changed` events (read-only)
 
 **Migrations:**
+
 ```rust
 pub fn migrations() -> Vec<Migration> {
     vec![
@@ -247,6 +259,7 @@ pub fn migrations() -> Vec<Migration> {
 **Purpose:** Survive device reboots when app isn't running
 
 **Keys:**
+
 ```
 alarm_1          → 1737885420000 (trigger timestamp)
 alarm_sound_1    → "content://media/28" (optional)
@@ -273,6 +286,7 @@ alarm_sound_2    → null
 **Write Trigger:** Whenever `alarms:changed` event fires (Android only)
 
 **Data Structure:**
+
 ```kotlin
 PutDataMapRequest.create("/threshold/state/alarms").apply {
     dataMap.putString("state_json", alarmStateJson)
@@ -295,11 +309,13 @@ PutDataMapRequest.create("/threshold/state/alarms").apply {
 **Payload:** `Vec<AlarmRecord>` serialized as JSON
 
 **Listeners:**
+
 - TypeScript UI (updates React state)
 - alarm-manager plugin (schedules native alarms)
 - wear-sync plugin (publishes to Data Layer)
 
 **Example Emission:**
+
 ```rust
 // src-tauri/src/alarm/mod.rs
 impl AlarmCoordinator {
@@ -312,16 +328,18 @@ impl AlarmCoordinator {
 ```
 
 **Example Listener (TypeScript):**
+
 ```typescript
 useEffect(() => {
-    const unlisten = listen<AlarmRecord[]>('alarms:changed', (event) => {
-        setAlarms(event.payload);
-    });
-    return () => unlisten.then(fn => fn());
+	const unlisten = listen<AlarmRecord[]>('alarms:changed', (event) => {
+		setAlarms(event.payload);
+	});
+	return () => unlisten.then((fn) => fn());
 }, []);
 ```
 
 **Example Listener (Rust Plugin):**
+
 ```rust
 app.listen("alarms:changed", move |event| {
     let alarms: Vec<AlarmRecord> = serde_json::from_str(event.payload()).unwrap();
@@ -342,6 +360,7 @@ app.listen("alarms:changed", move |event| {
 **Trigger:** `alarms:changed` event
 
 **Flow:**
+
 ```
 1. Rust emits `alarms:changed` event
 2. wear-sync plugin receives event
@@ -352,6 +371,7 @@ app.listen("alarms:changed", move |event| {
 ```
 
 **Implementation:**
+
 ```kotlin
 // plugins/wear-sync/android/WearSyncPlugin.kt (publishToWatch command)
 fun publishState(alarms: List<AlarmRecord>) {
@@ -359,14 +379,14 @@ fun publishState(alarms: List<AlarmRecord>) {
         updatedAtMs = System.currentTimeMillis(),
         alarms = alarms.sortedBy { it.nextTrigger ?: Long.MAX_VALUE }
     )
-    
+
     val json = Json.encodeToString(state)
-    
+
     val request = PutDataMapRequest.create("/threshold/state/alarms").apply {
         dataMap.putString("state_json", json)
         dataMap.putLong("timestamp", state.updatedAtMs)
     }
-    
+
     dataClient.putDataItem(request.asPutDataRequest())
 }
 ```
@@ -378,6 +398,7 @@ fun publishState(alarms: List<AlarmRecord>) {
 **Protocol:** Wear Message API (MessageClient)
 
 **Paths:**
+
 - `/threshold/cmd/alarm_set_enabled` - Toggle alarm
 - `/threshold/cmd/alarm_delete` - Delete alarm
 - `/threshold/cmd/alarm_create` (future) - Create alarm
@@ -385,6 +406,7 @@ fun publishState(alarms: List<AlarmRecord>) {
 **Trigger:** User action on watch
 
 **Flow:**
+
 ```
 1. User taps toggle on watch
 2. Watch sends message to phone
@@ -397,6 +419,7 @@ fun publishState(alarms: List<AlarmRecord>) {
 ```
 
 **Implementation (Toggle):**
+
 ```kotlin
 // wear-app (watch side)
 suspend fun toggleAlarm(id: Int, enabled: Boolean) {
@@ -404,7 +427,7 @@ suspend fun toggleAlarm(id: Int, enabled: Boolean) {
         "id" to id,
         "enabled" to enabled
     ))
-    
+
     val nodes = messageClient.connectedNodes.await()
     for (node in nodes) {
         messageClient.sendMessage(
@@ -426,7 +449,7 @@ override fun onMessageReceived(event: MessageEvent) {
             )
             val id = (data["id"] as Number).toInt()
             val enabled = data["enabled"] as Boolean
-            
+
             // Call Rust via invoke
             scope.launch {
                 invoke("toggle_alarm", mapOf("id" to id, "enabled" to enabled))
@@ -445,6 +468,7 @@ override fun onMessageReceived(event: MessageEvent) {
 **Problem:** User toggles alarm on watch while phone is offline, then phone comes back online.
 
 **Solution:**
+
 1. Add `updated_at_ms` field to `AlarmRecord` (future enhancement)
 2. When processing Wear command, check timestamp:
    ```rust
@@ -497,6 +521,7 @@ override fun onMessageReceived(event: MessageEvent) {
 ```
 
 **Timeline:**
+
 - T+0ms: User taps "Save"
 - T+10ms: Rust saves to SQLite
 - T+15ms: Event emitted
@@ -546,6 +571,7 @@ override fun onMessageReceived(event: MessageEvent) {
 ```
 
 **Timeline:**
+
 - T+0ms: User taps toggle on watch
 - T+50ms: Message queued
 - T+500ms: Message reaches phone
@@ -592,6 +618,7 @@ Later, when app launches:
 ```
 
 **Why SharedPreferences?**
+
 - BootReceiver can't launch app on some Android versions
 - SharedPreferences survives boot
 - Minimal data (id + timestamp + sound)
@@ -621,7 +648,7 @@ impl AlarmCoordinator {
                 if input.window_start.is_none() || input.window_end.is_none() {
                     return Err("Window alarm requires windowStart and windowEnd".into());
                 }
-                
+
                 // Validate window range
                 let start = NaiveTime::parse_from_str(
                     input.window_start.as_ref().unwrap(),
@@ -631,24 +658,24 @@ impl AlarmCoordinator {
                     input.window_end.as_ref().unwrap(),
                     "%H:%M"
                 )?;
-                
+
                 if end <= start {
                     return Err("Window end must be after start".into());
                 }
             }
         }
-        
+
         // Validate active days
         if input.active_days.is_empty() {
             return Err("At least one day must be selected".into());
         }
-        
+
         for day in &input.active_days {
             if *day < 0 || *day > 6 {
                 return Err("Invalid day of week".into());
             }
         }
-        
+
         // Proceed with save...
     }
 }
@@ -661,25 +688,25 @@ impl AlarmCoordinator {
 ```typescript
 // apps/threshold/src/screens/EditAlarm.tsx
 function validate(): string | null {
-    if (mode === 'FIXED' && !fixedTime) {
-        return 'Please select a time';
-    }
-    
-    if (mode === 'WINDOW') {
-        if (!windowStart || !windowEnd) {
-            return 'Please select start and end times';
-        }
-        
-        if (windowStart >= windowEnd) {
-            return 'End time must be after start time';
-        }
-    }
-    
-    if (selectedDays.length === 0) {
-        return 'Please select at least one day';
-    }
-    
-    return null;
+	if (mode === 'FIXED' && !fixedTime) {
+		return 'Please select a time';
+	}
+
+	if (mode === 'WINDOW') {
+		if (!windowStart || !windowEnd) {
+			return 'Please select start and end times';
+		}
+
+		if (windowStart >= windowEnd) {
+			return 'End time must be after start time';
+		}
+	}
+
+	if (selectedDays.length === 0) {
+		return 'Please select at least one day';
+	}
+
+	return null;
 }
 ```
 
@@ -710,6 +737,7 @@ pub async fn save_alarm(...) {
 **Target:** < 2 seconds roundtrip
 
 **Measurement:**
+
 ```kotlin
 // wear-sync plugin
 val publishStart = System.currentTimeMillis()
@@ -718,6 +746,7 @@ Log.d(TAG, "Publish latency: ${System.currentTimeMillis() - publishStart}ms")
 ```
 
 **Optimization:**
+
 - Don't publish on every event (already done - event is coalesced)
 - Use protobuf instead of JSON (future optimization)
 - Compress large payloads (not needed for <20 alarms)
@@ -750,12 +779,12 @@ pub struct AlarmCoordinator {
 async fn test_save_alarm_emits_event() {
     let app = /* create test app */;
     let coordinator = /* create coordinator */;
-    
+
     let mut events_received = 0;
     app.listen("alarms:changed", move |_| {
         events_received += 1;
     });
-    
+
     let input = AlarmInput {
         enabled: true,
         mode: AlarmMode::Fixed,
@@ -763,9 +792,9 @@ async fn test_save_alarm_emits_event() {
         active_days: vec![1, 2, 3, 4, 5],
         ..Default::default()
     };
-    
+
     coordinator.save_alarm(&app, input).await.unwrap();
-    
+
     assert_eq!(events_received, 1);
 }
 ```
@@ -777,18 +806,20 @@ async fn test_save_alarm_emits_event() {
 **Scenario:** Create alarm on phone, verify watch receives update.
 
 **Setup:**
+
 1. Run phone app with wear-sync enabled
 2. Run watch emulator paired to phone
 3. Create alarm via UI
 4. Check watch app receives DataItem within 2 seconds
 
 **Verification:**
+
 ```kotlin
 // Watch-side test
 @Test
 fun testReceiveAlarmUpdate() = runBlocking {
     val latch = CountDownLatch(1)
-    
+
     dataClient.addListener { dataEvents ->
         for (event in dataEvents) {
             if (event.dataItem.uri.path == "/threshold/state/alarms") {
@@ -796,9 +827,9 @@ fun testReceiveAlarmUpdate() = runBlocking {
             }
         }
     }
-    
+
     // Trigger alarm creation on phone (via adb or manual)
-    
+
     assertTrue(latch.await(5, TimeUnit.SECONDS))
 }
 ```
@@ -812,7 +843,9 @@ fun testReceiveAlarmUpdate() = runBlocking {
 **Example:** Add `vibrate: Boolean` field
 
 **Steps:**
+
 1. Add to Rust model:
+
    ```rust
    pub struct AlarmRecord {
        // ... existing fields
@@ -821,15 +854,17 @@ fun testReceiveAlarmUpdate() = runBlocking {
    ```
 
 2. Create migration:
+
    ```sql
    ALTER TABLE alarms ADD COLUMN vibrate BOOLEAN DEFAULT 1;
    ```
 
 3. Update TypeScript type:
+
    ```typescript
    interface AlarmRecord {
-       // ... existing fields
-       vibrate: boolean;
+   	// ... existing fields
+   	vibrate: boolean;
    }
    ```
 
@@ -842,6 +877,7 @@ fun testReceiveAlarmUpdate() = runBlocking {
 **Example:** Remove `sound_title` (future optimization - fetch on demand)
 
 **Steps:**
+
 1. Mark as deprecated (keep in schema for 2 releases)
 2. Update Rust to make optional:
    ```rust

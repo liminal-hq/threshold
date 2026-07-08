@@ -1,6 +1,10 @@
 import React from 'react';
 import { Card, Typography, Switch, IconButton, Box, Stack } from '@mui/material';
-import { Delete as DeleteIcon, Shuffle as ShuffleIcon, AccessTime as AccessTimeIcon } from '@mui/icons-material';
+import {
+	Delete as DeleteIcon,
+	Shuffle as ShuffleIcon,
+	AccessTime as AccessTimeIcon,
+} from '@mui/icons-material';
 import { AlarmRecord } from '../types/alarm';
 import { format } from 'date-fns';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
@@ -72,17 +76,34 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 					{alarm.label || 'Alarm'}
 				</Typography>
 				<Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5 }}>
-					{alarm.enabled && (
-						alarm.mode === 'WINDOW' ? <ShuffleIcon fontSize="inherit" color="action" /> : <AccessTimeIcon fontSize="inherit" color="action" />
-					)}
+					{alarm.enabled &&
+						(alarm.mode === 'WINDOW' ? (
+							<ShuffleIcon fontSize="inherit" color="action" />
+						) : (
+							<AccessTimeIcon fontSize="inherit" color="action" />
+						))}
 					<Typography variant="caption" color="text.secondary">
 						{nextTriggerDetailed}
 					</Typography>
 				</Stack>
 			</Box>
-			<Box onClick={handleSwitchClick} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} sx={{ display: 'flex', alignItems: 'center' }}>
+			<Box
+				onClick={handleSwitchClick}
+				onMouseDown={(e) => e.stopPropagation()}
+				onTouchStart={(e) => e.stopPropagation()}
+				onPointerDown={(e) => e.stopPropagation()}
+				sx={{ display: 'flex', alignItems: 'center' }}
+			>
 				{!isMobile && (
-					<IconButton onClick={(e) => { e.stopPropagation(); onDelete(); }} aria-label="delete" size="large" sx={{ mr: 1 }}>
+					<IconButton
+						onClick={(e) => {
+							e.stopPropagation();
+							onDelete();
+						}}
+						aria-label="delete"
+						size="large"
+						sx={{ mr: 1 }}
+					>
 						<DeleteIcon />
 					</IconButton>
 				)}
@@ -103,9 +124,5 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 		);
 	}
 
-	return (
-		<Box sx={{ mb: 2 }}>
-			{InnerContent}
-		</Box>
-	);
+	return <Box sx={{ mb: 2 }}>{InnerContent}</Box>;
 };

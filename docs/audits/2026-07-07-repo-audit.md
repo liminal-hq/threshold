@@ -58,7 +58,7 @@ CLAUDE.md (fixed on this branch), CI lint/format checks commented out.
 
 - **Documentation density.** `docs/architecture/event-architecture.md`,
   `flow-diagrams.md`, plugin specs, and PR checklists are unusually thorough. The docs
-  correctly describe the *intended* system — the gaps below are places where code
+  correctly describe the _intended_ system — the gaps below are places where code
   didn't finish catching up.
 
 ---
@@ -74,7 +74,7 @@ alarm dismissed from the notification will not ring the next day** until the use
 the app and touches that alarm. Same applies to the TS `onDismissRinging` handler
 (`AlarmManagerService.ts:172`), which only calls `stopRinging()`.
 
-*Fix:* mirror PR #192's snooze design — a `dismiss-requested` channel event from the
+_Fix:_ mirror PR #192's snooze design — a `dismiss-requested` channel event from the
 service through the plugin, handled in TS by `AlarmService.dismiss(id)` (which already
 recalculates via `calculate_next_trigger_after`). PR #192 adds `ALARM_ID` to the
 dismiss intent but still doesn't consume it; flag in review.
@@ -89,7 +89,7 @@ dismiss intent but still doesn't consume it; flag in review.
   (`AlarmManagerPlugin.kt:214`); the ringing launch path moved to the
   `threshold://ringing/<id>` deep link long ago.
 
-*Fix:* delete the command and its callsite (the deep-link path is the real one), or —
+_Fix:_ delete the command and its callsite (the deep-link path is the real one), or —
 if you want an extras-based fallback — add the permission and set the extra in the
 full-screen intent.
 
@@ -97,9 +97,9 @@ full-screen intent.
 
 `plugins/alarm-manager/src/lib.rs:65` listens for `alarms:changed`, but **nothing emits
 that event anywhere** (TS, Rust, or Kotlin — `docs/architecture/event-architecture.md`
-even says the granular system *replaced* it). Consequences:
+even says the granular system _replaced_ it). Consequences:
 
-- `AlarmManager::update_alarms` (mobile diff logic *and* the desktop implementation)
+- `AlarmManager::update_alarms` (mobile diff logic _and_ the desktop implementation)
   is unreachable, along with the plugin's `scheduled_ids` bookkeeping.
 - `heal_on_launch` (`alarm/mod.rs:362`) re-emits `alarm:scheduled` "to heal the
   SharedPreferences cache" — but no listener for `alarm:scheduled` exists anywhere, so
@@ -108,7 +108,8 @@ even says the granular system *replaced* it). Consequences:
   `alarms:batch:updated`. This works, but it means native schedules only update while
   the webview is alive.
 
-*Fix (pick one, deliberately):*
+_Fix (pick one, deliberately):_
+
 - **Finish the migration:** have the plugin listen to `alarm:scheduled` /
   `alarm:cancelled` (Rust-side), drop `syncNativeAlarms`, and make heal-on-launch
   real. This also removes the webview-alive dependency.
@@ -121,17 +122,17 @@ even says the granular system *replaced* it). Consequences:
 `scheduler.rs:91` returns `Err("Window end must be after start")`, and `EditAlarm.tsx`
 has no window-order validation, so saving a 23:30 → 00:15 alarm shows the generic
 "Failed to save alarm. Please try again." The abandoned TS scheduler
-(`packages/core/src/scheduler.ts`) *and* the archived design doc
+(`packages/core/src/scheduler.ts`) _and_ the archived design doc
 (`docs/archive/ALARM_RINGING_LOGIC_MAIN.md`, "Overnight windows are supported in this
 branch") both handled midnight crossing, including the check-yesterday's-window case.
 
-*Fix:* port the overnight logic (and its tests) into `scheduler.rs`; until then,
+_Fix:_ port the overnight logic (and its tests) into `scheduler.rs`; until then,
 validate in `EditAlarm` with a proper message.
 
 ### 5. The scheduler can't fire inside an already-open window
 
 `scheduler.rs:108` requires `window_start > now`. Enable a 07:00–07:30 alarm at 07:10
-and it schedules *next* occurrence (tomorrow/next week) instead of sampling the
+and it schedules _next_ occurrence (tomorrow/next week) instead of sampling the
 remaining 20 minutes. The legacy TS scheduler handled this (sample from
 `max(now + 30s, windowStart)` with a `MIN_LEAD_SECONDS` floor). Same porting job as #4.
 Also minor: `gen_range(0..window_duration_mins)` can never pick the final minute of the
@@ -142,14 +143,14 @@ window; the TS version's span was inclusive.
 Only `types.ts` is imported from `@threshold/core`; `scheduler.ts` (196 lines, the most
 featureful scheduler in the repo) and `scheduler.test.ts` run green in CI while testing
 nothing that ships. That's actively misleading — a passing "scheduler" suite that
-doesn't cover production scheduling. *Fix:* port the missing behaviour to Rust (#4/#5),
+doesn't cover production scheduling. _Fix:_ port the missing behaviour to Rust (#4/#5),
 then delete `scheduler.ts` + its tests, leaving `@threshold/core` as a types-only
 package (or fold types into the app).
 
 ### 7. theme-utils breaks non-Android mobile builds
 
 `plugins/theme-utils/src/mobile.rs` calls `api.register_android_plugin(...)` without an
-`#[cfg(target_os = "android")]` gate (and its `PLUGIN_IDENTIFIER` const *is* gated, so
+`#[cfg(target_os = "android")]` gate (and its `PLUGIN_IDENTIFIER` const _is_ gated, so
 iOS compilation fails twice over). time-prefs and toast gate correctly; alarm-manager
 and app-management use a different-but-working `api.handle().clone()` fallback.
 Harmless today (no iOS builds) but it's the one plugin that forecloses the option.
@@ -158,7 +159,7 @@ Harmless today (no iOS builds) but it's the one plugin that forecloses the optio
 
 `get_launch_args` (`AlarmManagerPlugin.kt:243`) splits the persisted payload on `"|"`
 and only removes the prefs entry when `parts.size == 2`. An alarm labelled
-`"Gym | Leg day"` (via the `SET_ALARM` intent) fails parsing *and is never cleaned up*,
+`"Gym | Leg day"` (via the `SET_ALARM` intent) fails parsing _and is never cleaned up_,
 so it re-fails on every launch. Use `split("|", limit = 2)` and remove the entry on
 parse failure too. Related nits in `SetAlarmActivity`: `EXTRA_DAYS` ignored, random
 ID from `currentTimeMillis % Int.MAX_VALUE`, and with `EXTRA_SKIP_UI` the temporary
@@ -211,17 +212,17 @@ is missing its licence header.
 
 ### ACL / COMMANDS drift (alarm-manager is the worst)
 
-| Command | `build.rs` COMMANDS | `default.toml` | Invoked from TS | Verdict |
-|---|---|---|---|---|
-| `schedule`, `cancel`, `get_launch_args`, `pick_alarm_sound`, `stop_ringing` | ✅ | ✅ | ✅ | correct |
-| `check_active_alarm` | ✅ | ❌ | ✅ | **broken at runtime** (Bad #2) |
-| `set_alarm_event_handler`, `mark_alarm_pipeline_ready` | ✅ | ❌ | ❌ (Rust-side only) | shouldn't be in COMMANDS at all |
-| `set_snooze_event_handler` (PR #192) | ❌ | ❌ | ❌ | works (Rust-side), confirms the list is vestigial |
+| Command                                                                     | `build.rs` COMMANDS | `default.toml` | Invoked from TS     | Verdict                                           |
+| --------------------------------------------------------------------------- | ------------------- | -------------- | ------------------- | ------------------------------------------------- |
+| `schedule`, `cancel`, `get_launch_args`, `pick_alarm_sound`, `stop_ringing` | ✅                  | ✅             | ✅                  | correct                                           |
+| `check_active_alarm`                                                        | ✅                  | ❌             | ✅                  | **broken at runtime** (Bad #2)                    |
+| `set_alarm_event_handler`, `mark_alarm_pipeline_ready`                      | ✅                  | ❌             | ❌ (Rust-side only) | shouldn't be in COMMANDS at all                   |
+| `set_snooze_event_handler` (PR #192)                                        | ❌                  | ❌             | ❌                  | works (Rust-side), confirms the list is vestigial |
 
 `run_mobile_plugin` bypasses the ACL, so Rust-internal commands don't belong in
 `COMMANDS`. wear-sync's `default.toml` also invents an `allow-event-listeners`
-permission that maps to no command. Decide the convention: *COMMANDS = webview-invokable
-surface only*, and regenerate the autogenerated permission docs.
+permission that maps to no command. Decide the convention: _COMMANDS = webview-invokable
+surface only_, and regenerate the autogenerated permission docs.
 
 ### Mixed command naming across the Kotlin bridge
 
@@ -272,20 +273,20 @@ follow the full upstream template: `guest-js/` + `rollup.config.js` + `package.j
 `dist-js/`, typed npm bindings consumed by the app. Threshold's plugins predate that
 standard:
 
-| Plugin | guest-js | npm pkg | desktop impl | mobile cfg-gating | ACL correct | licence headers |
-|---|---|---|---|---|---|---|
-| alarm-manager | ❌ | ❌ | real (tokio timers) | ✅ (handle fallback) | ❌ (Bad #2) | partial |
-| wear-sync | ❌ (Rust-only surface) | ❌ | no-op | ✅ | odd extras | ✅ mostly |
-| theme-utils | ❌ | ❌ | stub | ❌ **broken** | ✅ | ❌ |
-| time-prefs | ❌ | ❌ | stub | ✅ | ✅ | ❌ |
-| app-management | ❌ | ❌ | ❌ none (mobile-only) | ✅ | ✅ | ❌ |
-| toast | ✅ (no pkg/rollup) | ❌ | error stub | ✅ | ✅ | ❌ |
+| Plugin         | guest-js               | npm pkg | desktop impl          | mobile cfg-gating    | ACL correct | licence headers |
+| -------------- | ---------------------- | ------- | --------------------- | -------------------- | ----------- | --------------- |
+| alarm-manager  | ❌                     | ❌      | real (tokio timers)   | ✅ (handle fallback) | ❌ (Bad #2) | partial         |
+| wear-sync      | ❌ (Rust-only surface) | ❌      | no-op                 | ✅                   | odd extras  | ✅ mostly       |
+| theme-utils    | ❌                     | ❌      | stub                  | ❌ **broken**        | ✅          | ❌              |
+| time-prefs     | ❌                     | ❌      | stub                  | ✅                   | ✅          | ❌              |
+| app-management | ❌                     | ❌      | ❌ none (mobile-only) | ✅                   | ✅          | ❌              |
+| toast          | ✅ (no pkg/rollup)     | ❌      | error stub            | ✅                   | ✅          | ❌              |
 
 Consequences of the missing guest-js layer show up in the app: raw
 `invoke('plugin:x|cmd')` strings are scattered across services, and
-`AlarmManagerService.ts:23` hand-redeclares `ImportedAlarm` with the comment *"Define
+`AlarmManagerService.ts:23` hand-redeclares `ImportedAlarm` with the comment _"Define
 the plugin invoke types manually since we can't import from the plugin in this
-environment"* — that's the template's `guest-js` bindings package solving exactly this.
+environment"_ — that's the template's `guest-js` bindings package solving exactly this.
 
 **Recommendation:** don't retrofit all six at once. When a plugin's surface next
 changes (alarm-manager will, via PR #192), add its `guest-js` bindings + workspace
@@ -317,16 +318,16 @@ here — cosmetic, your call).
 
 ## Open PR review (8)
 
-| PR | Verdict | Notes |
-|---|---|---|
-| **#192** ghost notification + ringing snooze | **Land soon** (after nits) | Directly fixes audit Bad #1-adjacent races: `isAlarmLive` guard in `AlarmReceiver`, absolute `snoozed_until` timestamps (now-anchored vs trigger-anchored), snooze-from-notification channel reusing the wear-sync pattern, TS consumption of `alarm:cancelled`. Review nits: (a) dismiss intent gains `ALARM_ID` but `ACTION_DISMISS` still never dismisses in the DB — Bad #1 survives this PR; (b) `set_snooze_event_handler` not added to `build.rs` COMMANDS — fine functionally, but pick the convention (see ACL drift); (c) snooze `PendingIntent` requestCode 1 shares the multi-alarm collision. |
-| **#190** UI redesign | **Decide: rebase or split** | 4 months stale, +6250/−434 but mergeable. Your working tree still holds an untracked leftover from it (`docs/ui/redesigns/.../temp-review-maybe-delete.md`). Its docs/specs subtree is valuable regardless of the UI outcome — consider landing docs separately if the UI needs rework against #192. |
-| **#178** snooze array hoist | **Close** | The diff is empty (+0/−0) — the change no longer exists against main. |
-| **#168** CI Kotlin tests | **Rebase and land** | Conflicting (AGENTS.md + workflow drift). Valuable coverage, but note it runs plugin tests from `src-tauri/gen/android` (a generated Gradle project) — fragile; prefer the plugins' own `android/` Gradle projects if possible. |
-| **#150** checkImports N+1 | **Close, re-fix fresh** | Written against the pre-Rust-coordinator API (`databaseService.getAllAlarms`), unmergeable. But the bug it targets still exists in today's code: `checkImports` calls `AlarmService.getAll()` inside the import loop (`AlarmManagerService.ts:338`). A 3-line hoist on current main replaces the PR. |
-| **#149** Home sync storage read | **Close or redo small** | Conflicting; `Home.tsx:30` still does a synchronous `localStorage` read per render, so the concern is real but trivial in cost. If redone, skip the added perf-test file. |
-| **#148** async event log export | **Rebase and land** | Mergeable and still correct (`event_logs.rs` is sync I/O in an async command). While touching the file: fix `MAX_EVENT_LOG_BYTES = usize::MAX` (Bad #10) and add the licence header. |
-| **#13** predictive back | **Close; resurrect the idea** | Predates the `apps/window-alarm` → `apps/threshold` rename, based on another long-dead feature branch, conflicting. The `tauri-plugin-predictive-back` design (Kotlin `OnBackAnimationCallback` → events) is worth rebuilding fresh on the current plugin pattern. |
+| PR                                           | Verdict                       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **#192** ghost notification + ringing snooze | **Land soon** (after nits)    | Directly fixes audit Bad #1-adjacent races: `isAlarmLive` guard in `AlarmReceiver`, absolute `snoozed_until` timestamps (now-anchored vs trigger-anchored), snooze-from-notification channel reusing the wear-sync pattern, TS consumption of `alarm:cancelled`. Review nits: (a) dismiss intent gains `ALARM_ID` but `ACTION_DISMISS` still never dismisses in the DB — Bad #1 survives this PR; (b) `set_snooze_event_handler` not added to `build.rs` COMMANDS — fine functionally, but pick the convention (see ACL drift); (c) snooze `PendingIntent` requestCode 1 shares the multi-alarm collision. |
+| **#190** UI redesign                         | **Decide: rebase or split**   | 4 months stale, +6250/−434 but mergeable. Your working tree still holds an untracked leftover from it (`docs/ui/redesigns/.../temp-review-maybe-delete.md`). Its docs/specs subtree is valuable regardless of the UI outcome — consider landing docs separately if the UI needs rework against #192.                                                                                                                                                                                                                                                                                                       |
+| **#178** snooze array hoist                  | **Close**                     | The diff is empty (+0/−0) — the change no longer exists against main.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **#168** CI Kotlin tests                     | **Rebase and land**           | Conflicting (AGENTS.md + workflow drift). Valuable coverage, but note it runs plugin tests from `src-tauri/gen/android` (a generated Gradle project) — fragile; prefer the plugins' own `android/` Gradle projects if possible.                                                                                                                                                                                                                                                                                                                                                                            |
+| **#150** checkImports N+1                    | **Close, re-fix fresh**       | Written against the pre-Rust-coordinator API (`databaseService.getAllAlarms`), unmergeable. But the bug it targets still exists in today's code: `checkImports` calls `AlarmService.getAll()` inside the import loop (`AlarmManagerService.ts:338`). A 3-line hoist on current main replaces the PR.                                                                                                                                                                                                                                                                                                       |
+| **#149** Home sync storage read              | **Close or redo small**       | Conflicting; `Home.tsx:30` still does a synchronous `localStorage` read per render, so the concern is real but trivial in cost. If redone, skip the added perf-test file.                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **#148** async event log export              | **Rebase and land**           | Mergeable and still correct (`event_logs.rs` is sync I/O in an async command). While touching the file: fix `MAX_EVENT_LOG_BYTES = usize::MAX` (Bad #10) and add the licence header.                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **#13** predictive back                      | **Close; resurrect the idea** | Predates the `apps/window-alarm` → `apps/threshold` rename, based on another long-dead feature branch, conflicting. The `tauri-plugin-predictive-back` design (Kotlin `OnBackAnimationCallback` → events) is worth rebuilding fresh on the current plugin pattern.                                                                                                                                                                                                                                                                                                                                         |
 
 Cross-cutting PR hygiene vs house rules: #178/#150/#149/#148 have no labels (Spindle's
 AGENTS.md requires release-note category labels; Threshold's AGENTS.md predates that
@@ -337,15 +338,15 @@ process-flavoured, all counter to the PR-title rules.
 
 ## House-rules compliance (vs Flow/Spindle standards)
 
-| Rule | Status |
-|---|---|
-| Canadian English | ✅ Good in code/docs (`colours`, `initialise`, `behaviour`); ❌ bot PR titles ("Optimize") |
-| Licence headers on all source files | ❌ **~85 files missing** — all of `packages/core`, most TS components/screens/utils, most plugin Rust `commands/desktop/error/lib/models.rs`, several Kotlin files (`AlarmUtils.kt`, `AlarmRingingService.kt`, `BootReceiver.kt`, `SetAlarmActivity.kt`, all small-plugin Kotlin), `event_logs.rs`. PR #192 adds two — the rest need a sweep. Audit command: `for f in $(git ls-files '*.rs' '*.kt' '*.ts' '*.tsx' \| grep -v gen/); do head -5 "$f" \| grep -q SPDX \|\| echo "$f"; done` |
-| No barrel files | ❌ `components/ContextMenu/index.ts`, `components/TimePicker/index.ts`, `components/Icons/index.tsx` |
-| Conventional commits | ✅ Recent history is clean |
-| PR titles human-readable, no prefixes | ✅ #192/#190/#168/#13; ❌ the ⚡ bot PRs |
-| Don't push unasked | ✅ (workflow rule, noted) |
-| Licence identity | ⚠️ Threshold headers say `Apache-2.0 OR MIT`; Flow/Spindle use `MIT`. If deliberate (app vs library split?), document it in AGENTS.md; if drift, pick one. |
+| Rule                                  | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Canadian English                      | ✅ Good in code/docs (`colours`, `initialise`, `behaviour`); ❌ bot PR titles ("Optimize")                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Licence headers on all source files   | ❌ **~85 files missing** — all of `packages/core`, most TS components/screens/utils, most plugin Rust `commands/desktop/error/lib/models.rs`, several Kotlin files (`AlarmUtils.kt`, `AlarmRingingService.kt`, `BootReceiver.kt`, `SetAlarmActivity.kt`, all small-plugin Kotlin), `event_logs.rs`. PR #192 adds two — the rest need a sweep. Audit command: `for f in $(git ls-files '*.rs' '*.kt' '*.ts' '*.tsx' \| grep -v gen/); do head -5 "$f" \| grep -q SPDX \|\| echo "$f"; done` |
+| No barrel files                       | ❌ `components/ContextMenu/index.ts`, `components/TimePicker/index.ts`, `components/Icons/index.tsx`                                                                                                                                                                                                                                                                                                                                                                                       |
+| Conventional commits                  | ✅ Recent history is clean                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| PR titles human-readable, no prefixes | ✅ #192/#190/#168/#13; ❌ the ⚡ bot PRs                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Don't push unasked                    | ✅ (workflow rule, noted)                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Licence identity                      | ⚠️ Threshold headers say `Apache-2.0 OR MIT`; Flow/Spindle use `MIT`. If deliberate (app vs library split?), document it in AGENTS.md; if drift, pick one.                                                                                                                                                                                                                                                                                                                                 |
 
 **AGENTS.md is a generation behind Spindle's.** Worth back-porting: PR content rules
 (`## Summary`/`## Test plan` format, no internal workflow artefacts, ready-for-review

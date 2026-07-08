@@ -168,24 +168,24 @@ magenta      #9aa4b2     app title (smdu muted header style)
 
 ## Colour Roles
 
-| Element | Colour | Rationale |
-|---------|--------|-----------|
-| App title "Threshold Release TUI" | `muted` (#9aa4b2) | smdu header style |
-| Section titles ("Details", "Build Log") | `muted` bold | smdu StatusPanel labels |
-| Divider dashes | `line` (#2e3540) | Consistent throughout |
-| Current version values | `text` (#d2d8e1) | Normal readability |
-| New/changed version values | `green` (#2ec66a) | Positive change |
-| Hotkey letters | `accent` (#5aa2ff) | Actionable keys |
-| Preview values (→ 0.1.9) | `cyan` (#7dd3fc) | Informational |
-| Warning messages | `yellow` (#ffd166) | Caution |
-| Error/destructive | `red` (#ff6b6b) | Danger |
-| Footer hints | `muted` | smdu footer style |
-| Tag names | `yellow` | Significant artifact |
-| Progress bars | `green` filled / `line` empty | smdu bar style |
-| Spinners | `cyan` | Activity indicator |
-| Build phase labels | `accent` bold | Section headers |
-| File sizes | `text` | Data values |
-| Timestamps | `muted` | Background info |
+| Element                                 | Colour                        | Rationale               |
+| --------------------------------------- | ----------------------------- | ----------------------- |
+| App title "Threshold Release TUI"       | `muted` (#9aa4b2)             | smdu header style       |
+| Section titles ("Details", "Build Log") | `muted` bold                  | smdu StatusPanel labels |
+| Divider dashes                          | `line` (#2e3540)              | Consistent throughout   |
+| Current version values                  | `text` (#d2d8e1)              | Normal readability      |
+| New/changed version values              | `green` (#2ec66a)             | Positive change         |
+| Hotkey letters                          | `accent` (#5aa2ff)            | Actionable keys         |
+| Preview values (→ 0.1.9)                | `cyan` (#7dd3fc)              | Informational           |
+| Warning messages                        | `yellow` (#ffd166)            | Caution                 |
+| Error/destructive                       | `red` (#ff6b6b)               | Danger                  |
+| Footer hints                            | `muted`                       | smdu footer style       |
+| Tag names                               | `yellow`                      | Significant artifact    |
+| Progress bars                           | `green` filled / `line` empty | smdu bar style          |
+| Spinners                                | `cyan`                        | Activity indicator      |
+| Build phase labels                      | `accent` bold                 | Section headers         |
+| File sizes                              | `text`                        | Data values             |
+| Timestamps                              | `muted`                       | Background info         |
 
 ---
 
@@ -236,6 +236,7 @@ Every screen follows the smdu skeleton:
 ```
 
 **Behaviour:**
+
 - `p`/`n`/`j`/`c` — single keypress advances to Review
 - `r` — **Redo mode**: keeps version at current, goes to Review with "redo" flag. Tag is force-updated, commit message is `chore(release): redo release X.Y.Z`
 - `l` — Release log (see below)
@@ -488,6 +489,7 @@ The build progress screen features an animated Threshold clock (amber sweeping h
 ```
 
 **Progress estimation** is approximate, parsed from key log lines:
+
 - Phone: `Compiling` (0-40%), `Linking` (40-60%), `Bundling AAB` (60-75%), `Assembling APK` (75-85%), `Signing` (85-100%)
 - Wear: `Compiling` (0-50%), `Bundling AAB` (50-70%), `Assembling APK` (70-85%), `Signing` (85-100%)
 
@@ -682,46 +684,46 @@ Build was skipped:
 
 ### Global
 
-| Key | Action |
-|-----|--------|
-| `?` | Toggle help overlay |
-| `q` | Quit without changes |
-| `Ctrl+C` | Quit / abort build |
+| Key      | Action               |
+| -------- | -------------------- |
+| `?`      | Toggle help overlay  |
+| `q`      | Quit without changes |
+| `Ctrl+C` | Quit / abort build   |
 
 ### Screen 1 — Version Bump
 
-| Key | Action |
-|-----|--------|
-| `p` | Patch bump (→ X.Y.Z+1) |
-| `n` | Minor bump (→ X.Y+1.0) |
-| `j` | Major bump (→ X+1.0.0) |
-| `c` | Custom version (free-text input) |
+| Key | Action                                  |
+| --- | --------------------------------------- |
+| `p` | Patch bump (→ X.Y.Z+1)                  |
+| `n` | Minor bump (→ X.Y+1.0)                  |
+| `j` | Major bump (→ X+1.0.0)                  |
+| `c` | Custom version (free-text input)        |
 | `r` | Redo current version (re-tag + rebuild) |
-| `l` | View release log |
+| `l` | View release log                        |
 
 ### Screen 2 — Review
 
-| Key | Action |
-|-----|--------|
+| Key           | Action                           |
+| ------------- | -------------------------------- |
 | `a` / `Enter` | Apply all changes (commit + tag) |
-| `d` | Toggle detail panel |
-| `b` | Back to version bump |
+| `d`           | Toggle detail panel              |
+| `b`           | Back to version bump             |
 
 ### Tag Conflict
 
-| Key | Action |
-|-----|--------|
+| Key | Action                      |
+| --- | --------------------------- |
 | `u` | Update existing tag to HEAD |
-| `t` | Enter a different tag name |
-| `b` | Back to version selection |
+| `t` | Enter a different tag name  |
+| `b` | Back to version selection   |
 
 ### Screen 2.5 — Build
 
-| Key | Action |
-|-----|--------|
+| Key | Action                       |
+| --- | ---------------------------- |
 | `b` | Build phone + wear AABs/APKs |
-| `s` | Skip build |
-| `r` | Retry failed build |
+| `s` | Skip build                   |
+| `r` | Retry failed build           |
 
 ---
 
@@ -822,28 +824,28 @@ Phase 5: Cleanup
 
 All artifacts go to the `release/` directory with versioned filenames:
 
-| Artifact | Filename Pattern | Destination |
-|----------|-----------------|-------------|
-| Phone AAB | `release/app-v{ver}-{vCode}.aab` | Google Play |
-| Phone APK | `release/app-v{ver}-{vCode}.apk` | GitHub / F-Droid |
-| Phone symbols | `release/symbols-v{ver}.zip` | Play Console |
-| Wear AAB | `release/wear-v{ver}-{vCode}.aab` | Google Play |
-| Wear APK | `release/wear-v{ver}-{vCode}.apk` | GitHub / F-Droid |
-| Wear mapping | `release/wear-mapping-v{ver}.txt` | Play Console |
+| Artifact      | Filename Pattern                  | Destination      |
+| ------------- | --------------------------------- | ---------------- |
+| Phone AAB     | `release/app-v{ver}-{vCode}.aab`  | Google Play      |
+| Phone APK     | `release/app-v{ver}-{vCode}.apk`  | GitHub / F-Droid |
+| Phone symbols | `release/symbols-v{ver}.zip`      | Play Console     |
+| Wear AAB      | `release/wear-v{ver}-{vCode}.aab` | Google Play      |
+| Wear APK      | `release/wear-v{ver}-{vCode}.apk` | GitHub / F-Droid |
+| Wear mapping  | `release/wear-mapping-v{ver}.txt` | Play Console     |
 
 ---
 
 ## CLI Flags & CI Mode
 
-| Flag | Description |
-|------|-------------|
-| `--ci` | Non-interactive mode, requires `--bump` or `--redo` |
-| `--bump <patch\|minor\|major\|X.Y.Z>` | Version bump type or exact version |
-| `--redo` | Redo current version (re-tag, no version change) |
-| `--build` | Run release build after version bump |
-| `--no-commit` | Apply file changes only, don't commit or tag |
-| `--no-web-sync` | Don't update apps/threshold/package.json |
-| `--dry-run` | Show what would change without writing files |
+| Flag                                  | Description                                         |
+| ------------------------------------- | --------------------------------------------------- |
+| `--ci`                                | Non-interactive mode, requires `--bump` or `--redo` |
+| `--bump <patch\|minor\|major\|X.Y.Z>` | Version bump type or exact version                  |
+| `--redo`                              | Redo current version (re-tag, no version change)    |
+| `--build`                             | Run release build after version bump                |
+| `--no-commit`                         | Apply file changes only, don't commit or tag        |
+| `--no-web-sync`                       | Don't update apps/threshold/package.json            |
+| `--dry-run`                           | Show what would change without writing files        |
 
 ### CI Usage
 
@@ -874,46 +876,46 @@ Done.
 
 ## Terminal Behaviour
 
-| Aspect | Behaviour |
-|--------|-----------|
-| Alt screen | Enter on launch, leave on exit |
-| Cursor | Hidden except during free-text input |
-| Mouse | Keep SGR mouse support (click = Enter, right-click = back, scroll = cycle on Screen 1) |
-| Resize | Redraw on SIGWINCH |
-| Min width | 60 cols (truncate detail panel first, then file names) |
-| Wide terminals | Detail panel gets extra width |
-| Non-TTY | Auto-detect → non-interactive mode |
-| `NO_COLOR` | Respect env variable, strip ANSI codes |
-| Build output | Captured and displayed in a scrolling log region (last N lines) |
-| Build child process | Spawned with `stdio: ['ignore', 'pipe', 'pipe']`, output parsed for progress |
+| Aspect              | Behaviour                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| Alt screen          | Enter on launch, leave on exit                                                         |
+| Cursor              | Hidden except during free-text input                                                   |
+| Mouse               | Keep SGR mouse support (click = Enter, right-click = back, scroll = cycle on Screen 1) |
+| Resize              | Redraw on SIGWINCH                                                                     |
+| Min width           | 60 cols (truncate detail panel first, then file names)                                 |
+| Wide terminals      | Detail panel gets extra width                                                          |
+| Non-TTY             | Auto-detect → non-interactive mode                                                     |
+| `NO_COLOR`          | Respect env variable, strip ANSI codes                                                 |
+| Build output        | Captured and displayed in a scrolling log region (last N lines)                        |
+| Build child process | Spawned with `stdio: ['ignore', 'pipe', 'pipe']`, output parsed for progress           |
 
 ---
 
 ## Migration Table
 
-| Old | New |
-|-----|-----|
-| Two separate commands (`version:release` + `build:release`) | One unified TUI |
-| 3-line redundant menu with cycling picker | Single-key vertical menu |
-| Tag name free-text prompt (every time) | Auto-derive, only prompt on conflict |
-| "Update web package.json?" prompt | Always sync (removed) |
-| "Auto commit+tag?" prompt | Always auto (removed) |
-| Derived codes flash screen | Removed (dead code) |
-| Dense review with file::field format | Compact summary + toggleable detail panel |
-| Double confirmation for unrelated changes | Inline warning, single `a` to apply |
-| Back restarts from scratch | Back goes to previous screen |
-| Silent exit losing all context | One-liner printed to main terminal |
-| No undo guidance | Undo command on Done screen |
-| `m` vs `M` case-sensitive hotkeys | `p/n/j/c` — all lowercase |
-| No redo capability | `r` for re-release same version |
-| No release history view | `l` for release log |
-| Manual build with separate script | Integrated build with progress bars |
-| No build error recovery | Inline retry/skip on failure |
-| No artifact summary | Table with sizes + signature verification |
-| AAB-only builds | AAB + APK for Play Store and GitHub/F-Droid |
-| No pre-flight checks in TUI | Clear prerequisite reporting |
-| No CI/non-interactive mode | `--ci` flag with plain text output |
-| No dry-run | `--dry-run` flag |
+| Old                                                         | New                                         |
+| ----------------------------------------------------------- | ------------------------------------------- |
+| Two separate commands (`version:release` + `build:release`) | One unified TUI                             |
+| 3-line redundant menu with cycling picker                   | Single-key vertical menu                    |
+| Tag name free-text prompt (every time)                      | Auto-derive, only prompt on conflict        |
+| "Update web package.json?" prompt                           | Always sync (removed)                       |
+| "Auto commit+tag?" prompt                                   | Always auto (removed)                       |
+| Derived codes flash screen                                  | Removed (dead code)                         |
+| Dense review with file::field format                        | Compact summary + toggleable detail panel   |
+| Double confirmation for unrelated changes                   | Inline warning, single `a` to apply         |
+| Back restarts from scratch                                  | Back goes to previous screen                |
+| Silent exit losing all context                              | One-liner printed to main terminal          |
+| No undo guidance                                            | Undo command on Done screen                 |
+| `m` vs `M` case-sensitive hotkeys                           | `p/n/j/c` — all lowercase                   |
+| No redo capability                                          | `r` for re-release same version             |
+| No release history view                                     | `l` for release log                         |
+| Manual build with separate script                           | Integrated build with progress bars         |
+| No build error recovery                                     | Inline retry/skip on failure                |
+| No artifact summary                                         | Table with sizes + signature verification   |
+| AAB-only builds                                             | AAB + APK for Play Store and GitHub/F-Droid |
+| No pre-flight checks in TUI                                 | Clear prerequisite reporting                |
+| No CI/non-interactive mode                                  | `--ci` flag with plain text output          |
+| No dry-run                                                  | `--dry-run` flag                            |
 
 ---
 
@@ -921,32 +923,32 @@ Done.
 
 ### Spec & Mockups
 
-| File | Description |
-|------|-------------|
-| [`docs/ui-mockups/SPEC.md`](SPEC.md) | This specification |
-| [`docs/ui-mockups/release-tui-01-version-bump.svg`](release-tui-01-version-bump.svg) | Screen 1: Version bump |
-| [`docs/ui-mockups/release-tui-02-review-compact.svg`](release-tui-02-review-compact.svg) | Screen 2: Review (compact) |
-| [`docs/ui-mockups/release-tui-03-review-details.svg`](release-tui-03-review-details.svg) | Screen 2: Review (detail panel) |
-| [`docs/ui-mockups/release-tui-04-done.svg`](release-tui-04-done.svg) | Screen 3: Done (version only) |
-| [`docs/ui-mockups/release-tui-04a-build-offer.svg`](release-tui-04a-build-offer.svg) | Screen 2.5: Build offer |
+| File                                                                                     | Description                           |
+| ---------------------------------------------------------------------------------------- | ------------------------------------- |
+| [`docs/ui-mockups/SPEC.md`](SPEC.md)                                                     | This specification                    |
+| [`docs/ui-mockups/release-tui-01-version-bump.svg`](release-tui-01-version-bump.svg)     | Screen 1: Version bump                |
+| [`docs/ui-mockups/release-tui-02-review-compact.svg`](release-tui-02-review-compact.svg) | Screen 2: Review (compact)            |
+| [`docs/ui-mockups/release-tui-03-review-details.svg`](release-tui-03-review-details.svg) | Screen 2: Review (detail panel)       |
+| [`docs/ui-mockups/release-tui-04-done.svg`](release-tui-04-done.svg)                     | Screen 3: Done (version only)         |
+| [`docs/ui-mockups/release-tui-04a-build-offer.svg`](release-tui-04a-build-offer.svg)     | Screen 2.5: Build offer               |
 | [`docs/ui-mockups/release-tui-05-build-progress.svg`](release-tui-05-build-progress.svg) | Screen 2.5: Build progress (animated) |
-| [`docs/ui-mockups/release-tui-06-done-full.svg`](release-tui-06-done-full.svg) | Screen 3: Done (full release) |
-| [`docs/ui-mockups/release-tui-07-release-log.svg`](release-tui-07-release-log.svg) | Screen 1b: Release log |
-| [`docs/ui-mockups/release-tui-08-redo-review.svg`](release-tui-08-redo-review.svg) | Screen 2: Review (redo mode) |
-| [`docs/ui-mockups/release-tui-09-tag-conflict.svg`](release-tui-09-tag-conflict.svg) | Screen 2: Tag conflict |
-| [`docs/ui-mockups/release-tui-10-help.svg`](release-tui-10-help.svg) | Help overlay |
+| [`docs/ui-mockups/release-tui-06-done-full.svg`](release-tui-06-done-full.svg)           | Screen 3: Done (full release)         |
+| [`docs/ui-mockups/release-tui-07-release-log.svg`](release-tui-07-release-log.svg)       | Screen 1b: Release log                |
+| [`docs/ui-mockups/release-tui-08-redo-review.svg`](release-tui-08-redo-review.svg)       | Screen 2: Review (redo mode)          |
+| [`docs/ui-mockups/release-tui-09-tag-conflict.svg`](release-tui-09-tag-conflict.svg)     | Screen 2: Tag conflict                |
+| [`docs/ui-mockups/release-tui-10-help.svg`](release-tui-10-help.svg)                     | Help overlay                          |
 
 ### Implementation Files (to modify)
 
-| File | Description |
-|------|-------------|
-| `scripts/update-release-version.mjs` | Main TUI script (~1400 lines, full rewrite) |
-| `scripts/build-release-devcontainer.sh` | Build script (to be absorbed into TUI) |
+| File                                    | Description                                 |
+| --------------------------------------- | ------------------------------------------- |
+| `scripts/update-release-version.mjs`    | Main TUI script (~1400 lines, full rewrite) |
+| `scripts/build-release-devcontainer.sh` | Build script (to be absorbed into TUI)      |
 
 ### Version Files (read/written by the TUI)
 
-| File | Fields |
-|------|--------|
+| File                                       | Fields                           |
+| ------------------------------------------ | -------------------------------- |
 | `apps/threshold/src-tauri/tauri.conf.json` | `version`, `android.versionCode` |
-| `apps/threshold-wear/build.gradle.kts` | `versionName`, `versionCode` |
-| `apps/threshold/package.json` | `version` |
+| `apps/threshold-wear/build.gradle.kts`     | `versionName`, `versionCode`     |
+| `apps/threshold/package.json`              | `version`                        |

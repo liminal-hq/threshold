@@ -45,6 +45,7 @@ echo "✅ Basic checks passed"
 ```
 
 Usage:
+
 ```bash
 chmod +x verify-manifest-injection.sh
 ./verify-manifest-injection.sh alarm-manager
@@ -62,6 +63,7 @@ chmod +x verify-manifest-injection.sh
 - [ ] If using feature gates, features are defined in `[features]` section
 
 **Example:**
+
 ```toml
 [build-dependencies]
 tauri-plugin = { version = "2.0.0", features = ["build"] }
@@ -76,12 +78,14 @@ some-optional-feature = []
 ### 2. build.rs Implementation
 
 #### Basic Structure
+
 - [ ] `COMMANDS` constant defined with actual command names
 - [ ] `main()` function calls `tauri_plugin::Builder::new(COMMANDS).build()`
 - [ ] Injection function is called from `main()`
 - [ ] Error handling uses `.expect()` with descriptive message
 
 #### Injection Function
+
 - [ ] Function returns `std::io::Result<()>`
 - [ ] Uses `tauri_plugin::mobile::update_android_manifest(...)`
 - [ ] Block identifier follows convention: `tauri-plugin-{plugin-name}.{category}`
@@ -90,6 +94,7 @@ some-optional-feature = []
 - [ ] No escaped quotes in raw strings (❌ `\"` inside `r#"..."#`)
 
 **Red Flags:**
+
 ```rust
 // ❌ Wrong - no error handling
 tauri_plugin::mobile::update_android_manifest(...);
@@ -108,6 +113,7 @@ format!("plugin-{}", timestamp)  // Must be stable!
 ```
 
 **Good Examples:**
+
 ```rust
 // ✅ Correct
 const COMMANDS: &[&str] = &["scan", "cancel"];
@@ -141,11 +147,12 @@ fn inject_android_permissions() -> std::io::Result<()> {
 - [ ] No duplicate permission declarations
 
 **Before (❌ Wrong - has both):**
+
 ```xml
 <manifest>
     <!-- ❌ This will be injected via build.rs, should remove -->
     <uses-permission android:name="android.permission.CAMERA" />
-    
+
     <application>
         <!-- ✅ Keep this -->
         <service android:name=".MyService" />
@@ -154,10 +161,11 @@ fn inject_android_permissions() -> std::io::Result<()> {
 ```
 
 **After (✅ Correct):**
+
 ```xml
 <manifest>
     <!-- Permissions are now injected via build.rs -->
-    
+
     <application>
         <!-- Components stay here -->
         <service android:name=".MyService" />
@@ -176,12 +184,14 @@ fn inject_android_permissions() -> std::io::Result<()> {
 - [ ] Installation instructions are correct
 
 **Example README section:**
-```markdown
+
+````markdown
 ## Android Permissions
 
 This plugin requires the following permissions:
 
 ### `CAMERA` (Required)
+
 - **Purpose:** Scan barcodes using device camera
 - **When:** Only during active scanning
 - **Privacy:** Processed locally, not transmitted
@@ -189,9 +199,12 @@ This plugin requires the following permissions:
 ### Optional Features
 
 Enable camera access:
+
 ```toml
 tauri-plugin-barcode = { version = "1.0", features = ["camera"] }
 ```
+````
+
 ```
 
 ---
@@ -207,11 +220,14 @@ Request the author provide:
 
 **What to ask for:**
 ```
+
 Please provide:
+
 1. Output of: cat apps/threshold/src-tauri/gen/android/app/src/main/AndroidManifest.xml
 2. Confirmation that `pnpm tauri android build` succeeds
 3. Screenshot of app working on device/emulator
-```
+
+````
 
 ---
 
@@ -224,11 +240,12 @@ Please provide:
 <!-- tauri-plugin-scanner.permissions -->
 <uses-permission android:name="android.permission.CAMERA" />  <!-- From injection -->
 <!-- tauri-plugin-scanner.permissions -->
-```
+````
 
 **Fix:** Remove from library manifest.
 
 #### Mistake 2: Wrong Block Identifier
+
 ```rust
 // ❌ Wrong - too generic
 tauri_plugin::mobile::update_android_manifest(
@@ -246,6 +263,7 @@ tauri_plugin::mobile::update_android_manifest(
 ```
 
 #### Mistake 3: Injecting Components Unnecessarily
+
 ```rust
 // ❌ Don't do this unless you have a good reason
 let components = vec![
@@ -261,6 +279,7 @@ tauri_plugin::mobile::update_android_manifest(
 **Guideline:** Only inject components if they're conditionally required. Otherwise use library manifest.
 
 #### Mistake 4: Feature Gate Syntax Error
+
 ```rust
 // ❌ Wrong - uses underscore
 #[cfg(feature = "camera_access")]
@@ -270,6 +289,7 @@ tauri_plugin::mobile::update_android_manifest(
 ```
 
 #### Mistake 5: Hardcoded Commands
+
 ```rust
 // ❌ Wrong - outdated command list
 const COMMANDS: &[&str] = &["old_command"];
@@ -286,11 +306,13 @@ const COMMANDS: &[&str] = &["old_command"];
 ### Manual Test Procedure
 
 1. **Checkout the PR branch**
+
    ```bash
    gh pr checkout <pr-number>
    ```
 
 2. **Clean build**
+
    ```bash
    cd apps/threshold
    rm -rf src-tauri/gen
@@ -298,11 +320,13 @@ const COMMANDS: &[&str] = &["old_command"];
    ```
 
 3. **Inspect generated manifest**
+
    ```bash
    cat src-tauri/gen/android/app/src/main/AndroidManifest.xml | grep -A 20 "tauri-plugin"
    ```
 
 4. **Verify idempotency**
+
    ```bash
    pnpm tauri android build  # Build again
    # Check manifest - should be identical, no duplicates
@@ -319,6 +343,7 @@ const COMMANDS: &[&str] = &["old_command"];
 ## Approval Criteria
 
 ✅ **Approve if:**
+
 - All checklist items pass
 - Build succeeds
 - Generated manifest has correct injection markers
@@ -328,6 +353,7 @@ const COMMANDS: &[&str] = &["old_command"];
 - Runtime behaviour is correct
 
 ❌ **Request changes if:**
+
 - Build feature not enabled
 - Block identifier doesn't follow convention
 - Permissions duplicated in library manifest
@@ -336,6 +362,7 @@ const COMMANDS: &[&str] = &["old_command"];
 - Syntax errors in injection code
 
 ⚠️ **Request discussion if:**
+
 - Plugin injects components (discuss if necessary)
 - Uses configuration-driven injection (verify implementation)
 - Has many feature gates (verify they're all useful)
@@ -346,10 +373,12 @@ const COMMANDS: &[&str] = &["old_command"];
 ## Response Templates
 
 ### Approval Comment
+
 ```markdown
 ✅ Manifest injection implementation looks good!
 
 Verified:
+
 - Build feature enabled
 - Injection code follows pattern
 - Generated manifest correct
@@ -359,15 +388,18 @@ Merging!
 ```
 
 ### Request Changes Comment
-```markdown
+
+````markdown
 Thanks for the PR! The manifest injection implementation needs a few adjustments:
 
 **Issues:**
+
 - [ ] Missing `features = ["build"]` in `Cargo.toml`
 - [ ] Block identifier should be `tauri-plugin-{name}.permissions` not `{name}`
 - [ ] Remove injected permissions from library manifest
 
 **Example:**
+
 ```rust
 // In build.rs
 tauri_plugin::mobile::update_android_manifest(
@@ -376,9 +408,11 @@ tauri_plugin::mobile::update_android_manifest(
     permissions.join("\n"),
 )
 ```
+````
 
 See `plugin-manifest-pattern.md` for complete guide.
-```
+
+````
 
 ### Architecture Discussion Comment
 ```markdown
@@ -387,7 +421,7 @@ I see you're injecting components via `build.rs`. Can you explain why this is ne
 Generally we prefer library manifest for components and only inject permissions. The exception is if components need to be conditionally included based on features.
 
 If this is just for convenience, please move components back to the library manifest.
-```
+````
 
 ---
 
@@ -410,7 +444,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Check build feature
         run: |
           for plugin in plugins/*/Cargo.toml; do
@@ -419,7 +453,7 @@ jobs:
               exit 1
             fi
           done
-      
+
       - name: Check block identifiers
         run: |
           for build_rs in plugins/*/build.rs; do
@@ -428,7 +462,7 @@ jobs:
               echo "::warning file=$build_rs::Block identifier might not follow convention"
             fi
           done
-      
+
       - name: Check for escaped quotes in raw strings
         run: |
           if grep -r 'r#".*\\".*"#' plugins/*/build.rs; then
@@ -442,11 +476,13 @@ jobs:
 ## Contact
 
 **Questions about reviewing manifest injection PRs?**
+
 - Refer to `plugin-manifest-pattern.md`
 - Check alarm-manager implementation as reference
 - Ask in Threshold maintainer discussions
 
 **Found an issue with this checklist?**
+
 - Submit a PR to update this document
 - Help improve the review process
 

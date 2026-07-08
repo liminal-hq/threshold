@@ -82,14 +82,14 @@ const Ringing: React.FC = () => {
 
 	useEffect(() => {
 		const loadAlarm = async () => {
-            try {
-                const found = await AlarmService.get(alarmId);
-                if (found) {
-                    setAlarm(found);
-                }
-            } catch (e) {
-                console.error('Failed to load ringing alarm', e);
-            }
+			try {
+				const found = await AlarmService.get(alarmId);
+				if (found) {
+					setAlarm(found);
+				}
+			} catch (e) {
+				console.error('Failed to load ringing alarm', e);
+			}
 		};
 		loadAlarm();
 

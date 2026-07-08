@@ -65,10 +65,16 @@ export function App({ initialState }: AppProps) {
 
 	// Build progress state
 	const [phoneStatus, setPhoneStatus] = useState<PhaseStatus>({
-		building: false, done: false, failed: false, progress: 0,
+		building: false,
+		done: false,
+		failed: false,
+		progress: 0,
 	});
 	const [wearStatus, setWearStatus] = useState<PhaseStatus>({
-		building: false, done: false, failed: false, progress: 0,
+		building: false,
+		done: false,
+		failed: false,
+		progress: 0,
 	});
 	const [buildLogLines, setBuildLogLines] = useState<string[]>([]);
 

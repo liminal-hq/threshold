@@ -11,12 +11,13 @@
 Threshold uses a **companion app architecture** for Wear OS: a native Kotlin watch app communicates with the Tauri phone app via Google's Wear Data Layer API. This is architecturally distinct from running Tauri on the watch — the watch app is a standalone native Android app that shares no runtime with the phone, communicating exclusively through IPC (DataItems and Messages).
 
 This document covers:
+
 1. How sync works when the phone app is running (normal path)
 2. How sync works when the phone app is closed (offline path)
 3. How watch-initiated writes reach the database (write-back path)
 4. Design decisions and alternatives considered
 
-**Key Principle:** SQLite remains the single source of truth, with all writes going through `AlarmCoordinator` in Rust. Kotlin services may *read* cached data but never write to the database directly.
+**Key Principle:** SQLite remains the single source of truth, with all writes going through `AlarmCoordinator` in Rust. Kotlin services may _read_ cached data but never write to the database directly.
 
 ---
 
@@ -80,32 +81,32 @@ The Wear Data Layer routes messages using `applicationId`. Both the phone and wa
 
 **Purpose:** Persistent, synced state. Survives disconnects.
 
-| Field | Description |
-|-------|-------------|
-| Path | `/threshold/alarms` |
-| Format | `PutDataMapRequest` with `alarmsJson` (String), `revision` (Long), `timestamp` (Long), and `snoozeLengthMinutes` (Int) |
-| Payload | `SyncResponse` JSON (see §3) + snooze duration from phone settings |
-| Delivery | Automatic when Bluetooth reconnects |
+| Field    | Description                                                                                                            |
+| -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Path     | `/threshold/alarms`                                                                                                    |
+| Format   | `PutDataMapRequest` with `alarmsJson` (String), `revision` (Long), `timestamp` (Long), and `snoozeLengthMinutes` (Int) |
+| Payload  | `SyncResponse` JSON (see §3) + snooze duration from phone settings                                                     |
+| Delivery | Automatic when Bluetooth reconnects                                                                                    |
 
 ### 2.2 MessageClient (Phone → Watch)
 
 **Purpose:** Fire-and-forget commands for alarm ringing. Requires active connection.
 
-| Path | Payload | Handler |
-|------|---------|---------|
+| Path                    | Payload                 | Handler                              |
+| ----------------------- | ----------------------- | ------------------------------------ |
 | `/threshold/alarm_ring` | `AlarmRingRequest` JSON | Starts `WearRingingService` on watch |
 
 ### 2.3 MessageClient (Watch → Phone)
 
 **Purpose:** Fire-and-forget commands. Requires active connection.
 
-| Path | Payload | Handler |
-|------|---------|---------|
-| `/threshold/sync_request` | `"0"` (watch revision) | Triggers FullSync response |
-| `/threshold/save_alarm` | `WatchSaveAlarm` JSON | Toggles alarm via coordinator |
-| `/threshold/delete_alarm` | `WatchDeleteAlarm` JSON | Deletes alarm via coordinator |
+| Path                       | Payload                  | Handler                               |
+| -------------------------- | ------------------------ | ------------------------------------- |
+| `/threshold/sync_request`  | `"0"` (watch revision)   | Triggers FullSync response            |
+| `/threshold/save_alarm`    | `WatchSaveAlarm` JSON    | Toggles alarm via coordinator         |
+| `/threshold/delete_alarm`  | `WatchDeleteAlarm` JSON  | Deletes alarm via coordinator         |
 | `/threshold/alarm_dismiss` | `WatchDismissAlarm` JSON | Stops phone ringing + dismisses alarm |
-| `/threshold/alarm_snooze` | `WatchSnoozeAlarm` JSON | Stops phone ringing + snoozes alarm |
+| `/threshold/alarm_snooze`  | `WatchSnoozeAlarm` JSON  | Stops phone ringing + snoozes alarm   |
 
 ---
 
@@ -113,33 +114,34 @@ The Wear Data Layer routes messages using `applicationId`. Both the phone and wa
 
 The phone publishes a `SyncResponse` JSON payload to the watch via DataClient. The response type is determined by revision gap:
 
-| Watch Revision vs Phone | Response Type | Payload |
-|-------------------------|---------------|---------|
-| Equal | `UpToDate` | `currentRevision` only |
-| 1–100 behind | `Incremental` | `updatedAlarms` + `deletedAlarmIds` |
-| >100 behind or ahead | `FullSync` | All `allAlarms` |
+| Watch Revision vs Phone | Response Type | Payload                             |
+| ----------------------- | ------------- | ----------------------------------- |
+| Equal                   | `UpToDate`    | `currentRevision` only              |
+| 1–100 behind            | `Incremental` | `updatedAlarms` + `deletedAlarmIds` |
+| >100 behind or ahead    | `FullSync`    | All `allAlarms`                     |
 
 ### JSON Format (as received by watch)
 
 ```json
 {
-  "type": "FullSync",
-  "currentRevision": 42,
-  "allAlarms": [
-    {
-      "id": 1,
-      "label": "Morning",
-      "enabled": true,
-      "mode": "FIXED",
-      "fixedTime": "07:00",
-      "activeDays": [1, 2, 3, 4, 5],
-      "nextTrigger": 1737885420000
-    }
-  ]
+	"type": "FullSync",
+	"currentRevision": 42,
+	"allAlarms": [
+		{
+			"id": 1,
+			"label": "Morning",
+			"enabled": true,
+			"mode": "FIXED",
+			"fixedTime": "07:00",
+			"activeDays": [1, 2, 3, 4, 5],
+			"nextTrigger": 1737885420000
+		}
+	]
 }
 ```
 
 **Serde configuration (Rust):**
+
 - Type tag: `#[serde(tag = "type", rename_all = "PascalCase")]` → produces `"FullSync"`, `"Incremental"`, `"UpToDate"`
 - Field names: `#[serde(rename = "camelCase")]` per field → produces `"currentRevision"`, `"allAlarms"`, `"updatedAlarms"`, `"deletedAlarmIds"`
 
@@ -149,14 +151,14 @@ The phone publishes a `SyncResponse` JSON payload to the watch via DataClient. T
 
 The phone's `AlarmRecord` (camelCase) is transformed by the watch's `WatchAlarm.fromJson()`:
 
-| Phone Field | Watch Field | Transformation |
-|-------------|-------------|----------------|
-| `id` | `id` | Direct |
-| `label` | `label` | Direct (nullable → empty string) |
-| `enabled` | `enabled` | Direct |
-| `fixedTime` | `hour`, `minute` | Split `"HH:MM"` string |
-| `windowStart` | `hour`, `minute` | Fallback if `fixedTime` is null |
-| `activeDays` | `daysOfWeek` | Rename only |
+| Phone Field   | Watch Field      | Transformation                   |
+| ------------- | ---------------- | -------------------------------- |
+| `id`          | `id`             | Direct                           |
+| `label`       | `label`          | Direct (nullable → empty string) |
+| `enabled`     | `enabled`        | Direct                           |
+| `fixedTime`   | `hour`, `minute` | Split `"HH:MM"` string           |
+| `windowStart` | `hour`, `minute` | Fallback if `fixedTime` is null  |
+| `activeDays`  | `daysOfWeek`     | Rename only                      |
 
 ---
 
@@ -212,6 +214,7 @@ Watch sends /threshold/sync_request via MessageClient
 ```
 
 **SharedPreferences cache key:** `wear_sync_cache` in `ThresholdWearSync` preferences
+
 - `cached_alarms_json`: The last FullSync SyncResponse JSON
 - `cached_revision`: The revision at time of cache
 - `cached_snooze_length_minutes`: The snooze duration from phone settings
@@ -243,12 +246,14 @@ Watch sends /threshold/save_alarm via MessageClient
 **Readiness handshake:** Queue drain is gated by both `setWatchMessageHandler` and `markWatchPipelineReady`. The app crate emits the ready signal after registering `wear:alarm:save`, `wear:alarm:delete`, and `wear:sync:request` listeners, preventing early-replay races during cold boot.
 
 **Why a foreground service?**
+
 - Android 12+ restricts background Activity launches
 - A foreground service with notification is the sanctioned pattern
 - Same pattern used by `AlarmRingingService` for alarm firing
 - The Tauri runtime boots in ~1 second (observed from logcat)
 
 **Why not direct DB writes from Kotlin?**
+
 - Violates single-writer principle (revision conflicts, missing events)
 - `AlarmCoordinator` handles scheduling, event emission, revision tracking
 - SharedPreferences cache and alarm-manager cache would be stale
@@ -260,10 +265,10 @@ Watch sends /threshold/save_alarm via MessageClient
 
 The project uses SharedPreferences as a persistent cache in two places:
 
-| Preferences Name | Owner | Purpose |
-|------------------|-------|---------|
-| `ThresholdNative` | alarm-manager plugin | Boot recovery: trigger times + sound URIs |
-| `ThresholdWearSync` | wear-sync plugin | Offline sync: cached FullSync JSON |
+| Preferences Name    | Owner                | Purpose                                   |
+| ------------------- | -------------------- | ----------------------------------------- |
+| `ThresholdNative`   | alarm-manager plugin | Boot recovery: trigger times + sound URIs |
+| `ThresholdWearSync` | wear-sync plugin     | Offline sync: cached FullSync JSON        |
 
 Both are **read-only caches** of data that lives in SQLite. They are written when events propagate and read when the Tauri runtime isn't available.
 
@@ -291,13 +296,13 @@ App reopens → heal-on-launch re-syncs everything from SQLite
 
 From observed logcat (logcat-phone-7.log):
 
-| Event | Timestamp | Delta |
-|-------|-----------|-------|
-| Watch sends sync_request | 23:57:54 | — |
-| WearMessageService receives | 23:57:58 | +4s (GMS delivery) |
-| Chromium webview init | 23:58:06 | +8s (user opened app) |
-| WearSyncPlugin loaded | 23:58:07.013 | +0.1s |
-| Published to watch | 23:58:07.106 | +0.1s |
+| Event                       | Timestamp    | Delta                 |
+| --------------------------- | ------------ | --------------------- |
+| Watch sends sync_request    | 23:57:54     | —                     |
+| WearMessageService receives | 23:57:58     | +4s (GMS delivery)    |
+| Chromium webview init       | 23:58:06     | +8s (user opened app) |
+| WearSyncPlugin loaded       | 23:58:07.013 | +0.1s                 |
+| Published to watch          | 23:58:07.106 | +0.1s                 |
 
 **Key insight:** GMS message delivery takes ~3-4 seconds (Bluetooth latency). Tauri plugin init after process start is ~100ms. The 8-second gap was the user manually opening the app — with a foreground service this would be ~1 second instead.
 
@@ -307,12 +312,12 @@ From observed logcat (logcat-phone-7.log):
 
 ## 7. Comparison with Other Frameworks
 
-| Framework | Wear OS Background Sync Pattern |
-|-----------|---------------------------------|
-| **Native Android** | WearableListenerService + Room DB direct access |
-| **Flutter** | Native Kotlin WearableListenerService + platform channel bridge |
-| **React Native** | Native Kotlin WearableListenerService + event emission to JS |
-| **Capacitor** | Not supported |
+| Framework             | Wear OS Background Sync Pattern                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Native Android**    | WearableListenerService + Room DB direct access                                                      |
+| **Flutter**           | Native Kotlin WearableListenerService + platform channel bridge                                      |
+| **React Native**      | Native Kotlin WearableListenerService + event emission to JS                                         |
+| **Capacitor**         | Not supported                                                                                        |
 | **Tauri (Threshold)** | Native Kotlin WearableListenerService + SharedPrefs cache (reads) + foreground service boot (writes) |
 
 Threshold's approach is novel — no existing Tauri + Wear OS implementations exist. The hybrid pattern (cached reads + service-booted writes) avoids both direct DB access from Kotlin and the complexity of running Tauri headlessly for reads.
@@ -340,6 +345,7 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 **Decision:** Use cached data for the common case (sync requests) and boot the full runtime for the rare case (watch-initiated writes).
 
 **Rationale:**
+
 - Reads are the 90% case — watch boots, requests sync, gets cached data instantly
 - Writes require the coordinator for revision tracking, event emission, and scheduling
 - Direct DB writes from Kotlin would create consistency issues
@@ -358,70 +364,70 @@ Threshold's approach is novel — no existing Tauri + Wear OS implementations ex
 
 ### Phone-side (wear-sync plugin)
 
-| File | Purpose |
-|------|---------|
-| `plugins/wear-sync/src/lib.rs` | Plugin entry, event listeners, message routing, publish task |
-| `plugins/wear-sync/src/batch_collector.rs` | 500ms debounce buffer |
-| `plugins/wear-sync/src/publisher.rs` | WearSyncPublisher trait + ChannelPublisher |
-| `plugins/wear-sync/src/sync_protocol.rs` | SyncResponse enum, determine_sync_type() |
-| `plugins/wear-sync/src/conflict_detector.rs` | Revision validation for watch updates |
-| `plugins/wear-sync/src/models.rs` | Shared types (events, bridge requests, watch messages) |
-| `plugins/wear-sync/src/mobile.rs` | Android bridge via Tauri PluginHandle |
-| `plugins/wear-sync/src/desktop.rs` | No-op stubs for desktop compilation |
-| `plugins/wear-sync/android/.../WearSyncPlugin.kt` | Kotlin @TauriPlugin with DataClient |
-| `plugins/wear-sync/android/.../WearMessageService.kt` | WearableListenerService for incoming messages |
-| `plugins/wear-sync/android/.../WearSyncService.kt` | Foreground service — boots Tauri for offline writes |
-| `plugins/wear-sync/android/.../WearSyncCache.kt` | SharedPreferences helper for offline sync cache |
+| File                                                  | Purpose                                                      |
+| ----------------------------------------------------- | ------------------------------------------------------------ |
+| `plugins/wear-sync/src/lib.rs`                        | Plugin entry, event listeners, message routing, publish task |
+| `plugins/wear-sync/src/batch_collector.rs`            | 500ms debounce buffer                                        |
+| `plugins/wear-sync/src/publisher.rs`                  | WearSyncPublisher trait + ChannelPublisher                   |
+| `plugins/wear-sync/src/sync_protocol.rs`              | SyncResponse enum, determine_sync_type()                     |
+| `plugins/wear-sync/src/conflict_detector.rs`          | Revision validation for watch updates                        |
+| `plugins/wear-sync/src/models.rs`                     | Shared types (events, bridge requests, watch messages)       |
+| `plugins/wear-sync/src/mobile.rs`                     | Android bridge via Tauri PluginHandle                        |
+| `plugins/wear-sync/src/desktop.rs`                    | No-op stubs for desktop compilation                          |
+| `plugins/wear-sync/android/.../WearSyncPlugin.kt`     | Kotlin @TauriPlugin with DataClient                          |
+| `plugins/wear-sync/android/.../WearMessageService.kt` | WearableListenerService for incoming messages                |
+| `plugins/wear-sync/android/.../WearSyncService.kt`    | Foreground service — boots Tauri for offline writes          |
+| `plugins/wear-sync/android/.../WearSyncCache.kt`      | SharedPreferences helper for offline sync cache              |
 
 ### Watch-side (threshold-wear app)
 
-| File | Purpose |
-|------|---------|
-| `apps/threshold-wear/src/.../service/DataLayerListenerService.kt` | Receives DataItems + alarm ring messages |
-| `apps/threshold-wear/src/.../service/WearRingingService.kt` | Foreground service: vibration, audio, wake lock |
-| `apps/threshold-wear/src/.../service/WearAlarmScheduler.kt` | Local AlarmManager scheduling (disconnected fallback) |
-| `apps/threshold-wear/src/.../service/WearAlarmReceiver.kt` | BroadcastReceiver for local alarm fires |
-| `apps/threshold-wear/src/.../service/PhoneConnectionMonitor.kt` | Polls node connectivity, toggles fallback scheduling |
-| `apps/threshold-wear/src/.../presentation/RingingScreen.kt` | Compose ringing UI (breathing rings, stop/snooze) |
-| `apps/threshold-wear/src/.../presentation/RingingActivity.kt` | Lock-screen activity hosting RingingScreen |
-| `apps/threshold-wear/src/.../presentation/SettingsScreen.kt` | Watch settings with test ring button |
-| `apps/threshold-wear/src/.../data/WearDataLayerClient.kt` | Sends Messages to phone (incl. dismiss/snooze) |
-| `apps/threshold-wear/src/.../data/WatchAlarm.kt` | Watch alarm model with JSON parsing (incl. nextTrigger) |
-| `apps/threshold-wear/src/.../data/AlarmRepository.kt` | In-memory alarm state |
-| `apps/threshold-wear/build.gradle.kts` | applicationId = ca.liminalhq.threshold |
+| File                                                              | Purpose                                                 |
+| ----------------------------------------------------------------- | ------------------------------------------------------- |
+| `apps/threshold-wear/src/.../service/DataLayerListenerService.kt` | Receives DataItems + alarm ring messages                |
+| `apps/threshold-wear/src/.../service/WearRingingService.kt`       | Foreground service: vibration, audio, wake lock         |
+| `apps/threshold-wear/src/.../service/WearAlarmScheduler.kt`       | Local AlarmManager scheduling (disconnected fallback)   |
+| `apps/threshold-wear/src/.../service/WearAlarmReceiver.kt`        | BroadcastReceiver for local alarm fires                 |
+| `apps/threshold-wear/src/.../service/PhoneConnectionMonitor.kt`   | Polls node connectivity, toggles fallback scheduling    |
+| `apps/threshold-wear/src/.../presentation/RingingScreen.kt`       | Compose ringing UI (breathing rings, stop/snooze)       |
+| `apps/threshold-wear/src/.../presentation/RingingActivity.kt`     | Lock-screen activity hosting RingingScreen              |
+| `apps/threshold-wear/src/.../presentation/SettingsScreen.kt`      | Watch settings with test ring button                    |
+| `apps/threshold-wear/src/.../data/WearDataLayerClient.kt`         | Sends Messages to phone (incl. dismiss/snooze)          |
+| `apps/threshold-wear/src/.../data/WatchAlarm.kt`                  | Watch alarm model with JSON parsing (incl. nextTrigger) |
+| `apps/threshold-wear/src/.../data/AlarmRepository.kt`             | In-memory alarm state                                   |
+| `apps/threshold-wear/build.gradle.kts`                            | applicationId = ca.liminalhq.threshold                  |
 
 ### App-side (alarm coordinator)
 
-| File | Purpose |
-|------|---------|
-| `apps/threshold/src-tauri/src/lib.rs` | App setup — includes watch event listeners |
-| `apps/threshold/src-tauri/src/alarm/mod.rs` | AlarmCoordinator (sole DB writer) |
-| `apps/threshold/src-tauri/src/alarm/database.rs` | SQLite access, revision tracking |
-| `apps/threshold/src-tauri/src/alarm/events.rs` | Event payload types including AlarmsSyncNeeded |
-| `apps/threshold/src-tauri/src/alarm/models.rs` | AlarmRecord, AlarmInput |
+| File                                             | Purpose                                        |
+| ------------------------------------------------ | ---------------------------------------------- |
+| `apps/threshold/src-tauri/src/lib.rs`            | App setup — includes watch event listeners     |
+| `apps/threshold/src-tauri/src/alarm/mod.rs`      | AlarmCoordinator (sole DB writer)              |
+| `apps/threshold/src-tauri/src/alarm/database.rs` | SQLite access, revision tracking               |
+| `apps/threshold/src-tauri/src/alarm/events.rs`   | Event payload types including AlarmsSyncNeeded |
+| `apps/threshold/src-tauri/src/alarm/models.rs`   | AlarmRecord, AlarmInput                        |
 
 ---
 
 ## 10. Implementation Status
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| SyncResponse serde alignment | Done | PascalCase tags, camelCase fields |
-| FullSync payload in all publishes | Done | Both batch and immediate paths send FullSync envelope |
-| WatchAlarm.fromJson() AlarmRecord compat | Done | Parses fixedTime/activeDays |
-| WearMessageService offline routing | Done | Cache reads + foreground service writes |
-| SharedPreferences cache (reads) | Done | §4.2 — write on publish, read on offline sync |
-| WearSyncService (foreground, writes) | Done | §4.3 — boots Tauri silently (no UI flash) |
-| Watch event handlers in app crate | Done | wear:alarm:save/delete/dismiss/snooze, wear:sync:request/batch_ready |
-| heal-on-launch wear-sync integration | Done | emit_sync_needed(Initialize) on startup |
-| Alarm ring notification (phone → watch) | Done | `alarm:fired` → wear-sync → `/threshold/alarm_ring` → WearRingingService |
-| Alarm dismiss/snooze (watch → phone) | Done | `/threshold/alarm_dismiss` and `/threshold/alarm_snooze` → event bus → coordinator |
-| Watch ringing UI | Done | Compose screen with breathing rings, threshold indicator, stop/snooze buttons |
-| Disconnected fallback scheduling | Done | `PhoneConnectionMonitor` + `WearAlarmScheduler` + `AlarmManager.setAlarmClock()` |
-| Watch settings screen | Done | Test ring button via `SettingsScreen.kt` |
-| Phone "Test Watch Ring" button | Done | `test_watch_ring` Tauri command in phone settings |
-| Snooze duration sync (phone → watch) | Done | DataItem + ring payload + watch persistence; `set_snooze_length` triggers ForceSync |
-| Ring deduplication on watch | Done | `WearRingingService` ignores duplicate ring messages for already-ringing alarm |
+| Component                                | Status | Notes                                                                               |
+| ---------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
+| SyncResponse serde alignment             | Done   | PascalCase tags, camelCase fields                                                   |
+| FullSync payload in all publishes        | Done   | Both batch and immediate paths send FullSync envelope                               |
+| WatchAlarm.fromJson() AlarmRecord compat | Done   | Parses fixedTime/activeDays                                                         |
+| WearMessageService offline routing       | Done   | Cache reads + foreground service writes                                             |
+| SharedPreferences cache (reads)          | Done   | §4.2 — write on publish, read on offline sync                                       |
+| WearSyncService (foreground, writes)     | Done   | §4.3 — boots Tauri silently (no UI flash)                                           |
+| Watch event handlers in app crate        | Done   | wear:alarm:save/delete/dismiss/snooze, wear:sync:request/batch_ready                |
+| heal-on-launch wear-sync integration     | Done   | emit_sync_needed(Initialize) on startup                                             |
+| Alarm ring notification (phone → watch)  | Done   | `alarm:fired` → wear-sync → `/threshold/alarm_ring` → WearRingingService            |
+| Alarm dismiss/snooze (watch → phone)     | Done   | `/threshold/alarm_dismiss` and `/threshold/alarm_snooze` → event bus → coordinator  |
+| Watch ringing UI                         | Done   | Compose screen with breathing rings, threshold indicator, stop/snooze buttons       |
+| Disconnected fallback scheduling         | Done   | `PhoneConnectionMonitor` + `WearAlarmScheduler` + `AlarmManager.setAlarmClock()`    |
+| Watch settings screen                    | Done   | Test ring button via `SettingsScreen.kt`                                            |
+| Phone "Test Watch Ring" button           | Done   | `test_watch_ring` Tauri command in phone settings                                   |
+| Snooze duration sync (phone → watch)     | Done   | DataItem + ring payload + watch persistence; `set_snooze_length` triggers ForceSync |
+| Ring deduplication on watch              | Done   | `WearRingingService` ignores duplicate ring messages for already-ringing alarm      |
 
 ---
 

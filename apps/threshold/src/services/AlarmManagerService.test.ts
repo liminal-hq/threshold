@@ -90,12 +90,14 @@ describe('AlarmManagerService', () => {
 		(AlarmService.save as any).mockResolvedValue({ id: 99 });
 		(AlarmService.delete as any).mockResolvedValue(undefined);
 
-		(listen as any).mockImplementation(async (eventName: string, handler: (event: any) => unknown) => {
-			const existing = eventListeners.get(eventName) ?? [];
-			existing.push(handler);
-			eventListeners.set(eventName, existing);
-			return () => undefined;
-		});
+		(listen as any).mockImplementation(
+			async (eventName: string, handler: (event: any) => unknown) => {
+				const existing = eventListeners.get(eventName) ?? [];
+				existing.push(handler);
+				eventListeners.set(eventName, existing);
+				return () => undefined;
+			},
+		);
 		(emit as any).mockImplementation(async (eventName: string, payload?: unknown) => {
 			const handlers = eventListeners.get(eventName) ?? [];
 			for (const handler of handlers) {

@@ -134,7 +134,9 @@ export class AlarmManagerService {
 				// alarm could still fire if the BroadcastReceiver was already dispatched.
 				await listen<{ id: number; reason: string }>('alarm:cancelled', async (event) => {
 					const { id } = event.payload;
-					console.log(`[AlarmManager] Received alarm:cancelled for id=${id}, reason=${event.payload.reason}`);
+					console.log(
+						`[AlarmManager] Received alarm:cancelled for id=${id}, reason=${event.payload.reason}`,
+					);
 					await this.cancelNativeAlarm(id);
 					await alarmNotificationService.cancelUpcomingNotification(id);
 					this.scheduledSignatures.delete(id);
@@ -153,7 +155,9 @@ export class AlarmManagerService {
 				});
 				console.log('[AlarmManager] Event listener 4/6 registered.');
 
-				console.log('[AlarmManager] Setting up event listener 5/6: notifications:upcoming:resync...');
+				console.log(
+					'[AlarmManager] Setting up event listener 5/6: notifications:upcoming:resync...',
+				);
 				await listen<NotificationUpcomingResyncEvent>(
 					'notifications:upcoming:resync',
 					async (event) => {
@@ -414,19 +418,19 @@ export class AlarmManagerService {
 		}
 	}
 
-		private async handleAlarmRing(id: number) {
-			await alarmNotificationService.cancelUpcomingNotification(id);
+	private async handleAlarmRing(id: number) {
+		await alarmNotificationService.cancelUpcomingNotification(id);
 
-			const isMobile = PlatformUtils.isMobile();
-			try {
-				await sendNotification({
-					title: APP_NAME,
-					body: 'Your alarm is ringing!',
-					actionTypeId: isMobile ? 'alarm_trigger' : undefined,
-				});
-			} catch (e) {
-				console.error('[AlarmManager] Failed to send ringing notification', e);
-			}
+		const isMobile = PlatformUtils.isMobile();
+		try {
+			await sendNotification({
+				title: APP_NAME,
+				body: 'Your alarm is ringing!',
+				actionTypeId: isMobile ? 'alarm_trigger' : undefined,
+			});
+		} catch (e) {
+			console.error('[AlarmManager] Failed to send ringing notification', e);
+		}
 
 		try {
 			await AlarmService.reportFired(id, Date.now());

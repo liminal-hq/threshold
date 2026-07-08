@@ -14,73 +14,73 @@ The goal is to keep alarm state authoritative and deterministic while allowing n
 The notification system is intentionally split into three layers:
 
 1. Domain state and scheduling intent
-    - `AlarmManagerService` responds to core alarm events (`alarms:batch:updated`, `alarm-ring`), keeps native scheduling in sync, and emits notification refresh intents.
-    - It does not own notification rendering primitives directly.
+   - `AlarmManagerService` responds to core alarm events (`alarms:batch:updated`, `alarm-ring`), keeps native scheduling in sync, and emits notification refresh intents.
+   - It does not own notification rendering primitives directly.
 
 2. Notification orchestration
-    - `AlarmNotificationService` is the hub for notification action type registration, action dispatch, and upcoming notification schedule/cancel operations.
-    - It provides a stable API to feature services and hides plugin-level details.
+   - `AlarmNotificationService` is the hub for notification action type registration, action dispatch, and upcoming notification schedule/cancel operations.
+   - It provides a stable API to feature services and hides plugin-level details.
 
 3. UI feedback and presentation adapters
-    - `NotificationToastService` consumes toast intent events and performs platform-specific presentation.
-    - This keeps transient UI feedback separate from alarm domain logic.
+   - `NotificationToastService` consumes toast intent events and performs platform-specific presentation.
+   - This keeps transient UI feedback separate from alarm domain logic.
 
 ## Responsibility Boundaries
 
 ### `AlarmManagerService`
 
 - **Owns**
-    - Listening to core alarm lifecycle events.
-    - Native alarm scheduling and cancellation.
-    - Emitting `notifications:upcoming:resync` intents.
-    - Mapping alarm business operations to commands (`dismiss`, `snooze`).
-    - Consuming `notifications:upcoming:resync` and executing upcoming notification refresh using current alarm state.
+  - Listening to core alarm lifecycle events.
+  - Native alarm scheduling and cancellation.
+  - Emitting `notifications:upcoming:resync` intents.
+  - Mapping alarm business operations to commands (`dismiss`, `snooze`).
+  - Consuming `notifications:upcoming:resync` and executing upcoming notification refresh using current alarm state.
 - **Does not own**
-    - Notification action type composition internals.
-    - Direct toast UI invocation.
+  - Notification action type composition internals.
+  - Direct toast UI invocation.
 
 ### `AlarmNotificationService`
 
 - **Owns**
-    - Action type provider registry and deduplication.
-    - Action callback routing by `actionTypeId` and `actionId`.
-    - Upcoming notification ID translation and schedule/cancel logic.
-    - Notification-domain event API (`notifications:*`).
-    - Consuming `settings-changed` for notification-facing concerns (`snoozeLength`) and refreshing action registrations.
+  - Action type provider registry and deduplication.
+  - Action callback routing by `actionTypeId` and `actionId`.
+  - Upcoming notification ID translation and schedule/cancel logic.
+  - Notification-domain event API (`notifications:*`).
+  - Consuming `settings-changed` for notification-facing concerns (`snoozeLength`) and refreshing action registrations.
 - **Does not own**
-    - Alarm state mutation authority.
-    - Navigation or app window routing.
+  - Alarm state mutation authority.
+  - Navigation or app window routing.
 
 ### `NotificationToastService`
 
 - **Owns**
-    - Listening to `notifications:toast`.
-    - Platform filtering and toast rendering.
+  - Listening to `notifications:toast`.
+  - Platform filtering and toast rendering.
 - **Does not own**
-    - Alarm state, scheduling, or action routing decisions.
+  - Alarm state, scheduling, or action routing decisions.
 
 ### `SettingsService`
 
 - **Owns**
-    - Emitting settings-change events.
-    - Registering settings-owned test notification action types.
-    - Sending test notifications.
+  - Emitting settings-change events.
+  - Registering settings-owned test notification action types.
+  - Sending test notifications.
 
 ## Event-Driven Flows
 
 ### Event Contract Summary
 
-| Event | Producer | Primary Consumer | Intent |
-|---|---|---|---|
-| `alarms:batch:updated` | Alarm domain | `AlarmManagerService` | Alarm state changed; refresh scheduling |
-| `alarm-ring` | Native/plugin layer | `AlarmManagerService` | Alarm has fired; transition to ringing flow |
-| `alarm-manager:native-fired` | alarm-manager plugin mobile bridge | Rust core (`src-tauri`) | Native alarm-fired lifecycle callback |
-| `alarm:fired` | Rust alarm coordinator | wear-sync plugin | Canonical lifecycle event fan-out |
-| `settings-changed` (`snoozeLength`) | `SettingsService` | `AlarmNotificationService` | Rebuild action labels |
-| `settings-changed` (`is24h`) | `SettingsService` | `AlarmManagerService` | Re-render upcoming-notification text |
-| `notifications:action-types:refresh` | `AlarmNotificationService` | `AlarmNotificationService` | Recompute and register action types |
-| `notifications:upcoming:resync` | `AlarmManagerService`, `AlarmNotificationService` | `AlarmManagerService` | Refresh upcoming notifications (all or targeted) |
-| `notifications:toast` | Notification/domain services | `NotificationToastService` | Present transient confirmation UI |
+| Event                                | Producer                                          | Primary Consumer           | Intent                                           |
+| ------------------------------------ | ------------------------------------------------- | -------------------------- | ------------------------------------------------ |
+| `alarms:batch:updated`               | Alarm domain                                      | `AlarmManagerService`      | Alarm state changed; refresh scheduling          |
+| `alarm-ring`                         | Native/plugin layer                               | `AlarmManagerService`      | Alarm has fired; transition to ringing flow      |
+| `alarm-manager:native-fired`         | alarm-manager plugin mobile bridge                | Rust core (`src-tauri`)    | Native alarm-fired lifecycle callback            |
+| `alarm:fired`                        | Rust alarm coordinator                            | wear-sync plugin           | Canonical lifecycle event fan-out                |
+| `settings-changed` (`snoozeLength`)  | `SettingsService`                                 | `AlarmNotificationService` | Rebuild action labels                            |
+| `settings-changed` (`is24h`)         | `SettingsService`                                 | `AlarmManagerService`      | Re-render upcoming-notification text             |
+| `notifications:action-types:refresh` | `AlarmNotificationService`                        | `AlarmNotificationService` | Recompute and register action types              |
+| `notifications:upcoming:resync`      | `AlarmManagerService`, `AlarmNotificationService` | `AlarmManagerService`      | Refresh upcoming notifications (all or targeted) |
+| `notifications:toast`                | Notification/domain services                      | `NotificationToastService` | Present transient confirmation UI                |
 
 ### Alarm Batch Update Path
 
@@ -103,9 +103,9 @@ This two-step fan-out keeps notification refresh explicit and reusable without c
 ### Settings-Driven Paths
 
 - `snoozeLength` change:
-    - `AlarmNotificationService` refreshes action types so labels like `Snooze (15m)` stay accurate.
+  - `AlarmNotificationService` refreshes action types so labels like `Snooze (15m)` stay accurate.
 - `is24h` change:
-    - `AlarmManagerService` directly regenerates upcoming notification body text in the new time format.
+  - `AlarmManagerService` directly regenerates upcoming notification body text in the new time format.
 
 ### Toast Intent Path
 
@@ -159,13 +159,13 @@ Threshold follows a strict split:
 Examples:
 
 - Command-driven:
-    - `AlarmService.dismiss`
-    - `AlarmService.snooze`
+  - `AlarmService.dismiss`
+  - `AlarmService.snooze`
 - Event-driven:
-    - `alarm-manager:native-fired` -> Rust `alarm:fired`
-    - action type refresh
-    - upcoming notification refresh
-    - toast intent presentation
+  - `alarm-manager:native-fired` -> Rust `alarm:fired`
+  - action type refresh
+  - upcoming notification refresh
+  - toast intent presentation
 
 This avoids ambiguous dual-write logic and keeps source-of-truth behaviour predictable.
 
@@ -175,8 +175,8 @@ This avoids ambiguous dual-write logic and keeps source-of-truth behaviour predi
 
 ```ts
 type NotificationUpcomingResyncEvent = {
-  reason: 'alarm-batch-updated' | 'settings-24h-changed' | 'manual';
-  alarmIds?: number[];
+	reason: 'alarm-batch-updated' | 'settings-24h-changed' | 'manual';
+	alarmIds?: number[];
 };
 ```
 
@@ -184,9 +184,9 @@ type NotificationUpcomingResyncEvent = {
 
 ```ts
 type NotificationToastEvent = {
-  kind: 'upcoming-snoozed' | 'alarm-dismissed' | 'generic';
-  message: string;
-  platform?: 'android' | 'ios' | 'desktop';
+	kind: 'upcoming-snoozed' | 'alarm-dismissed' | 'generic';
+	message: string;
+	platform?: 'android' | 'ios' | 'desktop';
 };
 ```
 
@@ -195,16 +195,16 @@ type NotificationToastEvent = {
 When adding a new notification feature:
 
 1. Decide ownership first
-    - Add action registration where the feature context lives (settings, alarms, future modules), not in a central monolith.
+   - Add action registration where the feature context lives (settings, alarms, future modules), not in a central monolith.
 
 2. Preserve the split
-    - Use commands for state mutation and events for fan-out.
+   - Use commands for state mutation and events for fan-out.
 
 3. Prefer semantic event names
-    - Event names should describe intent (`notifications:toast`), not implementation details.
+   - Event names should describe intent (`notifications:toast`), not implementation details.
 
 4. Document new contracts
-    - Update this document with producer, consumer, payload, and lifecycle impact.
+   - Update this document with producer, consumer, payload, and lifecycle impact.
 
 ## Desktop Behaviour
 

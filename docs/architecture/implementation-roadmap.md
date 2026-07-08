@@ -25,6 +25,7 @@ Each milestone is **testable and shippable** independently.
 **Duration:** 3-4 days  
 **Goal:** Central alarm coordinator with scheduler logic  
 **Deliverables:**
+
 - AlarmCoordinator with CRUD operations
 - Scheduler module with next trigger calculation
 - AlarmDatabase with SQLite integration
@@ -52,6 +53,7 @@ src-tauri/src/alarm/
 **Tasks:**
 
 1. **Create module structure:**
+
    ```bash
    cd src-tauri/src
    mkdir alarm
@@ -147,7 +149,7 @@ pub fn calculate_next_trigger(alarm: &AlarmInput) -> Result<Option<i64>> {
     if !alarm.enabled {
         return Ok(None);
     }
-    
+
     match alarm.mode {
         AlarmMode::Fixed => {
             let time = alarm.fixed_time.as_ref()
@@ -167,25 +169,25 @@ pub fn calculate_next_trigger(alarm: &AlarmInput) -> Result<Option<i64>> {
 fn calculate_fixed_trigger(time_str: &str, active_days: &[i32]) -> Result<Option<i64>> {
     let now = Local::now();
     let target_time = NaiveTime::parse_from_str(time_str, "%H:%M")?;
-    
+
     // Find next occurrence in active days
     for days_ahead in 0..8 {
         let candidate = now + chrono::Duration::days(days_ahead);
         let weekday = candidate.weekday().num_days_from_sunday() as i32;
-        
+
         if active_days.contains(&weekday) {
             let candidate_dt = candidate
                 .date_naive()
                 .and_time(target_time)
                 .and_local_timezone(Local)
                 .unwrap();
-            
+
             if candidate_dt > now {
                 return Ok(Some(candidate_dt.timestamp_millis()));
             }
         }
     }
-    
+
     // No active days found in next week
     Ok(None)
 }
@@ -198,48 +200,48 @@ fn calculate_window_trigger(
     let now = Local::now();
     let start_time = NaiveTime::parse_from_str(start_str, "%H:%M")?;
     let end_time = NaiveTime::parse_from_str(end_str, "%H:%M")?;
-    
+
     // Validate window
     if end_time <= start_time {
         return Err("Window end must be after start".into());
     }
-    
+
     // Find next occurrence
     for days_ahead in 0..8 {
         let candidate = now + chrono::Duration::days(days_ahead);
         let weekday = candidate.weekday().num_days_from_sunday() as i32;
-        
+
         if active_days.contains(&weekday) {
             let window_start = candidate
                 .date_naive()
                 .and_time(start_time)
                 .and_local_timezone(Local)
                 .unwrap();
-            
+
             if window_start > now {
                 // Calculate random offset within window
                 let window_duration_secs = end_time
                     .signed_duration_since(start_time)
                     .num_seconds();
-                
+
                 let random_offset_secs = rand::thread_rng()
                     .gen_range(0..window_duration_secs);
-                
-                let trigger = window_start 
+
+                let trigger = window_start
                     + chrono::Duration::seconds(random_offset_secs);
-                
+
                 return Ok(Some(trigger.timestamp_millis()));
             }
         }
     }
-    
+
     Ok(None)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_fixed_alarm_calculation() {
         let input = AlarmInput {
@@ -249,11 +251,11 @@ mod tests {
             active_days: vec![1, 2, 3, 4, 5], // Weekdays
             ..Default::default()
         };
-        
+
         let trigger = calculate_next_trigger(&input).unwrap();
         assert!(trigger.is_some());
     }
-    
+
     #[test]
     fn test_window_randomization() {
         let input = AlarmInput {
@@ -264,25 +266,25 @@ mod tests {
             active_days: vec![1, 2, 3, 4, 5],
             ..Default::default()
         };
-        
+
         let trigger = calculate_next_trigger(&input).unwrap().unwrap();
-        
+
         // Verify trigger is in the future
         let now = Local::now().timestamp_millis();
         assert!(trigger > now);
-        
+
         // Run multiple times to verify randomness
         let trigger2 = calculate_next_trigger(&input).unwrap().unwrap();
         // Note: Could be same due to same day, but algorithm is random
     }
-    
+
     #[test]
     fn test_disabled_alarm() {
         let input = AlarmInput {
             enabled: false,
             ..Default::default()
         };
-        
+
         let trigger = calculate_next_trigger(&input).unwrap();
         assert!(trigger.is_none());
     }
@@ -290,6 +292,7 @@ mod tests {
 ```
 
 **Dependencies to add to `src-tauri/Cargo.toml`:**
+
 ```toml
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
@@ -315,32 +318,32 @@ impl AlarmDatabase {
     pub async fn new<R: Runtime>(app: &AppHandle<R>) -> Result<Self> {
         Ok(Self {})
     }
-    
+
     pub async fn get_all<R: Runtime>(&self, app: &AppHandle<R>) -> Result<Vec<AlarmRecord>> {
         use tauri_plugin_sql::DbExt;
-        
+
         let db = app.db()?;
         let rows: Vec<AlarmRow> = db.select("SELECT * FROM alarms ORDER BY id").await?;
-        
+
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
-    
+
     pub async fn get_by_id<R: Runtime>(
         &self,
         app: &AppHandle<R>,
         id: i32,
     ) -> Result<AlarmRecord> {
         use tauri_plugin_sql::DbExt;
-        
+
         let db = app.db()?;
         let row: AlarmRow = db.select_one(
             "SELECT * FROM alarms WHERE id = ?",
             vec![id.into()],
         ).await?;
-        
+
         Ok(row.into())
     }
-    
+
     pub async fn save<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -348,15 +351,15 @@ impl AlarmDatabase {
         next_trigger: Option<i64>,
     ) -> Result<AlarmRecord> {
         use tauri_plugin_sql::DbExt;
-        
+
         let db = app.db()?;
         let active_days_json = serde_json::to_string(&input.active_days)?;
-        
+
         if let Some(id) = input.id {
             // Update existing
             db.execute(
-                "UPDATE alarms SET 
-                    label=?, enabled=?, mode=?, fixed_time=?, window_start=?, 
+                "UPDATE alarms SET
+                    label=?, enabled=?, mode=?, fixed_time=?, window_start=?,
                     window_end=?, active_days=?, next_trigger=?, sound_uri=?, sound_title=?
                 WHERE id=?",
                 vec![
@@ -373,13 +376,13 @@ impl AlarmDatabase {
                     id.into(),
                 ],
             ).await?;
-            
+
             self.get_by_id(app, id).await
         } else {
             // Insert new
             let result = db.execute(
-                "INSERT INTO alarms 
-                    (label, enabled, mode, fixed_time, window_start, window_end, 
+                "INSERT INTO alarms
+                    (label, enabled, mode, fixed_time, window_start, window_end,
                      active_days, next_trigger, sound_uri, sound_title)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 vec![
@@ -395,14 +398,14 @@ impl AlarmDatabase {
                     input.sound_title.into(),
                 ],
             ).await?;
-            
+
             self.get_by_id(app, result.last_insert_id as i32).await
         }
     }
-    
+
     pub async fn delete<R: Runtime>(&self, app: &AppHandle<R>, id: i32) -> Result<()> {
         use tauri_plugin_sql::DbExt;
-        
+
         let db = app.db()?;
         db.execute("DELETE FROM alarms WHERE id = ?", vec![id.into()]).await?;
         Ok(())
@@ -432,10 +435,10 @@ impl From<AlarmRow> for AlarmRecord {
             "WINDOW" => AlarmMode::Window,
             _ => AlarmMode::Fixed,
         };
-        
+
         let active_days: Vec<i32> = serde_json::from_str(&row.active_days)
             .unwrap_or_else(|_| vec![]);
-        
+
         Self {
             id: row.id,
             label: row.label,
@@ -506,7 +509,7 @@ impl AlarmCoordinator {
     pub fn new(db: AlarmDatabase) -> Self {
         Self { db }
     }
-    
+
     /// Get all alarms
     pub async fn get_all_alarms<R: Runtime>(
         &self,
@@ -514,7 +517,7 @@ impl AlarmCoordinator {
     ) -> Result<Vec<AlarmRecord>> {
         self.db.get_all(app).await
     }
-    
+
     /// Get single alarm by ID
     pub async fn get_alarm<R: Runtime>(
         &self,
@@ -523,7 +526,7 @@ impl AlarmCoordinator {
     ) -> Result<AlarmRecord> {
         self.db.get_by_id(app, id).await
     }
-    
+
     /// Create or update alarm
     pub async fn save_alarm<R: Runtime>(
         &self,
@@ -536,16 +539,16 @@ impl AlarmCoordinator {
         } else {
             None
         };
-        
+
         // Save to database
         let alarm = self.db.save(app, input, next_trigger).await?;
-        
+
         // Emit event to all listeners
         self.emit_alarms_changed(app).await?;
-        
+
         Ok(alarm)
     }
-    
+
     /// Toggle alarm on/off
     pub async fn toggle_alarm<R: Runtime>(
         &self,
@@ -554,7 +557,7 @@ impl AlarmCoordinator {
         enabled: bool,
     ) -> Result<AlarmRecord> {
         let alarm = self.db.get_by_id(app, id).await?;
-        
+
         let input = AlarmInput {
             id: Some(alarm.id),
             label: alarm.label,
@@ -567,10 +570,10 @@ impl AlarmCoordinator {
             sound_uri: alarm.sound_uri,
             sound_title: alarm.sound_title,
         };
-        
+
         self.save_alarm(app, input).await
     }
-    
+
     /// Delete alarm
     pub async fn delete_alarm<R: Runtime>(
         &self,
@@ -581,7 +584,7 @@ impl AlarmCoordinator {
         self.emit_alarms_changed(app).await?;
         Ok(())
     }
-    
+
     /// Dismiss ringing alarm and calculate next occurrence
     pub async fn dismiss_alarm<R: Runtime>(
         &self,
@@ -589,7 +592,7 @@ impl AlarmCoordinator {
         id: i32,
     ) -> Result<()> {
         let alarm = self.db.get_by_id(app, id).await?;
-        
+
         // Recalculate next occurrence
         let input = AlarmInput {
             id: Some(alarm.id),
@@ -603,11 +606,11 @@ impl AlarmCoordinator {
             sound_uri: alarm.sound_uri,
             sound_title: alarm.sound_title,
         };
-        
+
         self.save_alarm(app, input).await?;
         Ok(())
     }
-    
+
     /// Emit alarms:changed event
     async fn emit_alarms_changed<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
         let alarms = self.get_all_alarms(app).await?;
@@ -725,10 +728,10 @@ pub fn run() {
             let db = tauri::async_runtime::block_on(async {
                 AlarmDatabase::new(app.handle()).await
             })?;
-            
+
             let coordinator = AlarmCoordinator::new(db);
             app.manage(coordinator);
-            
+
             Ok(())
         })
         .plugin(alarm_manager::init()) // Existing plugin
@@ -849,6 +852,7 @@ cargo test
 
 **Goal:** Implement the Level 3 Granular Event System with Monotonic Revision Tracking
 **Deliverables:**
+
 - Database migration v2 (revision tables, tombstones)
 - Event structs (11 events across 4 categories)
 - AlarmCoordinator event emission
@@ -859,6 +863,7 @@ cargo test
 
 **Why This Is Critical:**
 Without this system:
+
 - ❌ wear-sync plugin cannot detect conflicts (no revision comparison)
 - ❌ Incremental sync impossible (no "changes since revision X" queries)
 - ❌ Deleted alarms reappear on watch after phone restart (no tombstones)
@@ -869,6 +874,7 @@ Without this system:
 ### A.5.1: Add Revision System (3-4 hours)
 
 **Files to modify:**
+
 - [apps/threshold/src-tauri/src/alarm/models.rs](../../apps/threshold/src-tauri/src/alarm/models.rs)
 - [apps/threshold/src-tauri/src/alarm/database.rs](../../apps/threshold/src-tauri/src/alarm/database.rs)
 - [apps/threshold/src-tauri/src/alarm/mod.rs](../../apps/threshold/src-tauri/src/alarm/mod.rs)
@@ -922,6 +928,7 @@ pub struct AlarmRecord {
 **Add revision methods to AlarmDatabase:**
 
 See [event-architecture.md](event-architecture.md) section 2.3 for complete implementations:
+
 - `next_revision()` - Atomically increment and return next revision
 - `current_revision()` - Get current revision without incrementing
 - `get_alarms_since_revision()` - Get alarms changed since revision
@@ -952,6 +959,7 @@ pub async fn save_alarm<R: Runtime>(
 ```
 
 **Testing:**
+
 ```bash
 cargo test
 pnpm tauri dev
@@ -976,21 +984,23 @@ Populate with 11 event types across 4 categories. See [event-architecture.md](ev
 4. **Batch Events** (2): `alarms:batch:updated`, `alarms:sync:needed`
 
 **Key Benefits:**
+
 - Payload sizes: 40-220 bytes (vs 1200 bytes for old snapshot event)
 - No diffing needed (subscribers get exact action)
 - Enables batching (wear-sync buffers 5 edits → 1 sync)
 
 **Testing:**
+
 ```typescript
 // In browser DevTools console
 import { listen } from '@tauri-apps/api/event';
 
 await listen('alarm:created', (event) => {
-    console.log('Created:', event.payload);
+	console.log('Created:', event.payload);
 });
 
 await window.__TAURI__.core.invoke('save_alarm', {
-    alarm: { enabled: true, mode: 'FIXED', fixedTime: '09:00', activeDays: [1,2,3,4,5] }
+	alarm: { enabled: true, mode: 'FIXED', fixedTime: '09:00', activeDays: [1, 2, 3, 4, 5] },
 });
 // Should see event logged with revision
 ```
@@ -1136,6 +1146,7 @@ mod tests {
 **Duration:** 2-3 days  
 **Goal:** Replace the legacy TypeScript database service with Rust commands  
 **Deliverables:**
+
 - Updated TypeScript services
 - Event listeners in UI
 - Remove legacy database service
@@ -1149,30 +1160,30 @@ mod tests {
 
 ```typescript
 export interface AlarmRecord {
-    id: number;
-    label: string | null;
-    enabled: boolean;
-    mode: 'FIXED' | 'WINDOW';
-    fixedTime: string | null;
-    windowStart: string | null;
-    windowEnd: string | null;
-    activeDays: number[];
-    nextTrigger: number | null;
-    soundUri: string | null;
-    soundTitle: string | null;
+	id: number;
+	label: string | null;
+	enabled: boolean;
+	mode: 'FIXED' | 'WINDOW';
+	fixedTime: string | null;
+	windowStart: string | null;
+	windowEnd: string | null;
+	activeDays: number[];
+	nextTrigger: number | null;
+	soundUri: string | null;
+	soundTitle: string | null;
 }
 
 export interface AlarmInput {
-    id?: number;
-    label?: string | null;
-    enabled: boolean;
-    mode: 'FIXED' | 'WINDOW';
-    fixedTime?: string | null;
-    windowStart?: string | null;
-    windowEnd?: string | null;
-    activeDays: number[];
-    soundUri?: string | null;
-    soundTitle?: string | null;
+	id?: number;
+	label?: string | null;
+	enabled: boolean;
+	mode: 'FIXED' | 'WINDOW';
+	fixedTime?: string | null;
+	windowStart?: string | null;
+	windowEnd?: string | null;
+	activeDays: number[];
+	soundUri?: string | null;
+	soundTitle?: string | null;
 }
 ```
 
@@ -1188,69 +1199,69 @@ import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import type { AlarmRecord, AlarmInput } from '../types/alarm';
 
 export class AlarmService {
-    private static unlistenFn: UnlistenFn | null = null;
-    
-    /**
-     * Subscribe to alarm changes
-     */
-    static async subscribe(callback: (alarms: AlarmRecord[]) => void): Promise<UnlistenFn> {
-        this.unlistenFn = await listen<AlarmRecord[]>('alarms:changed', (event) => {
-            callback(event.payload);
-        });
-        return this.unlistenFn;
-    }
-    
-    /**
-     * Unsubscribe from alarm changes
-     */
-    static async unsubscribe() {
-        if (this.unlistenFn) {
-            this.unlistenFn();
-            this.unlistenFn = null;
-        }
-    }
-    
-    /**
-     * Get all alarms
-     */
-    static async getAll(): Promise<AlarmRecord[]> {
-        return await invoke<AlarmRecord[]>('get_alarms');
-    }
-    
-    /**
-     * Get single alarm
-     */
-    static async get(id: number): Promise<AlarmRecord> {
-        return await invoke<AlarmRecord>('get_alarm', { id });
-    }
-    
-    /**
-     * Create or update alarm
-     */
-    static async save(alarm: AlarmInput): Promise<AlarmRecord> {
-        return await invoke<AlarmRecord>('save_alarm', { alarm });
-    }
-    
-    /**
-     * Toggle alarm on/off
-     */
-    static async toggle(id: number, enabled: boolean): Promise<AlarmRecord> {
-        return await invoke<AlarmRecord>('toggle_alarm', { id, enabled });
-    }
-    
-    /**
-     * Delete alarm
-     */
-    static async delete(id: number): Promise<void> {
-        await invoke('delete_alarm', { id });
-    }
-    
-    /**
-     * Dismiss ringing alarm
-     */
-    static async dismiss(id: number): Promise<void> {
-        await invoke('dismiss_alarm', { id });
-    }
+	private static unlistenFn: UnlistenFn | null = null;
+
+	/**
+	 * Subscribe to alarm changes
+	 */
+	static async subscribe(callback: (alarms: AlarmRecord[]) => void): Promise<UnlistenFn> {
+		this.unlistenFn = await listen<AlarmRecord[]>('alarms:changed', (event) => {
+			callback(event.payload);
+		});
+		return this.unlistenFn;
+	}
+
+	/**
+	 * Unsubscribe from alarm changes
+	 */
+	static async unsubscribe() {
+		if (this.unlistenFn) {
+			this.unlistenFn();
+			this.unlistenFn = null;
+		}
+	}
+
+	/**
+	 * Get all alarms
+	 */
+	static async getAll(): Promise<AlarmRecord[]> {
+		return await invoke<AlarmRecord[]>('get_alarms');
+	}
+
+	/**
+	 * Get single alarm
+	 */
+	static async get(id: number): Promise<AlarmRecord> {
+		return await invoke<AlarmRecord>('get_alarm', { id });
+	}
+
+	/**
+	 * Create or update alarm
+	 */
+	static async save(alarm: AlarmInput): Promise<AlarmRecord> {
+		return await invoke<AlarmRecord>('save_alarm', { alarm });
+	}
+
+	/**
+	 * Toggle alarm on/off
+	 */
+	static async toggle(id: number, enabled: boolean): Promise<AlarmRecord> {
+		return await invoke<AlarmRecord>('toggle_alarm', { id, enabled });
+	}
+
+	/**
+	 * Delete alarm
+	 */
+	static async delete(id: number): Promise<void> {
+		await invoke('delete_alarm', { id });
+	}
+
+	/**
+	 * Dismiss ringing alarm
+	 */
+	static async dismiss(id: number): Promise<void> {
+		await invoke('dismiss_alarm', { id });
+	}
 }
 ```
 
@@ -1266,24 +1277,24 @@ import { AlarmService } from './services/AlarmService';
 import type { AlarmRecord } from './types/alarm';
 
 function App() {
-    const [alarms, setAlarms] = useState<AlarmRecord[]>([]);
-    const [loading, setLoading] = useState(true);
-    
-    useEffect(() => {
-        // Load initial data
-        AlarmService.getAll()
-            .then(setAlarms)
-            .finally(() => setLoading(false));
-        
-        // Subscribe to changes
-        const unlisten = AlarmService.subscribe(setAlarms);
-        
-        return () => {
-            unlisten.then(fn => fn());
-        };
-    }, []);
-    
-    // Rest of app...
+	const [alarms, setAlarms] = useState<AlarmRecord[]>([]);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		// Load initial data
+		AlarmService.getAll()
+			.then(setAlarms)
+			.finally(() => setLoading(false));
+
+		// Subscribe to changes
+		const unlisten = AlarmService.subscribe(setAlarms);
+
+		return () => {
+			unlisten.then((fn) => fn());
+		};
+	}, []);
+
+	// Rest of app...
 }
 ```
 
@@ -1298,24 +1309,24 @@ import { AlarmService } from '../services/AlarmService';
 import type { AlarmInput } from '../types/alarm';
 
 async function handleSave() {
-    const input: AlarmInput = {
-        id: alarm?.id,
-        label: label || null,
-        enabled: true,
-        mode: mode,
-        fixedTime: mode === 'FIXED' ? fixedTime : null,
-        windowStart: mode === 'WINDOW' ? windowStart : null,
-        windowEnd: mode === 'WINDOW' ? windowEnd : null,
-        activeDays: selectedDays,
-        soundUri: selectedSound?.uri || null,
-        soundTitle: selectedSound?.title || null,
-    };
-    
-    // Single call - Rust handles everything
-    await AlarmService.save(input);
-    
-    // Navigate back - UI updates via event listener
-    router.navigate('/');
+	const input: AlarmInput = {
+		id: alarm?.id,
+		label: label || null,
+		enabled: true,
+		mode: mode,
+		fixedTime: mode === 'FIXED' ? fixedTime : null,
+		windowStart: mode === 'WINDOW' ? windowStart : null,
+		windowEnd: mode === 'WINDOW' ? windowEnd : null,
+		activeDays: selectedDays,
+		soundUri: selectedSound?.uri || null,
+		soundTitle: selectedSound?.title || null,
+	};
+
+	// Single call - Rust handles everything
+	await AlarmService.save(input);
+
+	// Navigate back - UI updates via event listener
+	router.navigate('/');
 }
 ```
 
@@ -1329,17 +1340,17 @@ async function handleSave() {
 import { AlarmService } from '../services/AlarmService';
 
 function AlarmCard({ alarm }) {
-    const handleToggle = async (enabled: boolean) => {
-        await AlarmService.toggle(alarm.id, enabled);
-        // UI updates automatically via event
-    };
-    
-    const handleDelete = async () => {
-        await AlarmService.delete(alarm.id);
-        // UI updates automatically via event
-    };
-    
-    // Render...
+	const handleToggle = async (enabled: boolean) => {
+		await AlarmService.toggle(alarm.id, enabled);
+		// UI updates automatically via event
+	};
+
+	const handleDelete = async () => {
+		await AlarmService.delete(alarm.id);
+		// UI updates automatically via event
+	};
+
+	// Render...
 }
 ```
 
@@ -1353,15 +1364,15 @@ function AlarmCard({ alarm }) {
 import { AlarmService } from '../services/AlarmService';
 
 function RingingScreen() {
-    const { id } = useParams();
-    
-    const handleDismiss = async () => {
-        await AlarmService.dismiss(parseInt(id!));
-        // Rust calculates next occurrence
-        router.navigate('/');
-    };
-    
-    // Render...
+	const { id } = useParams();
+
+	const handleDismiss = async () => {
+		await AlarmService.dismiss(parseInt(id!));
+		// Rust calculates next occurrence
+		router.navigate('/');
+	};
+
+	// Render...
 }
 ```
 
@@ -1370,6 +1381,7 @@ function RingingScreen() {
 ### B7: Remove Legacy DatabaseService (Completed)
 
 **Completed steps:**
+
 1. Deleted `apps/threshold/src/services/DatabaseService.ts`
 2. Deleted `apps/threshold/src/services/DatabaseService.test.ts`
 3. Removed `@tauri-apps/plugin-sql` from `apps/threshold/package.json`
@@ -1396,6 +1408,7 @@ function RingingScreen() {
 **Duration:** 2-3 days  
 **Goal:** Make alarm-manager react to events instead of direct calls  
 **Deliverables:**
+
 - alarm-manager listens to `alarms:changed`
 - Schedules/cancels alarms automatically
 - SharedPreferences cache for boot recovery
@@ -1451,12 +1464,12 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             let alarm_manager = mobile::init(app, api)?;
             #[cfg(desktop)]
             let alarm_manager = desktop::init(app, api)?;
-            
+
             app.manage(alarm_manager);
-            
+
             // Listen to alarms:changed events
             setup_event_listener(app.clone());
-            
+
             Ok(())
         })
         .build()
@@ -1464,15 +1477,15 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 
 fn setup_event_listener<R: Runtime>(app: AppHandle<R>) {
     use serde_json::Value;
-    
+
     app.listen("alarms:changed", move |event| {
         let payload = event.payload();
-        
+
         // Parse AlarmRecord array
         if let Ok(alarms) = serde_json::from_str::<Vec<Value>>(payload) {
             #[cfg(target_os = "android")]
             mobile::handle_alarms_changed(&app, alarms);
-            
+
             #[cfg(desktop)]
             desktop::handle_alarms_changed(&app, alarms);
         }
@@ -1497,10 +1510,10 @@ pub fn handle_alarms_changed<R: Runtime>(app: &AppHandle<R>, alarms: Vec<Value>)
         let enabled = alarm["enabled"].as_bool().unwrap_or(false);
         let next_trigger = alarm["nextTrigger"].as_i64();
         let sound_uri = alarm["soundUri"].as_str().map(|s| s.to_string());
-        
+
         if enabled && next_trigger.is_some() {
             let trigger = next_trigger.unwrap();
-            
+
             // Schedule native alarm
             #[cfg(target_os = "android")]
             {
@@ -1532,25 +1545,25 @@ fn schedule_native_alarm<R: Runtime>(
     sound_uri: Option<String>,
 ) -> Result<()> {
     use jni::objects::JValue;
-    
+
     app.run_on_android_context(|context, vm, env| {
         // Call AlarmUtils.scheduleAlarm(context, id, triggerAt, soundUri)
         // Also saves to SharedPreferences for boot recovery
-        
+
         let context = env.new_global_ref(context)?;
         let class = env.find_class("com/plugin/alarmmanager/AlarmUtils")?;
-        
+
         let method = env.get_static_method_id(
             class,
             "scheduleAlarm",
             "(Landroid/content/Context;IJLjava/lang/String;)V"
         )?;
-        
+
         let sound_uri_jstring = sound_uri
             .map(|s| env.new_string(s))
             .transpose()?
             .map(|s| JValue::Object(s.into()));
-        
+
         env.call_static_method_unchecked(
             class,
             method,
@@ -1561,7 +1574,7 @@ fn schedule_native_alarm<R: Runtime>(
                 sound_uri_jstring.unwrap_or(JValue::Object(std::ptr::null_mut())),
             ]
         )?;
-        
+
         Ok(())
     }).map_err(|e| Error::from(e))
 }
@@ -1592,7 +1605,7 @@ import android.util.Log
 object AlarmUtils {
     private const val PREFS_NAME = "ThresholdNative"
     private const val TAG = "AlarmUtils"
-    
+
     fun scheduleAlarm(
         context: Context,
         id: Int,
@@ -1600,10 +1613,10 @@ object AlarmUtils {
         soundUri: String?
     ) {
         Log.d(TAG, "Scheduling alarm $id at $triggerAtMillis")
-        
+
         // 1. Save to SharedPreferences for boot recovery
         saveToPrefs(context, id, triggerAtMillis, soundUri)
-        
+
         // 2. Schedule via AlarmManager
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java).apply {
@@ -1611,26 +1624,26 @@ object AlarmUtils {
             putExtra("ALARM_ID", id)
             putExtra("ALARM_SOUND_URI", soundUri)
         }
-        
+
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             id,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        
+
         val info = AlarmManager.AlarmClockInfo(triggerAtMillis, pendingIntent)
         alarmManager.setAlarmClock(info, pendingIntent)
-        
+
         Log.d(TAG, "Alarm $id scheduled successfully")
     }
-    
+
     fun cancelAlarm(context: Context, id: Int) {
         Log.d(TAG, "Cancelling alarm $id")
-        
+
         // 1. Remove from SharedPreferences
         removeFromPrefs(context, id)
-        
+
         // 2. Cancel via AlarmManager
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java)
@@ -1640,13 +1653,13 @@ object AlarmUtils {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        
+
         alarmManager.cancel(pendingIntent)
         pendingIntent.cancel()
-        
+
         Log.d(TAG, "Alarm $id cancelled successfully")
     }
-    
+
     private fun saveToPrefs(context: Context, id: Int, trigger: Long, soundUri: String?) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().apply {
@@ -1657,7 +1670,7 @@ object AlarmUtils {
             apply()
         }
     }
-    
+
     private fun removeFromPrefs(context: Context, id: Int) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().apply {
@@ -1666,22 +1679,22 @@ object AlarmUtils {
             apply()
         }
     }
-    
+
     fun loadAllFromPrefs(context: Context): List<Triple<Int, Long, String?>> {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val all = prefs.all
         val alarms = mutableListOf<Triple<Int, Long, String?>>()
-        
+
         for ((key, value) in all) {
             if (key.startsWith("alarm_") && !key.contains("sound")) {
                 val id = key.removePrefix("alarm_").toIntOrNull() ?: continue
                 val trigger = value as? Long ?: continue
                 val soundUri = prefs.getString("alarm_sound_$id", null)
-                
+
                 alarms.add(Triple(id, trigger, soundUri))
             }
         }
-        
+
         return alarms
     }
 }
@@ -1705,10 +1718,10 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             Log.d("BootReceiver", "Boot completed, rescheduling alarms")
-            
+
             val alarms = AlarmUtils.loadAllFromPrefs(context)
             val now = System.currentTimeMillis()
-            
+
             for ((id, trigger, soundUri) in alarms) {
                 if (trigger > now) {
                     AlarmUtils.scheduleAlarm(context, id, trigger, soundUri)
@@ -1723,6 +1736,7 @@ class BootReceiver : BroadcastReceiver() {
 ```
 
 **Add to AndroidManifest.xml:**
+
 ```xml
 <receiver
     android:name=".BootReceiver"
@@ -1757,6 +1771,7 @@ class BootReceiver : BroadcastReceiver() {
 
 **Goal:** Wear Data Layer synchronization with granular event system
 **Deliverables:**
+
 - wear-sync plugin scaffolding
 - Batch collector pattern (500ms debounce)
 - Event listeners for granular events (not snapshot)
@@ -1765,6 +1780,7 @@ class BootReceiver : BroadcastReceiver() {
 - Conflict detection (reject stale updates)
 
 **Key Changes from Original Design:**
+
 - ❌ OLD: Listen to `alarms:changed` snapshot event
 - ✅ NEW: Listen to `alarms:batch:updated` and debounce changes
 - ✅ NEW: Use revision system for incremental sync
@@ -1774,6 +1790,7 @@ See [event-architecture.md](event-architecture.md) sections 5-6 for complete pro
 See [data-architecture.md](data-architecture.md) for detailed data schemas.
 
 **Key Files:**
+
 - `plugins/wear-sync/src/lib.rs`
 - `plugins/wear-sync/android/WearSyncPlugin.kt`
 - `plugins/wear-sync/android/WearMessageService.kt`
@@ -1786,6 +1803,7 @@ See [data-architecture.md](data-architecture.md) for detailed data schemas.
 **Status:** ✅ Complete
 **Goal:** Companion watch app  
 **Deliverables:**
+
 - Wear OS Compose app
 - Alarm list screen
 - Tile widget
@@ -1794,6 +1812,7 @@ See [data-architecture.md](data-architecture.md) for detailed data schemas.
 See `ui-mockups.md` for designs.
 
 **Key Components:**
+
 - `wear-app/AlarmListActivity.kt`
 - `wear-app/AlarmTileService.kt`
 - `wear-app/AlarmComplicationService.kt`
@@ -1802,14 +1821,14 @@ See `ui-mockups.md` for designs.
 
 ## Timeline Summary
 
-| Milestone | Duration | Cumulative |
-|-----------|----------|------------|
-| A: Rust Core | 3-4 days | 4 days |
-| B: TS Migration | 2-3 days | 7 days |
-| C: alarm-manager Events | 2-3 days | 10 days |
-| D: wear-sync Plugin | 3-4 days | 14 days |
-| E: Wear OS App | 4-5 days | 19 days |
-| **Testing & Polish** | 5-7 days | **26 days** |
+| Milestone               | Duration | Cumulative  |
+| ----------------------- | -------- | ----------- |
+| A: Rust Core            | 3-4 days | 4 days      |
+| B: TS Migration         | 2-3 days | 7 days      |
+| C: alarm-manager Events | 2-3 days | 10 days     |
+| D: wear-sync Plugin     | 3-4 days | 14 days     |
+| E: Wear OS App          | 4-5 days | 19 days     |
+| **Testing & Polish**    | 5-7 days | **26 days** |
 
 **Total:** ~4-6 weeks with AI tooling assistance
 
@@ -1818,6 +1837,7 @@ See `ui-mockups.md` for designs.
 ## Success Metrics
 
 ### Functional
+
 - [ ] Create alarm on phone → Appears on watch < 2s
 - [ ] Toggle alarm on watch → Phone updates < 2s
 - [ ] Boot device → Alarms survive and reschedule
@@ -1825,6 +1845,7 @@ See `ui-mockups.md` for designs.
 - [ ] Android alarm fires → Ringing screen shows
 
 ### Technical
+
 - [ ] Scheduler unit tests pass (100% coverage)
 - [ ] No TypeScript database code remains
 - [ ] alarm-manager works without Rust core knowledge
@@ -1832,6 +1853,7 @@ See `ui-mockups.md` for designs.
 - [ ] Events flow: Rust → plugins → watch → back to Rust
 
 ### UX
+
 - [ ] Desktop and Mobile use identical TypeScript
 - [ ] UI updates feel instant (< 100ms perceived latency)
 - [ ] No loading spinners needed (optimistic updates)

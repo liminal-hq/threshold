@@ -3,7 +3,6 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-
 import { Box, Text } from 'ink';
 import { Layout, Divider } from '../components/Layout.js';
 import { ProgressBar } from '../components/ProgressBar.js';
@@ -43,20 +42,38 @@ export function BuildProgressScreen({ phoneStatus, wearStatus, logLines }: Build
 			{/* Phone section */}
 			{phoneStatus.done ? (
 				<Box flexDirection="column">
-					<Text> <Text color={palette.bar}>{'\u2713'}</Text> Phone AAB                                          {phoneStatus.size ?? ''}  {phoneStatus.elapsed ?? ''}</Text>
+					<Text>
+						{' '}
+						<Text color={palette.bar}>{'\u2713'}</Text> Phone AAB {phoneStatus.size ?? ''}{' '}
+						{phoneStatus.elapsed ?? ''}
+					</Text>
 					{phoneStatus.apkSize && (
-						<Text> <Text color={palette.bar}>{'\u2713'}</Text> Phone APK                                          {phoneStatus.apkSize}</Text>
+						<Text>
+							{' '}
+							<Text color={palette.bar}>{'\u2713'}</Text> Phone APK {phoneStatus.apkSize}
+						</Text>
 					)}
 				</Box>
 			) : phoneStatus.building ? (
 				<Box flexDirection="column">
-					<Text> <Text color={palette.accent}>{'\u25b8'}</Text> Phone AAB/APK                                            <Text color={palette.cyan}>Building...</Text></Text>
+					<Text>
+						{' '}
+						<Text color={palette.accent}>{'\u25b8'}</Text> Phone AAB/APK{' '}
+						<Text color={palette.cyan}>Building...</Text>
+					</Text>
 					<ProgressBar progress={phoneStatus.progress} />
 				</Box>
 			) : phoneStatus.failed ? (
-				<Text> <Text color={palette.red}>{'\u2717'}</Text> Phone AAB/APK                                            <Text color={palette.red}>FAILED</Text></Text>
+				<Text>
+					{' '}
+					<Text color={palette.red}>{'\u2717'}</Text> Phone AAB/APK{' '}
+					<Text color={palette.red}>FAILED</Text>
+				</Text>
 			) : (
-				<Text>   Phone AAB/APK                                             <Text color={palette.muted}>Waiting...</Text></Text>
+				<Text>
+					{' '}
+					Phone AAB/APK <Text color={palette.muted}>Waiting...</Text>
+				</Text>
 			)}
 
 			<Text> </Text>
@@ -64,20 +81,38 @@ export function BuildProgressScreen({ phoneStatus, wearStatus, logLines }: Build
 			{/* Wear section */}
 			{wearStatus.done ? (
 				<Box flexDirection="column">
-					<Text> <Text color={palette.bar}>{'\u2713'}</Text> Wear AAB                                           {wearStatus.size ?? ''}  {wearStatus.elapsed ?? ''}</Text>
+					<Text>
+						{' '}
+						<Text color={palette.bar}>{'\u2713'}</Text> Wear AAB {wearStatus.size ?? ''}{' '}
+						{wearStatus.elapsed ?? ''}
+					</Text>
 					{wearStatus.apkSize && (
-						<Text> <Text color={palette.bar}>{'\u2713'}</Text> Wear APK                                           {wearStatus.apkSize}</Text>
+						<Text>
+							{' '}
+							<Text color={palette.bar}>{'\u2713'}</Text> Wear APK {wearStatus.apkSize}
+						</Text>
 					)}
 				</Box>
 			) : wearStatus.building ? (
 				<Box flexDirection="column">
-					<Text> <Text color={palette.accent}>{'\u25b8'}</Text> Wear AAB/APK                                             <Text color={palette.cyan}>Building...</Text></Text>
+					<Text>
+						{' '}
+						<Text color={palette.accent}>{'\u25b8'}</Text> Wear AAB/APK{' '}
+						<Text color={palette.cyan}>Building...</Text>
+					</Text>
 					<ProgressBar progress={wearStatus.progress} />
 				</Box>
 			) : wearStatus.failed ? (
-				<Text> <Text color={palette.red}>{'\u2717'}</Text> Wear AAB/APK                                             <Text color={palette.red}>FAILED</Text></Text>
+				<Text>
+					{' '}
+					<Text color={palette.red}>{'\u2717'}</Text> Wear AAB/APK{' '}
+					<Text color={palette.red}>FAILED</Text>
+				</Text>
 			) : (
-				<Text>   Wear AAB/APK                                              <Text color={palette.muted}>Waiting...</Text></Text>
+				<Text>
+					{' '}
+					Wear AAB/APK <Text color={palette.muted}>Waiting...</Text>
+				</Text>
 			)}
 
 			{/* Build log */}
@@ -86,7 +121,10 @@ export function BuildProgressScreen({ phoneStatus, wearStatus, logLines }: Build
 			<Text color={palette.muted}> Build log (last 3 lines):</Text>
 			<Text> </Text>
 			{logLines.slice(-3).map((line, i) => (
-				<Text key={i} color={palette.muted}> {line.slice(0, 78)}</Text>
+				<Text key={i} color={palette.muted}>
+					{' '}
+					{line.slice(0, 78)}
+				</Text>
 			))}
 		</Layout>
 	);

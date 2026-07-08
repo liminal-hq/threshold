@@ -3,7 +3,6 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-
 import { Text } from 'ink';
 import { palette } from '../lib/theme.js';
 
@@ -20,7 +19,11 @@ export function ProgressBar({ progress, width = 48 }: ProgressBarProps) {
 	return (
 		<Text>
 			{'  '}
-			<Text color={palette.line}>{'\u250c'}{'\u2500'.repeat(width)}{'\u2510'}</Text>
+			<Text color={palette.line}>
+				{'\u250c'}
+				{'\u2500'.repeat(width)}
+				{'\u2510'}
+			</Text>
 			{'\n'}
 			{'  '}
 			<Text color={palette.line}>{'\u2502'}</Text>
@@ -31,7 +34,11 @@ export function ProgressBar({ progress, width = 48 }: ProgressBarProps) {
 			<Text>{clamped}%</Text>
 			{'\n'}
 			{'  '}
-			<Text color={palette.line}>{'\u2514'}{'\u2500'.repeat(width)}{'\u2518'}</Text>
+			<Text color={palette.line}>
+				{'\u2514'}
+				{'\u2500'.repeat(width)}
+				{'\u2518'}
+			</Text>
 		</Text>
 	);
 }

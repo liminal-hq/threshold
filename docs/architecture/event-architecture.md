@@ -7,18 +7,19 @@
 
 ## Current Implementation Status
 
-| Phase | Component | Status | Blocks |
-|-------|-----------|--------|--------|
-| Phase 1 | Revision System | ❌ Not Started | Milestone D |
-| Phase 1 | Database Migration v2 | ❌ Not Started | Milestone D |
+| Phase   | Component                 | Status         | Blocks      |
+| ------- | ------------------------- | -------------- | ----------- |
+| Phase 1 | Revision System           | ❌ Not Started | Milestone D |
+| Phase 1 | Database Migration v2     | ❌ Not Started | Milestone D |
 | Phase 2 | Event Structs (events.rs) | ❌ Not Started | Milestone D |
-| Phase 2 | Event Emission | ❌ Not Started | Milestone D |
-| Phase 3 | alarm-manager Integration | ⏸️ Paused | Phase 2 |
-| Phase 4 | wear-sync Integration | ⏸️ Paused | Phase 2 |
+| Phase 2 | Event Emission            | ❌ Not Started | Milestone D |
+| Phase 3 | alarm-manager Integration | ⏸️ Paused      | Phase 2     |
+| Phase 4 | wear-sync Integration     | ⏸️ Paused      | Phase 2     |
 
 **🔴 CRITICAL BLOCKER:** Milestone D (wear-sync plugin) cannot proceed without Phase 1-2 implementation.
 
 **What Exists:**
+
 - ✅ Rust alarm core (AlarmCoordinator, database, scheduler)
 - ✅ Tauri commands (get_alarms, save_alarm, toggle_alarm, delete_alarm)
 - ❌ events.rs is EMPTY (1 blank line)
@@ -34,6 +35,7 @@
 This document defines Threshold's **Level 3 Granular Event System with Monotonic Revision Tracking** for bidirectional watch sync. It replaces the planned monolithic `alarms:changed` event with 11 semantic events across 4 categories.
 
 **Key Capabilities:**
+
 - ✅ **Bidirectional watch sync** (phone ↔ watch editing)
 - ✅ **Incremental sync** (send only changes since last revision)
 - ✅ **Conflict detection** (reject stale updates)
@@ -42,6 +44,7 @@ This document defines Threshold's **Level 3 Granular Event System with Monotonic
 - ✅ **No subscriber diffing** (plugins get exactly what they need)
 
 **Current Implementation Status:**
+
 - ✅ Milestone A: Rust alarm core complete (`apps/threshold/src-tauri/src/alarm/`)
 - ❌ Revision system: Not yet added (next step)
 - ❌ Event system: `events.rs` is empty (ready to implement)
@@ -79,12 +82,14 @@ This document defines Threshold's **Level 3 Granular Event System with Monotonic
 ```
 
 **What Works Now:**
+
 - Rust commands: `get_alarms`, `save_alarm`, `toggle_alarm`, `delete_alarm`
 - Scheduler calculates `next_trigger` with window randomization
 - SQLite stores alarms (without revisions)
 - alarm-manager plugin exists (but doesn't listen to events yet)
 
 **What's Missing:**
+
 - ❌ Revision tracking (global counter + per-alarm stamps)
 - ❌ Event emission (coordinator doesn't emit yet)
 - ❌ Event structs (events.rs is empty)
@@ -139,6 +144,7 @@ CREATE INDEX IF NOT EXISTS idx_tombstones_revision ON alarm_tombstones(deleted_a
 ```
 
 **Migration Notes:**
+
 - This will be Migration v2 (v1 is the initial schema)
 - Existing alarms get `revision = 1` on upgrade
 - Global counter starts at 1 after migration
@@ -152,23 +158,23 @@ impl AlarmDatabase {
     /// Atomically increment and return next revision
     pub async fn next_revision(&self) -> Result<i64> {
         let mut tx = self.pool.begin().await?;
-        
+
         // Atomic increment
         sqlx::query("UPDATE state_revision SET current_revision = current_revision + 1 WHERE id = 1")
             .execute(&mut *tx)
             .await?;
-        
+
         // Fetch new value
         let (rev,): (i64,) = sqlx::query_as(
             "SELECT current_revision FROM state_revision WHERE id = 1"
         )
         .fetch_one(&mut *tx)
         .await?;
-        
+
         tx.commit().await?;
         Ok(rev)
     }
-    
+
     /// Get current revision without incrementing
     pub async fn current_revision(&self) -> Result<i64> {
         let (rev,): (i64,) = sqlx::query_as(
@@ -176,10 +182,10 @@ impl AlarmDatabase {
         )
         .fetch_one(&self.pool)
         .await?;
-        
+
         Ok(rev)
     }
-    
+
     /// Save alarm with revision stamp
     pub async fn save(
         &self,
@@ -245,7 +251,7 @@ impl AlarmDatabase {
             self.get_by_id(id).await
         }
     }
-    
+
     /// Get alarms changed since revision (for incremental sync)
     pub async fn get_alarms_since_revision(&self, since: i64) -> Result<Vec<AlarmRecord>> {
         let rows = sqlx::query_as::<_, AlarmRow>(
@@ -257,7 +263,7 @@ impl AlarmDatabase {
 
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
-    
+
     /// Get deleted alarm IDs since revision (for incremental sync)
     pub async fn get_deleted_since_revision(&self, since: i64) -> Result<Vec<i32>> {
         let rows: Vec<(i32,)> = sqlx::query_as(
@@ -269,11 +275,11 @@ impl AlarmDatabase {
 
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
-    
+
     /// Delete alarm and create tombstone
     pub async fn delete_with_revision(&self, id: i32, revision: i64) -> Result<()> {
         let mut tx = self.pool.begin().await?;
-        
+
         // Get label before deleting
         let label: Option<(Option<String>,)> = sqlx::query_as(
             "SELECT label FROM alarms WHERE id = ?"
@@ -281,13 +287,13 @@ impl AlarmDatabase {
         .bind(id)
         .fetch_optional(&mut *tx)
         .await?;
-        
+
         // Delete alarm
         sqlx::query("DELETE FROM alarms WHERE id = ?")
             .bind(id)
             .execute(&mut *tx)
             .await?;
-        
+
         // Create tombstone
         sqlx::query(
             "INSERT INTO alarm_tombstones (alarm_id, deleted_at_revision, deleted_at_timestamp, label)
@@ -299,17 +305,17 @@ impl AlarmDatabase {
         .bind(label.and_then(|l| l.0))
         .execute(&mut *tx)
         .await?;
-        
+
         tx.commit().await?;
         Ok(())
     }
-    
+
     /// Clean up old tombstones (time-based retention: 30 days)
-    /// 
+    ///
     /// **Why time-based, not sync-based?**
     /// If we delete tombstones after watch sync, a second watch or reset watch
     /// would request incremental sync but miss deletions → "zombie" alarms.
-    /// 
+    ///
     /// With 30-day retention:
     /// - Fresh watch syncs within 30 days: Gets all deletions ✓
     /// - Watch syncs after 30 days: Falls back to full sync (safe) ✓
@@ -318,12 +324,12 @@ impl AlarmDatabase {
             .checked_sub_signed(chrono::Duration::days(days))
             .unwrap()
             .timestamp_millis();
-        
+
         sqlx::query("DELETE FROM alarm_tombstones WHERE deleted_at_timestamp < ?")
             .bind(cutoff_timestamp)
             .execute(&self.pool)
             .await?;
-        
+
         Ok(())
     }
 }
@@ -363,22 +369,22 @@ pub struct AlarmRecord {
 ```
 Event System (10 events across 4 categories)
 ├── CRUD Events (3) ─────────── UI updates, wear-sync state
-│   ├── alarm:created         
-│   ├── alarm:updated         
-│   └── alarm:deleted         
+│   ├── alarm:created
+│   ├── alarm:updated
+│   └── alarm:deleted
 │
 ├── Scheduling Events (2) ───── alarm-manager actions
-│   ├── alarm:scheduled       
-│   └── alarm:cancelled       
+│   ├── alarm:scheduled
+│   └── alarm:cancelled
 │
 ├── Lifecycle Events (3) ────── Analytics, toasts, history
-│   ├── alarm:fired           
-│   ├── alarm:dismissed       
-│   └── alarm:snoozed         
+│   ├── alarm:fired
+│   ├── alarm:dismissed
+│   └── alarm:snoozed
 │
 └── Batch Events (2) ────────── Sync optimization
-    ├── alarms:batch:updated  
-    └── alarms:sync:needed    
+    ├── alarms:batch:updated
+    └── alarms:sync:needed
 ```
 
 ### Event Flow Example (Create Alarm)
@@ -419,6 +425,7 @@ User taps "Save" on EditAlarm screen
 **Purpose:** New alarm added
 
 **Payload:**
+
 ```rust
 // apps/threshold/src-tauri/src/alarm/events.rs
 
@@ -431,25 +438,27 @@ pub struct AlarmCreated {
 ```
 
 **Example JSON:**
+
 ```json
 {
-  "alarm": {
-    "id": 7,
-    "label": "Morning Yoga",
-    "enabled": true,
-    "mode": "FIXED",
-    "fixedTime": "06:30",
-    "activeDays": [1, 2, 3, 4, 5],
-    "nextTrigger": 1737885420000,
-    "soundUri": "content://media/28",
-    "soundTitle": "Argon",
-    "revision": 43
-  },
-  "revision": 43
+	"alarm": {
+		"id": 7,
+		"label": "Morning Yoga",
+		"enabled": true,
+		"mode": "FIXED",
+		"fixedTime": "06:30",
+		"activeDays": [1, 2, 3, 4, 5],
+		"nextTrigger": 1737885420000,
+		"soundUri": "content://media/28",
+		"soundTitle": "Argon",
+		"revision": 43
+	},
+	"revision": 43
 }
 ```
 
 **Subscribers:**
+
 - UI: Add to alarm list
 - wear-sync: Buffer for batch
 - alarm-manager: Ignores (waits for `alarm:scheduled`)
@@ -461,6 +470,7 @@ pub struct AlarmCreated {
 **Purpose:** Existing alarm modified
 
 **Payload:**
+
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -481,20 +491,21 @@ pub struct AlarmSnapshot {
 ```
 
 **Example:**
+
 ```json
 {
-  "alarm": {
-    "id": 5,
-    "enabled": false,
-    "revision": 44
-  },
-  "previous": {
-    "id": 5,
-    "enabled": true,
-    "nextTrigger": 1737885420000,
-    "revision": 42
-  },
-  "revision": 44
+	"alarm": {
+		"id": 5,
+		"enabled": false,
+		"revision": 44
+	},
+	"previous": {
+		"id": 5,
+		"enabled": true,
+		"nextTrigger": 1737885420000,
+		"revision": 42
+	},
+	"revision": 44
 }
 ```
 
@@ -505,6 +516,7 @@ pub struct AlarmSnapshot {
 **Purpose:** Alarm removed
 
 **Payload:**
+
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -516,11 +528,12 @@ pub struct AlarmDeleted {
 ```
 
 **Example:**
+
 ```json
 {
-  "id": 3,
-  "label": "Weekend Alarm",
-  "revision": 45
+	"id": 3,
+	"label": "Weekend Alarm",
+	"revision": 45
 }
 ```
 
@@ -533,6 +546,7 @@ pub struct AlarmDeleted {
 **Purpose:** Alarm registered with native AlarmManager
 
 **Payload:**
+
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -547,12 +561,13 @@ pub struct AlarmScheduled {
 ```
 
 **alarm-manager Behavior:**
+
 ```rust
 // plugins/alarm-manager/src/lib.rs
 
 app.listen("alarm:scheduled", move |event| {
     let payload: AlarmScheduled = serde_json::from_str(event.payload()).unwrap();
-    
+
     #[cfg(target_os = "android")]
     {
         schedule_native_alarm(
@@ -560,7 +575,7 @@ app.listen("alarm:scheduled", move |event| {
             payload.trigger_at,
             payload.sound_uri,
         );
-        
+
         // Save to SharedPreferences for boot recovery
         save_to_prefs(payload.id, payload.trigger_at, payload.sound_uri);
     }
@@ -568,6 +583,7 @@ app.listen("alarm:scheduled", move |event| {
 ```
 
 **Why This Is Better:**
+
 - ✅ No diffing logic needed
 - ✅ Payload: 80 bytes (vs 1200 bytes for full Vec<AlarmRecord>)
 - ✅ Clear semantic meaning
@@ -580,6 +596,7 @@ app.listen("alarm:scheduled", move |event| {
 **Purpose:** Alarm unregistered from AlarmManager
 
 **Payload:**
+
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -608,6 +625,7 @@ pub enum CancelReason {
 **Purpose:** Native alarm triggered
 
 **Payload:**
+
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -633,6 +651,7 @@ in `lib.rs`), the upcoming-notification Dismiss action (TS-invoked), and the in-
 Ringing screen's own Dismiss button (TS-invoked).
 
 **Payload:**
+
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -664,6 +683,7 @@ call site) to publish the snooze confirmation toast, so every source above gets 
 same confirmation.
 
 **Payload:**
+
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -684,6 +704,7 @@ pub struct AlarmSnoozed {
 **Purpose:** Multiple alarms changed (with revision seal)
 
 **Payload:**
+
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -695,15 +716,17 @@ pub struct AlarmsBatchUpdated {
 ```
 
 **Example:**
+
 ```json
 {
-  "updatedIds": [7, 12],
-  "revision": 43,
-  "timestamp": 1737885420000
+	"updatedIds": [7, 12],
+	"revision": 43,
+	"timestamp": 1737885420000
 }
 ```
 
 **Why This Event Exists:**
+
 - Enables debouncing (buffer 5 rapid edits → 1 sync)
 - Carries revision for cheap sync checks
 - wear-sync subscribes to THIS, not individual CRUD events
@@ -715,6 +738,7 @@ pub struct AlarmsBatchUpdated {
 **Purpose:** Explicit sync trigger
 
 **Payload:**
+
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -744,27 +768,27 @@ pub enum SyncReason {
 
 impl AlarmCoordinator {
     /// Initialize coordinator and heal any inconsistencies
-    /// 
+    ///
     /// **Critical: Prevents Boot Recovery Split Brain**
-    /// 
+    ///
     /// Race condition: Rust saves to SQLite, then event → plugin → SharedPreferences.
     /// If app crashes between these steps, SharedPreferences becomes stale.
     /// On boot, BootReceiver schedules wrong alarms.
-    /// 
+    ///
     /// Solution: Every launch, re-emit all enabled alarms to force cache refresh.
     /// This makes the system self-healing - SharedPreferences eventually consistent.
-    /// 
+    ///
     /// Performance: ~35ms for 5 alarms, ~115ms for 20 alarms (negligible)
     pub async fn heal_on_launch<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
         log::info!("🔧 Starting heal-on-launch: syncing alarm-manager cache with DB");
-        
+
         let alarms = self.get_all_alarms(app).await?;
         let enabled_count = alarms.iter()
             .filter(|a| a.enabled && a.next_trigger.is_some())
             .count();
-        
+
         log::info!("Found {} enabled alarms, re-emitting scheduling events", enabled_count);
-        
+
         for alarm in alarms {
             if alarm.enabled && alarm.next_trigger.is_some() {
                 // Re-emit scheduling event to heal SharedPreferences cache
@@ -772,18 +796,18 @@ impl AlarmCoordinator {
                 self.emit_alarm_scheduled(app, &alarm, alarm.revision).await?;
             }
         }
-        
+
         log::info!("✅ Heal-on-launch complete: {} alarms synchronized", enabled_count);
         Ok(())
     }
-    
+
     /// Run periodic maintenance (tombstone cleanup)
     pub async fn run_maintenance(&self) -> Result<()> {
         // Keep tombstones for 30 days (prevents zombie alarms on reset watches)
         self.db.cleanup_tombstones_older_than_days(30).await?;
         Ok(())
     }
-    
+
     pub async fn save_alarm<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -795,22 +819,22 @@ impl AlarmCoordinator {
         } else {
             None
         };
-        
+
         // Calculate trigger
         let next_trigger = if input.enabled {
             scheduler::calculate_next_trigger(&input)?
         } else {
             None
         };
-        
+
         // ⭐ Get next revision BEFORE save
         let revision = self.db.next_revision().await?;
-        
+
         // Save with revision
         let alarm = self.db.save(input, next_trigger, revision).await?;
-        
+
         // Emit events IN ORDER:
-        
+
         // 1. CRUD event
         if is_new {
             self.emit_alarm_created(app, &alarm, revision).await?;
@@ -818,18 +842,18 @@ impl AlarmCoordinator {
             let snapshot = previous.as_ref().map(|p| AlarmSnapshot::from_alarm(p));
             self.emit_alarm_updated(app, &alarm, snapshot, revision).await?;
         }
-        
+
         // 2. Scheduling events
         self.emit_scheduling_events(app, &alarm, previous.as_ref(), revision).await?;
-        
+
         // 3. Batch event
         self.emit_batch_update(app, vec![alarm.id], revision).await?;
-        
+
         Ok(alarm)
     }
-    
+
     // Helper methods
-    
+
     async fn emit_alarm_created<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -843,7 +867,7 @@ impl AlarmCoordinator {
         app.emit("alarm:created", &event)?;
         Ok(())
     }
-    
+
     async fn emit_alarm_updated<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -859,7 +883,7 @@ impl AlarmCoordinator {
         app.emit("alarm:updated", &event)?;
         Ok(())
     }
-    
+
     async fn emit_scheduling_events<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -870,9 +894,9 @@ impl AlarmCoordinator {
         let was_scheduled = previous
             .map(|p| p.enabled && p.next_trigger.is_some())
             .unwrap_or(false);
-        
+
         let should_schedule = alarm.enabled && alarm.next_trigger.is_some();
-        
+
         match (was_scheduled, should_schedule) {
             (false, true) => {
                 // Schedule
@@ -892,7 +916,7 @@ impl AlarmCoordinator {
                 let trigger_changed = previous
                     .map(|p| p.next_trigger != alarm.next_trigger)
                     .unwrap_or(false);
-                
+
                 if trigger_changed {
                     self.emit_alarm_cancelled(app, alarm.id, CancelReason::Updated, revision).await?;
                     self.emit_alarm_scheduled(app, alarm, revision).await?;
@@ -900,10 +924,10 @@ impl AlarmCoordinator {
             },
             (false, false) => {},
         }
-        
+
         Ok(())
     }
-    
+
     async fn emit_batch_update<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -958,18 +982,18 @@ pub async fn sync_from_watch<R: Runtime>(
     request: SyncRequest,
 ) -> Result<SyncResponse, String> {
     let coordinator = app.state::<AlarmCoordinator>();
-    
+
     let current_rev = coordinator.db.current_revision().await
         .map_err(|e| e.to_string())?;
     let watch_rev = request.last_known_revision;
-    
+
     // Case 1: Up to date
     if watch_rev == current_rev {
-        return Ok(SyncResponse::UpToDate { 
-            current_revision: current_rev 
+        return Ok(SyncResponse::UpToDate {
+            current_revision: current_rev
         });
     }
-    
+
     // Case 2: Watch ahead (phone was reset)
     if watch_rev > current_rev {
         log::warn!("Watch ahead: watch={}, phone={}", watch_rev, current_rev);
@@ -980,7 +1004,7 @@ pub async fn sync_from_watch<R: Runtime>(
             alarms,
         });
     }
-    
+
     // Case 3: Small gap - incremental
     let gap = current_rev - watch_rev;
     if gap <= 100 {
@@ -988,14 +1012,14 @@ pub async fn sync_from_watch<R: Runtime>(
             .map_err(|e| e.to_string())?;
         let deleted = coordinator.db.get_deleted_since_revision(watch_rev).await
             .map_err(|e| e.to_string())?;
-        
+
         return Ok(SyncResponse::Incremental {
             current_revision: current_rev,
             alarms: changed,
             deleted_ids: deleted,
         });
     }
-    
+
     // Case 4: Large gap - full sync
     let alarms = coordinator.get_all_alarms(&app).await
         .map_err(|e| e.to_string())?;
@@ -1016,7 +1040,7 @@ pub async fn save_alarm_from_watch<R: Runtime>(
     watch_revision: i64,
 ) -> Result<AlarmRecord, String> {
     let coordinator = app.state::<AlarmCoordinator>();
-    
+
     // Check if watch data is stale
     if let Some(id) = alarm.id {
         if let Ok(existing) = coordinator.db.get_by_id(id).await {
@@ -1029,7 +1053,7 @@ pub async fn save_alarm_from_watch<R: Runtime>(
             }
         }
     }
-    
+
     // Proceed with save (gets new revision)
     coordinator.save_alarm(&app, alarm).await
         .map_err(|e| e.to_string())
@@ -1060,19 +1084,19 @@ pub fn run() {
             let db = tauri::async_runtime::block_on(async {
                 AlarmDatabase::new(app.handle()).await
             })?;
-            
+
             let coordinator = AlarmCoordinator::new(db);
-            
+
             // ⭐ CRITICAL FIX #2: Heal-on-launch (prevents boot recovery split brain)
             tauri::async_runtime::block_on(async {
                 coordinator.heal_on_launch(app.handle()).await
             })?;
-            
+
             // ⭐ CRITICAL FIX #1: Cleanup old tombstones (prevents zombie alarms)
             tauri::async_runtime::block_on(async {
                 coordinator.run_maintenance().await
             }).ok();
-            
+
             // Schedule daily maintenance
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -1086,9 +1110,9 @@ pub fn run() {
                     }
                 }
             });
-            
+
             app.manage(coordinator);
-            
+
             Ok(())
         })
         .plugin(alarm_manager::init())
@@ -1116,6 +1140,7 @@ pub fn run() {
 6. **Register plugins** - alarm-manager receives healed events
 
 **Performance Impact:**
+
 - Database init: ~50ms
 - Heal-on-launch: ~35-115ms (5-20 alarms)
 - Maintenance: ~1ms
@@ -1130,6 +1155,7 @@ This is acceptable - total app startup is typically 500-1000ms.
 ### Phase 1: Add Revision System (2-3 hours)
 
 **Files to modify:**
+
 1. `apps/threshold/src-tauri/src/alarm/models.rs`
    - Add `revision: i64` to `AlarmRecord`
 
@@ -1145,6 +1171,7 @@ This is acceptable - total app startup is typically 500-1000ms.
    - Update `delete_alarm()` to call `next_revision()` and `delete_with_revision()`
 
 **Test:**
+
 ```bash
 cargo test
 pnpm tauri dev
@@ -1162,6 +1189,7 @@ await window.__TAURI__.core.invoke('get_alarms')
 Copy the event struct definitions from this document (sections 4.1-4.9).
 
 Add helper functions:
+
 ```rust
 impl AlarmSnapshot {
     pub fn from_alarm(alarm: &AlarmRecord) -> Self {
@@ -1186,16 +1214,17 @@ impl AlarmsBatchUpdated {
 ```
 
 **Test:**
+
 ```typescript
 // In browser console
 import { listen } from '@tauri-apps/api/event';
 
 await listen('alarm:created', (event) => {
-    console.log('Created:', event.payload);
+	console.log('Created:', event.payload);
 });
 
-await window.__TAURI__.core.invoke('save_alarm', { 
-    alarm: { enabled: true, mode: 'FIXED', fixedTime: '09:00', activeDays: [1,2,3,4,5] } 
+await window.__TAURI__.core.invoke('save_alarm', {
+	alarm: { enabled: true, mode: 'FIXED', fixedTime: '09:00', activeDays: [1, 2, 3, 4, 5] },
 });
 // Should see event logged
 ```
@@ -1207,6 +1236,7 @@ await window.__TAURI__.core.invoke('save_alarm', {
 **File:** `plugins/alarm-manager/src/lib.rs`
 
 Replace event listener:
+
 ```rust
 // OLD: Listen to alarms:changed
 app.listen("alarms:changed", ...);
@@ -1230,6 +1260,7 @@ app.listen("alarm:cancelled", move |event| {
 **File:** `plugins/wear-sync/src/lib.rs`
 
 Implement BatchCollector pattern:
+
 ```rust
 struct BatchCollector {
     pending_ids: HashSet<i32>,
@@ -1244,6 +1275,7 @@ app.listen("alarms:batch:updated", move |event| {
 ```
 
 Add sync commands:
+
 - `sync_from_watch`
 - `save_alarm_from_watch`
 
@@ -1252,6 +1284,7 @@ Add sync commands:
 ### Phase 5: TypeScript Migration (3-4 hours)
 
 **Files:**
+
 - Create `apps/threshold/src/services/AlarmService.ts`
 - Update all screens to use `AlarmService` instead of `DatabaseService`
 - Remove old `DatabaseService.ts`
@@ -1266,7 +1299,7 @@ Add sync commands:
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_revision_increments() {
         let db = create_test_db().await;
@@ -1274,7 +1307,7 @@ mod tests {
         let rev2 = db.next_revision().await.unwrap();
         assert_eq!(rev2, rev1 + 1);
     }
-    
+
     #[tokio::test]
     async fn test_alarm_stamped_with_revision() {
         let db = create_test_db().await;
@@ -1283,18 +1316,18 @@ mod tests {
         let alarm = db.save(input, Some(123456), rev).await.unwrap();
         assert_eq!(alarm.revision, rev);
     }
-    
+
     #[tokio::test]
     async fn test_incremental_sync() {
         let db = create_test_db().await;
         // Create alarm with rev 1
         let rev1 = db.next_revision().await.unwrap();
         db.save(input1, None, rev1).await.unwrap();
-        
+
         // Create alarm with rev 2
         let rev2 = db.next_revision().await.unwrap();
         db.save(input2, None, rev2).await.unwrap();
-        
+
         // Get changes since rev 1
         let changed = db.get_alarms_since_revision(1).await.unwrap();
         assert_eq!(changed.len(), 1);
@@ -1306,6 +1339,7 @@ mod tests {
 ### Integration Tests
 
 **Scenario 1: Create alarm → Events fire**
+
 ```
 1. Create alarm via invoke('save_alarm')
 2. Verify: alarm:created event fired
@@ -1315,6 +1349,7 @@ mod tests {
 ```
 
 **Scenario 2: Toggle alarm → Correct events**
+
 ```
 1. Toggle alarm off
 2. Verify: alarm:updated event fired
@@ -1323,6 +1358,7 @@ mod tests {
 ```
 
 **Scenario 3: Incremental sync**
+
 ```
 1. Watch at revision 42
 2. Phone creates 3 alarms (rev 43, 44, 45)
@@ -1332,6 +1368,7 @@ mod tests {
 ```
 
 **Scenario 4: Conflict resolution**
+
 ```
 1. Watch edits alarm #5 (has revision 42)
 2. Phone already updated to revision 44
@@ -1344,14 +1381,14 @@ mod tests {
 
 ## Performance Targets
 
-| Metric | Target | Current | How to Measure |
-|--------|--------|---------|----------------|
-| Event emission | < 5ms | TBD | Rust benchmark |
-| Payload size (CRUD) | 100-200 bytes | TBD | JSON stringify |
-| Payload size (Scheduling) | 80 bytes | TBD | JSON stringify |
-| wear-sync debounce | 500ms | TBD | Manual timing |
-| Watch sync (full) | < 2s | TBD | Manual timing |
-| Incremental sync | < 500ms | TBD | Manual timing |
+| Metric                    | Target        | Current | How to Measure |
+| ------------------------- | ------------- | ------- | -------------- |
+| Event emission            | < 5ms         | TBD     | Rust benchmark |
+| Payload size (CRUD)       | 100-200 bytes | TBD     | JSON stringify |
+| Payload size (Scheduling) | 80 bytes      | TBD     | JSON stringify |
+| wear-sync debounce        | 500ms         | TBD     | Manual timing  |
+| Watch sync (full)         | < 2s          | TBD     | Manual timing  |
+| Incremental sync          | < 500ms       | TBD     | Manual timing  |
 
 ---
 
@@ -1360,12 +1397,14 @@ mod tests {
 ### From Current State (Milestone A)
 
 **Current:**
+
 - ✅ Rust alarm core exists
 - ❌ No revisions
 - ❌ No events
 - ❌ TypeScript uses DatabaseService
 
 **Migration Steps:**
+
 1. Add revision system (non-breaking - new columns)
 2. Add event system (non-breaking - just emitting)
 3. Update alarm-manager to subscribe (non-breaking - still works without)
@@ -1373,6 +1412,7 @@ mod tests {
 5. Integrate wear-sync (new feature)
 
 **Database Migration:**
+
 ```sql
 -- Existing users will get:
 ALTER TABLE alarms ADD COLUMN revision INTEGER DEFAULT 1;
@@ -1381,6 +1421,7 @@ ALTER TABLE alarms ADD COLUMN revision INTEGER DEFAULT 1;
 ```
 
 **Backwards Compatibility:**
+
 - Revision system is additive (doesn't break existing code)
 - Events are fire-and-forget (doesn't break if no listeners)
 - alarm-manager can work with OR without events (graceful degradation)
@@ -1390,16 +1431,19 @@ ALTER TABLE alarms ADD COLUMN revision INTEGER DEFAULT 1;
 ## Next Steps
 
 **Immediate (Today):**
+
 1. ✅ Read this document
 2. ✅ Review implementation phases
 3. ⏭️ Start Phase 1: Add revision system
 
 **This Week:**
+
 - Complete Phases 1-2 (revisions + events)
 - Test with DevTools console
 - Update implementation-roadmap.md with progress
 
 **Next Week:**
+
 - Complete Phases 3-4 (alarm-manager + wear-sync)
 - Begin TypeScript migration (Phase 5)
 - Start Wear OS app (Milestone E)
@@ -1502,6 +1546,7 @@ sequenceDiagram
 - ✅ New: `alarms:batch:updated` ~60 bytes (updatedIds[], revision, timestamp)
 
 **Benefits:**
+
 - **Efficiency:** 80 byte payloads vs 1200 byte payloads
 - **Clarity:** Semantic event names make intent obvious
 - **No Diffing:** alarm-manager receives exact action (schedule/cancel)
@@ -1520,6 +1565,7 @@ sequenceDiagram
 ---
 
 **Questions? Issues?**
+
 - GitHub: `#92` (current tracking issue)
 - Branch: `feat/wear-os-companion-support`
 - Milestone: "Wear OS D — Wear Sync Plugin"

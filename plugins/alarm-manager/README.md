@@ -27,18 +27,18 @@ In your Tauri app:
 import { invoke } from '@tauri-apps/api/core';
 
 await invoke('plugin:alarm-manager|schedule', {
-	payload: { 
-        id: 1, 
-        triggerAt: 1715000000000,
-        soundUri: 'content://media/internal/audio/media/12', // Optional
-    },
+	payload: {
+		id: 1,
+		triggerAt: 1715000000000,
+		soundUri: 'content://media/internal/audio/media/12', // Optional
+	},
 });
 
 // Pick a sound
 const sound = await invoke('plugin:alarm-manager|pick_alarm_sound', {
-   existingUri: null,
-   title: 'Select Alarm Sound',
-   showSilent: true,
-   showDefault: true
+	existingUri: null,
+	title: 'Select Alarm Sound',
+	showSilent: true,
+	showDefault: true,
 });
 ```

@@ -4,13 +4,17 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-
 import { render } from 'ink';
 import process from 'node:process';
 import { Command, CommanderError } from 'commander';
 import { App } from './App.js';
 import { ensureRepoRoot, readCurrentState, applyChanges } from './lib/files.js';
-import { bumpSemver, deriveTauriVersionCode, deriveWearVersionCode, isValidSemver } from './lib/version.js';
+import {
+	bumpSemver,
+	deriveTauriVersionCode,
+	deriveWearVersionCode,
+	isValidSemver,
+} from './lib/version.js';
 import { createReleaseCommit, createRedoCommit, applyTag } from './lib/git.js';
 import { runFullBuild, fileSize, BuildFailureError } from './lib/build.js';
 

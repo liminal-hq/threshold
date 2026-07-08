@@ -138,12 +138,12 @@ plugins/wear-sync/
 
 The sync protocol is revision-based. The watch sends its `last_sync_revision` and the phone determines the response type:
 
-| Revision Gap | Response | Description |
-|--------------|----------|-------------|
-| 0 | `UpToDate` | No changes needed |
-| 1–100 | `Incremental` | Send only changed/deleted alarms |
-| >100 | `FullSync` | Send all alarms |
-| Negative (watch ahead) | `FullSync` | Anomaly — phone wins |
+| Revision Gap           | Response      | Description                      |
+| ---------------------- | ------------- | -------------------------------- |
+| 0                      | `UpToDate`    | No changes needed                |
+| 1–100                  | `Incremental` | Send only changed/deleted alarms |
+| >100                   | `FullSync`    | Send all alarms                  |
+| Negative (watch ahead) | `FullSync`    | Anomaly — phone wins             |
 
 ### SyncResponse JSON Format
 
@@ -184,13 +184,13 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 
 ## Kotlin Commands
 
-| Command | Description |
-|---------|-------------|
-| `publishToWatch` | Write alarm data to Wear Data Layer `DataItem` |
-| `requestSyncFromWatch` | Send sync request message to all connected watch nodes |
-| `setWatchMessageHandler` | Register Kotlin → Rust Channel handler |
-| `markWatchPipelineReady` | Mark app listener readiness and drain queued messages |
-| `sendAlarmRing` | Send `/threshold/alarm_ring` message to all connected watches |
+| Command                  | Description                                                   |
+| ------------------------ | ------------------------------------------------------------- |
+| `publishToWatch`         | Write alarm data to Wear Data Layer `DataItem`                |
+| `requestSyncFromWatch`   | Send sync request message to all connected watch nodes        |
+| `setWatchMessageHandler` | Register Kotlin → Rust Channel handler                        |
+| `markWatchPipelineReady` | Mark app listener readiness and drain queued messages         |
+| `sendAlarmRing`          | Send `/threshold/alarm_ring` message to all connected watches |
 
 **No `guest-js`, by design.** Unlike alarm-manager, theme-utils, time-prefs, and
 app-management, this plugin has no TypeScript-facing surface at all — the webview never
@@ -215,36 +215,36 @@ would add a package with nothing to bind. This is the accepted variant, not an o
 
 ### Listened
 
-| Event | Source | Purpose |
-|-------|--------|---------|
-| `alarms:batch:updated` | AlarmCoordinator | Batched alarm changes |
-| `alarms:sync:needed` | AlarmCoordinator | Force immediate sync |
-| `alarm:fired` | AlarmCoordinator | Alarm triggered — send ring message to watch |
-| `wear:message:received` | WearSyncPlugin.kt | Incoming watch messages |
+| Event                   | Source            | Purpose                                      |
+| ----------------------- | ----------------- | -------------------------------------------- |
+| `alarms:batch:updated`  | AlarmCoordinator  | Batched alarm changes                        |
+| `alarms:sync:needed`    | AlarmCoordinator  | Force immediate sync                         |
+| `alarm:fired`           | AlarmCoordinator  | Alarm triggered — send ring message to watch |
+| `wear:message:received` | WearSyncPlugin.kt | Incoming watch messages                      |
 
 ### Emitted
 
-| Event | Target | Purpose |
-|-------|--------|---------|
-| `wear:sync:request` | App layer | Watch wants sync data |
-| `wear:alarm:save` | App layer | Watch wants to toggle alarm |
-| `wear:alarm:delete` | App layer | Watch wants to delete alarm |
-| `wear:alarm:dismiss` | App layer | Watch dismissed a ringing alarm |
-| `wear:alarm:snooze` | App layer | Watch snoozed a ringing alarm |
+| Event                   | Target    | Purpose                                       |
+| ----------------------- | --------- | --------------------------------------------- |
+| `wear:sync:request`     | App layer | Watch wants sync data                         |
+| `wear:alarm:save`       | App layer | Watch wants to toggle alarm                   |
+| `wear:alarm:delete`     | App layer | Watch wants to delete alarm                   |
+| `wear:alarm:dismiss`    | App layer | Watch dismissed a ringing alarm               |
+| `wear:alarm:snooze`     | App layer | Watch snoozed a ringing alarm                 |
 | `wear:sync:batch_ready` | App layer | Batch debounce expired, needs full alarm data |
 
 ### Handled by App Layer
 
 The app crate (`apps/threshold/src-tauri/src/lib.rs`) listens for the events above and routes them through `AlarmCoordinator`:
 
-| Event | Handler |
-|-------|---------|
-| `wear:alarm:save` | `coordinator.toggle_alarm(id, enabled)` |
-| `wear:alarm:delete` | `coordinator.delete_alarm(id)` |
-| `wear:alarm:dismiss` | `stop_ringing()` + `coordinator.dismiss_alarm(id)` |
-| `wear:alarm:snooze` | `stop_ringing()` + `coordinator.snooze_alarm(id, snoozed_until)` |
-| `wear:sync:request` | `coordinator.emit_sync_needed(ForceSync)` |
-| `wear:sync:batch_ready` | `coordinator.emit_sync_needed(BatchComplete)` |
+| Event                   | Handler                                                          |
+| ----------------------- | ---------------------------------------------------------------- |
+| `wear:alarm:save`       | `coordinator.toggle_alarm(id, enabled)`                          |
+| `wear:alarm:delete`     | `coordinator.delete_alarm(id)`                                   |
+| `wear:alarm:dismiss`    | `stop_ringing()` + `coordinator.dismiss_alarm(id)`               |
+| `wear:alarm:snooze`     | `stop_ringing()` + `coordinator.snooze_alarm(id, snoozed_until)` |
+| `wear:sync:request`     | `coordinator.emit_sync_needed(ForceSync)`                        |
+| `wear:sync:batch_ready` | `coordinator.emit_sync_needed(BatchComplete)`                    |
 
 ## Tests
 
@@ -260,12 +260,12 @@ Run with: `cargo test -p tauri-plugin-wear-sync`
 
 ## Performance Targets
 
-| Operation | Target | Acceptable |
-|-----------|--------|------------|
-| Watch sync (<10 alarms) | <500ms | <2s |
-| Incremental sync | <500ms | <1s |
-| Full sync | <2s | <5s |
-| Conflict detection | <100ms | <500ms |
+| Operation               | Target | Acceptable |
+| ----------------------- | ------ | ---------- |
+| Watch sync (<10 alarms) | <500ms | <2s        |
+| Incremental sync        | <500ms | <1s        |
+| Full sync               | <2s    | <5s        |
+| Conflict detection      | <100ms | <500ms     |
 
 ## Related Issues
 

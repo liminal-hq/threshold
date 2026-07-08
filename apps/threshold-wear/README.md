@@ -194,14 +194,14 @@ On app launch, the watch sends a sync request with its `lastSyncRevision` to `/t
 
 ## Design Tokens
 
-| Token | Value | Purpose |
-|-------|-------|---------|
-| Background | `#0A0A0A` | Deep black for OLED (always static) |
-| Surface | `#1A1A1A` | Card backgrounds (always static) |
-| Accent | Dynamic / `#4A9EFF` | Material You system accent on API 31+, calm blue fallback |
-| On Surface | `#E0E0E0` | Primary text |
-| Disabled | `#333333` | Disabled indicators |
-| Error | `#CF6679` | Error states |
+| Token      | Value               | Purpose                                                   |
+| ---------- | ------------------- | --------------------------------------------------------- |
+| Background | `#0A0A0A`           | Deep black for OLED (always static)                       |
+| Surface    | `#1A1A1A`           | Card backgrounds (always static)                          |
+| Accent     | Dynamic / `#4A9EFF` | Material You system accent on API 31+, calm blue fallback |
+| On Surface | `#E0E0E0`           | Primary text                                              |
+| Disabled   | `#333333`           | Disabled indicators                                       |
+| Error      | `#CF6679`           | Error states                                              |
 
 **Material You support:** On Wear OS 3.5+ (API 31+), the accent colour is pulled from the watch's system colour scheme (`system_accent1_200`). Background and surface remain deep black for OLED regardless of the system theme. On older watches, the static calm blue (`#4A9EFF`) is used.
 
@@ -260,6 +260,7 @@ adb devices                    # Should show the emulator
 You can build and deploy entirely from the command line using Gradle and `adb`.
 
 1. **Install Android SDK command line tools:**
+
    ```bash
    # Linux (Debian/Ubuntu)
    sudo apt-get install -y openjdk-17-jdk
@@ -275,6 +276,7 @@ You can build and deploy entirely from the command line using Gradle and `adb`.
    ```
 
 2. **Install required SDK packages:**
+
    ```bash
    sdkmanager "platforms;android-34" "build-tools;34.0.0" \
      "system-images;android-34;google_apis;x86_64" \
@@ -282,6 +284,7 @@ You can build and deploy entirely from the command line using Gradle and `adb`.
    ```
 
 3. **Create a Wear OS emulator:**
+
    ```bash
    avdmanager create avd -n WearOS \
      -k "system-images;android-wear-34;google_apis;x86_64" \
@@ -290,20 +293,24 @@ You can build and deploy entirely from the command line using Gradle and `adb`.
    ```
 
 4. **Pair with a phone** (emulator or real device):
+
    ```bash
    # If using two emulators, forward the pairing port:
    adb -s emulator-5554 forward tcp:5601 tcp:5601
    # Then pair via the Wear OS companion app on the phone
    ```
+
    For a real watch paired to a real phone over Bluetooth, no `adb` pairing is needed — they connect automatically via Google Play Services.
 
 5. **Build and deploy the watch app:**
+
    ```bash
    cd apps/threshold-wear
    ./gradlew installDebug
    ```
 
 6. **Build and deploy the phone app:**
+
    ```bash
    cd apps/threshold
    pnpm tauri android dev
@@ -332,6 +339,7 @@ When the watch app launches for the first time:
 3. The alarm list populates and the sync status changes from "Offline" to "Connected"
 
 If no alarms appear, check:
+
 - Both devices are paired (Wear OS companion app on phone shows connection)
 - The phone app is running (the wear-sync plugin needs to be active)
 - Logcat for `WearSyncPlugin` or `DataLayerListener` tags
@@ -356,15 +364,15 @@ If no alarms appear, check:
 
 ### Troubleshooting
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| "Offline" status permanently | Phone not paired or app not running | Check Wear OS pairing, launch phone app |
-| Alarms don't appear | Sync hasn't happened yet | Relaunch watch app to trigger sync request |
-| Toggle doesn't work | Phone app not processing messages | Check logcat for `WearMessageService` errors |
-| Tile shows "No alarms" | No enabled alarms, or tile not refreshed | Enable an alarm, then swipe away and back to tile |
-| Watch doesn't ring when phone does | Ring message not delivered | Check logcat for `DataLayerListener` and `WearRingingService` |
-| Ringing screen doesn't appear | Full-screen intent blocked | Ensure `USE_FULL_SCREEN_INTENT` permission is granted |
-| Fallback alarms don't fire when disconnected | Exact alarm permission missing | Grant `SCHEDULE_EXACT_ALARM` in system settings |
+| Symptom                                      | Cause                                    | Fix                                                           |
+| -------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
+| "Offline" status permanently                 | Phone not paired or app not running      | Check Wear OS pairing, launch phone app                       |
+| Alarms don't appear                          | Sync hasn't happened yet                 | Relaunch watch app to trigger sync request                    |
+| Toggle doesn't work                          | Phone app not processing messages        | Check logcat for `WearMessageService` errors                  |
+| Tile shows "No alarms"                       | No enabled alarms, or tile not refreshed | Enable an alarm, then swipe away and back to tile             |
+| Watch doesn't ring when phone does           | Ring message not delivered               | Check logcat for `DataLayerListener` and `WearRingingService` |
+| Ringing screen doesn't appear                | Full-screen intent blocked               | Ensure `USE_FULL_SCREEN_INTENT` permission is granted         |
+| Fallback alarms don't fire when disconnected | Exact alarm permission missing           | Grant `SCHEDULE_EXACT_ALARM` in system settings               |
 
 ## Building
 

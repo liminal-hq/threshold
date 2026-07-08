@@ -189,6 +189,7 @@ Follow this directory structure for React/MUI applications:
 **Header format:**
 
 For Rust (`.rs`) and Kotlin (`.kt`) files:
+
 ```
 // Brief one-line summary of what this file does.
 //
@@ -197,6 +198,7 @@ For Rust (`.rs`) and Kotlin (`.kt`) files:
 ```
 
 For TypeScript/JavaScript (`.ts`, `.tsx`, `.js`) files:
+
 ```
 // Brief one-line summary of what this file does.
 //
