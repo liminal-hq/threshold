@@ -192,6 +192,14 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 | `markWatchPipelineReady` | Mark app listener readiness and drain queued messages |
 | `sendAlarmRing` | Send `/threshold/alarm_ring` message to all connected watches |
 
+**No `guest-js`, by design.** Unlike alarm-manager, theme-utils, time-prefs, and
+app-management, this plugin has no TypeScript-facing surface at all — the webview never
+calls `invoke('plugin:wear-sync|...')` directly. Every command above is driven from the
+Rust side (`AlarmCoordinator` events → `run_mobile_plugin(...)`, per the Channels rule in
+`CLAUDE.md`); the app's only interaction with wear-sync is listening for the Tauri events
+it emits (see Events below). Adopting typed `guest-js` bindings here (issue #205) would
+add a package with nothing to bind. This is the accepted variant, not an oversight.
+
 ## Naming Conventions
 
 - Kotlin `@Command` method names use `camelCase` (for example, `publishToWatch`), matching
