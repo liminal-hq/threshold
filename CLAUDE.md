@@ -78,6 +78,16 @@ SharedPreferences for boot recovery) → `AlarmReceiver` → `AlarmRingingServic
 `alarm:fired` → wear-sync mirrors ringing to the watch. Desktop uses tokio timers in
 `alarm-manager/src/desktop.rs` emitting `alarm-ring`.
 
+**Dismiss/snooze from the notification also go straight to Rust.** `AlarmRingingService`'s
+Dismiss/Snooze actions post through the same channel pattern
+(`alarm-manager:dismiss-requested` / `alarm-manager:snooze-requested`), handled directly
+in `lib.rs` — mirrors `wear:alarm:dismiss`/`wear:alarm:snooze`, no TS involvement, per the
+Channels rule above. Snooze reads `SnoozeLengthState` (Rust's own copy of the snooze-length
+setting, kept in sync via `set_snooze_length`) rather than depending on TS to compute the
+anchor. The confirmation toast is a separate concern: `AlarmManagerService` listens for
+`alarm:snoozed` unconditionally so every snooze source (native, watch, upcoming
+notification, in-app) gets the same toast, rather than each call site publishing its own.
+
 **Wear sync:** phone publishes FullSync snapshots to the Data Layer at
 `/threshold/alarms` (revision-stamped); the watch sends mutations back as messages
 (`/threshold/save_alarm`, `delete_alarm`, `sync_request`, `alarm_dismiss`,
