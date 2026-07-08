@@ -10,16 +10,16 @@ pub struct AlarmRecord {
     pub enabled: bool,
     #[cfg_attr(test, ts(type = "AlarmMode"))]
     pub mode: AlarmMode,
-    pub fixed_time: Option<String>,       // "HH:MM"
-    pub window_start: Option<String>,     // "HH:MM"
-    pub window_end: Option<String>,       // "HH:MM"
-    pub active_days: Vec<i32>,             // [0-6] where 0=Sun
+    pub fixed_time: Option<String>,   // "HH:MM"
+    pub window_start: Option<String>, // "HH:MM"
+    pub window_end: Option<String>,   // "HH:MM"
+    pub active_days: Vec<i32>,        // [0-6] where 0=Sun
     // i64 -> bigint by default in ts-rs; these are millisecond timestamps and
     // a revision counter, both safely within JS's Number.MAX_SAFE_INTEGER for
     // the app's realistic lifetime, and all existing call sites already treat
     // them as `number`.
     #[cfg_attr(test, ts(type = "number | null"))]
-    pub next_trigger: Option<i64>,         // Epoch millis
+    pub next_trigger: Option<i64>, // Epoch millis
     pub sound_uri: Option<String>,
     pub sound_title: Option<String>,
     #[cfg_attr(test, ts(type = "number"))]
@@ -127,7 +127,8 @@ export { AlarmMode };
         let path = output_path();
 
         if std::env::var("UPDATE_TS_BINDINGS").is_ok() {
-            fs::write(&path, &generated).expect("failed to write apps/threshold/src/types/alarm.ts");
+            fs::write(&path, &generated)
+                .expect("failed to write apps/threshold/src/types/alarm.ts");
             return;
         }
 

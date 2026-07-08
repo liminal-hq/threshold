@@ -12,13 +12,8 @@ use tauri::{plugin::PluginApi, AppHandle, Runtime};
 ///
 /// Desktop does not support Wear OS, so all methods are no-ops that
 /// log the call for development visibility.
-pub fn init<R: Runtime>(
-    app: &AppHandle<R>,
-    _api: PluginApi<R, ()>,
-) -> crate::Result<WearSync<R>> {
-    Ok(WearSync {
-        _app: app.clone(),
-    })
+pub fn init<R: Runtime>(app: &AppHandle<R>, _api: PluginApi<R, ()>) -> crate::Result<WearSync<R>> {
+    Ok(WearSync { _app: app.clone() })
 }
 
 /// Desktop stub for the Wear Data Layer bridge.

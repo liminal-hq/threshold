@@ -9,13 +9,13 @@ use crate::models::{
     AlarmDismissRequest, AlarmRingRequest, AlarmSnoozeRequest, PublishRequest, SyncRequest,
     WatchMessage,
 };
+#[cfg(target_os = "android")]
+use tauri::plugin::PluginHandle;
 use tauri::{
     ipc::{Channel, InvokeResponseBody},
     plugin::PluginApi,
     AppHandle, Emitter, Runtime,
 };
-#[cfg(target_os = "android")]
-use tauri::plugin::PluginHandle;
 
 /// Payload sent to the Kotlin side to register the watch message channel.
 #[derive(Serialize)]
@@ -29,16 +29,11 @@ struct WatchMessageHandler {
 /// Registers the Kotlin `WearSyncPlugin` via the Tauri auto-generated bridge
 /// and sets up a [Channel] so Kotlin can send watch messages directly to Rust
 /// without going through the WebView/JS layer.
-pub fn init<R: Runtime>(
-    app: &AppHandle<R>,
-    api: PluginApi<R, ()>,
-) -> crate::Result<WearSync<R>> {
+pub fn init<R: Runtime>(app: &AppHandle<R>, api: PluginApi<R, ()>) -> crate::Result<WearSync<R>> {
     #[cfg(target_os = "android")]
     {
-        let handle = api.register_android_plugin(
-            "ca.liminalhq.threshold.wearsync",
-            "WearSyncPlugin",
-        )?;
+        let handle =
+            api.register_android_plugin("ca.liminalhq.threshold.wearsync", "WearSyncPlugin")?;
 
         // Register a Channel with the Kotlin side so it can send watch messages
         // directly to Rust via JNI, bypassing the WebView/JS layer entirely.
@@ -186,9 +181,7 @@ impl<R: Runtime> WearSync<R> {
     pub fn mark_watch_pipeline_ready(&self) -> crate::Result<()> {
         #[cfg(not(target_os = "android"))]
         {
-            log::debug!(
-                "wear-sync: mark_watch_pipeline_ready no-op on non-Android mobile target"
-            );
+            log::debug!("wear-sync: mark_watch_pipeline_ready no-op on non-Android mobile target");
             return Ok(());
         }
 

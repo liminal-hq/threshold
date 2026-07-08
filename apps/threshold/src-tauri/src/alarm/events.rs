@@ -3,8 +3,8 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::alarm::models::{AlarmMode, AlarmRecord};
 use serde::{Deserialize, Serialize};
-use crate::alarm::models::{AlarmRecord, AlarmMode};
 
 // =========================================================================
 // CRUD Events
@@ -88,10 +88,10 @@ pub struct AlarmCancelled {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 /// Enumerates why a scheduled alarm was cancelled.
 pub enum CancelReason {
-    Disabled,   // User toggled off
-    Deleted,    // User deleted alarm
-    Updated,    // Rescheduling with new trigger
-    Expired,    // One-time alarm fired
+    Disabled, // User toggled off
+    Deleted,  // User deleted alarm
+    Updated,  // Rescheduling with new trigger
+    Expired,  // One-time alarm fired
 }
 
 // =========================================================================
@@ -198,8 +198,8 @@ pub struct AlarmsSyncNeeded {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 /// Enumerates why an explicit sync was requested.
 pub enum SyncReason {
-    BatchComplete,  // Debounce timer expired
-    Initialize,     // App startup
-    Reconnect,      // Watch reconnected
-    ForceSync,      // User requested
+    BatchComplete, // Debounce timer expired
+    Initialize,    // App startup
+    Reconnect,     // Watch reconnected
+    ForceSync,     // User requested
 }

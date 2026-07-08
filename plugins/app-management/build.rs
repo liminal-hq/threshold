@@ -1,11 +1,11 @@
 const COMMANDS: &[&str] = &["minimize_app"];
 
 fn main() {
-  tauri_plugin::Builder::new(COMMANDS)
-    .android_path("android")
-    .build();
-  
-  inject_android_permissions().expect("Failed to inject Android permissions");
+    tauri_plugin::Builder::new(COMMANDS)
+        .android_path("android")
+        .build();
+
+    inject_android_permissions().expect("Failed to inject Android permissions");
 }
 
 fn inject_android_permissions() -> Result<(), Box<dyn std::error::Error>> {

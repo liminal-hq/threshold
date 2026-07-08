@@ -34,8 +34,8 @@ fn collect_event_logs(app: &AppHandle) -> Result<String, String> {
     let app_version = app.package_info().version.to_string();
 
     let mut entries: Vec<(PathBuf, SystemTime)> = Vec::new();
-    let read_dir = fs::read_dir(&log_dir)
-        .map_err(|err| format!("Failed to read log directory: {err}"))?;
+    let read_dir =
+        fs::read_dir(&log_dir).map_err(|err| format!("Failed to read log directory: {err}"))?;
 
     for entry in read_dir {
         let entry = entry.map_err(|err| format!("Failed to read log entry: {err}"))?;
@@ -138,11 +138,7 @@ pub fn export_event_logs(app: AppHandle, destination: String) -> Result<String, 
     }
 
     fs::write(&destination_path, content)
-        .map_err(|err| {
-            format!(
-                "Failed to write event logs to {normalised_destination}: {err}"
-            )
-        })?;
+        .map_err(|err| format!("Failed to write event logs to {normalised_destination}: {err}"))?;
     Ok(normalised_destination.to_string())
 }
 

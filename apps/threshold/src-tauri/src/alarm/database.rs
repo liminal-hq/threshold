@@ -1,8 +1,11 @@
-use tauri::{AppHandle, Runtime, Manager};
-use tauri_plugin_sql::{Migration, MigrationKind};
-use crate::alarm::{models::*, error::{Result, Error}};
+use crate::alarm::{
+    error::{Error, Result},
+    models::*,
+};
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
+use tauri::{AppHandle, Manager, Runtime};
+use tauri_plugin_sql::{Migration, MigrationKind};
 
 pub struct AlarmDatabase {
     pool: SqlitePool,
@@ -23,7 +26,7 @@ impl AlarmDatabase {
             .connect_with(
                 sqlx::sqlite::SqliteConnectOptions::new()
                     .filename(db_path)
-                    .create_if_missing(true)
+                    .create_if_missing(true),
             )
             .await?;
 
@@ -43,16 +46,17 @@ impl AlarmDatabase {
         let mut tx = self.pool.begin().await?;
 
         // Atomic increment
-        sqlx::query("UPDATE state_revision SET current_revision = current_revision + 1 WHERE id = 1")
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "UPDATE state_revision SET current_revision = current_revision + 1 WHERE id = 1",
+        )
+        .execute(&mut *tx)
+        .await?;
 
         // Fetch new value
-        let (rev,): (i64,) = sqlx::query_as(
-            "SELECT current_revision FROM state_revision WHERE id = 1"
-        )
-        .fetch_one(&mut *tx)
-        .await?;
+        let (rev,): (i64,) =
+            sqlx::query_as("SELECT current_revision FROM state_revision WHERE id = 1")
+                .fetch_one(&mut *tx)
+                .await?;
 
         tx.commit().await?;
         Ok(rev)
@@ -60,11 +64,10 @@ impl AlarmDatabase {
 
     /// Get current revision without incrementing
     pub async fn current_revision(&self) -> Result<i64> {
-        let (rev,): (i64,) = sqlx::query_as(
-            "SELECT current_revision FROM state_revision WHERE id = 1"
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let (rev,): (i64,) =
+            sqlx::query_as("SELECT current_revision FROM state_revision WHERE id = 1")
+                .fetch_one(&self.pool)
+                .await?;
 
         Ok(rev)
     }
@@ -110,7 +113,7 @@ impl AlarmDatabase {
                     label=?, enabled=?, mode=?, fixed_time=?, window_start=?,
                     window_end=?, active_days=?, next_trigger=?, sound_uri=?, sound_title=?,
                     revision=?
-                WHERE id=?"
+                WHERE id=?",
             )
             .bind(input.label)
             .bind(enabled_int)
@@ -134,7 +137,7 @@ impl AlarmDatabase {
                 "INSERT INTO alarms
                     (label, enabled, mode, fixed_time, window_start, window_end,
                      active_days, next_trigger, sound_uri, sound_title, revision)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             )
             .bind(input.label)
             .bind(enabled_int)
@@ -168,14 +171,12 @@ impl AlarmDatabase {
         next_trigger: Option<i64>,
         revision: i64,
     ) -> Result<AlarmRecord> {
-        sqlx::query(
-            "UPDATE alarms SET next_trigger = ?, revision = ? WHERE id = ?"
-        )
-        .bind(next_trigger)
-        .bind(revision)
-        .bind(id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("UPDATE alarms SET next_trigger = ?, revision = ? WHERE id = ?")
+            .bind(next_trigger)
+            .bind(revision)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
 
         self.get_by_id(id).await
     }
@@ -185,12 +186,11 @@ impl AlarmDatabase {
         let mut tx = self.pool.begin().await?;
 
         // Get label before deleting
-        let label: Option<(Option<String>,)> = sqlx::query_as(
-            "SELECT label FROM alarms WHERE id = ?"
-        )
-        .bind(id)
-        .fetch_optional(&mut *tx)
-        .await?;
+        let label: Option<(Option<String>,)> =
+            sqlx::query_as("SELECT label FROM alarms WHERE id = ?")
+                .bind(id)
+                .fetch_optional(&mut *tx)
+                .await?;
 
         // Delete alarm
         sqlx::query("DELETE FROM alarms WHERE id = ?")
@@ -216,24 +216,22 @@ impl AlarmDatabase {
 
     /// Get alarms changed since revision (for incremental sync)
     pub async fn get_alarms_since_revision(&self, since: i64) -> Result<Vec<AlarmRecord>> {
-        let rows = sqlx::query_as::<_, AlarmRow>(
-            "SELECT * FROM alarms WHERE revision > ? ORDER BY id"
-        )
-        .bind(since)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows =
+            sqlx::query_as::<_, AlarmRow>("SELECT * FROM alarms WHERE revision > ? ORDER BY id")
+                .bind(since)
+                .fetch_all(&self.pool)
+                .await?;
 
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 
     /// Get deleted alarm IDs since revision (for incremental sync)
     pub async fn get_deleted_since_revision(&self, since: i64) -> Result<Vec<i32>> {
-        let rows: Vec<(i32,)> = sqlx::query_as(
-            "SELECT alarm_id FROM alarm_tombstones WHERE deleted_at_revision > ?"
-        )
-        .bind(since)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows: Vec<(i32,)> =
+            sqlx::query_as("SELECT alarm_id FROM alarm_tombstones WHERE deleted_at_revision > ?")
+                .bind(since)
+                .fetch_all(&self.pool)
+                .await?;
 
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
@@ -271,7 +269,7 @@ impl AlarmDatabase {
                         sound_uri TEXT,
                         sound_title TEXT
                     )
-                "#
+                "#,
             )
             .execute(pool)
             .await?;
@@ -296,7 +294,7 @@ impl AlarmDatabase {
                         id INTEGER PRIMARY KEY CHECK (id = 1),
                         current_revision INTEGER NOT NULL DEFAULT 0
                     )
-                "#
+                "#,
             )
             .execute(pool)
             .await?;
@@ -315,7 +313,7 @@ impl AlarmDatabase {
                         deleted_at_timestamp INTEGER NOT NULL,
                         label TEXT
                     )
-                "#
+                "#,
             )
             .execute(pool)
             .await?;
@@ -332,12 +330,11 @@ impl AlarmDatabase {
     }
 
     async fn table_exists(pool: &SqlitePool, name: &str) -> Result<bool> {
-        let exists: Option<(i64,)> = sqlx::query_as(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
-        )
-        .bind(name)
-        .fetch_optional(pool)
-        .await?;
+        let exists: Option<(i64,)> =
+            sqlx::query_as("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1")
+                .bind(name)
+                .fetch_optional(pool)
+                .await?;
 
         Ok(exists.is_some())
     }
@@ -378,16 +375,23 @@ impl From<AlarmRow> for AlarmRecord {
             "FIXED" => AlarmMode::Fixed,
             "WINDOW" => AlarmMode::Window,
             _ => {
-                log::warn!("Invalid alarm mode '{}' for alarm {}, defaulting to FIXED", row.mode, row.id);
+                log::warn!(
+                    "Invalid alarm mode '{}' for alarm {}, defaulting to FIXED",
+                    row.mode,
+                    row.id
+                );
                 AlarmMode::Fixed
             }
         };
 
-        let active_days: Vec<i32> = serde_json::from_str(&row.active_days)
-            .unwrap_or_else(|e| {
-                log::warn!("Failed to parse active_days for alarm {}: {}, using empty array", row.id, e);
-                vec![]
-            });
+        let active_days: Vec<i32> = serde_json::from_str(&row.active_days).unwrap_or_else(|e| {
+            log::warn!(
+                "Failed to parse active_days for alarm {}: {}, using empty array",
+                row.id,
+                e
+            );
+            vec![]
+        });
 
         Self {
             id: row.id,
@@ -630,7 +634,7 @@ mod tests {
 
         let result = db.get_by_id(999).await;
         assert!(result.is_err());
-        
+
         if let Err(Error::Database(msg)) = result {
             assert!(msg.contains("not found"));
         } else {
@@ -760,7 +764,7 @@ mod tests {
             sound_title: None,
         };
         let alarm = db.save(input, None, 1).await.unwrap();
-        
+
         assert_eq!(alarm.active_days, vec![0, 2, 4, 6]);
 
         // Verify by fetching
@@ -785,7 +789,7 @@ mod tests {
             sound_title: None,
         };
         let alarm = db.save(input, None, 1).await.unwrap();
-        
+
         assert_eq!(alarm.active_days, Vec::<i32>::new());
 
         let fetched = db.get_by_id(alarm.id).await.unwrap();
@@ -809,7 +813,7 @@ mod tests {
             sound_title: None,
         };
         let alarm = db.save(input, None, 1).await.unwrap();
-        
+
         assert_eq!(alarm.label, None);
         assert_eq!(alarm.sound_uri, None);
         assert_eq!(alarm.sound_title, None);
@@ -909,8 +913,14 @@ mod tests {
     async fn test_incremental_sync() {
         let db = setup_test_db().await;
 
-        let input1 = AlarmInput { label: Some("A".into()), ..Default::default() };
-        let input2 = AlarmInput { label: Some("B".into()), ..Default::default() };
+        let input1 = AlarmInput {
+            label: Some("A".into()),
+            ..Default::default()
+        };
+        let input2 = AlarmInput {
+            label: Some("B".into()),
+            ..Default::default()
+        };
 
         let rev1 = db.next_revision().await.unwrap();
         db.save(input1, None, rev1).await.unwrap();
@@ -930,7 +940,10 @@ mod tests {
     async fn test_delete_with_tombstone() {
         let db = setup_test_db().await;
 
-        let input = AlarmInput { label: Some("To Delete".into()), ..Default::default() };
+        let input = AlarmInput {
+            label: Some("To Delete".into()),
+            ..Default::default()
+        };
         let rev1 = db.next_revision().await.unwrap();
         let alarm = db.save(input, None, rev1).await.unwrap();
 

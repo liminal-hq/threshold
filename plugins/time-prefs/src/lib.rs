@@ -1,6 +1,6 @@
 use tauri::{
-  plugin::{Builder, TauriPlugin},
-  Manager, Runtime,
+    plugin::{Builder, TauriPlugin},
+    Manager, Runtime,
 };
 
 pub use models::*;
@@ -23,26 +23,26 @@ use mobile::TimePrefs;
 
 /// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the time-prefs APIs.
 pub trait TimePrefsExt<R: Runtime> {
-  fn time_prefs(&self) -> &TimePrefs<R>;
+    fn time_prefs(&self) -> &TimePrefs<R>;
 }
 
 impl<R: Runtime, T: Manager<R>> TimePrefsExt<R> for T {
-  fn time_prefs(&self) -> &TimePrefs<R> {
-    self.state::<TimePrefs<R>>().inner()
-  }
+    fn time_prefs(&self) -> &TimePrefs<R> {
+        self.state::<TimePrefs<R>>().inner()
+    }
 }
 
 /// Initialises the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
-  Builder::new("time-prefs")
-    .invoke_handler(tauri::generate_handler![commands::get_time_format])
-    .setup(|app, api| {
-      #[cfg(mobile)]
-      let time_prefs = mobile::init(app, api)?;
-      #[cfg(desktop)]
-      let time_prefs = desktop::init(app, api)?;
-      app.manage(time_prefs);
-      Ok(())
-    })
-    .build()
+    Builder::new("time-prefs")
+        .invoke_handler(tauri::generate_handler![commands::get_time_format])
+        .setup(|app, api| {
+            #[cfg(mobile)]
+            let time_prefs = mobile::init(app, api)?;
+            #[cfg(desktop)]
+            let time_prefs = desktop::init(app, api)?;
+            app.manage(time_prefs);
+            Ok(())
+        })
+        .build()
 }

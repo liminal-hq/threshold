@@ -5,8 +5,7 @@ fn main() {
         .android_path("android")
         .build();
 
-    inject_android_permissions()
-        .expect("Failed to inject Android manifest permissions for toast");
+    inject_android_permissions().expect("Failed to inject Android manifest permissions for toast");
 }
 
 fn inject_android_permissions() -> std::io::Result<()> {
