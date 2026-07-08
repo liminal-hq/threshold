@@ -1,24 +1,19 @@
 {
 	"name": "Threshold Dev",
 	"dockerFile": "Dockerfile",
-	"forwardPorts": [
-		5173,
-		1420
-	],
+	"forwardPorts": [5173, 1420],
 	"runArgs": [
 		"--device=/dev/snd",
 		"--group-add=audio",
 		"--env=PULSE_SERVER=unix:/run/user/1000/pulse/native",
 		"--volume=/run/user/1000/pulse/native:/run/user/1000/pulse/native"
 	],
-	
+
 	// Mount keystore directory from host (read-only for security)
 	// Comment out on machines without ~/threshold-keys/ (like laptop)
 	// git update-index --assume-unchanged .devcontainer/devcontainer.json
-	"mounts": [
-		"source=${localEnv:HOME}/threshold-keys,target=/keys,type=bind,readonly"
-	],
-	
+	"mounts": ["source=${localEnv:HOME}/threshold-keys,target=/keys,type=bind,readonly"],
+
 	"customizations": {
 		"vscode": {
 			"extensions": [

@@ -11,6 +11,7 @@
 ## Philosophy
 
 This architecture embodies Threshold's core principles:
+
 - **Single source of truth**: SQLite managed by Rust
 - **Event-driven coordination**: Plugins react, don't orchestrate
 - **Platform independence**: Desktop and Mobile use identical TypeScript
@@ -83,6 +84,7 @@ This architecture embodies Threshold's core principles:
 **Purpose:** Business logic, scheduling algorithms, data persistence
 
 **Key Files:**
+
 ```
 src-tauri/src/
 ├── main.rs                      # App entry, plugin registration
@@ -96,6 +98,7 @@ src-tauri/src/
 ```
 
 **Responsibilities:**
+
 - ✅ Calculate next trigger timestamps (fixed + window)
 - ✅ Manage SQLite database
 - ✅ Emit `alarms:changed` events when state updates
@@ -103,6 +106,7 @@ src-tauri/src/
 - ✅ Handle commands from TypeScript and plugins
 
 **Does NOT:**
+
 - ❌ Call platform-specific APIs (AlarmManager, Data Layer)
 - ❌ Know about UI frameworks
 - ❌ Know about plugins
@@ -114,6 +118,7 @@ src-tauri/src/
 **Purpose:** User interface, rendering, user input handling
 
 **Key Changes:**
+
 ```typescript
 // Legacy (TypeScript handled SQLite directly)
 await saveAlarmToSqlite(alarm);
@@ -125,12 +130,14 @@ const saved = await invoke<AlarmRecord>('save_alarm', { alarm });
 ```
 
 **Responsibilities:**
+
 - ✅ Render alarm list, edit screens, ringing screen
 - ✅ Invoke Rust commands for CRUD operations
 - ✅ Listen to `alarms:changed` events and update state
 - ✅ Handle navigation
 
 **Does NOT:**
+
 - ❌ Calculate next triggers
 - ❌ Manage database directly
 - ❌ Call native plugins (except for UI-specific things like sound picker)
@@ -145,29 +152,33 @@ const saved = await invoke<AlarmRecord>('save_alarm', { alarm });
 **Generic Design:** Could be published as `tauri-plugin-alarm-scheduler`
 
 **Event Listener:**
+
 ```rust
 app.listen("alarms:changed", move |event| {
     let alarms: Vec<AlarmRecord> = serde_json::from_str(event.payload()).unwrap();
-    
+
     #[cfg(target_os = "android")]
     android::sync_to_alarm_manager(alarms);
-    
+
     #[cfg(desktop)]
     desktop::sync_to_scheduler(alarms);
 });
 ```
 
 **Android Implementation:**
+
 - Receives `AlarmRecord[]` from event
 - Schedules/cancels via `AlarmManager.setAlarmClock()`
 - Maintains SharedPreferences cache for boot recovery
 - Launches app when alarm fires
 
 **Desktop Implementation:**
+
 - Schedules via local timer (no system wake guarantee)
 - Opens dedicated Ring window + notification when alarm fires
 
 **Responsibilities:**
+
 - ✅ React to `alarms:changed` events
 - ✅ Schedule platform-specific alarms
 - ✅ Handle alarm firing (launch app)
@@ -175,6 +186,7 @@ app.listen("alarms:changed", move |event| {
 - ✅ Sound picker UI (Android only)
 
 **Does NOT:**
+
 - ❌ Calculate next triggers
 - ❌ Access SQLite database
 - ❌ Know about Wear OS
@@ -190,6 +202,7 @@ app.listen("alarms:changed", move |event| {
 **Generic Design:** Could be published as `tauri-plugin-wear-sync`
 
 **Event Listener:**
+
 ```rust
 #[cfg(target_os = "android")]
 app.listen("alarms:changed", move |event| {
@@ -199,18 +212,21 @@ app.listen("alarms:changed", move |event| {
 ```
 
 **Android Implementation:**
+
 - Listens to `alarms:changed` events
 - Publishes alarm state to Wear Data Layer
 - Receives commands from watch (toggle, delete)
 - Calls back to Rust core via `invoke('toggle_alarm', ...)`
 
 **Responsibilities:**
+
 - ✅ React to `alarms:changed` events
 - ✅ Publish state to Wear Data Layer
 - ✅ Handle watch commands (toggle, delete, create)
 - ✅ Convert between Wear format and AlarmRecord
 
 **Does NOT:**
+
 - ❌ Calculate next triggers
 - ❌ Access SQLite database
 - ❌ Schedule native alarms
@@ -231,14 +247,14 @@ app.listen("alarms:changed", move |event| {
 ```typescript
 // 1. User taps "Save" in EditAlarm.tsx
 const input: AlarmInput = {
-    label: "Wake up",
-    enabled: true,
-    mode: "WINDOW",
-    windowStart: "07:00",
-    windowEnd: "07:30",
-    activeDays: [1, 2, 3, 4, 5],  // Mon-Fri
-    soundUri: "content://media/28",
-    soundTitle: "Argon"
+	label: 'Wake up',
+	enabled: true,
+	mode: 'WINDOW',
+	windowStart: '07:00',
+	windowEnd: '07:30',
+	activeDays: [1, 2, 3, 4, 5], // Mon-Fri
+	soundUri: 'content://media/28',
+	soundTitle: 'Argon',
 };
 
 const saved = await invoke<AlarmRecord>('save_alarm', { alarm: input });
@@ -262,13 +278,13 @@ impl AlarmCoordinator {
         // Calculate next trigger (SECRET SAUCE)
         let next_trigger = scheduler::calculate_next_trigger(&alarm)?;
         // Result: 1737885420000 (random time between 7:00-7:30 tomorrow)
-        
+
         // Save to SQLite
         let saved = self.db.save(alarm, next_trigger).await?;
-        
+
         // Emit event to all listeners
         self.emit_alarms_changed(&app).await?;
-        
+
         Ok(saved)
     }
 }
@@ -278,7 +294,7 @@ impl AlarmCoordinator {
 // 4. alarm-manager reacts (plugins/alarm-manager/src/lib.rs)
 app.listen("alarms:changed", move |event| {
     let alarms: Vec<AlarmRecord> = event.payload();
-    
+
     #[cfg(target_os = "android")]
     {
         for alarm in alarms {
@@ -304,11 +320,11 @@ app.listen("alarms:changed", move |event| {
 ```typescript
 // 6. TypeScript UI reacts (apps/threshold/src/App.tsx)
 useEffect(() => {
-    const unlisten = listen<AlarmRecord[]>('alarms:changed', (event) => {
-        setAlarms(event.payload);
-        // UI re-renders with new alarm
-    });
-    return () => unlisten.then(fn => fn());
+	const unlisten = listen<AlarmRecord[]>('alarms:changed', (event) => {
+		setAlarms(event.payload);
+		// UI re-renders with new alarm
+	});
+	return () => unlisten.then((fn) => fn());
 }, []);
 ```
 
@@ -336,7 +352,7 @@ messageClient.sendMessage(
 // 2. wear-sync receives message (plugins/wear-sync/android/)
 override fun onMessageReceived(event: MessageEvent) {
     val data = Json.decodeFromString<TogglePayload>(event.data.decodeToString())
-    
+
     // Call back to Rust via invoke
     scope.launch {
         invoke("toggle_alarm", data)
@@ -361,17 +377,17 @@ impl AlarmCoordinator {
     pub async fn toggle_alarm(...) -> Result<AlarmRecord> {
         let mut alarm = self.db.get_by_id(id).await?;
         alarm.enabled = enabled;
-        
+
         // Recalculate or clear trigger
         alarm.next_trigger = if enabled {
             Some(scheduler::calculate_next_trigger(&alarm)?)
         } else {
             None
         };
-        
+
         self.db.update(alarm).await?;
         self.emit_alarms_changed(&app).await?;
-        
+
         Ok(alarm)
     }
 }
@@ -400,7 +416,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         // Can't launch app, can't call Tauri commands
         // Use cached data from SharedPreferences
-        
+
         val alarms = AlarmUtils.loadAllFromPrefs(context)
         for (id, trigger, soundUri) in alarms) {
             if (trigger > System.currentTimeMillis()) {
@@ -412,6 +428,7 @@ class BootReceiver : BroadcastReceiver() {
 ```
 
 **Why this works:**
+
 - alarm-manager maintains SharedPreferences cache on every `alarms:changed` event
 - Boot receiver reads cache (no app launch needed)
 - When app eventually launches, Rust re-validates from SQLite
@@ -425,6 +442,7 @@ class BootReceiver : BroadcastReceiver() {
 ### Decision 1: Rust Core, Not Plugin
 
 **Rationale:**
+
 - Scheduler algorithm is Threshold's competitive advantage
 - Should not be easily extractable
 - No overhead of plugin lifecycle
@@ -437,6 +455,7 @@ class BootReceiver : BroadcastReceiver() {
 ### Decision 2: Event-Driven Plugin Coordination
 
 **Rationale:**
+
 - Plugins don't need to know about each other
 - Easy to add new listeners (e.g., future cloud sync plugin)
 - Single emit point (AlarmCoordinator)
@@ -448,6 +467,7 @@ class BootReceiver : BroadcastReceiver() {
 ### Decision 3: SharedPreferences Cache for Boot
 
 **Rationale:**
+
 - Boot receiver can't launch app on some Android versions
 - SharedPreferences survives boot
 - Minimal duplication (just id + trigger + sound)
@@ -459,6 +479,7 @@ class BootReceiver : BroadcastReceiver() {
 ### Decision 4: Generic Plugins
 
 **Rationale:**
+
 - alarm-manager could work for any alarm app
 - wear-sync could work for any Wear-enabled app
 - Easier to maintain when separate from core logic
@@ -469,30 +490,33 @@ class BootReceiver : BroadcastReceiver() {
 
 ## Platform Differences
 
-| Feature | Android | Desktop | Wear OS |
-|---------|---------|---------|---------|
-| **Alarm Scheduling** | AlarmManager.setAlarmClock() | notify-rust (no wake) | N/A (syncs from phone) |
-| **Boot Recovery** | BootReceiver + SharedPrefs | N/A | N/A |
-| **Sound Picker** | Native RingtonePickerActivity | File picker | N/A |
-| **Ringing UI** | Full-screen Activity + notification | Dedicated Ring window + notification | Watch vibration + complication |
-| **Wake from Sleep** | ✅ Guaranteed | ❌ Not reliable | ✅ Via phone |
-| **Data Sync** | Local SQLite | Local SQLite | Wear Data Layer from phone |
+| Feature              | Android                             | Desktop                              | Wear OS                        |
+| -------------------- | ----------------------------------- | ------------------------------------ | ------------------------------ |
+| **Alarm Scheduling** | AlarmManager.setAlarmClock()        | notify-rust (no wake)                | N/A (syncs from phone)         |
+| **Boot Recovery**    | BootReceiver + SharedPrefs          | N/A                                  | N/A                            |
+| **Sound Picker**     | Native RingtonePickerActivity       | File picker                          | N/A                            |
+| **Ringing UI**       | Full-screen Activity + notification | Dedicated Ring window + notification | Watch vibration + complication |
+| **Wake from Sleep**  | ✅ Guaranteed                       | ❌ Not reliable                      | ✅ Via phone                   |
+| **Data Sync**        | Local SQLite                        | Local SQLite                         | Wear Data Layer from phone     |
 
 ---
 
 ## Security Considerations
 
 ### Data at Rest
+
 - SQLite database stored in app-private directory
 - No encryption (alarms are not sensitive data)
 - SharedPreferences also app-private
 
 ### Data in Transit (Wear Sync)
+
 - Wear Data Layer scoped to app package name + signing key
 - Only apps with same signature can access data
 - No additional authentication needed
 
 ### Permissions Required
+
 - Android: `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`
 - Desktop: None (local notifications)
 - Wear: None (Data Layer is automatic for paired apps)
@@ -502,6 +526,7 @@ class BootReceiver : BroadcastReceiver() {
 ## Testing Strategy
 
 ### Unit Tests (Rust)
+
 ```rust
 // Test scheduler logic
 #[test]
@@ -514,9 +539,9 @@ fn test_window_randomization() {
         enabled: true,
         ..Default::default()
     };
-    
+
     let trigger = calculate_next_trigger(&input).unwrap().unwrap();
-    
+
     // Assert within window (convert to time of day)
     let trigger_time = /* extract time */;
     assert!(trigger_time >= "07:00");
@@ -525,11 +550,13 @@ fn test_window_randomization() {
 ```
 
 ### Integration Tests
+
 - Create alarm via TypeScript → Verify SQLite record
 - Toggle alarm via Wear command → Verify all surfaces update
 - Boot receiver → Verify alarms rescheduled
 
 ### Manual Testing Checklist
+
 - [ ] Desktop: Create alarm, verify notification appears
 - [ ] Android: Create alarm, verify AlarmManager scheduled
 - [ ] Android: Reboot device, verify alarm survives
@@ -541,13 +568,13 @@ fn test_window_randomization() {
 
 ## Performance Targets
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Save alarm (TS → Rust → SQLite) | < 50ms | Benchmark |
-| Event emission (Rust → plugins) | < 5ms | Benchmark |
-| Wear sync latency (phone → watch) | < 2s | Manual timing |
-| Boot recovery (all alarms) | < 500ms | adb logcat timing |
-| UI update after toggle | < 100ms | Visual perception |
+| Metric                            | Target  | Measurement       |
+| --------------------------------- | ------- | ----------------- |
+| Save alarm (TS → Rust → SQLite)   | < 50ms  | Benchmark         |
+| Event emission (Rust → plugins)   | < 5ms   | Benchmark         |
+| Wear sync latency (phone → watch) | < 2s    | Manual timing     |
+| Boot recovery (all alarms)        | < 500ms | adb logcat timing |
+| UI update after toggle            | < 100ms | Visual perception |
 
 ---
 
@@ -556,6 +583,7 @@ fn test_window_randomization() {
 **Current Users:** None (testers can reinstall)
 
 **Fresh Install Flow:**
+
 1. App starts
 2. Rust initializes SQLite database (creates tables)
 3. No alarms exist

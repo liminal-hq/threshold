@@ -15,7 +15,6 @@ Default permissions for the wear-sync plugin
 <th>Description</th>
 </tr>
 
-
 <tr>
 <td>
 

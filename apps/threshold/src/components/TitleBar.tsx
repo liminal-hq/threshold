@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { platform } from '@tauri-apps/plugin-os';
-import {
-	WindowMinimizeIcon,
-	WindowCloseIcon,
-} from './Icons/Icons';
+import { WindowMinimizeIcon, WindowCloseIcon } from './Icons/Icons';
 import { ContextMenu } from './ContextMenu/ContextMenu';
 import type { MenuModel } from './ContextMenu/types';
 import './TitleBar.css';
@@ -122,7 +119,6 @@ export const TitleBar: React.FC = () => {
 			},
 		],
 	};
-
 
 	// Mac Traffic Lights
 	const MacControls = () => (

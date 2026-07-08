@@ -4,10 +4,10 @@ User interface implementation documentation for Threshold.
 
 ## Contents
 
-| Document | Description |
-|----------|-------------|
-| [ui-task](ui-task.md) | UI implementation spec: screens, components, theme, and navigation |
-| [swipe-to-delete-row](swipe-to-delete-row.md) | Physics-based swipe-to-delete component with `motion/react` |
+| Document                                      | Description                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------ |
+| [ui-task](ui-task.md)                         | UI implementation spec: screens, components, theme, and navigation |
+| [swipe-to-delete-row](swipe-to-delete-row.md) | Physics-based swipe-to-delete component with `motion/react`        |
 
 ## Current Stack
 

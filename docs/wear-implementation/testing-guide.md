@@ -252,30 +252,30 @@ Run `adb devices` to list serials.
 
 ### Tag Reference
 
-| Tag | Source | What It Logs |
-|-----|--------|-------------|
-| **Watch** | | |
-| `DataLayerListener` | `DataLayerListenerService.kt` | Incoming data changes, sync payloads, parse errors |
-| `WearDataLayer` | `WearDataLayerClient.kt` | Outgoing messages (toggle, delete, sync requests) |
-| `WearDataLayerClient` | `WearDataLayerClient.kt` | Node resolution, message send results |
-| `ThresholdWearApp` | `ThresholdWearApp.kt` | App initialisation |
-| `NextAlarmTile` | `NextAlarmTileService.kt` | Tile render events |
-| `NextAlarmComplication` | `NextAlarmComplicationService.kt` | Complication updates |
-| **Phone — Wear Sync** | | |
-| `WearSyncPlugin` | `WearSyncPlugin.kt` | Data Layer publishes, connected nodes |
-| `WearMessageService` | `WearMessageService.kt` | Incoming watch messages, offline cache writes |
-| `WearSyncService` | `WearSyncService.kt` | Foreground service boot, cached message replay |
-| `WearSyncCache` | `WearSyncCache.kt` | SharedPreferences read/write for offline sync |
-| `BatchCollector` | `BatchCollector` (Rust log) | Batch debounce events |
-| **Phone — App** | | |
-| `threshold` | Tauri Rust runtime | General app-level Rust logs |
-| `AlarmManager` | Android system | System alarm scheduling |
-| `AlarmManagerPlugin` | `AlarmManagerPlugin.kt` | Plugin bridge calls |
-| `AlarmReceiver` | `AlarmReceiver.kt` | Alarm fired broadcast |
-| `AlarmRingingService` | `AlarmRingingService.kt` | Ring/vibrate/dismiss |
-| `BootReceiver` | `BootReceiver.kt` | Boot recovery scheduling |
-| `Tauri/Console` | WebView console | JS `console.log` from the UI |
-| `chromium` | WebView engine | WebView internals (use `:I` for info only) |
+| Tag                     | Source                            | What It Logs                                       |
+| ----------------------- | --------------------------------- | -------------------------------------------------- |
+| **Watch**               |                                   |                                                    |
+| `DataLayerListener`     | `DataLayerListenerService.kt`     | Incoming data changes, sync payloads, parse errors |
+| `WearDataLayer`         | `WearDataLayerClient.kt`          | Outgoing messages (toggle, delete, sync requests)  |
+| `WearDataLayerClient`   | `WearDataLayerClient.kt`          | Node resolution, message send results              |
+| `ThresholdWearApp`      | `ThresholdWearApp.kt`             | App initialisation                                 |
+| `NextAlarmTile`         | `NextAlarmTileService.kt`         | Tile render events                                 |
+| `NextAlarmComplication` | `NextAlarmComplicationService.kt` | Complication updates                               |
+| **Phone — Wear Sync**   |                                   |                                                    |
+| `WearSyncPlugin`        | `WearSyncPlugin.kt`               | Data Layer publishes, connected nodes              |
+| `WearMessageService`    | `WearMessageService.kt`           | Incoming watch messages, offline cache writes      |
+| `WearSyncService`       | `WearSyncService.kt`              | Foreground service boot, cached message replay     |
+| `WearSyncCache`         | `WearSyncCache.kt`                | SharedPreferences read/write for offline sync      |
+| `BatchCollector`        | `BatchCollector` (Rust log)       | Batch debounce events                              |
+| **Phone — App**         |                                   |                                                    |
+| `threshold`             | Tauri Rust runtime                | General app-level Rust logs                        |
+| `AlarmManager`          | Android system                    | System alarm scheduling                            |
+| `AlarmManagerPlugin`    | `AlarmManagerPlugin.kt`           | Plugin bridge calls                                |
+| `AlarmReceiver`         | `AlarmReceiver.kt`                | Alarm fired broadcast                              |
+| `AlarmRingingService`   | `AlarmRingingService.kt`          | Ring/vibrate/dismiss                               |
+| `BootReceiver`          | `BootReceiver.kt`                 | Boot recovery scheduling                           |
+| `Tauri/Console`         | WebView console                   | JS `console.log` from the UI                       |
+| `chromium`              | WebView engine                    | WebView internals (use `:I` for info only)         |
 
 ### Logcat with Timestamps
 
@@ -314,6 +314,7 @@ adb logcat -d -s DataLayerListener:* | grep -i "error\|fail\|exception"
 ### End-to-End Sync Test
 
 1. Start both apps:
+
    ```bash
    # Terminal 1: phone app
    cd apps/threshold && pnpm tauri android dev
@@ -324,11 +325,13 @@ adb logcat -d -s DataLayerListener:* | grep -i "error\|fail\|exception"
    ```
 
 2. Open logcat on the watch:
+
    ```bash
    adb -s <watch> logcat -s DataLayerListener:* WearDataLayer:*
    ```
 
 3. Create an alarm on the phone. You should see:
+
    ```
    D/DataLayerListener: Received alarm data at revision 1
    ```
@@ -450,17 +453,17 @@ The GitHub Actions workflow (`.github/workflows/test.yml`) runs both Kotlin and 
 
 ## Common Issues
 
-| Problem | Diagnosis | Fix |
-|---------|-----------|-----|
-| `adb: no devices/emulators found` | Watch not connected or ADB not enabled | Check USB connection, enable ADB debugging on watch |
-| `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | Signing key mismatch from previous install | `adb uninstall ca.liminalhq.threshold.wear` then reinstall |
-| `error: device unauthorized` | ADB prompt not accepted on device | Tap "Allow" on the debugging prompt, or revoke + re-enable USB debugging |
-| Watch shows "Offline" permanently | Phone app not running or not paired | Launch phone app, verify Wear OS pairing |
-| Sync works once then stops | Data Layer deduplication (same data = no event) | The phone includes a timestamp in each publish to ensure uniqueness |
-| `./gradlew: Permission denied` | Gradle wrapper not executable | `chmod +x apps/threshold-wear/gradlew` |
-| Build fails with `dependencyResolutionManagement` error | Stale Gradle cache | `cd apps/threshold-wear && ./gradlew clean` |
-| Tile shows stale data | Tile not refreshed after data change | Swipe away from the tile and back, or force-refresh via ADB |
-| Logcat shows nothing for expected tags | Logs cleared or process not running | Verify app is running: `adb shell pidof ca.liminalhq.threshold.wear` |
+| Problem                                                 | Diagnosis                                       | Fix                                                                      |
+| ------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------ |
+| `adb: no devices/emulators found`                       | Watch not connected or ADB not enabled          | Check USB connection, enable ADB debugging on watch                      |
+| `INSTALL_FAILED_UPDATE_INCOMPATIBLE`                    | Signing key mismatch from previous install      | `adb uninstall ca.liminalhq.threshold.wear` then reinstall               |
+| `error: device unauthorized`                            | ADB prompt not accepted on device               | Tap "Allow" on the debugging prompt, or revoke + re-enable USB debugging |
+| Watch shows "Offline" permanently                       | Phone app not running or not paired             | Launch phone app, verify Wear OS pairing                                 |
+| Sync works once then stops                              | Data Layer deduplication (same data = no event) | The phone includes a timestamp in each publish to ensure uniqueness      |
+| `./gradlew: Permission denied`                          | Gradle wrapper not executable                   | `chmod +x apps/threshold-wear/gradlew`                                   |
+| Build fails with `dependencyResolutionManagement` error | Stale Gradle cache                              | `cd apps/threshold-wear && ./gradlew clean`                              |
+| Tile shows stale data                                   | Tile not refreshed after data change            | Swipe away from the tile and back, or force-refresh via ADB              |
+| Logcat shows nothing for expected tags                  | Logs cleared or process not running             | Verify app is running: `adb shell pidof ca.liminalhq.threshold.wear`     |
 
 ---
 

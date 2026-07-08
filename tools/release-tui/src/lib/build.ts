@@ -76,9 +76,7 @@ export function symlinkKeystore(): void {
 			if (fs.existsSync(target)) fs.unlinkSync(target);
 			fs.symlinkSync(BUILD.keystoreProps, target);
 		} catch (err) {
-			throw new Error(
-				`Failed to symlink keystore to ${target}: ${(err as Error).message}`,
-			);
+			throw new Error(`Failed to symlink keystore to ${target}: ${(err as Error).message}`);
 		}
 	}
 }
@@ -291,8 +289,7 @@ export async function runFullBuild(
 				artifacts.phone.aab = dest;
 			}
 
-			const apkDir =
-				'apps/threshold/src-tauri/gen/android/app/build/outputs/apk/universal/release';
+			const apkDir = 'apps/threshold/src-tauri/gen/android/app/build/outputs/apk/universal/release';
 			const apkPath = findArtifact(apkDir, '.apk');
 			if (apkPath) {
 				const dest = `${BUILD.releaseDir}/app-v${version}-${versionCode}.apk`;
@@ -361,12 +358,7 @@ export async function runFullBuild(
 		} catch (err: unknown) {
 			const buildErr = err as { logLines?: string[] };
 			callbacks.onWearError?.(buildErr.logLines ?? []);
-			throw new BuildFailureError(
-				'wear',
-				'Wear build failed',
-				buildErr.logLines ?? [],
-				artifacts,
-			);
+			throw new BuildFailureError('wear', 'Wear build failed', buildErr.logLines ?? [], artifacts);
 		}
 
 		return artifacts;

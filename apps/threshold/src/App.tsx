@@ -42,7 +42,9 @@ const App: React.FC = () => {
 			try {
 				const detected = await SettingsService.getSystemTimeFormat();
 				is24Hour = detected.is24Hour;
-				console.log(`[App] System time format: ${is24Hour ? '24h' : '12h'} (source: ${detected.source})`);
+				console.log(
+					`[App] System time format: ${is24Hour ? '24h' : '12h'} (source: ${detected.source})`,
+				);
 			} catch (e) {
 				console.error('[App] Failed to get system time format:', e);
 			}

@@ -47,11 +47,24 @@ export function CustomVersion({ currentState, onConfirm, onCancel }: CustomVersi
 			footerRight="Esc: cancel  Enter: confirm"
 		>
 			<Text> </Text>
-			<Text> Current version    <Text color={palette.text}>{currentState.tauriVersionName}</Text></Text>
-			<Text> Wear OS version    <Text color={palette.text}>{currentState.wearVersionName}</Text></Text>
-			<Text> Web pkg version    <Text color={palette.text}>{currentState.webVersion}</Text></Text>
+			<Text>
+				{' '}
+				Current version <Text color={palette.text}>{currentState.tauriVersionName}</Text>
+			</Text>
+			<Text>
+				{' '}
+				Wear OS version <Text color={palette.text}>{currentState.wearVersionName}</Text>
+			</Text>
+			<Text>
+				{' '}
+				Web pkg version <Text color={palette.text}>{currentState.webVersion}</Text>
+			</Text>
 			<Text> </Text>
-			<Text> Enter version: {buffer}<Text color={palette.accent}>{'\u2588'}</Text></Text>
+			<Text>
+				{' '}
+				Enter version: {buffer}
+				<Text color={palette.accent}>{'\u2588'}</Text>
+			</Text>
 			{error ? <Text color={palette.yellow}> {error}</Text> : null}
 			<Text> </Text>
 			<Text color={palette.muted}> Format: X.Y.Z or X.Y.Z-suffix (e.g. 0.2.0, 0.2.0-rc.1)</Text>

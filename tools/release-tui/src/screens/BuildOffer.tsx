@@ -3,7 +3,6 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-
 import { Text, useInput } from 'ink';
 import { Layout } from '../components/Layout.js';
 import { HotkeyBar } from '../components/HotkeyHint.js';
@@ -31,16 +30,31 @@ export function BuildOffer({ version, tagName, onBuild, onSkip, onHelp, onQuit }
 			headerLeft="Build"
 			footerLeft="Build offer"
 			footerRight={
-				<HotkeyBar hints={[{ label: 'Help', hotkey: '?' }, { label: 'Quit', hotkey: 'q' }]} />
+				<HotkeyBar
+					hints={[
+						{ label: 'Help', hotkey: '?' },
+						{ label: 'Quit', hotkey: 'q' },
+					]}
+				/>
 			}
 		>
 			<Text> </Text>
-			<Text> Version committed and tagged: <Text color={palette.bar}>{version}</Text> (<Text color={palette.yellow}>{tagName}</Text>)</Text>
+			<Text>
+				{' '}
+				Version committed and tagged: <Text color={palette.bar}>{version}</Text> (
+				<Text color={palette.yellow}>{tagName}</Text>)
+			</Text>
 			<Text> </Text>
 			<Text> Build release artifacts now?</Text>
 			<Text> </Text>
-			<Text>   <Text color={palette.accent}>b</Text>  Build phone + wear AABs/APKs</Text>
-			<Text>   <Text color={palette.accent}>s</Text>  Skip (version bump only)</Text>
+			<Text>
+				{' '}
+				<Text color={palette.accent}>b</Text> Build phone + wear AABs/APKs
+			</Text>
+			<Text>
+				{' '}
+				<Text color={palette.accent}>s</Text> Skip (version bump only)
+			</Text>
 		</Layout>
 	);
 }

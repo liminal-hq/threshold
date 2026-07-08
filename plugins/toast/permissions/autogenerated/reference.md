@@ -14,7 +14,6 @@ Default permissions for the toast plugin
 <th>Description</th>
 </tr>
 
-
 <tr>
 <td>
 

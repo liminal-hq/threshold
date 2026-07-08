@@ -7,6 +7,7 @@
 ## Overview
 
 The Threshold plugin pattern documentation is specifically designed to work well with AI coding agents. The documents are:
+
 - ✅ Comprehensive and self-contained
 - ✅ Include code templates and examples
 - ✅ Provide verification steps
@@ -56,6 +57,7 @@ threshold/
 ```
 
 **Why this works:**
+
 - Agents can access local files via file paths
 - Documentation is version-controlled with code
 - Updates to patterns propagate to all future agent tasks
@@ -70,14 +72,17 @@ threshold/
 **Scenario:** You're creating a new plugin called `notification-manager`.
 
 **Agent Prompt:**
+
 ```markdown
 I need to create a new Tauri plugin called `notification-manager` with Android support.
 
 Please follow the Threshold Android Manifest Injection Pattern documented in:
+
 - `/docs/plugins/plugin-manifest-quickstart.md` (for quick reference)
 - `/docs/plugins/plugin-manifest-pattern.md` (for comprehensive details)
 
 Requirements:
+
 1. Plugin needs these Android permissions:
    - POST_NOTIFICATIONS
    - VIBRATE
@@ -94,6 +99,7 @@ Please implement the complete plugin structure with proper manifest injection.
 ```
 
 **What the Agent Will Do:**
+
 1. Read both pattern documents
 2. Extract templates and conventions
 3. Generate `build.rs` with correct injection
@@ -108,6 +114,7 @@ Please implement the complete plugin structure with proper manifest injection.
 **Scenario:** Migrating an existing plugin to the pattern.
 
 **Agent Prompt:**
+
 ```markdown
 Please update the alarm-manager plugin to follow the Android Manifest Injection Pattern.
 
@@ -115,6 +122,7 @@ Use the specific implementation prompt at:
 `/docs/prompts/LLM_AGENT_PROMPT_ALARM_MANAGER_UPDATE.md`
 
 This prompt contains:
+
 - Step-by-step instructions
 - Current state analysis
 - Expected changes
@@ -124,6 +132,7 @@ Follow all phases and provide verification results when complete.
 ```
 
 **What the Agent Will Do:**
+
 1. Read the task-specific prompt
 2. Reference the main pattern docs as needed
 3. Analyze current implementation
@@ -138,6 +147,7 @@ Follow all phases and provide verification results when complete.
 **Scenario:** An AI agent reviews a PR that adds Android support.
 
 **Agent Prompt:**
+
 ```markdown
 Please review this PR that adds Android manifest injection to the barcode-scanner plugin.
 
@@ -145,17 +155,20 @@ Use the review checklist at:
 `/docs/plugins/plugin-manifest-pr-checklist.md`
 
 Files changed in this PR:
+
 - plugins/barcode-scanner/build.rs
 - plugins/barcode-scanner/Cargo.toml
 - plugins/barcode-scanner/android/src/main/AndroidManifest.xml
 
 Provide:
+
 1. Checklist completion results
 2. Any issues found
 3. Approval or requested changes
 ```
 
 **What the Agent Will Do:**
+
 1. Read the PR checklist
 2. Examine each changed file
 3. Verify against checklist items
@@ -169,11 +182,14 @@ Provide:
 **Scenario:** The pattern isn't working as expected.
 
 **Agent Prompt:**
+
 ```markdown
 I'm implementing Android manifest injection in my plugin but getting this error:
 ```
+
 [error message here]
-```
+
+````
 
 Please help troubleshoot using:
 `/docs/plugins/plugin-manifest-pattern.md`
@@ -183,7 +199,8 @@ Specifically, check the troubleshooting section and compare my implementation to
 My current build.rs:
 ```rust
 [paste your build.rs]
-```
+````
+
 ```
 
 **What the Agent Will Do:**
@@ -201,12 +218,16 @@ My current build.rs:
 
 **❌ Bad:**
 ```
+
 Implement Android manifest injection for my plugin.
+
 ```
 
 **✅ Good:**
 ```
+
 Implement Android manifest injection following the pattern in `/docs/plugins/plugin-manifest-quickstart.md`.
+
 ```
 
 **Why:** Explicit paths ensure the agent reads your specific documentation, not its general knowledge.
@@ -217,16 +238,21 @@ Implement Android manifest injection following the pattern in `/docs/plugins/plu
 
 **❌ Bad:**
 ```
+
 Add permissions to my plugin.
+
 ```
 
 **✅ Good:**
 ```
+
 Add these Android permissions using the manifest injection pattern:
+
 - CAMERA
 - VIBRATE
 
 Follow the template in section 4 of plugin-manifest-quickstart.md.
+
 ```
 
 **Why:** Specific requirements + doc reference = better results.
@@ -237,17 +263,22 @@ Follow the template in section 4 of plugin-manifest-quickstart.md.
 
 **❌ Bad:**
 ```
+
 Update the plugin to use manifest injection.
+
 ```
 
 **✅ Good:**
 ```
+
 Update the plugin to use manifest injection and verify using the steps in Phase 5 of the implementation guide.
 
 Provide:
+
 1. Build output
 2. Generated manifest snippet
 3. Confirmation that runtime behaviour works
+
 ```
 
 **Why:** Verification ensures the agent tests its work.
@@ -258,18 +289,23 @@ Provide:
 
 **❌ Bad:**
 ```
+
 Fix my build.rs using the pattern doc.
+
 ```
 
 **✅ Good:**
 ```
+
 Fix my build.rs by comparing it to the "Template Code" section in plugin-manifest-pattern.md (line ~450).
 
 Focus on:
+
 - COMMANDS array definition
 - Injection function signature
 - Block identifier format
-```
+
+````
 
 **Why:** Specific sections guide the agent to the most relevant information.
 
@@ -291,7 +327,7 @@ Requirements:
 - Feature-gated: ACCESS_BACKGROUND_LOCATION (opt-in only)
 
 Follow the feature-gated pattern from section 7.
-```
+````
 
 ---
 
@@ -299,7 +335,7 @@ Follow the feature-gated pattern from section 7.
 
 Always include verification in your prompts:
 
-```markdown
+````markdown
 After implementing manifest injection:
 
 1. Run verification commands from the implementation prompt
@@ -307,11 +343,14 @@ After implementing manifest injection:
    ```bash
    cat apps/threshold/src-tauri/gen/android/app/src/main/AndroidManifest.xml | grep -A 20 "tauri-plugin-your-plugin"
    ```
+````
+
 3. Confirm no build errors
 4. Confirm runtime behaviour is correct
 
 Do not consider the task complete until all verification passes.
-```
+
+````
 
 ---
 
@@ -362,26 +401,30 @@ Include:
 3. Library manifest with components only
 
 Verify using steps from the quickstart doc.
-```
+````
 
 ---
 
 ### Add Android Support to Existing Plugin
+
 ```markdown
 Add Android support to the existing `{plugin-name}` plugin.
 
 Current state:
+
 - Has desktop implementation
 - No Android code yet
 - Commands: {list commands}
 
 Required Android permissions:
+
 - {PERMISSION_1}
 - {PERMISSION_2}
 
 Follow the pattern in `/docs/plugins/plugin-manifest-pattern.md` sections 4-6.
 
 Create:
+
 1. build.rs with manifest injection
 2. android/ directory with proper structure
 3. Native Kotlin/Java code (basic structure)
@@ -392,12 +435,14 @@ Provide verification that manifest injection works.
 ---
 
 ### Migrate Library Manifest to Injection
+
 ```markdown
 Migrate `{plugin-name}` from library manifest approach to build-time injection.
 
 Current manifest is at: `plugins/{plugin-name}/android/src/main/AndroidManifest.xml`
 
 Steps:
+
 1. Extract all `<uses-permission>` from library manifest
 2. Implement injection in build.rs following `/docs/plugins/plugin-manifest-quickstart.md`
 3. Remove permissions from library manifest (keep components)
@@ -427,14 +472,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       # Use AI agent to validate
       - name: AI Pattern Validation
         run: |
           ai-agent run --prompt "
           Review the changed plugin files against the checklist in:
           /docs/plugins/plugin-manifest-pr-checklist.md
-          
+
           Report any violations of the pattern.
           " --files plugins/**
 ```
@@ -448,16 +493,19 @@ jobs:
 When you discover new patterns or issues:
 
 1. **Update the main pattern doc**
+
    ```bash
    # Add to troubleshooting section
    vim docs/plugins/plugin-manifest-pattern.md
    ```
 
 2. **Increment version**
+
    ```markdown
    ## Changelog
-   
+
    ### Version 1.1 (February 2026)
+
    - Added troubleshooting for {new issue}
    - New pattern: {pattern name}
    ```
@@ -470,6 +518,7 @@ When you discover new patterns or issues:
 ### Keep Templates Current
 
 When APIs change:
+
 1. Update code templates in all docs
 2. Add migration notes
 3. Test with AI agent using old and new approaches
@@ -484,7 +533,7 @@ You'll know the docs are working well with AI agents when:
 ✅ Less back-and-forth needed for clarification  
 ✅ Verification steps pass on first attempt  
 ✅ Agents catch mistakes during self-review  
-✅ New contributors can onboard using agent + docs  
+✅ New contributors can onboard using agent + docs
 
 ---
 
@@ -499,11 +548,13 @@ You'll know the docs are working well with AI agents when:
 Prompt: Create plugin structure following `/docs/plugins/plugin-manifest-quickstart.md`
 
 Commands:
+
 - start_tracking
-- stop_tracking  
+- stop_tracking
 - get_current_location
 
 Permissions:
+
 - ACCESS_FINE_LOCATION (always)
 - ACCESS_BACKGROUND_LOCATION (feature-gated)
 
@@ -512,6 +563,7 @@ Prompt: Add optional background location feature following the "Feature-Gated Pe
 
 **Phase 3: Verify**
 Prompt: Run all verification steps from the quickstart guide and provide:
+
 1. Build output
 2. Generated manifest snippet
 3. Feature gate test results (with/without feature)
@@ -532,10 +584,12 @@ Prompt: Create a README section documenting the Android permissions following th
 **Problem:** Agent uses its general knowledge instead of your docs.
 
 **Solution:**
+
 ```markdown
 CRITICAL: You MUST read and follow `/docs/plugins/plugin-manifest-quickstart.md`.
 
 Before writing any code:
+
 1. Read the document
 2. Summarize the key requirements
 3. Then implement following those requirements
@@ -548,10 +602,12 @@ Do not use your general knowledge of Tauri plugins. Follow the Threshold-specifi
 **Problem:** Implementation doesn't match template.
 
 **Solution:**
+
 ```markdown
 Compare your implementation line-by-line with the template in section X of the pattern doc.
 
 For each difference, explain:
+
 1. Why you deviated
 2. Is it intentional or a mistake?
 
@@ -563,10 +619,12 @@ If mistake, correct it. If intentional, justify.
 **Problem:** Claims task is done without testing.
 
 **Solution:**
+
 ```markdown
 Verification is MANDATORY and part of the task.
 
 You are not finished until you:
+
 1. Run the verification commands from the doc
 2. Provide the actual output (not simulated)
 3. Confirm all checks pass
@@ -592,6 +650,7 @@ You can leverage AI agents to consistently implement the pattern across all plug
 ---
 
 **Questions or Issues?**
+
 - Update the docs with new patterns as you discover them
 - Share successful agent prompts with the team
 - Report documentation gaps or unclear sections

@@ -110,12 +110,12 @@ sequenceDiagram
 
 Revision-based protocol where the watch sends its `lastSyncRevision` and the phone determines the response:
 
-| Revision Gap | Response | Description |
-|--------------|----------|-------------|
-| 0 | `UpToDate` | No changes needed |
-| 1–100 | `Incremental` | Send only changed/deleted alarms |
-| >100 | `FullSync` | Send all alarms |
-| Negative (watch ahead) | `FullSync` | Anomaly — phone wins |
+| Revision Gap           | Response      | Description                      |
+| ---------------------- | ------------- | -------------------------------- |
+| 0                      | `UpToDate`    | No changes needed                |
+| 1–100                  | `Incremental` | Send only changed/deleted alarms |
+| >100                   | `FullSync`    | Send all alarms                  |
+| Negative (watch ahead) | `FullSync`    | Anomaly — phone wins             |
 
 ## Conflict Detection
 
@@ -153,18 +153,18 @@ This plugin currently requires no Android permissions. The manifest injection me
 
 ### Listened
 
-| Event | Source | Purpose |
-|-------|--------|---------|
-| `alarms:batch:updated` | AlarmCoordinator | Batched alarm changes |
-| `alarms:sync:needed` | AlarmCoordinator | Force immediate sync |
+| Event                   | Source            | Purpose                 |
+| ----------------------- | ----------------- | ----------------------- |
+| `alarms:batch:updated`  | AlarmCoordinator  | Batched alarm changes   |
+| `alarms:sync:needed`    | AlarmCoordinator  | Force immediate sync    |
 | `wear:message:received` | WearSyncPlugin.kt | Incoming watch messages |
 
 ### Emitted
 
-| Event | Target | Purpose |
-|-------|--------|---------|
-| `wear:sync:request` | App layer | Watch wants sync data |
-| `wear:alarm:save` | App layer | Watch wants to toggle alarm |
+| Event               | Target    | Purpose                     |
+| ------------------- | --------- | --------------------------- |
+| `wear:sync:request` | App layer | Watch wants sync data       |
+| `wear:alarm:save`   | App layer | Watch wants to toggle alarm |
 | `wear:alarm:delete` | App layer | Watch wants to delete alarm |
 
 ## Tests
@@ -177,13 +177,13 @@ cargo test -p tauri-plugin-wear-sync
 
 ## Platform Support
 
-| Platform | Support Level | Notes |
-|----------|---------------|-------|
-| Linux | Desktop stubs | No-op (no Wear Data Layer) |
-| Windows | Desktop stubs | No-op |
-| macOS | Desktop stubs | No-op |
-| Android | Full | Wear Data Layer via Google Play Services |
-| iOS | None | Not implemented |
+| Platform | Support Level | Notes                                    |
+| -------- | ------------- | ---------------------------------------- |
+| Linux    | Desktop stubs | No-op (no Wear Data Layer)               |
+| Windows  | Desktop stubs | No-op                                    |
+| macOS    | Desktop stubs | No-op                                    |
+| Android  | Full          | Wear Data Layer via Google Play Services |
+| iOS      | None          | Not implemented                          |
 
 ## Licence
 

@@ -16,6 +16,7 @@
 		"dev:desktop": "pnpm --filter threshold tauri dev",
 		"dev:android": "pnpm --filter threshold tauri android dev",
 		"format": "prettier --write .",
+		"format:check": "prettier --check .",
 		"lint:mermaid": "bash scripts/lint-mermaid.sh"
 	},
 	"packageManager": "pnpm@10.28.0",

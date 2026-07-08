@@ -1,16 +1,16 @@
 ---
-title: "Moving Alarm Fired Ownership from UI to Core"
-date: "2026-02-26"
-slug: "native-alarm-fired-bridge"
-excerpt: "Threshold now emits alarm lifecycle events from native alarm triggers through plugin bridge callbacks, with queue-and-drain reliability for cold boot."
+title: 'Moving Alarm Fired Ownership from UI to Core'
+date: '2026-02-26'
+slug: 'native-alarm-fired-bridge'
+excerpt: 'Threshold now emits alarm lifecycle events from native alarm triggers through plugin bridge callbacks, with queue-and-drain reliability for cold boot.'
 tags:
-  - "Threshold"
-  - "Tauri"
-  - "Android"
-  - "Rust"
-  - "Kotlin"
-  - "Wear OS"
-  - "Architecture"
+  - 'Threshold'
+  - 'Tauri'
+  - 'Android'
+  - 'Rust'
+  - 'Kotlin'
+  - 'Wear OS'
+  - 'Architecture'
 draft: true
 ---
 

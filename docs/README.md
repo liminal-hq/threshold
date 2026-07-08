@@ -2,17 +2,17 @@
 
 ## By Topic
 
-| Folder | Contents |
-|--------|----------|
-| [architecture/](architecture/) | Core app architecture, event system, data models, and roadmap |
-| [plugins/](plugins/) | Plugin specs and manifest injection patterns |
-| [android/](android/) | Android platform docs (intents, transitions) |
-| [desktop/](desktop/) | Desktop platform docs (deeplinks) |
-| [ui/](ui/) | UI implementation specs and components |
-| [wear-implementation/](wear-implementation/) | Wear OS companion app (UI mockups) |
-| [infrastructure/](infrastructure/) | CI/CD and operational docs |
-| [blog/](blog/) | Engineering blog posts and technical deep dives |
-| [archive/](archive/) | Deprecated documents (kept for reference) |
+| Folder                                       | Contents                                                      |
+| -------------------------------------------- | ------------------------------------------------------------- |
+| [architecture/](architecture/)               | Core app architecture, event system, data models, and roadmap |
+| [plugins/](plugins/)                         | Plugin specs and manifest injection patterns                  |
+| [android/](android/)                         | Android platform docs (intents, transitions)                  |
+| [desktop/](desktop/)                         | Desktop platform docs (deeplinks)                             |
+| [ui/](ui/)                                   | UI implementation specs and components                        |
+| [wear-implementation/](wear-implementation/) | Wear OS companion app (UI mockups)                            |
+| [infrastructure/](infrastructure/)           | CI/CD and operational docs                                    |
+| [blog/](blog/)                               | Engineering blog posts and technical deep dives               |
+| [archive/](archive/)                         | Deprecated documents (kept for reference)                     |
 
 ## Quick Links
 

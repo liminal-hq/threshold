@@ -46,7 +46,11 @@ export function CustomTag({ initialTag, onConfirm, onCancel }: CustomTagProps) {
 			footerRight="Esc: cancel  Enter: confirm"
 		>
 			<Text> </Text>
-			<Text> Enter tag name: {buffer}<Text color={palette.accent}>{'\u2588'}</Text></Text>
+			<Text>
+				{' '}
+				Enter tag name: {buffer}
+				<Text color={palette.accent}>{'\u2588'}</Text>
+			</Text>
 			{error ? <Text color={palette.yellow}> {error}</Text> : null}
 			<Text> </Text>
 			<Text color={palette.muted}> Example: v0.2.0-hotfix</Text>

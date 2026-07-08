@@ -28,8 +28,8 @@ export default defineConfig(async () => ({
 		port: 1420,
 		strictPort: true,
 		host: '0.0.0.0', // Listen on all interfaces
-        // This 'origin' enforces where the browser believes the request came from, which can help with CORS/host checks.
-        // But importantly, we need 'clientPort' in HMR.
+		// This 'origin' enforces where the browser believes the request came from, which can help with CORS/host checks.
+		// But importantly, we need 'clientPort' in HMR.
 		hmr: host
 			? {
 					protocol: 'ws',

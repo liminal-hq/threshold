@@ -4,6 +4,6 @@ Desktop-specific platform documentation for Threshold.
 
 ## Contents
 
-| Document | Description |
-|----------|-------------|
+| Document                  | Description                                                |
+| ------------------------- | ---------------------------------------------------------- |
 | [deeplinks](deeplinks.md) | `threshold://` protocol deep linking for desktop platforms |

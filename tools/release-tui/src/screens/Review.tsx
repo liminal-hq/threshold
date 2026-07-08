@@ -29,30 +29,64 @@ interface ReviewProps {
 	onQuit: () => void;
 }
 
-function DetailPanel({ currentState, draft, width }: { currentState: CurrentState; draft: DraftState; width?: number }) {
+function DetailPanel({
+	currentState,
+	draft,
+	width,
+}: {
+	currentState: CurrentState;
+	draft: DraftState;
+	width?: number;
+}) {
 	const tauriVC = deriveTauriVersionCode(draft.version);
 	const wearVC = deriveWearVersionCode(draft.version);
 	const isRedo = draft.mode === 'redo';
 
 	return (
 		<Box flexDirection="column">
-			<Text bold color={palette.muted}>  Details</Text>
+			<Text bold color={palette.muted}>
+				{' '}
+				Details
+			</Text>
 			<Divider width={width} />
 			<Text> </Text>
-			<Text color={palette.accent}>  tauri.conf.json</Text>
-			<Text>    version           <Text color={palette.red}>{currentState.tauriVersionName}</Text> <Text color={palette.muted}>{'\u2192'}</Text> <Text color={palette.bar}>{draft.version}</Text></Text>
+			<Text color={palette.accent}> tauri.conf.json</Text>
+			<Text>
+				{' '}
+				version <Text color={palette.red}>{currentState.tauriVersionName}</Text>{' '}
+				<Text color={palette.muted}>{'\u2192'}</Text>{' '}
+				<Text color={palette.bar}>{draft.version}</Text>
+			</Text>
 			{!isRedo && (
-				<Text>    android vCode     <Text color={palette.red}>{currentState.tauriDerivedVersionCode}</Text> <Text color={palette.muted}>{'\u2192'}</Text> <Text color={palette.bar}>{tauriVC}</Text></Text>
+				<Text>
+					{' '}
+					android vCode <Text color={palette.red}>{currentState.tauriDerivedVersionCode}</Text>{' '}
+					<Text color={palette.muted}>{'\u2192'}</Text> <Text color={palette.bar}>{tauriVC}</Text>
+				</Text>
 			)}
 			<Text> </Text>
-			<Text color={palette.accent}>  build.gradle.kts</Text>
-			<Text>    versionName       <Text color={palette.red}>{currentState.wearVersionName}</Text> <Text color={palette.muted}>{'\u2192'}</Text> <Text color={palette.bar}>{draft.version}</Text></Text>
+			<Text color={palette.accent}> build.gradle.kts</Text>
+			<Text>
+				{' '}
+				versionName <Text color={palette.red}>{currentState.wearVersionName}</Text>{' '}
+				<Text color={palette.muted}>{'\u2192'}</Text>{' '}
+				<Text color={palette.bar}>{draft.version}</Text>
+			</Text>
 			{!isRedo && (
-				<Text>    versionCode       <Text color={palette.red}>{currentState.wearVersionCode}</Text> <Text color={palette.muted}>{'\u2192'}</Text> <Text color={palette.bar}>{wearVC}</Text></Text>
+				<Text>
+					{' '}
+					versionCode <Text color={palette.red}>{currentState.wearVersionCode}</Text>{' '}
+					<Text color={palette.muted}>{'\u2192'}</Text> <Text color={palette.bar}>{wearVC}</Text>
+				</Text>
 			)}
 			<Text> </Text>
-			<Text color={palette.accent}>  package.json</Text>
-			<Text>    version           <Text color={palette.red}>{currentState.webVersion}</Text> <Text color={palette.muted}>{'\u2192'}</Text> <Text color={palette.bar}>{draft.version}</Text></Text>
+			<Text color={palette.accent}> package.json</Text>
+			<Text>
+				{' '}
+				version <Text color={palette.red}>{currentState.webVersion}</Text>{' '}
+				<Text color={palette.muted}>{'\u2192'}</Text>{' '}
+				<Text color={palette.bar}>{draft.version}</Text>
+			</Text>
 		</Box>
 	);
 }
@@ -110,22 +144,49 @@ export function Review({ currentState, draft, onApply, onBack, onHelp, onQuit }:
 				<Box flexDirection="column" flexGrow={1}>
 					<Text> </Text>
 					{isRedo ? (
-						<Text> Version        <Text color={palette.text}>{draft.version} (unchanged)</Text></Text>
+						<Text>
+							{' '}
+							Version <Text color={palette.text}>{draft.version} (unchanged)</Text>
+						</Text>
 					) : (
-						<Text> Version        <Text color={palette.red}>{currentState.tauriVersionName}</Text> <Text color={palette.muted}>{'\u2192'}</Text> <Text color={palette.bar}>{draft.version}</Text></Text>
+						<Text>
+							{' '}
+							Version <Text color={palette.red}>{currentState.tauriVersionName}</Text>{' '}
+							<Text color={palette.muted}>{'\u2192'}</Text>{' '}
+							<Text color={palette.bar}>{draft.version}</Text>
+						</Text>
 					)}
 					{isRedo ? (
-						<Text> Tag            <Text color={palette.yellow}>{tagName}</Text> <Text color={palette.muted}>{'\u2192'} update to HEAD</Text></Text>
+						<Text>
+							{' '}
+							Tag <Text color={palette.yellow}>{tagName}</Text>{' '}
+							<Text color={palette.muted}>{'\u2192'} update to HEAD</Text>
+						</Text>
 					) : (
-						<Text> Tag            <Text color={palette.yellow}>{tagName}</Text></Text>
+						<Text>
+							{' '}
+							Tag <Text color={palette.yellow}>{tagName}</Text>
+						</Text>
 					)}
-					<Text> Commit         <Text color={palette.text}>{commitMsg}</Text></Text>
-					<Text> Files          <Text color={palette.text}>{filesChanged} updated</Text></Text>
-					<Text> Build          <Text color={palette.muted}>ready (phone AAB/APK + wear AAB/APK)</Text></Text>
+					<Text>
+						{' '}
+						Commit <Text color={palette.text}>{commitMsg}</Text>
+					</Text>
+					<Text>
+						{' '}
+						Files <Text color={palette.text}>{filesChanged} updated</Text>
+					</Text>
+					<Text>
+						{' '}
+						Build <Text color={palette.muted}>ready (phone AAB/APK + wear AAB/APK)</Text>
+					</Text>
 					{isRedo && (
 						<>
 							<Text> </Text>
-							<Text color={palette.yellow}> Note: This will force-update the local {tagName} tag to the current commit.</Text>
+							<Text color={palette.yellow}>
+								{' '}
+								Note: This will force-update the local {tagName} tag to the current commit.
+							</Text>
 						</>
 					)}
 				</Box>

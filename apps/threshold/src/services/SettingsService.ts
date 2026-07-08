@@ -9,10 +9,7 @@ import { sendNotification } from '@tauri-apps/plugin-notification';
 import { TimePrefs } from '../utils/timePrefs';
 import { ThemeId } from '../theme/themes';
 import { PlatformUtils } from '../utils/PlatformUtils';
-import {
-	alarmNotificationService,
-	type NotificationActionType,
-} from './AlarmNotificationService';
+import { alarmNotificationService, type NotificationActionType } from './AlarmNotificationService';
 
 export type Theme = ThemeId;
 

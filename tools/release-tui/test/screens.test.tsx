@@ -174,11 +174,7 @@ describe('VersionBump screen', () => {
 describe('CustomVersion screen', () => {
 	it('renders the input prompt', () => {
 		const { lastFrame } = render(
-			<CustomVersion
-				currentState={mockState}
-				onConfirm={vi.fn()}
-				onCancel={vi.fn()}
-			/>,
+			<CustomVersion currentState={mockState} onConfirm={vi.fn()} onCancel={vi.fn()} />,
 		);
 
 		const frame = lastFrame()!;
