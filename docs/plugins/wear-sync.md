@@ -120,7 +120,9 @@ plugins/wear-sync/
    - `wear:alarm:save` → `toggle_alarm(id, enabled)` → saves + re-publishes to watch
    - `wear:alarm:delete` → `delete_alarm(id)` → deletes + re-publishes to watch
    - `wear:alarm:dismiss` → `stop_ringing()` + `dismiss_alarm(id)` → stops phone alarm
-   - `wear:alarm:snooze` → `stop_ringing()` + `snooze_alarm(id, minutes)` → snoozes phone alarm
+   - `wear:alarm:snooze` → `stop_ringing()` + `snooze_alarm(id, snoozed_until)` → snoozes phone alarm
+     (watch sends `snoozeLengthMinutes`; the phone converts it to a now-anchored absolute
+     timestamp before calling `snooze_alarm`, same as the native and upcoming-notification paths)
    - `wear:sync:request` → `emit_sync_needed(ForceSync)` → publishes FullSync to watch
 
 ### Phone → Watch (Ring Notification)
@@ -231,7 +233,7 @@ The app crate (`apps/threshold/src-tauri/src/lib.rs`) listens for the events abo
 | `wear:alarm:save` | `coordinator.toggle_alarm(id, enabled)` |
 | `wear:alarm:delete` | `coordinator.delete_alarm(id)` |
 | `wear:alarm:dismiss` | `stop_ringing()` + `coordinator.dismiss_alarm(id)` |
-| `wear:alarm:snooze` | `stop_ringing()` + `coordinator.snooze_alarm(id, minutes)` |
+| `wear:alarm:snooze` | `stop_ringing()` + `coordinator.snooze_alarm(id, snoozed_until)` |
 | `wear:sync:request` | `coordinator.emit_sync_needed(ForceSync)` |
 | `wear:sync:batch_ready` | `coordinator.emit_sync_needed(BatchComplete)` |
 

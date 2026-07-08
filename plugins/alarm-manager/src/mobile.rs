@@ -26,6 +26,12 @@ struct SnoozeEventHandler {
     handler: Channel,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DismissEventHandler {
+    handler: Channel,
+}
+
 // Initialize the plugin
 pub fn init<R: Runtime>(
     app: &tauri::AppHandle<R>,
@@ -82,6 +88,33 @@ pub fn init<R: Runtime>(
                         let _ = snooze_app_handle.emit("alarm-manager:snooze-requested", &payload);
                     } else {
                         log::warn!("alarm-manager: failed to parse snooze requested payload");
+                    }
+                    Ok(())
+                }),
+            },
+        )?;
+
+        // Register a channel for dismiss-from-notification events. The ringing service
+        // posts ACTION_DISMISS (with an ALARM_ID extra when the user tapped a real alarm's
+        // notification) which Kotlin forwards here; we re-emit as a Tauri event so the TS
+        // layer can invoke dismiss_alarm and recalculate the next occurrence.
+        let dismiss_app_handle = app.clone();
+        handle.run_mobile_plugin::<()>(
+            "setDismissEventHandler",
+            DismissEventHandler {
+                handler: Channel::new(move |event| {
+                    let payload = match event {
+                        InvokeResponseBody::Json(payload) => {
+                            serde_json::from_str::<NativeDismissRequestedPayload>(&payload).ok()
+                        }
+                        _ => None,
+                    };
+
+                    if let Some(payload) = payload {
+                        log::info!("alarm-manager: dismiss requested id={}", payload.id);
+                        let _ = dismiss_app_handle.emit("alarm-manager:dismiss-requested", &payload);
+                    } else {
+                        log::warn!("alarm-manager: failed to parse dismiss requested payload");
                     }
                     Ok(())
                 }),

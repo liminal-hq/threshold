@@ -60,6 +60,9 @@ class AlarmRingingService : Service() {
         }
 
         if (intent.action == ACTION_DISMISS) {
+            val alarmId = intent.getIntExtra("ALARM_ID", -1)
+            Log.d(TAG, "Dismiss action received for alarm $alarmId")
+            AlarmManagerPlugin.notifyAlarmDismissed(applicationContext, alarmId)
             stopSelf()
             return START_NOT_STICKY
         }

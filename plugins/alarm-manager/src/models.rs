@@ -63,3 +63,9 @@ pub struct NativeAlarmFiredPayload {
 pub struct NativeSnoozeRequestedPayload {
     pub id: i32,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDismissRequestedPayload {
+    pub id: i32,
+}

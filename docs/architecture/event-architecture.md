@@ -361,7 +361,7 @@ pub struct AlarmRecord {
 ### Overview
 
 ```
-Event System (11 events across 4 categories)
+Event System (10 events across 4 categories)
 ├── CRUD Events (3) ─────────── UI updates, wear-sync state
 │   ├── alarm:created         
 │   ├── alarm:updated         
@@ -374,7 +374,7 @@ Event System (11 events across 4 categories)
 ├── Lifecycle Events (3) ────── Analytics, toasts, history
 │   ├── alarm:fired           
 │   ├── alarm:dismissed       
-│   └── alarm:snoozed (future)
+│   └── alarm:snoozed         
 │
 └── Batch Events (2) ────────── Sync optimization
     ├── alarms:batch:updated  
@@ -626,6 +626,12 @@ pub struct AlarmFired {
 
 **Purpose:** User stopped ringing alarm
 
+**Triggered from four sources, all funnelling through `AlarmCoordinator::dismiss_alarm`:**
+the native `AlarmRingingService` Dismiss action (`alarm-manager:dismiss-requested`,
+handled directly in `lib.rs`), the watch (`wear:alarm:dismiss`, also handled directly
+in `lib.rs`), the upcoming-notification Dismiss action (TS-invoked), and the in-app
+Ringing screen's own Dismiss button (TS-invoked).
+
 **Payload:**
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -641,9 +647,39 @@ pub struct AlarmDismissed {
 
 ---
 
+#### 8. alarm:snoozed
+
+**Purpose:** User snoozed a ringing (or upcoming) alarm
+
+**Triggered from four sources, all funnelling through `AlarmCoordinator::snooze_alarm`:**
+the native `AlarmRingingService` Snooze action (`alarm-manager:snooze-requested`,
+handled directly in `lib.rs`), the watch (`wear:alarm:snooze`, also handled directly
+in `lib.rs`), the upcoming-notification Snooze action (TS-invoked), and the in-app
+Ringing screen's own Snooze button (TS-invoked). The TS layer computes
+`snoozed_until` for the two TS-invoked paths; the two native paths compute it in
+Rust from `SnoozeLengthState`, Rust's own synced copy of the snooze-length setting.
+
+`AlarmManagerService` listens for this event unconditionally (not tied to any one
+call site) to publish the snooze confirmation toast, so every source above gets the
+same confirmation.
+
+**Payload:**
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmSnoozed {
+    pub id: i32,
+    pub original_trigger: i64,
+    pub snoozed_until: i64,
+    pub revision: i64,
+}
+```
+
+---
+
 ### Batch Events (Critical for Sync)
 
-#### 8. alarms:batch:updated
+#### 9. alarms:batch:updated
 
 **Purpose:** Multiple alarms changed (with revision seal)
 
@@ -674,7 +710,7 @@ pub struct AlarmsBatchUpdated {
 
 ---
 
-#### 9. alarms:sync:needed
+#### 10. alarms:sync:needed
 
 **Purpose:** Explicit sync trigger
 
@@ -1063,6 +1099,7 @@ pub fn run() {
             commands::toggle_alarm,
             commands::delete_alarm,
             commands::dismiss_alarm,
+            commands::snooze_alarm,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -1393,7 +1430,7 @@ graph TB
 
     Life --> Fired["alarm:fired<br/>Alarm ringing"]
     Life --> Dismissed["alarm:dismissed<br/>User dismissed"]
-    Life --> Snoozed["alarm:snoozed<br/>User snoozed (future)"]
+    Life --> Snoozed["alarm:snoozed<br/>User snoozed"]
 
     Batch --> BatchUpdate["alarms:batch:updated<br/>Changes buffered"]
     Batch --> SyncNeeded["alarms:sync:needed<br/>Explicit sync request"]

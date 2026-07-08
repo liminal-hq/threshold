@@ -18,11 +18,12 @@ const EVENT_NOTIFICATIONS_UPCOMING_RESYNC = 'notifications:upcoming:resync';
 const EVENT_NOTIFICATIONS_TOAST = 'notifications:toast';
 
 type NotificationActionHandlers = {
+	// The native AlarmRingingService dismiss/snooze actions go straight from
+	// Kotlin to Rust (see apps/threshold/src-tauri/src/lib.rs) without coming
+	// through TS at all, so these only ever fire from the JS-driven
+	// 'alarm_trigger' notification action, which has no alarm ID.
 	onDismissRinging: () => Promise<void>;
-	// The JS-driven 'alarm_trigger' notification action (unlike the native
-	// AlarmRingingService channel bridge) doesn't carry an alarm ID yet, so this
-	// must tolerate being called with none.
-	onSnoozeRinging: (alarmId?: number) => Promise<void>;
+	onSnoozeRinging: () => Promise<void>;
 	onDismissUpcoming: (alarmId: number) => Promise<void>;
 	onSnoozeUpcoming: (alarmId: number, snoozeMinutes: number) => Promise<void>;
 };
@@ -254,13 +255,10 @@ export class AlarmNotificationService {
 			await handler(parsed.actionId, { id: parsed.notificationId });
 		});
 
-		// Listen for snooze-from-ringing-notification events bridged from AlarmRingingService.
-		// The Android service emits ACTION_SNOOZE which Kotlin routes through the plugin channel.
-		await listen<{ id: number }>('alarm-manager:snooze-requested', async (event) => {
-			const { id } = event.payload;
-			console.log(`[AlarmNotifications] Snooze requested from ringing notification for alarm ${id}`);
-			await handlers.onSnoozeRinging(id);
-		});
+		// Note: the native AlarmRingingService dismiss/snooze actions (ACTION_DISMISS,
+		// ACTION_SNOOZE) are handled entirely in Rust — see the
+		// alarm-manager:dismiss-requested / alarm-manager:snooze-requested listeners in
+		// apps/threshold/src-tauri/src/lib.rs. TS never sees those events.
 	}
 
 	async cancelUpcomingNotification(alarmId: number): Promise<void> {
