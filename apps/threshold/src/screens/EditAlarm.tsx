@@ -15,7 +15,7 @@ import {
 import { MobileToolbar } from '../components/MobileToolbar';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { TimePicker as MuiTimePicker } from '@mui/x-date-pickers/TimePicker';
-import { TimePicker as DesktopCustomTimePicker } from '../components/TimePicker';
+import { TimePicker as DesktopCustomTimePicker } from '../components/TimePicker/TimePicker';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { DaySelector } from '../components/DaySelector';
