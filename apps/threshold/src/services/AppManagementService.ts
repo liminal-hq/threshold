@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { minimizeApp as minimizeAppNative } from 'tauri-plugin-app-management-api';
 
 class AppManagementService {
 	/**
@@ -8,7 +8,7 @@ class AppManagementService {
 	 */
 	async minimizeApp(): Promise<void> {
 		try {
-			await invoke('plugin:app-management|minimize_app');
+			await minimizeAppNative();
 		} catch (error) {
 			console.error('Failed to minimize app:', error);
 		}

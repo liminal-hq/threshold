@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline, useMediaQuery } from '@mui/material';
-import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { getMaterialYouColours } from 'tauri-plugin-theme-utils-api';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SettingsService, Theme as AppTheme } from '../services/SettingsService';
 import { themes, generateSystemTheme, ThemeDefinition, MaterialYouResponse } from '../theme/themes';
@@ -52,9 +52,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 			if (PlatformUtils.isMobile() && PlatformUtils.getPlatform() === 'android') {
 				try {
 					console.log('Fetching Material You Colours...');
-					const response = await invoke<MaterialYouResponse>(
-						'plugin:theme-utils|get_material_you_colours',
-					);
+					const response = await getMaterialYouColours();
 					console.log('Material You Response:', response);
 					setMaterialYouResponse(response);
 
