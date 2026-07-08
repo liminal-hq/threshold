@@ -1,3 +1,8 @@
+// Foreground service that plays audio and shows the ringing alarm notification
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package com.plugin.alarmmanager
 
 import android.app.NotificationChannel
@@ -29,6 +34,7 @@ class AlarmRingingService : Service() {
     companion object {
         const val CHANNEL_ID = "alarm_ringing_service"
         const val ACTION_DISMISS = "com.threshold.ACTION_DISMISS"
+        const val ACTION_SNOOZE = "com.threshold.ACTION_SNOOZE"
         const val NOTIFICATION_ID = 999
         private const val TAG = "AlarmRingingService"
     }
@@ -54,6 +60,14 @@ class AlarmRingingService : Service() {
         }
 
         if (intent.action == ACTION_DISMISS) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        if (intent.action == ACTION_SNOOZE) {
+            val alarmId = intent.getIntExtra("ALARM_ID", -1)
+            Log.d(TAG, "Snooze action received for alarm $alarmId")
+            AlarmManagerPlugin.notifySnoozeRequested(applicationContext, alarmId)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -98,12 +112,23 @@ class AlarmRingingService : Service() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Dismiss Action
+        // Dismiss Action — carries alarm ID so the handler knows which alarm to dismiss
         val dismissIntent = Intent(this, AlarmRingingService::class.java).apply {
             action = ACTION_DISMISS
+            putExtra("ALARM_ID", currentAlarmId)
         }
         val dismissPendingIntent = PendingIntent.getService(
             this, 0, dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Snooze Action — routes through the plugin bridge so the TS layer computes the new trigger
+        val snoozeIntent = Intent(this, AlarmRingingService::class.java).apply {
+            action = ACTION_SNOOZE
+            putExtra("ALARM_ID", currentAlarmId)
+        }
+        val snoozePendingIntent = PendingIntent.getService(
+            this, 1, snoozeIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -131,6 +156,7 @@ class AlarmRingingService : Service() {
             .setOngoing(true)
             .setContentIntent(contentPendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
+            .addAction(android.R.drawable.ic_popup_reminder, "Snooze", snoozePendingIntent)
             .build()
 
         startForeground(NOTIFICATION_ID, notification)
@@ -155,7 +181,7 @@ class AlarmRingingService : Service() {
             // Fallback to notification sound if alarm sound is not available
              uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         }
-        
+
         if (uri == null) {
              Log.e(TAG, "No sound URI available to play")
              return

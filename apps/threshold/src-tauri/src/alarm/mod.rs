@@ -237,17 +237,23 @@ impl AlarmCoordinator {
     ///
     /// - `app`: app handle for event emission.
     /// - `id`: alarm identifier.
-    /// - `minutes`: snooze duration in minutes.
+    /// - `snoozed_until`: absolute epoch-millisecond timestamp for the new trigger.
+    ///   The TS layer is responsible for computing the anchor (now + N for ringing,
+    ///   original_trigger + N for upcoming) and enforcing a minimum-in-future floor.
     pub async fn snooze_alarm<R: Runtime>(
         &self,
         app: &AppHandle<R>,
         id: i32,
-        minutes: i64,
+        snoozed_until: i64,
     ) -> Result<()> {
-        let alarm = self.db.get_by_id(id).await?;
         let now = chrono::Utc::now().timestamp_millis();
+        if snoozed_until <= now {
+            return Err(Error::Validation(
+                "snoozed_until must be in the future".into(),
+            ));
+        }
+        let alarm = self.db.get_by_id(id).await?;
         let original_trigger = alarm.next_trigger.unwrap_or(now);
-        let snoozed_until = now + minutes * 60 * 1000;
 
         let revision = self.db.next_revision().await?;
         let updated = self.db.update_next_trigger(id, Some(snoozed_until), revision).await?;

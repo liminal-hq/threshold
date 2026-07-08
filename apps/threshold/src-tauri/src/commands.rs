@@ -121,15 +121,15 @@ pub async fn dismiss_alarm<R: Runtime>(
 /// - `app`: app handle for command context.
 /// - `coordinator`: alarm coordinator state.
 /// - `id`: alarm identifier.
-/// - `minutes`: snooze duration in minutes.
+/// - `snoozed_until`: absolute epoch-millisecond timestamp for the new trigger.
 pub async fn snooze_alarm<R: Runtime>(
     app: AppHandle<R>,
     coordinator: State<'_, AlarmCoordinator>,
     id: i32,
-    minutes: i64,
+    snoozed_until: i64,
 ) -> Result<(), String> {
     coordinator
-        .snooze_alarm(&app, id, minutes)
+        .snooze_alarm(&app, id, snoozed_until)
         .await
         .map_err(|e| e.to_string())
 }
