@@ -67,7 +67,7 @@ pub fn init<R: Runtime>(
         // can compute the snoozed_until timestamp and invoke snooze_alarm.
         let snooze_app_handle = app.clone();
         handle.run_mobile_plugin::<()>(
-            "set_snooze_event_handler",
+            "setSnoozeEventHandler",
             SnoozeEventHandler {
                 handler: Channel::new(move |event| {
                     let payload = match event {
