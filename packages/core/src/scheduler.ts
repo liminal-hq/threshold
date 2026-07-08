@@ -32,7 +32,7 @@ export function calculateNextTrigger(alarm: Alarm, now: Date = new Date()): numb
 	// If the window crosses midnight, and we are currently in the early morning (e.g. 01:00),
 	// we might effectively be in the window that started "Yesterday".
 	// We should check "Yesterday" first if it was an active day.
-	if (alarm.mode === AlarmMode.RandomWindow && alarm.windowStart && alarm.windowEnd) {
+	if (alarm.mode === AlarmMode.Window && alarm.windowStart && alarm.windowEnd) {
 		const [startH, startM] = parseTime(alarm.windowStart);
 		const [endH, endM] = parseTime(alarm.windowEnd);
 		// If window crosses midnight (start > end)

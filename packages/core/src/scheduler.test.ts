@@ -67,7 +67,7 @@ describe('Scheduler Logic', () => {
 			const alarm: Alarm = {
 				id: 2,
 				enabled: true,
-				mode: AlarmMode.RandomWindow,
+				mode: AlarmMode.Window,
 				windowStart: '12:00',
 				windowEnd: '14:00',
 				activeDays: [3], // Wed only
@@ -86,7 +86,7 @@ describe('Scheduler Logic', () => {
 			const alarm: Alarm = {
 				id: 2,
 				enabled: true,
-				mode: AlarmMode.RandomWindow,
+				mode: AlarmMode.Window,
 				windowStart: '23:00',
 				windowEnd: '02:00',
 				activeDays: [3], // Wed
@@ -110,7 +110,7 @@ describe('Scheduler Logic', () => {
 			const alarm: Alarm = {
 				id: 2,
 				enabled: true,
-				mode: AlarmMode.RandomWindow,
+				mode: AlarmMode.Window,
 				windowStart: '08:00',
 				windowEnd: '09:00',
 				activeDays: [3, 4], // Wed, Thu
@@ -131,7 +131,7 @@ describe('Scheduler Logic', () => {
 			const alarm: Alarm = {
 				id: 2,
 				enabled: true,
-				mode: AlarmMode.RandomWindow,
+				mode: AlarmMode.Window,
 				windowStart: '09:00',
 				windowEnd: '11:00',
 				activeDays: [3], // Wed
@@ -152,7 +152,7 @@ describe('Scheduler Logic', () => {
 			const alarm: Alarm = {
 				id: 2,
 				enabled: true,
-				mode: AlarmMode.RandomWindow,
+				mode: AlarmMode.Window,
 				windowStart: '09:00',
 				windowEnd: '11:00',
 				activeDays: [3], // Wed
@@ -172,7 +172,7 @@ describe('Scheduler Logic', () => {
 			const overnightAlarm: Alarm = {
 				id: 2,
 				enabled: true,
-				mode: AlarmMode.RandomWindow,
+				mode: AlarmMode.Window,
 				windowStart: '23:00',
 				windowEnd: '02:00',
 				activeDays: [3], // Wed

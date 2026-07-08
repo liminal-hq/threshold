@@ -94,7 +94,7 @@ export class AlarmNotificationService {
 	}
 
 	private getUpcomingTitle(alarm: AlarmRecord, is24h: boolean): string {
-		if (alarm.mode === AlarmMode.RandomWindow && alarm.windowStart && alarm.windowEnd) {
+		if (alarm.mode === AlarmMode.Window && alarm.windowStart && alarm.windowEnd) {
 			const start = TimeFormatHelper.formatTimeString(alarm.windowStart, is24h);
 			const end = TimeFormatHelper.formatTimeString(alarm.windowEnd, is24h);
 			return `Upcoming alarm (window ${start}-${end})`;

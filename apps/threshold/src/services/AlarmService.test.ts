@@ -30,6 +30,7 @@ describe('AlarmService', () => {
         nextTrigger: 1625097600000,
         soundUri: 'test_uri',
         soundTitle: 'Test Sound',
+        revision: 1,
     };
 
     describe('subscribe', () => {
