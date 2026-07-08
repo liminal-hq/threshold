@@ -51,21 +51,25 @@ describe('AlarmService', () => {
             expect(invoke).toHaveBeenCalledWith('get_alarms');
             expect(callback).toHaveBeenCalledWith([mockAlarm]);
         });
-    });
 
-    describe('unsubscribe', () => {
-        it('should call unlisten function if subscribed', async () => {
-            const mockUnlisten = vi.fn();
-            (listen as any).mockResolvedValue(mockUnlisten);
-            await AlarmService.subscribe(vi.fn());
+        it('returns independent cleanup functions for concurrent subscriptions', async () => {
+            const unlistenA = vi.fn();
+            const unlistenB = vi.fn();
+            (listen as any)
+                .mockResolvedValueOnce(unlistenA)
+                .mockResolvedValueOnce(unlistenB);
 
-            await AlarmService.unsubscribe();
+            const cleanupA = await AlarmService.subscribe(vi.fn());
+            const cleanupB = await AlarmService.subscribe(vi.fn());
+            cleanupA();
 
-            expect(mockUnlisten).toHaveBeenCalled();
-        });
+            expect(unlistenA).toHaveBeenCalledTimes(1);
+            expect(unlistenB).not.toHaveBeenCalled();
 
-        it('should do nothing if not subscribed', async () => {
-            await AlarmService.unsubscribe();
+            cleanupB();
+
+            expect(unlistenB).toHaveBeenCalledTimes(1);
+            expect(unlistenA).toHaveBeenCalledTimes(1);
         });
     });
 

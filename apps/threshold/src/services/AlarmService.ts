@@ -3,33 +3,15 @@ import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import type { AlarmRecord, AlarmInput } from '../types/alarm';
 
 export class AlarmService {
-    private static unlistenFns: UnlistenFn[] = [];
-
     /**
-     * Subscribe to alarm changes
+     * Subscribe to alarm changes. Returns a cleanup function for this
+     * specific subscription -- call it to stop listening.
      */
     static async subscribe(callback: (alarms: AlarmRecord[]) => void): Promise<UnlistenFn> {
-        const unlisten = await listen('alarms:batch:updated', async () => {
+        return await listen('alarms:batch:updated', async () => {
             const alarms = await this.getAll();
             callback(alarms);
         });
-
-        this.unlistenFns = [unlisten];
-
-        return () => {
-            this.unlistenFns.forEach((fn) => fn());
-            this.unlistenFns = [];
-        };
-    }
-
-    /**
-     * Unsubscribe from alarm changes
-     */
-    static async unsubscribe() {
-        if (this.unlistenFns.length > 0) {
-            this.unlistenFns.forEach((fn) => fn());
-            this.unlistenFns = [];
-        }
     }
 
     /**
