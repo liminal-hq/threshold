@@ -131,7 +131,7 @@ jobs:
       # - name: Rust Clippy
       #   run: cargo clippy --all-features -- -D warnings
 
-  test-kotlin:
+  test-kotlin-wear:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -154,13 +154,47 @@ jobs:
           path: |
             /github/home/.gradle/caches
             /github/home/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-kotlin-${{ hashFiles('apps/threshold-wear/**/*.gradle*', 'apps/threshold-wear/**/gradle-wrapper.properties', 'apps/threshold-wear/gradle/libs.versions.toml', 'plugins/**/android/**/*.gradle*', 'plugins/**/android/**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-wear-${{ hashFiles('apps/threshold-wear/**/*.gradle*', 'apps/threshold-wear/**/gradle-wrapper.properties', 'apps/threshold-wear/gradle/libs.versions.toml') }}
           restore-keys: |
-            ${{ runner.os }}-gradle-kotlin-
+            ${{ runner.os }}-gradle-wear-
 
       - name: Run Wear app unit tests
         working-directory: apps/threshold-wear
         run: ./gradlew testDebugUnitTest
+
+      - name: Upload Kotlin Test Results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: kotlin-wear-test-results
+          path: apps/threshold-wear/build/test-results/**/*.xml
+
+  test-kotlin-plugins:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ghcr.io/liminal-hq/threshold/ci-base:latest
+      options: --user root
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            /github/home/.gradle/caches
+            /github/home/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-plugins-${{ hashFiles('plugins/**/android/**/*.gradle*', 'plugins/**/android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-plugins-
 
       - name: Run core plugin Android unit tests
         run: |
@@ -273,15 +307,13 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: kotlin-test-results
-          path: |
-            apps/threshold-wear/build/test-results/**/*.xml
-            plugins/**/android/build/test-results/**/*.xml
+          name: kotlin-plugin-test-results
+          path: plugins/**/android/build/test-results/**/*.xml
 
   report:
     runs-on: ubuntu-24.04
     if: always()
-    needs: [test-js, test-rust, test-kotlin, lint-mermaid]
+    needs: [test-js, test-rust, test-kotlin-wear, test-kotlin-plugins, lint-mermaid]
     permissions:
       contents: read
       checks: write
@@ -304,11 +336,17 @@ jobs:
           name: rust-test-results
           path: test-results/rust
 
-      - name: Download Kotlin Test Results
+      - name: Download Kotlin Wear Test Results
         uses: actions/download-artifact@v8
         with:
-          name: kotlin-test-results
-          path: test-results/kotlin
+          name: kotlin-wear-test-results
+          path: test-results/kotlin-wear
+
+      - name: Download Kotlin Plugin Test Results
+        uses: actions/download-artifact@v8
+        with:
+          name: kotlin-plugin-test-results
+          path: test-results/kotlin-plugins
 
       - name: Publish Test Report
         uses: dorny/test-reporter@v2
