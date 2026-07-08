@@ -1,3 +1,8 @@
+// Custom SVG icon components for window controls
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 export const WindowMinimizeIcon = () => (
 	<svg width="10" height="1" viewBox="0 0 10 1" fill="none" xmlns="http://www.w3.org/2000/svg">
 		<path d="M0 0.5H10" stroke="currentColor" strokeWidth="1" />

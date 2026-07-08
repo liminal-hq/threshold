@@ -1,3 +1,8 @@
+// Maps icon name strings to their rendered icon components
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React from 'react';
 
 // Check icon for "Always on Top" toggle

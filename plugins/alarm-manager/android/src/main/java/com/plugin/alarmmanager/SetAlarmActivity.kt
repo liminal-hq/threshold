@@ -1,3 +1,8 @@
+// Handles the Android SET_ALARM intent to import native alarms
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package com.plugin.alarmmanager
 
 import android.app.Activity

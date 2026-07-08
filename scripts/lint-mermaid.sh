@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Lints Mermaid diagrams in docs/ and emits GitHub Actions annotations
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 # Lint Mermaid diagrams in docs/, excluding archived files.
 # Emits GitHub Actions annotations for inline PR comments.
 # Exits 0 if no errors (warnings are allowed).

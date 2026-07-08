@@ -1,3 +1,8 @@
+// Build script registering the plugin's commands
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 const COMMANDS: &[&str] = &["show"];
 
 fn main() {

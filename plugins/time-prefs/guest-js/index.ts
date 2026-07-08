@@ -1,3 +1,8 @@
+// Typed TypeScript bindings for the time-prefs plugin's commands
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { invoke } from '@tauri-apps/api/core';
 
 export interface TimeFormatResponse {

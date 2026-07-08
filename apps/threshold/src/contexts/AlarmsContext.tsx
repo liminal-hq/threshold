@@ -1,3 +1,8 @@
+// React context providing the current alarm list to the app
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AlarmRecord } from '../types/alarm';
 import { AlarmService } from '../services/AlarmService';

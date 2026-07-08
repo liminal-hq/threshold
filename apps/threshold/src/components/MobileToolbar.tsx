@@ -1,3 +1,8 @@
+// Mobile-style top toolbar with start/end actions and a title
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React, { useState } from 'react';
 import { AppBar, Toolbar, Typography, IconButton, Menu, MenuItem, Box } from '@mui/material';
 import { MoreVert as MoreVertIcon } from '@mui/icons-material';

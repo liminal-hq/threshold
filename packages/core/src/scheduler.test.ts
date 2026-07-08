@@ -1,3 +1,8 @@
+// Tests for the legacy (unused) TypeScript scheduler
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { describe, it, expect } from 'vitest';
 import { calculateNextTrigger } from './scheduler';
 import { Alarm, AlarmMode, DayOfWeek } from './types';

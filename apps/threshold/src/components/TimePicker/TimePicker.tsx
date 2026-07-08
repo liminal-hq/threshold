@@ -1,3 +1,8 @@
+// Custom time picker input for desktop platforms
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React, { useEffect, useState } from 'react';
 import { Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import './TimePicker.css';

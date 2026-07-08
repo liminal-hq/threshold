@@ -1,3 +1,8 @@
+// Tauri plugin exposing the native toast command
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package com.plugin.toast
 
 import android.app.Activity

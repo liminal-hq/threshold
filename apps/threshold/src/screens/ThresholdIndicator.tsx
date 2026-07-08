@@ -1,3 +1,8 @@
+// Animated Threshold logo indicator
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 

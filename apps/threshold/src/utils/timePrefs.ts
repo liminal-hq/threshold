@@ -1,3 +1,8 @@
+// Reads the system's 12/24-hour time preference
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { getTimeFormat } from 'tauri-plugin-time-prefs-api';
 import { PlatformUtils } from './PlatformUtils';
 

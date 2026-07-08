@@ -1,3 +1,8 @@
+// Custom right-click context menu
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { MenuModel, MenuPosition } from './types';

@@ -1,3 +1,8 @@
+// Single alarm row in the alarm list, with toggle and swipe-to-delete
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React from 'react';
 import { Card, Typography, Switch, IconButton, Box, Stack } from '@mui/material';
 import {

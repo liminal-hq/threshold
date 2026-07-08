@@ -1,3 +1,8 @@
+// Typed TypeScript bindings for the theme-utils plugin's commands
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import { invoke } from '@tauri-apps/api/core';
 
 // Note: Palettes' keys stay snake_case -- Rust's Palettes struct has no

@@ -1,3 +1,8 @@
+// Minimises the app to the background via moveTaskToBack
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package com.plugin.app_management
 
 import android.app.Activity

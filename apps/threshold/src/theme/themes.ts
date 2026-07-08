@@ -1,3 +1,8 @@
+// Theme definitions and Material You colour derivation
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import type { MaterialYouResponse } from 'tauri-plugin-theme-utils-api';
 
 export type { MaterialYouResponse };

@@ -1,3 +1,8 @@
+// Desktop stub for the Material You colour query
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use tauri::{plugin::PluginApi, AppHandle, Runtime};
 
 use crate::models::{MaterialYouResponse, Palettes};

@@ -1,3 +1,8 @@
+// Error type for theme-utils plugin operations
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 

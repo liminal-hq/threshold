@@ -1,3 +1,8 @@
+// Day-of-week picker for alarm recurrence
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React from 'react';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
