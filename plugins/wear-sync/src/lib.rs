@@ -119,13 +119,13 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                         tauri::async_runtime::spawn(async move {
                             let wear_sync = app.state::<WearSync<R>>();
 
-                            // Pass hour=-1, minute=-1 to signal the Kotlin side
+                            // Pass hour=None, minute=None to signal the Kotlin side
                             // should use the current device time for the watch display.
                             let request = AlarmRingRequest {
                                 alarm_id: fired.id,
                                 label: fired.label.unwrap_or_default(),
-                                hour: -1,
-                                minute: -1,
+                                hour: None,
+                                minute: None,
                                 snooze_length_minutes: fired.snooze_length_minutes,
                                 is_24_hour: fired.is_24_hour,
                                 is_24_hour_known: fired.is_24_hour_known,
