@@ -166,8 +166,8 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         }
     }
 
-    override fun load(webview: WebView) {
-        super.load(webview)
+    override fun load(webView: WebView) {
+        super.load(webView)
         instance = this
         Log.d(TAG, "Plugin loaded.")
         drainPendingAlarmEvents()
