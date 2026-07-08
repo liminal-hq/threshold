@@ -124,7 +124,14 @@ mod tests {
 
         let cmd = rx.try_recv().unwrap();
         match cmd {
-            PublishCommand::Immediate { reason, revision, all_alarms_json, snooze_length_minutes, is_24_hour, is_24_hour_known } => {
+            PublishCommand::Immediate {
+                reason,
+                revision,
+                all_alarms_json,
+                snooze_length_minutes,
+                is_24_hour,
+                is_24_hour_known,
+            } => {
                 assert_eq!(reason, SyncReason::ForceSync);
                 assert_eq!(revision, 100);
                 assert_eq!(all_alarms_json, Some("[{\"id\":1}]".into()));

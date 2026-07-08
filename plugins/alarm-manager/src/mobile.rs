@@ -39,7 +39,8 @@ pub fn init<R: Runtime>(
 ) -> crate::Result<AlarmManager<R>> {
     #[cfg(target_os = "android")]
     let handle = {
-        let handle = api.register_android_plugin("com.plugin.alarmmanager", "AlarmManagerPlugin")?;
+        let handle =
+            api.register_android_plugin("com.plugin.alarmmanager", "AlarmManagerPlugin")?;
         let app_handle = app.clone();
 
         handle.run_mobile_plugin::<()>(
@@ -112,7 +113,8 @@ pub fn init<R: Runtime>(
 
                     if let Some(payload) = payload {
                         log::info!("alarm-manager: dismiss requested id={}", payload.id);
-                        let _ = dismiss_app_handle.emit("alarm-manager:dismiss-requested", &payload);
+                        let _ =
+                            dismiss_app_handle.emit("alarm-manager:dismiss-requested", &payload);
                     } else {
                         log::warn!("alarm-manager: failed to parse dismiss requested payload");
                     }
@@ -170,10 +172,11 @@ impl<R: Runtime> AlarmManager<R> {
             _ => serde_json::Value::Array(vec![]),
         };
 
-        serde_json::from_value::<Vec<ImportedAlarm>>(alarms_value)
-            .map_err(|error| crate::Error::MobilePlugin(format!(
+        serde_json::from_value::<Vec<ImportedAlarm>>(alarms_value).map_err(|error| {
+            crate::Error::MobilePlugin(format!(
                 "failed to deserialize launch args payload: {error}"
-            )))
+            ))
+        })
     }
 
     pub fn pick_alarm_sound(

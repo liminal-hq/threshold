@@ -116,7 +116,9 @@ mod tests {
 
     #[test]
     fn sync_response_serialises_up_to_date() {
-        let response = SyncResponse::UpToDate { current_revision: 42 };
+        let response = SyncResponse::UpToDate {
+            current_revision: 42,
+        };
         let json = serde_json::to_string(&response).unwrap();
         assert!(json.contains("\"type\":\"UpToDate\""));
         assert!(json.contains("\"currentRevision\":42"));

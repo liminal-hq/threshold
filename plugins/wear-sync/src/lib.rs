@@ -68,12 +68,15 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             spawn_publish_task(app.clone(), rx);
 
             let publisher: Arc<dyn WearSyncPublisher> = Arc::new(ChannelPublisher::new(tx));
-            let batch_collector =
-                Arc::new(BatchCollector::new(BATCH_DEBOUNCE_MS, Arc::clone(&publisher)));
+            let batch_collector = Arc::new(BatchCollector::new(
+                BATCH_DEBOUNCE_MS,
+                Arc::clone(&publisher),
+            ));
 
             let batch_listener = Arc::clone(&batch_collector);
-            app.listen("alarms:batch:updated", move |event| {
-                match serde_json::from_str::<AlarmsBatchUpdated>(event.payload()) {
+            app.listen(
+                "alarms:batch:updated",
+                move |event| match serde_json::from_str::<AlarmsBatchUpdated>(event.payload()) {
                     Ok(payload) => {
                         let batch_listener = Arc::clone(&batch_listener);
                         tauri::async_runtime::spawn(async move {
@@ -87,13 +90,14 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                             "wear-sync: failed to parse alarms:batch:updated payload: {error}"
                         );
                     }
-                }
-            });
+                },
+            );
 
             let sync_listener = Arc::clone(&batch_collector);
             let sync_publisher = Arc::clone(&publisher);
-            app.listen("alarms:sync:needed", move |event| {
-                match serde_json::from_str::<AlarmsSyncNeeded>(event.payload()) {
+            app.listen(
+                "alarms:sync:needed",
+                move |event| match serde_json::from_str::<AlarmsSyncNeeded>(event.payload()) {
                     Ok(payload) => {
                         let sync_listener = Arc::clone(&sync_listener);
                         let sync_publisher = Arc::clone(&sync_publisher);
@@ -106,8 +110,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                             "wear-sync: failed to parse alarms:sync:needed payload: {error}"
                         );
                     }
-                }
-            });
+                },
+            );
 
             // Listen for alarm fired events — notify the watch so it shows
             // the ringing screen in parallel with the phone.
@@ -132,7 +136,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                             };
 
                             if let Err(error) = wear_sync.send_alarm_ring(request) {
-                                log::error!("wear-sync: failed to send alarm ring to watch: {error}");
+                                log::error!(
+                                    "wear-sync: failed to send alarm ring to watch: {error}"
+                                );
                             }
                         });
                     }
@@ -190,8 +196,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                         let app = snooze_app.clone();
                         tauri::async_runtime::spawn(async move {
                             let wear_sync = app.state::<WearSync<R>>();
-                            let duration_ms =
-                                snoozed.snoozed_until.saturating_sub(snoozed.original_trigger);
+                            let duration_ms = snoozed
+                                .snoozed_until
+                                .saturating_sub(snoozed.original_trigger);
                             let snooze_length_minutes = (duration_ms / 60_000).max(0) as i32;
                             let request = AlarmSnoozeRequest {
                                 alarm_id: snoozed.id,
@@ -213,8 +220,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             // Listen for messages from the watch (routed by Kotlin WearMessageService
             // through WearSyncPlugin → Channel → app.emit("wear:message:received"))
             let watch_app = app.clone();
-            app.listen("wear:message:received", move |event| {
-                match serde_json::from_str::<WatchMessage>(event.payload()) {
+            app.listen(
+                "wear:message:received",
+                move |event| match serde_json::from_str::<WatchMessage>(event.payload()) {
                     Ok(msg) => {
                         handle_watch_message(&watch_app, msg);
                     }
@@ -223,8 +231,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                             "wear-sync: failed to parse wear:message:received payload: {error}"
                         );
                     }
-                }
-            });
+                },
+            );
 
             Ok(())
         })
@@ -295,7 +303,9 @@ fn spawn_publish_task<R: Runtime>(
                         is_24_hour_known,
                     };
                     if let Err(error) = wear_sync.publish_to_watch(request) {
-                        log::error!("wear-sync: failed to publish immediate sync to watch: {error}");
+                        log::error!(
+                            "wear-sync: failed to publish immediate sync to watch: {error}"
+                        );
                     }
                 }
             }
@@ -327,74 +337,63 @@ fn handle_watch_message<R: Runtime>(app: &AppHandle<R>, msg: WatchMessage) {
                 log::error!("wear-sync: failed to emit wear:sync:request event: {error}");
             }
         }
-        "/threshold/save_alarm" => {
-            match serde_json::from_str::<WatchSaveAlarm>(&msg.data) {
-                Ok(save_cmd) => {
-                    log::info!(
-                        "wear-sync: watch save alarm {} (enabled={}, revision={})",
-                        save_cmd.alarm_id,
-                        save_cmd.enabled,
-                        save_cmd.watch_revision
-                    );
-                    if let Err(error) = app.emit("wear:alarm:save", &save_cmd) {
-                        log::error!("wear-sync: failed to emit wear:alarm:save event: {error}");
-                    }
-                }
-                Err(error) => {
-                    log::warn!("wear-sync: invalid save_alarm payload: {error}");
+        "/threshold/save_alarm" => match serde_json::from_str::<WatchSaveAlarm>(&msg.data) {
+            Ok(save_cmd) => {
+                log::info!(
+                    "wear-sync: watch save alarm {} (enabled={}, revision={})",
+                    save_cmd.alarm_id,
+                    save_cmd.enabled,
+                    save_cmd.watch_revision
+                );
+                if let Err(error) = app.emit("wear:alarm:save", &save_cmd) {
+                    log::error!("wear-sync: failed to emit wear:alarm:save event: {error}");
                 }
             }
-        }
-        "/threshold/delete_alarm" => {
-            match serde_json::from_str::<WatchDeleteAlarm>(&msg.data) {
-                Ok(delete_cmd) => {
-                    log::info!(
-                        "wear-sync: watch delete alarm {} (revision={})",
-                        delete_cmd.alarm_id,
-                        delete_cmd.watch_revision
-                    );
-                    if let Err(error) = app.emit("wear:alarm:delete", &delete_cmd) {
-                        log::error!("wear-sync: failed to emit wear:alarm:delete event: {error}");
-                    }
-                }
-                Err(error) => {
-                    log::warn!("wear-sync: invalid delete_alarm payload: {error}");
+            Err(error) => {
+                log::warn!("wear-sync: invalid save_alarm payload: {error}");
+            }
+        },
+        "/threshold/delete_alarm" => match serde_json::from_str::<WatchDeleteAlarm>(&msg.data) {
+            Ok(delete_cmd) => {
+                log::info!(
+                    "wear-sync: watch delete alarm {} (revision={})",
+                    delete_cmd.alarm_id,
+                    delete_cmd.watch_revision
+                );
+                if let Err(error) = app.emit("wear:alarm:delete", &delete_cmd) {
+                    log::error!("wear-sync: failed to emit wear:alarm:delete event: {error}");
                 }
             }
-        }
-        "/threshold/alarm_dismiss" => {
-            match serde_json::from_str::<WatchDismissAlarm>(&msg.data) {
-                Ok(dismiss_cmd) => {
-                    log::info!(
-                        "wear-sync: watch dismiss alarm {}",
-                        dismiss_cmd.alarm_id
-                    );
-                    if let Err(error) = app.emit("wear:alarm:dismiss", &dismiss_cmd) {
-                        log::error!("wear-sync: failed to emit wear:alarm:dismiss event: {error}");
-                    }
-                }
-                Err(error) => {
-                    log::warn!("wear-sync: invalid alarm_dismiss payload: {error}");
+            Err(error) => {
+                log::warn!("wear-sync: invalid delete_alarm payload: {error}");
+            }
+        },
+        "/threshold/alarm_dismiss" => match serde_json::from_str::<WatchDismissAlarm>(&msg.data) {
+            Ok(dismiss_cmd) => {
+                log::info!("wear-sync: watch dismiss alarm {}", dismiss_cmd.alarm_id);
+                if let Err(error) = app.emit("wear:alarm:dismiss", &dismiss_cmd) {
+                    log::error!("wear-sync: failed to emit wear:alarm:dismiss event: {error}");
                 }
             }
-        }
-        "/threshold/alarm_snooze" => {
-            match serde_json::from_str::<WatchSnoozeAlarm>(&msg.data) {
-                Ok(snooze_cmd) => {
-                    log::info!(
-                        "wear-sync: watch snooze alarm {} for {} min",
-                        snooze_cmd.alarm_id,
-                        snooze_cmd.snooze_length_minutes
-                    );
-                    if let Err(error) = app.emit("wear:alarm:snooze", &snooze_cmd) {
-                        log::error!("wear-sync: failed to emit wear:alarm:snooze event: {error}");
-                    }
-                }
-                Err(error) => {
-                    log::warn!("wear-sync: invalid alarm_snooze payload: {error}");
+            Err(error) => {
+                log::warn!("wear-sync: invalid alarm_dismiss payload: {error}");
+            }
+        },
+        "/threshold/alarm_snooze" => match serde_json::from_str::<WatchSnoozeAlarm>(&msg.data) {
+            Ok(snooze_cmd) => {
+                log::info!(
+                    "wear-sync: watch snooze alarm {} for {} min",
+                    snooze_cmd.alarm_id,
+                    snooze_cmd.snooze_length_minutes
+                );
+                if let Err(error) = app.emit("wear:alarm:snooze", &snooze_cmd) {
+                    log::error!("wear-sync: failed to emit wear:alarm:snooze event: {error}");
                 }
             }
-        }
+            Err(error) => {
+                log::warn!("wear-sync: invalid alarm_snooze payload: {error}");
+            }
+        },
         other => {
             log::warn!("wear-sync: unknown watch message path: {other}");
         }
@@ -578,7 +577,9 @@ mod tests {
 
         let cmd2 = rx.recv().await.unwrap();
         match cmd2 {
-            PublishCommand::Immediate { reason, revision, .. } => {
+            PublishCommand::Immediate {
+                reason, revision, ..
+            } => {
                 assert_eq!(reason, SyncReason::ForceSync);
                 assert_eq!(revision, 6);
             }

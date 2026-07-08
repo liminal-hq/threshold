@@ -3,10 +3,10 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use chrono::{Datelike, Local, NaiveTime, Timelike};
+use crate::alarm::{error::Result, models::*};
 use chrono::{DateTime, TimeZone};
+use chrono::{Datelike, Local, NaiveTime, Timelike};
 use rand::Rng;
-use crate::alarm::{models::*, error::Result};
 
 /// Minimum lead time when sampling inside an already-open window, so the
 /// alarm never fires "immediately" the moment it's enabled.
@@ -48,17 +48,23 @@ fn calculate_next_trigger_from(
 
     match alarm.mode {
         AlarmMode::Fixed => {
-            let time = alarm.fixed_time.as_ref()
+            let time = alarm
+                .fixed_time
+                .as_ref()
                 .ok_or("Fixed alarm missing fixedTime")?;
             calculate_fixed_trigger(time, &alarm.active_days, now)
-        },
+        }
         AlarmMode::Window => {
-            let start = alarm.window_start.as_ref()
+            let start = alarm
+                .window_start
+                .as_ref()
                 .ok_or("Window alarm missing windowStart")?;
-            let end = alarm.window_end.as_ref()
+            let end = alarm
+                .window_end
+                .as_ref()
                 .ok_or("Window alarm missing windowEnd")?;
             calculate_window_trigger(start, end, &alarm.active_days, now, kind)
-        },
+        }
     }
 }
 
@@ -133,14 +139,9 @@ fn calculate_window_trigger(
         let weekday = candidate.weekday().num_days_from_sunday() as i32;
 
         if active_days.contains(&weekday) {
-            if let Some(trigger) = sample_window_for_day(
-                candidate,
-                start_time,
-                end_time,
-                crosses_midnight,
-                now,
-                kind,
-            )? {
+            if let Some(trigger) =
+                sample_window_for_day(candidate, start_time, end_time, crosses_midnight, now, kind)?
+            {
                 return Ok(Some(trigger));
             }
         }
@@ -190,7 +191,10 @@ fn sample_window_for_day(
         ReferenceKind::Fresh if window_start <= now => {
             // Already inside the window: sample the remaining time, with a
             // small lead so the alarm never fires "immediately".
-            std::cmp::max(now + chrono::Duration::seconds(MIN_LEAD_SECONDS), window_start)
+            std::cmp::max(
+                now + chrono::Duration::seconds(MIN_LEAD_SECONDS),
+                window_start,
+            )
         }
         _ if window_start > now => window_start,
         // Not eligible for in-progress sampling and the window has already
@@ -238,7 +242,7 @@ fn ceil_to_minute(dt: DateTime<Local>) -> DateTime<Local> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Datelike, DateTime};
+    use chrono::{DateTime, Datelike};
 
     #[test]
     fn test_fixed_alarm_calculation() {
@@ -302,7 +306,9 @@ mod tests {
         };
 
         let trigger_ts = calculate_next_trigger(&input).unwrap().unwrap();
-        let trigger_dt = DateTime::from_timestamp_millis(trigger_ts).unwrap().with_timezone(&Local);
+        let trigger_dt = DateTime::from_timestamp_millis(trigger_ts)
+            .unwrap()
+            .with_timezone(&Local);
 
         assert!(trigger_dt > now);
 
@@ -330,7 +336,9 @@ mod tests {
         };
 
         let trigger_ts = calculate_next_trigger(&input).unwrap().unwrap();
-        let trigger_dt = DateTime::from_timestamp_millis(trigger_ts).unwrap().with_timezone(&Local);
+        let trigger_dt = DateTime::from_timestamp_millis(trigger_ts)
+            .unwrap()
+            .with_timezone(&Local);
 
         assert!(trigger_dt > now);
 
@@ -426,8 +434,12 @@ mod tests {
             .earliest()
             .unwrap();
         let today_idx = now.weekday().num_days_from_sunday() as i32;
-        let start = (now - chrono::Duration::minutes(10)).format("%H:%M").to_string();
-        let end = (now + chrono::Duration::minutes(20)).format("%H:%M").to_string();
+        let start = (now - chrono::Duration::minutes(10))
+            .format("%H:%M")
+            .to_string();
+        let end = (now + chrono::Duration::minutes(20))
+            .format("%H:%M")
+            .to_string();
 
         let input = AlarmInput {
             enabled: true,
@@ -438,13 +450,20 @@ mod tests {
             ..Default::default()
         };
 
-        let trigger_ts = calculate_next_trigger_from(&input, now, ReferenceKind::Fresh).unwrap().unwrap();
-        let trigger_dt = DateTime::from_timestamp_millis(trigger_ts).unwrap().with_timezone(&Local);
+        let trigger_ts = calculate_next_trigger_from(&input, now, ReferenceKind::Fresh)
+            .unwrap()
+            .unwrap();
+        let trigger_dt = DateTime::from_timestamp_millis(trigger_ts)
+            .unwrap()
+            .with_timezone(&Local);
 
         // Should sample from the remaining time of today's window, not skip to next week.
         assert!(trigger_dt > now);
         assert!(trigger_dt.signed_duration_since(now) < chrono::Duration::minutes(21));
-        assert_eq!(trigger_dt.weekday().num_days_from_sunday() as i32, today_idx);
+        assert_eq!(
+            trigger_dt.weekday().num_days_from_sunday() as i32,
+            today_idx
+        );
     }
 
     #[test]
@@ -475,7 +494,9 @@ mod tests {
         let trigger_ts = calculate_next_trigger_from(&input, synthetic_now, ReferenceKind::Fresh)
             .unwrap()
             .unwrap();
-        let trigger_dt = DateTime::from_timestamp_millis(trigger_ts).unwrap().with_timezone(&Local);
+        let trigger_dt = DateTime::from_timestamp_millis(trigger_ts)
+            .unwrap()
+            .with_timezone(&Local);
 
         // Should sample from the remaining ~50 minutes of last night's window.
         assert!(trigger_dt > synthetic_now);
@@ -493,8 +514,12 @@ mod tests {
             .earliest()
             .unwrap();
         let today_idx = now.weekday().num_days_from_sunday() as i32;
-        let start = (now - chrono::Duration::minutes(10)).format("%H:%M").to_string();
-        let end = (now + chrono::Duration::minutes(20)).format("%H:%M").to_string();
+        let start = (now - chrono::Duration::minutes(10))
+            .format("%H:%M")
+            .to_string();
+        let end = (now + chrono::Duration::minutes(20))
+            .format("%H:%M")
+            .to_string();
 
         let input = AlarmInput {
             enabled: true,
@@ -512,7 +537,9 @@ mod tests {
         let after = calculate_next_trigger_after(&input, fired_at + 1_000).unwrap();
 
         if let Some(ts) = after {
-            let dt = DateTime::from_timestamp_millis(ts).unwrap().with_timezone(&Local);
+            let dt = DateTime::from_timestamp_millis(ts)
+                .unwrap()
+                .with_timezone(&Local);
             // Must not resample later today's remaining window time.
             assert!(dt.signed_duration_since(now) > chrono::Duration::days(6));
         }

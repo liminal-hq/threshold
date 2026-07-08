@@ -34,6 +34,8 @@ pub struct Toast<R: Runtime>(PluginHandle<R>);
 
 impl<R: Runtime> Toast<R> {
     pub fn show(&self, payload: ShowToastRequest) -> crate::Result<()> {
-        self.0.run_mobile_plugin("show", payload).map_err(Into::into)
+        self.0
+            .run_mobile_plugin("show", payload)
+            .map_err(Into::into)
     }
 }
