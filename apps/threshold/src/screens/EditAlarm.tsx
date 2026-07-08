@@ -220,7 +220,7 @@ const EditAlarm: React.FC = () => {
                                 sx={{ mb: 3 }}
                             >
                                 <ToggleButton value={AlarmMode.Fixed}>Fixed Time</ToggleButton>
-                                <ToggleButton value={AlarmMode.RandomWindow}>Window</ToggleButton>
+                                <ToggleButton value={AlarmMode.Window}>Window</ToggleButton>
                             </ToggleButtonGroup>
 
                             {mode === AlarmMode.Fixed ? (

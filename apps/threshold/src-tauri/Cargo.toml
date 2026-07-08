@@ -44,3 +44,4 @@ tauri-plugin-app-events = "0.2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+ts-rs = "12"

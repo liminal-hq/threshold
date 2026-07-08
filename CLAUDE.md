@@ -24,7 +24,10 @@ pnpm workspace monorepo + Cargo workspace:
 - `apps/threshold-wear` — native Kotlin/Compose Wear OS app (own Gradle project)
 - `apps/site` — static landing page
 - `packages/core` — shared TS types (`@threshold/core`); its `scheduler.ts` is legacy
-  and unused — production scheduling is Rust (see below)
+  and unused — production scheduling is Rust (see below). Its `types.ts` (`AlarmMode`,
+  `Alarm`) is still live, though — `AlarmMode`'s member names must match Rust's enum
+  variant names (`Fixed`/`Window`) exactly, since it's referenced by the generated
+  types below via `#[ts(type = "AlarmMode")]`
 - `plugins/*` — custom Tauri plugins (alarm-manager, wear-sync, theme-utils,
   time-prefs, toast, app-management), each with Rust `src/` and Kotlin `android/`
 - `vendor/tauri-plugins-workspace` — submodule for the vendored notification plugin
@@ -117,3 +120,12 @@ the full `COMMANDS`-scope rule and the Kotlin `@Command` naming convention (came
   `apps/threshold-wear/.../WearDataLayerClient.kt`) — change both together.
 - `docs/audits/` holds point-in-time repo audits; check the latest before re-deriving
   known issues.
+- `apps/threshold/src/types/alarm.ts` (`AlarmRecord`/`AlarmInput`) is **generated**
+  from `alarm/models.rs` via `ts-rs` — don't hand-edit it. A Rust test
+  (`alarm::models::ts_bindings`) fails CI if the committed file drifts from a fresh
+  generation; regenerate with
+  `UPDATE_TS_BINDINGS=1 cargo test -p threshold ts_bindings -- --nocapture` after
+  changing an annotated field. `AlarmMode` itself stays hand-maintained in
+  `packages/core/src/types.ts` (ts-rs doesn't generate runtime TS enums, only
+  type-only unions, and this codebase relies on `AlarmMode` as a real enum object) —
+  keep its variant names in sync with Rust's by hand.
