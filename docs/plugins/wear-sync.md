@@ -196,9 +196,10 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 app-management, this plugin has no TypeScript-facing surface at all — the webview never
 calls `invoke('plugin:wear-sync|...')` directly. Every command above is driven from the
 Rust side (`AlarmCoordinator` events → `run_mobile_plugin(...)`, per the Channels rule in
-`CLAUDE.md`); the app's only interaction with wear-sync is listening for the Tauri events
-it emits (see Events below). Adopting typed `guest-js` bindings here (issue #205) would
-add a package with nothing to bind. This is the accepted variant, not an oversight.
+`CLAUDE.md`), and every event wear-sync itself emits targets the Rust app layer
+(`apps/threshold/src-tauri/src/lib.rs`), not the webview (see Events below) — TS has no
+interaction with this plugin at all. Adopting typed `guest-js` bindings here (issue #205)
+would add a package with nothing to bind. This is the accepted variant, not an oversight.
 
 ## Naming Conventions
 
