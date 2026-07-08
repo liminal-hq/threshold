@@ -4,8 +4,9 @@ import { platform } from '@tauri-apps/plugin-os';
 import {
 	WindowMinimizeIcon,
 	WindowCloseIcon,
-} from './Icons';
-import { ContextMenu, MenuModel } from './ContextMenu';
+} from './Icons/Icons';
+import { ContextMenu } from './ContextMenu/ContextMenu';
+import type { MenuModel } from './ContextMenu/types';
 import './TitleBar.css';
 import { APP_NAME } from '../constants';
 
