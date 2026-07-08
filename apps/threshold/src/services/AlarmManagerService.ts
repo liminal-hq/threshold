@@ -182,8 +182,15 @@ export class AlarmManagerService {
 								console.log('[AlarmManager] Action: Dismiss');
 								await this.stopRinging();
 							},
-							onSnoozeRinging: async (alarmId: number) => {
+							onSnoozeRinging: async (alarmId) => {
 								console.log('[AlarmManager] Action: Snooze ringing', alarmId);
+								if (alarmId == null) {
+									// The JS-driven ringing notification action has no alarm ID to
+									// recalculate against yet — fall back to stopping ringing only,
+									// same as before this alarm ID plumbing existed.
+									await this.stopRinging();
+									return;
+								}
 								const snoozeLength = SettingsService.getSnoozeLength();
 								await this.snoozeRinging(alarmId, snoozeLength);
 								await this.emitUpcomingSnoozeToast(alarmId, snoozeLength);

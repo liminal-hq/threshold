@@ -19,7 +19,10 @@ const EVENT_NOTIFICATIONS_TOAST = 'notifications:toast';
 
 type NotificationActionHandlers = {
 	onDismissRinging: () => Promise<void>;
-	onSnoozeRinging: (alarmId: number) => Promise<void>;
+	// The JS-driven 'alarm_trigger' notification action (unlike the native
+	// AlarmRingingService channel bridge) doesn't carry an alarm ID yet, so this
+	// must tolerate being called with none.
+	onSnoozeRinging: (alarmId?: number) => Promise<void>;
 	onDismissUpcoming: (alarmId: number) => Promise<void>;
 	onSnoozeUpcoming: (alarmId: number, snoozeMinutes: number) => Promise<void>;
 };

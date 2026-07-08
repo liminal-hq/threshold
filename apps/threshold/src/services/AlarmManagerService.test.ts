@@ -612,4 +612,31 @@ describe('AlarmManagerService', () => {
 		expect(calledTimestamp).toBeLessThanOrEqual(after + 10 * 60_000);
 		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
 	});
+
+	it('falls back to stopping ringing when the alarm_trigger snooze action has no alarm ID', async () => {
+		const service = new AlarmManagerService();
+		let actionCallback: ((notification: any) => Promise<void>) | null = null;
+
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+		(onAction as any).mockImplementation(async (cb: (notification: any) => Promise<void>) => {
+			actionCallback = cb;
+			return undefined;
+		});
+
+		await service.init();
+		expect(actionCallback).not.toBeNull();
+
+		(invoke as any).mockClear();
+		// The JS-driven 'alarm_trigger' notification carries no alarm ID (unlike the
+		// native AlarmRingingService channel bridge, tested above).
+		await actionCallback!({
+			actionId: 'snooze',
+			notification: {
+				actionTypeId: 'alarm_trigger',
+			},
+		});
+
+		expect(AlarmService.snooze).not.toHaveBeenCalled();
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
+	});
 });
