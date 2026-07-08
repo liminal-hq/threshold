@@ -1,19 +1,9 @@
-import { invoke } from '@tauri-apps/api/core';
+import { pickAlarmSound as pickAlarmSoundNative } from 'tauri-plugin-alarm-manager-api';
+import type { PickAlarmSoundOptions, PickedAlarmSound } from 'tauri-plugin-alarm-manager-api';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { open } from '@tauri-apps/plugin-dialog';
 
-export interface PickAlarmSoundOptions {
-	existingUri?: string | null;
-	title?: string;
-	showSilent?: boolean;
-	showDefault?: boolean;
-}
-
-export interface PickedAlarmSound {
-	uri: string | null;
-	isSilent: boolean;
-	title: string | null;
-}
+export type { PickAlarmSoundOptions, PickedAlarmSound };
 
 export class AlarmSoundPickerService {
 	/**
@@ -53,13 +43,11 @@ export class AlarmSoundPickerService {
 		}
 
 		try {
-			return await invoke<PickedAlarmSound>('plugin:alarm-manager|pick_alarm_sound', {
-				options: {
-					existingUri: options.existingUri,
-					title: options.title,
-					showSilent: options.showSilent ?? true,
-					showDefault: options.showDefault ?? true,
-				},
+			return await pickAlarmSoundNative({
+				existingUri: options.existingUri,
+				title: options.title,
+				showSilent: options.showSilent ?? true,
+				showDefault: options.showDefault ?? true,
 			});
 		} catch (error: any) {
 			if (typeof error === 'string' && error.includes('cancelled')) {
