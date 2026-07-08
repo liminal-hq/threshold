@@ -119,7 +119,7 @@ jobs:
             xvfb
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.96.1
         with:
           components: clippy, rustfmt
 

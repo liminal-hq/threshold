@@ -77,8 +77,8 @@ RUN yes | sdkmanager --licenses && \
     "build-tools;36.0.0" \
     "ndk;28.2.13676358"
 
-# Install Rust toolchain (stable)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
+# Install Rust toolchain (pinned -- see rust-toolchain.toml at the repo root)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.96.1 \
     && rustup component add clippy rustfmt
 
 # Install experimental Tauri CLI for portable AppImage builds
