@@ -138,4 +138,25 @@ export { AlarmMode };
              Regenerate with: UPDATE_TS_BINDINGS=1 cargo test -p threshold ts_bindings -- --nocapture\n"
         );
     }
+
+    /// `AlarmMode` is deliberately hand-maintained TS-side (see the module
+    /// doc comment above), so it isn't covered by the drift check above --
+    /// nothing stops its Rust variants and TS enum members from silently
+    /// diverging. This test can't inspect `packages/core/src/types.ts`
+    /// directly, but hardcoding the wire values here means renaming a
+    /// variant is a compile error in this test, forcing whoever does it to
+    /// come here and update `AlarmMode` in `packages/core/src/types.ts` too.
+    #[test]
+    fn alarm_mode_wire_values_match_hand_maintained_ts_enum() {
+        assert_eq!(
+            serde_json::to_value(AlarmMode::Fixed).unwrap(),
+            serde_json::json!("FIXED"),
+            "packages/core/src/types.ts: AlarmMode.Fixed must serialise to 'FIXED'"
+        );
+        assert_eq!(
+            serde_json::to_value(AlarmMode::Window).unwrap(),
+            serde_json::json!("WINDOW"),
+            "packages/core/src/types.ts: AlarmMode.Window must serialise to 'WINDOW'"
+        );
+    }
 }
