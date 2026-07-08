@@ -33,6 +33,10 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Type-check JS/TS
+        run: |
+          pnpm -r run typecheck
+
       - name: Run JS/TS Tests
         run: |
           pnpm -r run test:ci
