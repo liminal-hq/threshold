@@ -20,6 +20,10 @@ export interface ImportedAlarm {
 	hour: number;
 	minute: number;
 	label: string;
+	/** Days of week this alarm is active on, 0=Sunday..6=Saturday. Always non-empty. */
+	activeDays: number[];
+	/** Epoch millis of the originally-computed one-shot occurrence, for staleness checks. */
+	triggerAt: number;
 }
 
 export interface PickAlarmSoundOptions {

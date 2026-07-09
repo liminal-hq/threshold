@@ -48,6 +48,8 @@ class ImportedAlarm {
     var hour: Int = 0
     var minute: Int = 0
     var label: String = ""
+    var activeDays: List<Int> = emptyList()
+    var triggerAt: Long = 0
 }
 
 @InvokeArg
@@ -299,27 +301,31 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         for ((key, value) in allImports) {
             if (key.startsWith("import_") && value is String) {
+                // Always remove the entry, whether or not it parses -- a malformed or
+                // unparseable payload must never be retried forever.
                 try {
                     val id = key.removePrefix("import_").toInt()
-                    val parts = value.split("|")
-                    if (parts.size == 2) {
-                        val timeParts = parts[0].split(":")
-                        val hour = timeParts[0].toInt()
-                        val minute = timeParts[1].toInt()
-                        val label = parts[1]
-
-                        val import = ImportedAlarm()
-                        import.id = id
-                        import.hour = hour
-                        import.minute = minute
-                        import.label = label
-                        importsList.add(import)
-
-                        // Clean up
-                        prefs.edit().remove(key).apply()
+                    val json = JSONObject(value)
+                    val daysArray = json.optJSONArray("activeDays")
+                    val activeDays = mutableListOf<Int>()
+                    if (daysArray != null) {
+                        for (i in 0 until daysArray.length()) {
+                            activeDays.add(daysArray.getInt(i))
+                        }
                     }
+
+                    val import = ImportedAlarm()
+                    import.id = id
+                    import.hour = json.getInt("hour")
+                    import.minute = json.getInt("minute")
+                    import.label = json.getString("label")
+                    import.activeDays = activeDays
+                    import.triggerAt = json.optLong("triggerAt", 0)
+                    importsList.add(import)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to parse import: $value", e)
+                } finally {
+                    prefs.edit().remove(key).apply()
                 }
             }
         }
@@ -333,6 +339,8 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             alarmObj.put("hour", alarm.hour)
             alarmObj.put("minute", alarm.minute)
             alarmObj.put("label", alarm.label)
+            alarmObj.put("activeDays", JSArray(alarm.activeDays))
+            alarmObj.put("triggerAt", alarm.triggerAt)
             array.put(alarmObj)
         }
 

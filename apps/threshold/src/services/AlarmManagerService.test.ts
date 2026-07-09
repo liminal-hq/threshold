@@ -673,4 +673,116 @@ describe('AlarmManagerService', () => {
 
 		expect(invoke).toHaveBeenCalledWith('set_snooze_length', { minutes: 15 });
 	});
+
+	describe('checkImports', () => {
+		it('imports a native alarm using its resolved activeDays, not a hardcoded daily default', async () => {
+			const service = new AlarmManagerService();
+			const triggerAt = Date.now() + 60 * 60_000;
+
+			(invoke as any).mockImplementation((command: string) => {
+				if (command === 'plugin:alarm-manager|get_launch_args') {
+					return Promise.resolve([
+						{ id: 555, hour: 7, minute: 0, label: 'Gym | Leg day', activeDays: [2], triggerAt },
+					]);
+				}
+				return Promise.resolve(null);
+			});
+
+			await service.init();
+
+			expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel', { payload: { id: 555 } });
+			expect(AlarmService.save).toHaveBeenCalledWith(
+				expect.objectContaining({
+					label: 'Gym | Leg day',
+					fixedTime: '07:00',
+					activeDays: [2],
+				}),
+			);
+		});
+
+		it('skips a stale import whose one-shot occurrence already passed, but still cancels the temp native alarm', async () => {
+			const service = new AlarmManagerService();
+			const pastTriggerAt = Date.now() - 60_000;
+
+			(invoke as any).mockImplementation((command: string) => {
+				if (command === 'plugin:alarm-manager|get_launch_args') {
+					return Promise.resolve([
+						{
+							id: 556,
+							hour: 6,
+							minute: 30,
+							label: 'Already rang',
+							activeDays: [3],
+							triggerAt: pastTriggerAt,
+						},
+					]);
+				}
+				return Promise.resolve(null);
+			});
+
+			await service.init();
+
+			expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel', { payload: { id: 556 } });
+			expect(AlarmService.save).not.toHaveBeenCalled();
+		});
+
+		it('falls back to the triggerAt weekday when activeDays comes back empty', async () => {
+			const service = new AlarmManagerService();
+			const triggerAt = new Date('2026-07-15T07:00:00').getTime(); // a Wednesday
+
+			(invoke as any).mockImplementation((command: string) => {
+				if (command === 'plugin:alarm-manager|get_launch_args') {
+					return Promise.resolve([
+						{
+							id: 557,
+							hour: 7,
+							minute: 0,
+							label: 'No days from native',
+							activeDays: [],
+							triggerAt,
+						},
+					]);
+				}
+				return Promise.resolve(null);
+			});
+
+			await service.init();
+
+			expect(AlarmService.save).toHaveBeenCalledWith(
+				expect.objectContaining({ activeDays: [new Date(triggerAt).getDay()] }),
+			);
+		});
+
+		it('skips a within-batch duplicate without re-querying AlarmService.getAll for every import', async () => {
+			const service = new AlarmManagerService();
+			const triggerAt = Date.now() + 60 * 60_000;
+
+			(AlarmService.save as any).mockResolvedValue({
+				id: 601,
+				label: 'Duplicate label',
+				mode: AlarmMode.Fixed,
+				fixedTime: '07:00',
+				activeDays: [2],
+				enabled: true,
+			});
+
+			(invoke as any).mockImplementation((command: string) => {
+				if (command === 'plugin:alarm-manager|get_launch_args') {
+					return Promise.resolve([
+						{ id: 601, hour: 7, minute: 0, label: 'Duplicate label', activeDays: [2], triggerAt },
+						{ id: 602, hour: 7, minute: 0, label: 'Duplicate label', activeDays: [2], triggerAt },
+					]);
+				}
+				return Promise.resolve(null);
+			});
+
+			await service.init();
+
+			// getAll is called exactly once for the import pass (plus once for the
+			// initial-sync reschedule that follows checkImports in init()).
+			const getAllCalls = (AlarmService.getAll as any).mock.calls.length;
+			expect(getAllCalls).toBe(2);
+			expect(AlarmService.save).toHaveBeenCalledTimes(1);
+		});
+	});
 });
