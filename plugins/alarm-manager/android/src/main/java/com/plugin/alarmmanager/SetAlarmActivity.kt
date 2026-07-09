@@ -14,6 +14,20 @@ import java.util.Calendar
 import org.json.JSONArray
 import org.json.JSONObject
 
+// EXTRA_DAYS uses Calendar.SUNDAY(1)..SATURDAY(7); Threshold's activeDays uses 0=Sunday..6=Saturday.
+// Absent/empty requestedDays means "one-time, next occurrence only" per the SET_ALARM contract --
+// Threshold has no true one-shot concept (every alarm recurs on activeDays), so the honest
+// translation is a single-day array for whichever weekday the resolved occurrence falls on.
+// A standalone function (not a method) so it's trivially unit-testable without any Android
+// framework dependency -- both parameters are already-resolved Calendar day-of-week values (1-7).
+internal fun resolveActiveDays(requestedDays: List<Int>?, fallbackCalendarDay: Int): List<Int> {
+    return if (requestedDays != null && requestedDays.isNotEmpty()) {
+        requestedDays.map { it - 1 }
+    } else {
+        listOf(fallbackCalendarDay - 1)
+    }
+}
+
 class SetAlarmActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,16 +67,8 @@ class SetAlarmActivity : Activity() {
 
         val triggerAt = calendar.timeInMillis
 
-        // EXTRA_DAYS uses Calendar.SUNDAY(1)..SATURDAY(7); Threshold's activeDays uses 0=Sunday..6=Saturday.
-        // Absent EXTRA_DAYS means "one-time, next occurrence only" per the SET_ALARM contract -- Threshold
-        // has no true one-shot concept (every alarm recurs on activeDays), so the honest translation is a
-        // single-day array for whichever weekday this resolved occurrence already falls on.
         val requestedDays = intent.getIntegerArrayListExtra(AlarmClock.EXTRA_DAYS)
-        val activeDays = if (requestedDays != null && requestedDays.isNotEmpty()) {
-            requestedDays.map { it - 1 }
-        } else {
-            listOf(calendar.get(Calendar.DAY_OF_WEEK) - 1)
-        }
+        val activeDays = resolveActiveDays(requestedDays, calendar.get(Calendar.DAY_OF_WEEK))
 
         // 3. Generate ID (Random for now, or timestamp based)
         val id = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
