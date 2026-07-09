@@ -13,7 +13,7 @@
 		"build:desktop": "pnpm --filter threshold tauri build",
 		"build:android": "pnpm --filter threshold tauri android build",
 		"build:wear": "bash scripts/build-wear.sh",
-		"dev:desktop": "pnpm --filter threshold tauri dev",
+		"dev:desktop": "pnpm --filter threshold tauri dev --config '{\"app\":{\"withGlobalTauri\":true}}'",
 		"dev:android": "pnpm --filter threshold tauri android dev",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",

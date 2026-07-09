@@ -36,6 +36,7 @@
 		"time-prefs:default",
 		"theme-utils:default",
 		"dialog:default",
-		"toast:default"
+		"toast:default",
+		"mcp-bridge:default"
 	]
 }
