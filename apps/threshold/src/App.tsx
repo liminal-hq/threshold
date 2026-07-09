@@ -10,6 +10,7 @@ import { ThemeContextProvider } from './contexts/ThemeContext';
 import { AlarmsProvider } from './contexts/AlarmsContext';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DesktopToastHost } from './components/DesktopToastHost';
 
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -178,6 +179,7 @@ const App: React.FC = () => {
 			<AlarmsProvider>
 				<LocalizationProvider dateAdapter={AdapterDateFns}>
 					<RouterProvider router={router} />
+					<DesktopToastHost />
 				</LocalizationProvider>
 			</AlarmsProvider>
 		</ThemeContextProvider>
