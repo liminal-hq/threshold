@@ -725,4 +725,14 @@ mod scheduling_transition_tests {
             SchedulingTransition::NoOp
         );
     }
+
+    #[test]
+    fn does_nothing_for_a_brand_new_disabled_alarm_with_no_previous_state() {
+        let current = alarm(false, None, None);
+
+        assert_eq!(
+            classify_scheduling_transition(None, &current),
+            SchedulingTransition::NoOp
+        );
+    }
 }
