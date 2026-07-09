@@ -19,7 +19,10 @@ import { isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notif
 
 /* Theme variables */
 // import './theme/variables.css'; // Deprecated in favor of Code-First ThemeProvider
-import './theme/ringing.css';
+// ringing.css is imported directly by the Ringing screen, scoped to its own
+// .ringing-page root class -- do not import it here (see theme/components.css
+// and router.tsx for why: it used to leak an unscoped body/html overflow:hidden
+// app-wide).
 import './theme/components.css';
 import './theme/transitions.css';
 import { routeTransitions } from './utils/RouteTransitions';

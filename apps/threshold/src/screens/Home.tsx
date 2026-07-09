@@ -57,7 +57,7 @@ const Home: React.FC = () => {
 	};
 
 	return (
-		<Box sx={{ minHeight: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+		<Box>
 			{isMobile && (
 				<MobileToolbar
 					title={APP_NAME}
@@ -93,7 +93,6 @@ const Home: React.FC = () => {
 					pt: isMobile ? 2 : 0, // Add top padding on mobile to clear header/prevent blend
 					pb: 10,
 					px: 2, // Always add padding for "inset" bubble look
-					flexGrow: 1,
 				}}
 			>
 				{isMobile ? (

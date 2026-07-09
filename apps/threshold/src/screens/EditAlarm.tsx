@@ -179,7 +179,7 @@ const EditAlarm: React.FC = () => {
 	};
 
 	return (
-		<Box sx={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+		<Box>
 			{/* Mobile Header: Placed OUTSIDE IonContent to avoid scrolling issues and overlay */}
 			{isMobile && (
 				<MobileToolbar
@@ -196,15 +196,12 @@ const EditAlarm: React.FC = () => {
 					}
 				/>
 			)}
-			<Box sx={{ flexGrow: 1 }}>
+			<Box>
 				<Container
 					maxWidth="sm"
 					sx={{
 						py: 3,
 						mt: !isMobile ? 2 : 0,
-						height: '100%',
-						display: 'flex',
-						flexDirection: 'column',
 					}}
 				>
 					{!isMobile && (
@@ -215,7 +212,7 @@ const EditAlarm: React.FC = () => {
 						</Box>
 					)}
 
-					<Stack spacing={3} sx={{ flexGrow: 1, pb: !isMobile ? 10 : 0 }}>
+					<Stack spacing={3} sx={{ pb: !isMobile ? 10 : 0 }}>
 						<Paper elevation={0} sx={{ p: isMobile ? 0 : 3, bgcolor: 'transparent' }}>
 							<ToggleButtonGroup
 								value={mode}
