@@ -1,0 +1,14 @@
+.git/
+node_modules/
+/target/
+plugins/*/target/
+apps/threshold/src-tauri/gen/android/**/build/
+apps/threshold-wear/build/
+dist/
+build/
+.tauri/
+.gradle/
+.pnpm-store/
+release/
+coverage/
+test-results/

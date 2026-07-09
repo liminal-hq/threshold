@@ -21,19 +21,9 @@ It will:
 - publish a GitHub Release with curated distributable artefacts attached
 - remove existing assets on reruns so release pages stay clean
 
-## Container Base Image (`ci-base`)
+## Container Base Image (`tauri-ci-mobile`)
 
-The workflow runs build jobs in:
-
-- `ghcr.io/<owner>/<repo>/ci-base:latest`
-
-This image is built from `.devcontainer/Dockerfile` and includes most system dependencies used by Tauri and Android builds.
-
-If tooling in `.devcontainer/Dockerfile` changes, rebuild and push `ci-base` before running release tags.
-
-Related workflow:
-
-- `.github/workflows/build-ci-image.yml`
+The Android build job runs in `ghcr.io/liminal-hq/tauri-ci-mobile:latest`, a shared org-level image maintained in `liminal-hq/.github` (`docker/ci/Dockerfile`, published by `.github/workflows/shared-tauri-ci-images.yml` in that repo). It includes Rust, Node, and the Android SDK/NDK/JDK. Threshold no longer builds or publishes its own CI image -- if the shared image needs a version bump, that happens in `liminal-hq/.github`, not here.
 
 ## Node and Cache Behaviour
 
