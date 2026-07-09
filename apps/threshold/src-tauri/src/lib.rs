@@ -86,6 +86,18 @@ pub fn run() {
         builder = builder.plugin(tauri_plugin_window_state::Builder::new().build());
     }
 
+    // Debug-only automation bridge for the Tauri MCP server -- never compiled into
+    // release builds. Bound to localhost only for now; mobile testing will need this
+    // opened up to the LAN, which is a deliberate follow-up, not the default.
+    #[cfg(debug_assertions)]
+    {
+        builder = builder.plugin(
+            tauri_plugin_mcp_bridge::Builder::new()
+                .bind_address("127.0.0.1")
+                .build(),
+        );
+    }
+
     builder = builder.invoke_handler(tauri::generate_handler![
         event_logs::export_event_logs,
         event_logs::get_event_logs,
