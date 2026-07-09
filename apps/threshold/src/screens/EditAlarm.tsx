@@ -333,8 +333,7 @@ const EditAlarm: React.FC = () => {
 									) : (
 										windowEnd < windowStart && (
 											<FormHelperText sx={{ textAlign: 'center' }}>
-												This window crosses midnight -- it starts today and ends the
-												next day.
+												This window crosses midnight -- it starts today and ends the next day.
 											</FormHelperText>
 										)
 									)}
