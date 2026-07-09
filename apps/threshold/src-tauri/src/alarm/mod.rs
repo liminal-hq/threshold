@@ -483,40 +483,20 @@ impl AlarmCoordinator {
         previous: Option<&AlarmRecord>,
         revision: i64,
     ) -> Result<()> {
-        let was_scheduled = previous
-            .map(|p| p.enabled && p.next_trigger.is_some())
-            .unwrap_or(false);
-
-        let should_schedule = alarm.enabled && alarm.next_trigger.is_some();
-
-        match (was_scheduled, should_schedule) {
-            (false, true) => {
-                // Schedule
+        match classify_scheduling_transition(previous, alarm) {
+            SchedulingTransition::Schedule => {
                 self.emit_alarm_scheduled(app, alarm, revision).await?;
             }
-            (true, false) => {
-                // Cancel
-                let reason = if alarm.enabled {
-                    CancelReason::Updated
-                } else {
-                    CancelReason::Disabled
-                };
+            SchedulingTransition::Cancel(reason) => {
                 self.emit_alarm_cancelled(app, alarm.id, reason, revision)
                     .await?;
             }
-            (true, true) => {
-                // Check if trigger changed
-                let trigger_changed = previous
-                    .map(|p| p.next_trigger != alarm.next_trigger)
-                    .unwrap_or(false);
-
-                if trigger_changed {
-                    self.emit_alarm_cancelled(app, alarm.id, CancelReason::Updated, revision)
-                        .await?;
-                    self.emit_alarm_scheduled(app, alarm, revision).await?;
-                }
+            SchedulingTransition::Reschedule => {
+                self.emit_alarm_cancelled(app, alarm.id, CancelReason::Updated, revision)
+                    .await?;
+                self.emit_alarm_scheduled(app, alarm, revision).await?;
             }
-            (false, false) => {}
+            SchedulingTransition::NoOp => {}
         }
 
         Ok(())
@@ -587,5 +567,172 @@ impl AlarmCoordinator {
         };
         app.emit("alarms:batch:updated", &event)?;
         Ok(())
+    }
+}
+
+/// What, if anything, a mutation should do to an alarm's native schedule. Pulled out of
+/// `emit_scheduling_events` as a pure function so it's testable without an `AppHandle`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SchedulingTransition {
+    Schedule,
+    Cancel(CancelReason),
+    Reschedule,
+    NoOp,
+}
+
+fn classify_scheduling_transition(
+    previous: Option<&AlarmRecord>,
+    alarm: &AlarmRecord,
+) -> SchedulingTransition {
+    let was_scheduled = previous
+        .map(|p| p.enabled && p.next_trigger.is_some())
+        .unwrap_or(false);
+
+    let should_schedule = alarm.enabled && alarm.next_trigger.is_some();
+
+    match (was_scheduled, should_schedule) {
+        (false, true) => SchedulingTransition::Schedule,
+        (true, false) => {
+            let reason = if alarm.enabled {
+                CancelReason::Updated
+            } else {
+                CancelReason::Disabled
+            };
+            SchedulingTransition::Cancel(reason)
+        }
+        (true, true) => {
+            // Re-schedule on a trigger change, or a sound change alone -- the native
+            // scheduler needs to know about the latter too, or an edited sound won't
+            // take effect until some other change happens to trigger a reschedule.
+            let needs_reschedule = previous
+                .map(|p| p.next_trigger != alarm.next_trigger || p.sound_uri != alarm.sound_uri)
+                .unwrap_or(false);
+
+            if needs_reschedule {
+                SchedulingTransition::Reschedule
+            } else {
+                SchedulingTransition::NoOp
+            }
+        }
+        (false, false) => SchedulingTransition::NoOp,
+    }
+}
+
+#[cfg(test)]
+mod scheduling_transition_tests {
+    use super::*;
+
+    fn alarm(enabled: bool, next_trigger: Option<i64>, sound_uri: Option<&str>) -> AlarmRecord {
+        AlarmRecord {
+            id: 1,
+            label: None,
+            enabled,
+            mode: AlarmMode::Fixed,
+            fixed_time: Some("07:00".into()),
+            window_start: None,
+            window_end: None,
+            active_days: vec![0, 1, 2, 3, 4, 5, 6],
+            next_trigger,
+            sound_uri: sound_uri.map(|s| s.to_string()),
+            sound_title: None,
+            revision: 1,
+        }
+    }
+
+    #[test]
+    fn schedules_a_newly_enabled_alarm() {
+        let previous = alarm(false, None, None);
+        let current = alarm(true, Some(1_000), None);
+
+        assert_eq!(
+            classify_scheduling_transition(Some(&previous), &current),
+            SchedulingTransition::Schedule
+        );
+    }
+
+    #[test]
+    fn schedules_a_brand_new_alarm_with_no_previous_state() {
+        let current = alarm(true, Some(1_000), None);
+
+        assert_eq!(
+            classify_scheduling_transition(None, &current),
+            SchedulingTransition::Schedule
+        );
+    }
+
+    #[test]
+    fn cancels_as_disabled_when_the_user_toggles_off() {
+        let previous = alarm(true, Some(1_000), None);
+        let current = alarm(false, Some(1_000), None);
+
+        assert_eq!(
+            classify_scheduling_transition(Some(&previous), &current),
+            SchedulingTransition::Cancel(CancelReason::Disabled)
+        );
+    }
+
+    #[test]
+    fn cancels_as_updated_when_still_enabled_but_no_longer_has_a_trigger() {
+        let previous = alarm(true, Some(1_000), None);
+        let current = alarm(true, None, None);
+
+        assert_eq!(
+            classify_scheduling_transition(Some(&previous), &current),
+            SchedulingTransition::Cancel(CancelReason::Updated)
+        );
+    }
+
+    #[test]
+    fn reschedules_when_the_trigger_time_changes() {
+        let previous = alarm(true, Some(1_000), None);
+        let current = alarm(true, Some(2_000), None);
+
+        assert_eq!(
+            classify_scheduling_transition(Some(&previous), &current),
+            SchedulingTransition::Reschedule
+        );
+    }
+
+    #[test]
+    fn reschedules_when_only_the_sound_changes() {
+        let previous = alarm(true, Some(1_000), Some("a.mp3"));
+        let current = alarm(true, Some(1_000), Some("b.mp3"));
+
+        assert_eq!(
+            classify_scheduling_transition(Some(&previous), &current),
+            SchedulingTransition::Reschedule
+        );
+    }
+
+    #[test]
+    fn does_nothing_when_neither_trigger_nor_sound_changed() {
+        let previous = alarm(true, Some(1_000), Some("a.mp3"));
+        let current = alarm(true, Some(1_000), Some("a.mp3"));
+
+        assert_eq!(
+            classify_scheduling_transition(Some(&previous), &current),
+            SchedulingTransition::NoOp
+        );
+    }
+
+    #[test]
+    fn does_nothing_for_an_alarm_that_was_never_and_still_is_not_scheduled() {
+        let previous = alarm(false, None, None);
+        let current = alarm(false, None, None);
+
+        assert_eq!(
+            classify_scheduling_transition(Some(&previous), &current),
+            SchedulingTransition::NoOp
+        );
+    }
+
+    #[test]
+    fn does_nothing_for_a_brand_new_disabled_alarm_with_no_previous_state() {
+        let current = alarm(false, None, None);
+
+        assert_eq!(
+            classify_scheduling_transition(None, &current),
+            SchedulingTransition::NoOp
+        );
     }
 }

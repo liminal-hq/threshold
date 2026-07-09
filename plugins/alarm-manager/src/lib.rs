@@ -57,28 +57,52 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             let alarm_manager = desktop::init(app, api)?;
             app.manage(alarm_manager);
 
-            // Listen to alarms:changed events
-            setup_event_listener(app.clone());
+            // Registered here (the plugin's own setup) rather than the app's setup hook,
+            // so these listeners are guaranteed to exist before AlarmCoordinator's
+            // heal_on_launch re-emits alarm:scheduled -- Tauri runs plugin setup before
+            // the app's own setup closure, and a listener registered after an event
+            // fires never receives it.
+            setup_scheduling_listeners(app.clone());
 
             Ok(())
         })
         .build()
 }
 
-fn setup_event_listener<R: Runtime>(app: AppHandle<R>) {
-    use serde_json::Value;
+/// Listens for the AlarmCoordinator's granular scheduling events and drives the native
+/// alarm manager directly, in-process -- no webview round-trip required. `ScheduleRequest`/
+/// `CancelRequest` already deserialize a compatible subset of `alarm:scheduled`'s /
+/// `alarm:cancelled`'s payload fields, so no dedicated event types are needed here.
+fn setup_scheduling_listeners<R: Runtime>(app: AppHandle<R>) {
+    let scheduled_app = app.clone();
+    app.listen("alarm:scheduled", move |event| {
+        match serde_json::from_str::<models::ScheduleRequest>(event.payload()) {
+            Ok(request) => {
+                if let Err(error) = scheduled_app.state::<AlarmManager<R>>().schedule(request) {
+                    log::error!(
+                        "alarm-manager: failed to schedule from alarm:scheduled event: {error}"
+                    );
+                }
+            }
+            Err(error) => {
+                log::error!("alarm-manager: failed to parse alarm:scheduled payload: {error}");
+            }
+        }
+    });
 
-    let app_handle = app.clone();
-    app.listen("alarms:changed", move |event| {
-        let payload = event.payload();
-
-        // Parse AlarmRecord array
-        if let Ok(alarms) = serde_json::from_str::<Vec<Value>>(payload) {
-            #[cfg(mobile)]
-            mobile::handle_alarms_changed(&app_handle, alarms);
-
-            #[cfg(desktop)]
-            desktop::handle_alarms_changed(&app_handle, alarms);
+    let cancelled_app = app.clone();
+    app.listen("alarm:cancelled", move |event| {
+        match serde_json::from_str::<models::CancelRequest>(event.payload()) {
+            Ok(request) => {
+                if let Err(error) = cancelled_app.state::<AlarmManager<R>>().cancel(request) {
+                    log::error!(
+                        "alarm-manager: failed to cancel from alarm:cancelled event: {error}"
+                    );
+                }
+            }
+            Err(error) => {
+                log::error!("alarm-manager: failed to parse alarm:cancelled payload: {error}");
+            }
         }
     });
 }

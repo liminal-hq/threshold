@@ -4,10 +4,9 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::models::*;
-use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tauri::{plugin::PluginApi, AppHandle, Emitter, Manager, Runtime};
+use tauri::{plugin::PluginApi, Emitter, Runtime};
 use tokio::task::JoinHandle;
 use tokio::time::{sleep_until, Duration, Instant};
 
@@ -35,19 +34,6 @@ impl<R: Runtime> AlarmManager<R> {
     pub fn cancel(&self, payload: CancelRequest) -> crate::Result<()> {
         self.cancel_internal(payload.id);
         Ok(())
-    }
-
-    pub fn update_alarms(&self, alarms: Vec<Value>) {
-        for alarm in alarms {
-            let id = alarm["id"].as_i64().unwrap_or(0) as i32;
-            let enabled = alarm["enabled"].as_bool().unwrap_or(false);
-            let next_trigger = alarm["nextTrigger"].as_i64();
-
-            match next_trigger {
-                Some(trigger) if enabled => self.schedule_internal(id, trigger),
-                _ => self.cancel_internal(id),
-            }
-        }
     }
 
     fn schedule_internal(&self, id: i32, trigger_at: i64) {
@@ -110,9 +96,4 @@ impl<R: Runtime> AlarmManager<R> {
         println!("Desktop: Stop ringing request received");
         Ok(())
     }
-}
-
-pub fn handle_alarms_changed<R: Runtime>(app: &AppHandle<R>, alarms: Vec<Value>) {
-    let manager = app.state::<AlarmManager<R>>();
-    manager.update_alarms(alarms);
 }
