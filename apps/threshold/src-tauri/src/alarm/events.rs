@@ -84,7 +84,7 @@ pub struct AlarmCancelled {
     pub revision: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 /// Enumerates why a scheduled alarm was cancelled.
 pub enum CancelReason {

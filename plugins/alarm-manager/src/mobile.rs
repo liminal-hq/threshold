@@ -5,13 +5,10 @@
 
 use crate::models::*;
 use serde::Serialize;
-use serde_json::Value;
-use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
 use tauri::{
     ipc::{Channel, InvokeResponseBody},
     plugin::{PluginApi, PluginHandle},
-    AppHandle, Emitter, Manager, Runtime,
+    Emitter, Runtime,
 };
 
 #[derive(Serialize)]
@@ -128,31 +125,21 @@ pub fn init<R: Runtime>(
     #[cfg(not(target_os = "android"))]
     let handle = api.handle().clone();
 
-    Ok(AlarmManager {
-        handle,
-        scheduled_ids: Arc::new(Mutex::new(HashSet::new())),
-    })
+    Ok(AlarmManager { handle })
 }
 
 /// Access to the alarm-manager APIs.
 pub struct AlarmManager<R: Runtime> {
     handle: PluginHandle<R>,
-    scheduled_ids: Arc<Mutex<HashSet<i32>>>,
 }
 
 impl<R: Runtime> AlarmManager<R> {
     pub fn schedule(&self, payload: ScheduleRequest) -> crate::Result<()> {
-        let id = payload.id;
-        self.invoke_schedule(payload)?;
-        self.scheduled_ids.lock().unwrap().insert(id);
-        Ok(())
+        self.invoke_schedule(payload)
     }
 
     pub fn cancel(&self, payload: CancelRequest) -> crate::Result<()> {
-        let id = payload.id;
-        self.invoke_cancel(payload)?;
-        self.scheduled_ids.lock().unwrap().remove(&id);
-        Ok(())
+        self.invoke_cancel(payload)
     }
 
     pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
@@ -209,60 +196,6 @@ impl<R: Runtime> AlarmManager<R> {
             .map_err(Into::into)
     }
 
-    pub fn update_alarms(&self, alarms: Vec<Value>) {
-        #[cfg(target_os = "android")]
-        {
-            let previous_ids = self.scheduled_ids.lock().unwrap().clone();
-            let mut desired_ids = HashSet::new();
-
-            for alarm in alarms {
-                let id = alarm["id"].as_i64().unwrap_or(0) as i32;
-                if id <= 0 {
-                    continue;
-                }
-
-                let enabled = alarm["enabled"].as_bool().unwrap_or(false);
-                let next_trigger = alarm["nextTrigger"].as_i64();
-                let sound_uri = alarm["soundUri"].as_str().map(|s| s.to_string());
-
-                if enabled {
-                    if let Some(trigger) = next_trigger {
-                        desired_ids.insert(id);
-                        let payload = ScheduleRequest {
-                            id,
-                            trigger_at: trigger,
-                            sound_uri,
-                        };
-                        if let Err(error) = self.invoke_schedule(payload) {
-                            log::error!("Failed to schedule alarm {}: {}", id, error);
-                        }
-                    } else {
-                        let payload = CancelRequest { id };
-                        if let Err(error) = self.invoke_cancel(payload) {
-                            log::error!("Failed to cancel alarm {}: {}", id, error);
-                        }
-                    }
-                } else {
-                    if previous_ids.contains(&id) {
-                        let payload = CancelRequest { id };
-                        if let Err(error) = self.invoke_cancel(payload) {
-                            log::error!("Failed to cancel alarm {}: {}", id, error);
-                        }
-                    }
-                }
-            }
-
-            for removed_id in previous_ids.difference(&desired_ids) {
-                let payload = CancelRequest { id: *removed_id };
-                if let Err(error) = self.invoke_cancel(payload) {
-                    log::error!("Failed to cancel removed alarm {}: {}", removed_id, error);
-                }
-            }
-
-            *self.scheduled_ids.lock().unwrap() = desired_ids;
-        }
-    }
-
     fn invoke_schedule(&self, payload: ScheduleRequest) -> crate::Result<()> {
         self.handle
             .run_mobile_plugin("schedule", payload)
@@ -274,9 +207,4 @@ impl<R: Runtime> AlarmManager<R> {
             .run_mobile_plugin("cancel", payload)
             .map_err(Into::into)
     }
-}
-
-pub fn handle_alarms_changed<R: Runtime>(app: &AppHandle<R>, alarms: Vec<Value>) {
-    let manager = app.state::<AlarmManager<R>>();
-    manager.update_alarms(alarms);
 }
