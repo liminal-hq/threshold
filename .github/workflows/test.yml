@@ -152,11 +152,8 @@ jobs:
       contents: read
       packages: read
     container:
-      image: ghcr.io/liminal-hq/threshold/ci-base:latest
+      image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
       options: --user root
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -190,11 +187,8 @@ jobs:
       contents: read
       packages: read
     container:
-      image: ghcr.io/liminal-hq/threshold/ci-base:latest
+      image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
       options: --user root
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6

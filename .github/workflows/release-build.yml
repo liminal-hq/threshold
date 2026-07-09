@@ -342,11 +342,8 @@ jobs:
       run:
         shell: bash
     container:
-      image: ghcr.io/${{ github.repository }}/ci-base:latest
+      image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
       options: --user 0
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6

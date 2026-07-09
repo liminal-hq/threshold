@@ -46,7 +46,7 @@ threshold/
 │   │   ├── ui-task.md
 │   │   └── swipe-to-delete-row.md
 │   ├── infrastructure/
-│   │   └── ghcr-setup.md
+│   │   └── release-build.md
 │   ├── wear-implementation/
 │   │   └── ui-mockups.md
 │   └── ai-agent-usage-guide.md
