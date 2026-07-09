@@ -19,6 +19,13 @@ pub type SnoozeLengthState = Arc<AtomicI32>;
 pub type TimeFormatState = Arc<AtomicBool>;
 /// Whether the phone-side time format has been explicitly initialised from settings.
 pub type TimeFormatKnownState = Arc<AtomicBool>;
+/// Serializes native-import de-dup checks against concurrent import events (e.g. several
+/// SET_ALARM imports queued while the app was cold, then drained back-to-back on
+/// launch) -- without this, two concurrent "check known alarms, then save" sequences
+/// could both see no duplicate and both save, since async tasks can interleave here
+/// unlike the single-threaded JS loop this logic used to run in.
+#[cfg(mobile)]
+pub struct ImportLock(pub tokio::sync::Mutex<()>);
 #[cfg(mobile)]
 use tauri_plugin_alarm_manager::AlarmManagerExt;
 #[cfg(mobile)]
@@ -188,6 +195,9 @@ pub fn run() {
             }).ok();
 
             app.manage(coordinator);
+
+            #[cfg(mobile)]
+            app.manage(ImportLock(tokio::sync::Mutex::new(())));
 
             // Snooze length state — default 10 minutes, updated by frontend
             let snooze_state: SnoozeLengthState = Arc::new(AtomicI32::new(10));
@@ -562,6 +572,16 @@ pub fn run() {
                         let Some(coord) = handle.try_state::<AlarmCoordinator>() else {
                             return;
                         };
+
+                        // Held through the whole check-then-save sequence below so two
+                        // imports racing each other (e.g. several queued while the app was
+                        // cold, drained back-to-back on launch) can't both see "no
+                        // duplicate" and both save -- mirrors the effectively-single-
+                        // threaded guarantee the old TS loop got for free.
+                        let Some(import_lock) = handle.try_state::<ImportLock>() else {
+                            return;
+                        };
+                        let _import_guard = import_lock.0.lock().await;
 
                         let time_str = format!("{:02}:{:02}", payload.hour, payload.minute);
 
