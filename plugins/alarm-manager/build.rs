@@ -7,7 +7,6 @@
 // `run_mobile_plugin` from Rust (e.g. the pipeline-ready handshake) bypass the
 // ACL entirely and must not be listed here.
 const COMMANDS: &[&str] = &[
-    "schedule",
     "cancel",
     "get_launch_args",
     "pick_alarm_sound",

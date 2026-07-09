@@ -143,31 +143,6 @@ describe('AlarmManagerService', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('schedules enabled alarms returned during initial sync', async () => {
-		const service = new AlarmManagerService();
-		const nextTrigger = Date.now() + 60_000;
-
-		(AlarmService.getAll as any).mockResolvedValue([
-			{
-				id: 12,
-				enabled: true,
-				mode: AlarmMode.Fixed,
-				fixedTime: '07:30',
-				activeDays: [1],
-				label: 'Weekday alarm',
-				nextTrigger,
-				soundUri: null,
-				soundTitle: null,
-			},
-		]);
-
-		await service.init();
-
-		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|schedule', {
-			payload: { id: 12, triggerAt: nextTrigger, soundUri: null },
-		});
-	});
-
 	it('never invokes the removed check_active_alarm command during init', async () => {
 		const service = new AlarmManagerService();
 
@@ -209,117 +184,6 @@ describe('AlarmManagerService', () => {
 				actionTypeId: 'upcoming_alarm',
 			}),
 		);
-	});
-
-	it('cancels removed alarms on sync', async () => {
-		const service = new AlarmManagerService();
-		const nextTrigger = Date.now() + 60_000;
-
-		await (service as any).syncNativeAlarms([
-			{
-				id: 7,
-				enabled: true,
-				mode: AlarmMode.Fixed,
-				fixedTime: '06:45',
-				activeDays: [1],
-				label: 'Morning alarm',
-				nextTrigger,
-				soundUri: null,
-				soundTitle: null,
-			},
-		]);
-
-		await (service as any).syncNativeAlarms([]);
-
-		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel', {
-			payload: { id: 7 },
-		});
-	});
-
-	it('re-schedules native alarms when sound changes and trigger stays the same', async () => {
-		const service = new AlarmManagerService();
-		const nextTrigger = Date.now() + 60_000;
-
-		await (service as any).syncNativeAlarms([
-			{
-				id: 7,
-				enabled: true,
-				mode: AlarmMode.Fixed,
-				fixedTime: '06:45',
-				activeDays: [1],
-				label: 'Morning alarm',
-				nextTrigger,
-				soundUri: 'sound://alpha',
-				soundTitle: null,
-			},
-		]);
-
-		await (service as any).syncNativeAlarms([
-			{
-				id: 7,
-				enabled: true,
-				mode: AlarmMode.Fixed,
-				fixedTime: '06:45',
-				activeDays: [1],
-				label: 'Morning alarm',
-				nextTrigger,
-				soundUri: 'sound://beta',
-				soundTitle: null,
-			},
-		]);
-
-		const scheduleCalls = (invoke as any).mock.calls.filter(
-			([command]: [string]) => command === 'plugin:alarm-manager|schedule',
-		);
-		expect(scheduleCalls).toHaveLength(2);
-		expect(scheduleCalls[0][1]).toEqual({
-			payload: { id: 7, triggerAt: nextTrigger, soundUri: 'sound://alpha' },
-		});
-		expect(scheduleCalls[1][1]).toEqual({
-			payload: { id: 7, triggerAt: nextTrigger, soundUri: 'sound://beta' },
-		});
-	});
-
-	it('retries native scheduling when previous schedule attempt failed', async () => {
-		const service = new AlarmManagerService();
-		const nextTrigger = Date.now() + 60_000;
-
-		(invoke as any)
-			.mockRejectedValueOnce(new Error('native unavailable'))
-			.mockResolvedValueOnce(null);
-
-		await (service as any).syncNativeAlarms([
-			{
-				id: 7,
-				enabled: true,
-				mode: AlarmMode.Fixed,
-				fixedTime: '06:45',
-				activeDays: [1],
-				label: 'Morning alarm',
-				nextTrigger,
-				soundUri: 'sound://alpha',
-				soundTitle: null,
-			},
-		]);
-
-		await (service as any).syncNativeAlarms([
-			{
-				id: 7,
-				enabled: true,
-				mode: AlarmMode.Fixed,
-				fixedTime: '06:45',
-				activeDays: [1],
-				label: 'Morning alarm',
-				nextTrigger,
-				soundUri: 'sound://alpha',
-				soundTitle: null,
-			},
-		]);
-
-		const scheduleCalls = (invoke as any).mock.calls.filter(
-			([command]: [string]) => command === 'plugin:alarm-manager|schedule',
-		);
-		expect(scheduleCalls).toHaveLength(2);
 	});
 
 	it('snoozes ringing alarm with now-anchored timestamp and stops ringing', async () => {
@@ -544,12 +408,9 @@ describe('AlarmManagerService', () => {
 		);
 	});
 
-	it('cancels native alarm and upcoming notification when alarm:cancelled fires', async () => {
+	it('cancels the upcoming notification when alarm:cancelled fires (native cancel is Rust-driven)', async () => {
 		const service = new AlarmManagerService();
 		(PlatformUtils.isMobile as any).mockReturnValue(true);
-
-		// Pre-populate the signature map as if the alarm had been scheduled
-		(service as any).scheduledSignatures.set(5, '12345|');
 
 		await service.init();
 
@@ -560,10 +421,8 @@ describe('AlarmManagerService', () => {
 			await handler({ payload: { id: 5, reason: 'DELETED' } });
 		}
 
-		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel', { payload: { id: 5 } });
 		expect(cancel).toHaveBeenCalledWith([1_000_005]);
 		expect(removeActive).toHaveBeenCalledWith([{ id: 1_000_005 }]);
-		expect((service as any).scheduledSignatures.has(5)).toBe(false);
 	});
 
 	it('publishes a snooze confirmation toast when alarm:snoozed fires, for any snooze source', async () => {
@@ -778,10 +637,11 @@ describe('AlarmManagerService', () => {
 
 			await service.init();
 
-			// getAll is called exactly once for the import pass (plus once for the
-			// initial-sync reschedule that follows checkImports in init()).
+			// getAll is called exactly once for the import pass -- native scheduling no
+			// longer does its own initial-sync fetch in init(), so there's nothing else
+			// to call it a second time.
 			const getAllCalls = (AlarmService.getAll as any).mock.calls.length;
-			expect(getAllCalls).toBe(2);
+			expect(getAllCalls).toBe(1);
 			expect(AlarmService.save).toHaveBeenCalledTimes(1);
 		});
 
