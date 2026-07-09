@@ -7,8 +7,8 @@
 
 /* Scoped to the ringing screen's own root element -- must not target body/html
    directly, since this file is bundled app-wide and would otherwise disable
-   scrolling on every other screen too (see App.css for the shared height
-   foundation every screen actually relies on). */
+   scrolling on every other screen too (see components.css for the shared
+   height foundation every screen actually relies on). */
 .ringing-page {
 	margin: 0 !important;
 	padding: 0 !important;
