@@ -155,6 +155,29 @@ describe('AlarmManagerService', () => {
 		expect(invoke).not.toHaveBeenCalledWith('plugin:alarm-manager|check_active_alarm');
 	});
 
+	it('never invokes the native schedule command during init -- that is Rust-driven now', async () => {
+		const service = new AlarmManagerService();
+		const nextTrigger = Date.now() + 60_000;
+
+		(AlarmService.getAll as any).mockResolvedValue([
+			{
+				id: 12,
+				enabled: true,
+				mode: AlarmMode.Fixed,
+				fixedTime: '07:30',
+				activeDays: [1],
+				label: 'Weekday alarm',
+				nextTrigger,
+				soundUri: null,
+				soundTitle: null,
+			},
+		]);
+
+		await service.init();
+
+		expect(invoke).not.toHaveBeenCalledWith('plugin:alarm-manager|schedule', expect.anything());
+	});
+
 	it('schedules upcoming notifications for enabled mobile alarms', async () => {
 		const service = new AlarmManagerService();
 		const nextTrigger = Date.now() + 30 * 60_000;
