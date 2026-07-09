@@ -5,7 +5,6 @@ Default permissions for the alarm-manager plugin
 #### This default permission set includes the following:
 
 - `allow-cancel`
-- `allow-get-launch-args`
 - `allow-pick-alarm-sound`
 - `allow-stop-ringing`
 
@@ -40,32 +39,6 @@ Enables the cancel command without any pre-configured scope.
 <td>
 
 Denies the cancel command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:allow-get-launch-args`
-
-</td>
-<td>
-
-Enables the get_launch_args command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:deny-get-launch-args`
-
-</td>
-<td>
-
-Denies the get_launch_args command without any pre-configured scope.
 
 </td>
 </tr>

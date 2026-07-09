@@ -15,11 +15,6 @@ pub async fn cancel<R: Runtime>(app: AppHandle<R>, payload: CancelRequest) -> Re
 }
 
 #[command]
-pub async fn get_launch_args<R: Runtime>(app: AppHandle<R>) -> Result<Vec<ImportedAlarm>> {
-    app.alarm_manager().get_launch_args()
-}
-
-#[command]
 pub async fn pick_alarm_sound<R: Runtime>(
     app: AppHandle<R>,
     options: PickAlarmSoundOptions,

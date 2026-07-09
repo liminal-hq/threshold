@@ -507,6 +507,126 @@ pub fn run() {
                 }
             });
 
+            // Native alarm import request from alarm-manager plugin (e.g. Android's "Set
+            // Alarm" intent, handled by SetAlarmActivity). Ports the de-dup/staleness
+            // logic that used to live in AlarmManagerService.ts's checkImports() -- now
+            // Rust-internal end to end, so it works even if this event is queued and
+            // replayed before any TS code has run (SetAlarmActivity can launch with the
+            // main process completely cold). Mobile-only: SET_ALARM import has no
+            // desktop equivalent, and AlarmManagerExt is itself only in scope on mobile.
+            #[cfg(mobile)]
+            let import_handle = app.handle().clone();
+            #[cfg(mobile)]
+            app.handle().listen("alarm-manager:import-requested", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct ImportRequested {
+                    id: i32,
+                    hour: i32,
+                    minute: i32,
+                    label: String,
+                    active_days: Vec<i32>,
+                    trigger_at: i64,
+                }
+
+                if let Ok(payload) = serde_json::from_str::<ImportRequested>(event.payload()) {
+                    let handle = import_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        // Always tear down the temporary native alarm SetAlarmActivity
+                        // created -- safe even if it already fired, and needs to happen
+                        // regardless of whether this import turns into a real Threshold
+                        // alarm below.
+                        if let Err(error) = handle
+                            .alarm_manager()
+                            .cancel(tauri_plugin_alarm_manager::CancelRequest { id: payload.id })
+                        {
+                            log::warn!(
+                                "alarm-manager: failed to cancel temp native alarm for import {}: {error}",
+                                payload.id
+                            );
+                        }
+
+                        // A stale import means the one-shot occurrence already passed.
+                        // Re-importing it now would silently turn a single alarm the user
+                        // never asked to keep into an ongoing recurring one, so discard it.
+                        if payload.trigger_at > 0
+                            && chrono::Utc::now().timestamp_millis() >= payload.trigger_at
+                        {
+                            log::info!(
+                                "alarm-manager: skipping stale import {} (past its occurrence)",
+                                payload.id
+                            );
+                            return;
+                        }
+
+                        let Some(coord) = handle.try_state::<AlarmCoordinator>() else {
+                            return;
+                        };
+
+                        let time_str = format!("{:02}:{:02}", payload.hour, payload.minute);
+
+                        let known = match coord.get_all_alarms(&handle).await {
+                            Ok(alarms) => alarms,
+                            Err(error) => {
+                                log::error!(
+                                    "alarm-manager: failed to fetch known alarms for import {}: {error}",
+                                    payload.id
+                                );
+                                return;
+                            }
+                        };
+
+                        let duplicate = known.iter().any(|a| {
+                            a.mode == alarm::AlarmMode::Fixed
+                                && a.fixed_time.as_deref() == Some(time_str.as_str())
+                                && a.label.as_deref() == Some(payload.label.as_str())
+                        });
+
+                        if duplicate {
+                            log::info!("alarm-manager: skipping duplicate import {}", payload.id);
+                            return;
+                        }
+
+                        let active_days = if !payload.active_days.is_empty() {
+                            payload.active_days.clone()
+                        } else {
+                            // No requested days means "one-time" per the SET_ALARM
+                            // contract; Threshold has no true one-shot concept, so fall
+                            // back to the resolved occurrence's weekday.
+                            use chrono::Datelike;
+                            chrono::DateTime::from_timestamp_millis(payload.trigger_at)
+                                .map(|dt| vec![dt.weekday().num_days_from_sunday() as i32])
+                                .unwrap_or_else(|| vec![0])
+                        };
+
+                        let input = alarm::AlarmInput {
+                            id: None,
+                            label: Some(payload.label.clone()),
+                            enabled: true,
+                            mode: alarm::AlarmMode::Fixed,
+                            fixed_time: Some(time_str),
+                            window_start: None,
+                            window_end: None,
+                            active_days,
+                            sound_uri: None,
+                            sound_title: None,
+                        };
+
+                        match coord.save_alarm(&handle, input).await {
+                            Ok(saved) => log::info!(
+                                "alarm-manager: imported native alarm {} as Threshold alarm {}",
+                                payload.id,
+                                saved.id
+                            ),
+                            Err(error) => log::error!(
+                                "alarm-manager: failed to save imported alarm {}: {error}",
+                                payload.id
+                            ),
+                        }
+                    });
+                }
+            });
+
             #[cfg(mobile)]
             if let Err(error) = app.handle().wear_sync().mark_watch_pipeline_ready() {
                 log::warn!("watch: failed to mark watch pipeline ready: {error}");

@@ -1,21 +1,18 @@
-// Coordinates alarm lifecycle, native import handling, and ringing UI orchestration --
-// native scheduling itself is driven directly by Rust (see plugins/alarm-manager's
-// alarm:scheduled/alarm:cancelled listeners), not from here.
+// Coordinates alarm lifecycle and ringing UI orchestration -- native scheduling and
+// native "Set Alarm" imports are both driven directly by Rust now (see
+// plugins/alarm-manager's alarm:scheduled/alarm:cancelled/import-requested listeners),
+// not from here.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import { APP_NAME } from '../constants';
 import { listen, emit } from '@tauri-apps/api/event';
-import {
-	cancel as cancelNative,
-	getLaunchArgs,
-	stopRinging as stopRingingNative,
-} from 'tauri-plugin-alarm-manager-api';
+import { stopRinging as stopRingingNative } from 'tauri-plugin-alarm-manager-api';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { Alarm } from '@threshold/core/types';
-import { AlarmInput, AlarmRecord, AlarmMode } from '../types/alarm';
+import { AlarmInput, AlarmRecord } from '../types/alarm';
 import { AlarmService } from './AlarmService';
 import { SettingsService } from './SettingsService';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
@@ -176,9 +173,9 @@ export class AlarmManagerService {
 				);
 				console.log('[AlarmManager] Event listener 6/6 registered.');
 
-				console.log('[AlarmManager] Checking for native imports...');
-				await this.checkImports();
-				console.log('[AlarmManager] Native imports check complete.');
+				// Native imports (e.g. Android's "Set Alarm" intent) are handled entirely in
+				// Rust now -- the alarm-manager plugin's import Channel dispatches or queues
+				// them independently of whether this init() has even run yet.
 
 				// Native scheduling no longer needs an initial sync here -- Rust's own
 				// heal_on_launch re-emits alarm:scheduled for every enabled alarm on startup,
@@ -283,75 +280,6 @@ export class AlarmManagerService {
 			}
 
 			await alarmNotificationService.scheduleUpcomingNotification(alarm, alarm.nextTrigger);
-		}
-	}
-
-	// Check for alarms created natively (e.g. via "Set Alarm" intent)
-	private async checkImports() {
-		let imports: Awaited<ReturnType<typeof getLaunchArgs>>;
-		let knownAlarms: AlarmRecord[];
-
-		try {
-			imports = await getLaunchArgs();
-			if (imports.length === 0) return;
-
-			console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
-			knownAlarms = await AlarmService.getAll();
-		} catch (e) {
-			console.error('Failed to check imports', e);
-			return;
-		}
-
-		// Each import is handled in its own try/catch so one failure (e.g. a transient
-		// save error) doesn't abort the rest of the batch -- otherwise imports after the
-		// failed one would silently go unprocessed (and their temp native alarms
-		// uncancelled) until the next time the app happens to open.
-		for (const imp of imports) {
-			try {
-				// Cancel the 'temporary' native alarm created by the Intent. Safe to call
-				// even if it already fired -- cancellation is idempotent.
-				await this.cancelNativeAlarm(imp.id);
-
-				// A stale import means the one-shot occurrence already passed (the temp
-				// native alarm already rang, or was due to). Re-importing it now would
-				// silently turn a single alarm the user never asked to keep into an
-				// ongoing recurring one, so discard it instead.
-				if (imp.triggerAt && Date.now() >= imp.triggerAt) {
-					console.log('[AlarmManager] Skipping stale import (past its occurrence):', imp);
-					continue;
-				}
-
-				const timeStr = `${imp.hour.toString().padStart(2, '0')}:${imp.minute.toString().padStart(2, '0')}`;
-
-				const duplicate = knownAlarms.find(
-					(a) => a.mode === AlarmMode.Fixed && a.fixedTime === timeStr && a.label === imp.label,
-				);
-
-				if (duplicate) {
-					console.log('Skipping duplicate import:', imp);
-					continue;
-				}
-
-				const activeDays =
-					imp.activeDays.length > 0 ? imp.activeDays : [new Date(imp.triggerAt).getDay()];
-
-				const newAlarm: AlarmInput = {
-					label: imp.label,
-					mode: AlarmMode.Fixed,
-					fixedTime: timeStr,
-					activeDays,
-					enabled: true,
-				};
-
-				const saved = await this.saveAndSchedule(newAlarm);
-				knownAlarms.push(saved);
-			} catch (e) {
-				console.error(
-					'[AlarmManager] Failed to import native alarm, continuing with remaining imports:',
-					imp,
-					e,
-				);
-			}
 		}
 	}
 
@@ -462,14 +390,6 @@ export class AlarmManagerService {
 			await stopRingingNative();
 		} catch (e) {
 			console.error('Failed to stop ringing', e);
-		}
-	}
-
-	private async cancelNativeAlarm(id: number) {
-		try {
-			await cancelNative({ id });
-		} catch (e) {
-			console.error('Failed to cancel native alarm', e);
 		}
 	}
 }
