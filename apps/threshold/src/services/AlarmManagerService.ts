@@ -336,35 +336,49 @@ export class AlarmManagerService {
 	private async checkImports() {
 		try {
 			const imports = await getLaunchArgs();
-			if (imports.length > 0) {
-				console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
-				for (const imp of imports) {
-					// Deduplication Check
-					const allAlarms = await AlarmService.getAll();
-					const timeStr = `${imp.hour.toString().padStart(2, '0')}:${imp.minute.toString().padStart(2, '0')}`;
+			if (imports.length === 0) return;
 
-					const duplicate = allAlarms.find(
-						(a) => a.mode === AlarmMode.Fixed && a.fixedTime === timeStr && a.label === imp.label,
-					);
+			console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
+			const knownAlarms = await AlarmService.getAll();
 
-					if (duplicate) {
-						console.log('Skipping duplicate import:', imp);
-						continue;
-					}
+			for (const imp of imports) {
+				// Cancel the 'temporary' native alarm created by the Intent. Safe to call
+				// even if it already fired -- cancellation is idempotent.
+				await this.cancelNativeAlarm(imp.id);
 
-					// Cancel the 'temporary' native alarm created by the Intent
-					await this.cancelNativeAlarm(imp.id);
-
-					const newAlarm: AlarmInput = {
-						label: imp.label,
-						mode: AlarmMode.Fixed,
-						fixedTime: timeStr,
-						activeDays: [0, 1, 2, 3, 4, 5, 6],
-						enabled: true,
-					};
-
-					await this.saveAndSchedule(newAlarm);
+				// A stale import means the one-shot occurrence already passed (the temp
+				// native alarm already rang, or was due to). Re-importing it now would
+				// silently turn a single alarm the user never asked to keep into an
+				// ongoing recurring one, so discard it instead.
+				if (imp.triggerAt && Date.now() >= imp.triggerAt) {
+					console.log('[AlarmManager] Skipping stale import (past its occurrence):', imp);
+					continue;
 				}
+
+				const timeStr = `${imp.hour.toString().padStart(2, '0')}:${imp.minute.toString().padStart(2, '0')}`;
+
+				const duplicate = knownAlarms.find(
+					(a) => a.mode === AlarmMode.Fixed && a.fixedTime === timeStr && a.label === imp.label,
+				);
+
+				if (duplicate) {
+					console.log('Skipping duplicate import:', imp);
+					continue;
+				}
+
+				const activeDays =
+					imp.activeDays.length > 0 ? imp.activeDays : [new Date(imp.triggerAt).getDay()];
+
+				const newAlarm: AlarmInput = {
+					label: imp.label,
+					mode: AlarmMode.Fixed,
+					fixedTime: timeStr,
+					activeDays,
+					enabled: true,
+				};
+
+				const saved = await this.saveAndSchedule(newAlarm);
+				knownAlarms.push(saved);
 			}
 		} catch (e) {
 			console.error('Failed to check imports', e);
@@ -375,9 +389,8 @@ export class AlarmManagerService {
 		await AlarmService.toggle(alarm.id, enabled);
 	}
 
-	async saveAndSchedule(alarm: AlarmInput) {
-		const saved = await AlarmService.save(alarm);
-		return saved.id;
+	async saveAndSchedule(alarm: AlarmInput): Promise<AlarmRecord> {
+		return await AlarmService.save(alarm);
 	}
 
 	async deleteAlarm(id: number) {

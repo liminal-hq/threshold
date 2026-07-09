@@ -11,6 +11,8 @@ import android.os.Bundle
 import android.provider.AlarmClock
 import android.util.Log
 import java.util.Calendar
+import org.json.JSONArray
+import org.json.JSONObject
 
 class SetAlarmActivity : Activity() {
 
@@ -51,6 +53,17 @@ class SetAlarmActivity : Activity() {
 
         val triggerAt = calendar.timeInMillis
 
+        // EXTRA_DAYS uses Calendar.SUNDAY(1)..SATURDAY(7); Threshold's activeDays uses 0=Sunday..6=Saturday.
+        // Absent EXTRA_DAYS means "one-time, next occurrence only" per the SET_ALARM contract -- Threshold
+        // has no true one-shot concept (every alarm recurs on activeDays), so the honest translation is a
+        // single-day array for whichever weekday this resolved occurrence already falls on.
+        val requestedDays = intent.getIntegerArrayListExtra(AlarmClock.EXTRA_DAYS)
+        val activeDays = if (requestedDays != null && requestedDays.isNotEmpty()) {
+            requestedDays.map { it - 1 }
+        } else {
+            listOf(calendar.get(Calendar.DAY_OF_WEEK) - 1)
+        }
+
         // 3. Generate ID (Random for now, or timestamp based)
         val id = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
 
@@ -60,7 +73,7 @@ class SetAlarmActivity : Activity() {
         // 5. Store "Launch Payload" for React to import later
         // We persist this payload in SharedPrefs distinct from the alarm schedule
         // so that when the app opens, it can read it and sync to SQLite.
-        saveImportPayload(id, hour, minutes, message)
+        saveImportPayload(id, hour, minutes, message, activeDays, triggerAt)
 
         // 6. Launch App if not skipping UI
         if (!skipUi) {
@@ -75,9 +88,22 @@ class SetAlarmActivity : Activity() {
         }
     }
 
-    private fun saveImportPayload(id: Int, hour: Int, minutes: Int, label: String) {
+    private fun saveImportPayload(
+        id: Int,
+        hour: Int,
+        minutes: Int,
+        label: String,
+        activeDays: List<Int>,
+        triggerAt: Long
+    ) {
         val prefs = getSharedPreferences("ThresholdImports", MODE_PRIVATE)
-        val importString = "$hour:$minutes|$label"
-        prefs.edit().putString("import_$id", importString).apply()
+        val payload = JSONObject().apply {
+            put("hour", hour)
+            put("minute", minutes)
+            put("label", label)
+            put("activeDays", JSONArray(activeDays))
+            put("triggerAt", triggerAt)
+        }
+        prefs.edit().putString("import_$id", payload.toString()).apply()
     }
 }
