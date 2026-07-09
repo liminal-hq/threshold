@@ -16,6 +16,11 @@ import {
 	Stack,
 	FormHelperText,
 	Paper,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogContentText,
+	DialogActions,
 } from '@mui/material';
 import { MobileToolbar } from '../components/MobileToolbar';
 import { Close as CloseIcon } from '@mui/icons-material';
@@ -29,6 +34,7 @@ import { parse, format } from 'date-fns';
 import { AlarmService } from '../services/AlarmService';
 import { AlarmInput, AlarmMode } from '../types/alarm';
 import { alarmSoundPickerService } from '../services/AlarmSoundPickerService';
+import { showToast } from 'tauri-plugin-toast-api';
 import { MusicNote as MusicNoteIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 import { Select, MenuItem, FormControl, SelectChangeEvent } from '@mui/material';
 
@@ -61,6 +67,13 @@ const EditAlarm: React.FC = () => {
 	const [soundUri, setSoundUri] = useState<string | null>(null);
 	const [soundTitle, setSoundTitle] = useState<string | null>(null);
 
+	const [daysError, setDaysError] = useState(false);
+	const [imminentTrigger, setImminentTrigger] = useState<number | null>(null);
+
+	// Minutes-until-trigger below which we warn the user before leaving the screen --
+	// catches an accidental Start/End swap in Window mode producing a near-term ring.
+	const IMMINENT_TRIGGER_THRESHOLD_MINUTES = 30;
+
 	useEffect(() => {
 		setIsMobile(PlatformUtils.isMobile());
 	}, []);
@@ -92,7 +105,13 @@ const EditAlarm: React.FC = () => {
 
 	const handleSave = async () => {
 		if (activeDays.length === 0) {
-			alert('Please select at least one day for the alarm to repeat.');
+			setDaysError(true);
+			return;
+		}
+
+		if (mode === AlarmMode.Window && windowStart === windowEnd) {
+			// Inline error already shown below the time pickers -- the scheduler
+			// rejects a zero-length window outright, so don't even round-trip it.
 			return;
 		}
 
@@ -117,11 +136,24 @@ const EditAlarm: React.FC = () => {
 		}
 
 		try {
-			await AlarmService.save(alarmData);
-			navigate({ to: '/home' }); // Go back to home
+			const saved = await AlarmService.save(alarmData);
+
+			if (saved.nextTrigger) {
+				const minutesUntil = (saved.nextTrigger - Date.now()) / 60000;
+				if (minutesUntil >= 0 && minutesUntil <= IMMINENT_TRIGGER_THRESHOLD_MINUTES) {
+					setImminentTrigger(saved.nextTrigger);
+					return;
+				}
+			}
+
+			navigate({ to: '/home' });
 		} catch (e) {
 			console.error('Failed to save alarm:', e);
-			alert('Failed to save alarm. Please try again.');
+			try {
+				await showToast({ message: 'Failed to save alarm. Please try again.', duration: 'long' });
+			} catch (toastError) {
+				console.warn('[EditAlarm] Failed to show save-failure toast', toastError);
+			}
 		}
 	};
 
@@ -294,6 +326,17 @@ const EditAlarm: React.FC = () => {
 									<FormHelperText sx={{ textAlign: 'center' }}>
 										Alarm will ring once randomly between these times.
 									</FormHelperText>
+									{windowStart === windowEnd ? (
+										<FormHelperText error sx={{ textAlign: 'center' }}>
+											Start and end times must be different.
+										</FormHelperText>
+									) : (
+										windowEnd < windowStart && (
+											<FormHelperText sx={{ textAlign: 'center' }}>
+												This window crosses midnight -- it starts today and ends the next day.
+											</FormHelperText>
+										)
+									)}
 								</Stack>
 							)}
 
@@ -311,7 +354,18 @@ const EditAlarm: React.FC = () => {
 								<Typography variant="subtitle2" gutterBottom>
 									Repeats
 								</Typography>
-								<DaySelector selectedDays={activeDays} onChange={setActiveDays} />
+								<DaySelector
+									selectedDays={activeDays}
+									onChange={(days) => {
+										setActiveDays(days);
+										if (days.length > 0) setDaysError(false);
+									}}
+								/>
+								{daysError && (
+									<FormHelperText error>
+										Select at least one day for the alarm to repeat.
+									</FormHelperText>
+								)}
 							</Box>
 
 							<Box sx={{ mt: 3 }}>
@@ -419,6 +473,25 @@ const EditAlarm: React.FC = () => {
 					)}
 				</Container>
 			</Box>
+
+			<Dialog open={imminentTrigger !== null} onClose={() => setImminentTrigger(null)}>
+				<DialogTitle>This alarm will ring soon</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						{imminentTrigger &&
+							`This alarm's next trigger is around ${format(
+								new Date(imminentTrigger),
+								'h:mm a',
+							)}, less than ${IMMINENT_TRIGGER_THRESHOLD_MINUTES} minutes from now. Keep it as configured, or go back and adjust the times?`}
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setImminentTrigger(null)}>Adjust</Button>
+					<Button variant="contained" onClick={() => navigate({ to: '/home' })}>
+						Keep It
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Box>
 	);
 };
