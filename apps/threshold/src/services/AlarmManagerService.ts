@@ -334,14 +334,26 @@ export class AlarmManagerService {
 
 	// Check for alarms created natively (e.g. via "Set Alarm" intent)
 	private async checkImports() {
+		let imports: Awaited<ReturnType<typeof getLaunchArgs>>;
+		let knownAlarms: AlarmRecord[];
+
 		try {
-			const imports = await getLaunchArgs();
+			imports = await getLaunchArgs();
 			if (imports.length === 0) return;
 
 			console.log(`[AlarmManager] Found ${imports.length} native alarms to import:`, imports);
-			const knownAlarms = await AlarmService.getAll();
+			knownAlarms = await AlarmService.getAll();
+		} catch (e) {
+			console.error('Failed to check imports', e);
+			return;
+		}
 
-			for (const imp of imports) {
+		// Each import is handled in its own try/catch so one failure (e.g. a transient
+		// save error) doesn't abort the rest of the batch -- otherwise imports after the
+		// failed one would silently go unprocessed (and their temp native alarms
+		// uncancelled) until the next time the app happens to open.
+		for (const imp of imports) {
+			try {
 				// Cancel the 'temporary' native alarm created by the Intent. Safe to call
 				// even if it already fired -- cancellation is idempotent.
 				await this.cancelNativeAlarm(imp.id);
@@ -379,9 +391,13 @@ export class AlarmManagerService {
 
 				const saved = await this.saveAndSchedule(newAlarm);
 				knownAlarms.push(saved);
+			} catch (e) {
+				console.error(
+					'[AlarmManager] Failed to import native alarm, continuing with remaining imports:',
+					imp,
+					e,
+				);
 			}
-		} catch (e) {
-			console.error('Failed to check imports', e);
 		}
 	}
 
