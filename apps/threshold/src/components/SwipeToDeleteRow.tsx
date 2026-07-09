@@ -141,7 +141,10 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 				onDrag={handleDrag}
 				onDragEnd={handleDragEnd}
 				animate={controls}
-				style={{ x }}
+				// touchAction must be set on this exact element (not just the outer wrapper) --
+				// Motion needs it here to let the browser handle vertical scroll natively while
+				// still capturing horizontal drag itself, or it captures all touch input.
+				style={{ x, touchAction: 'pan-y' }}
 				onTap={handleTap}
 			>
 				{/* 

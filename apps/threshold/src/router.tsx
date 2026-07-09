@@ -38,6 +38,10 @@ const RootLayout = () => {
 				style={{
 					marginTop: showTitleBar ? '32px' : '0px',
 					height: showTitleBar ? 'calc(100% - 32px)' : '100%',
+					// The single scroll container for every screen -- individual screens should
+					// not manage their own height/overflow. Ringing opts out locally (see
+					// ringing.css) since it's a small fixed-size surface that shouldn't scroll.
+					overflowY: isRingingWindow ? 'hidden' : 'auto',
 					// @ts-ignore - viewTransitionName is not yet in standard React types
 					viewTransitionName: isMobile ? 'wa-route-slot' : undefined,
 				}}

@@ -70,7 +70,7 @@ const Settings: React.FC = () => {
 	};
 
 	return (
-		<Box sx={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+		<Box>
 			{/* Mobile Header: Placed OUTSIDE IonContent to avoid scrolling issues and overlay */}
 			{isMobile && (
 				<MobileToolbar
@@ -82,7 +82,7 @@ const Settings: React.FC = () => {
 					title="Settings"
 				/>
 			)}
-			<Box sx={{ flexGrow: 1 }}>
+			<Box>
 				{/* Desktop Spacing Fix: Adjusted mt to 2 to work with RootLayout spacing */}
 				<Container maxWidth="sm" sx={{ py: 3, mt: !isMobile ? 2 : 0 }}>
 					{!isMobile && (

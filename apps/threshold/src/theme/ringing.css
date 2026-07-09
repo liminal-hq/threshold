@@ -5,9 +5,11 @@
 	-webkit-tap-highlight-color: transparent;
 }
 
-/* Aggressive reset for body/html - use * selector to ensure it applies */
-body,
-html {
+/* Scoped to the ringing screen's own root element -- must not target body/html
+   directly, since this file is bundled app-wide and would otherwise disable
+   scrolling on every other screen too (see App.css for the shared height
+   foundation every screen actually relies on). */
+.ringing-page {
 	margin: 0 !important;
 	padding: 0 !important;
 	overflow: hidden !important;
