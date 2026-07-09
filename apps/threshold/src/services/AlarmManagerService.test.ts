@@ -707,7 +707,14 @@ describe('AlarmManagerService', () => {
 			(invoke as any).mockImplementation((command: string) => {
 				if (command === 'plugin:alarm-manager|get_launch_args') {
 					return Promise.resolve([
-						{ id: 556, hour: 6, minute: 30, label: 'Already rang', activeDays: [3], triggerAt: pastTriggerAt },
+						{
+							id: 556,
+							hour: 6,
+							minute: 30,
+							label: 'Already rang',
+							activeDays: [3],
+							triggerAt: pastTriggerAt,
+						},
 					]);
 				}
 				return Promise.resolve(null);
@@ -726,7 +733,14 @@ describe('AlarmManagerService', () => {
 			(invoke as any).mockImplementation((command: string) => {
 				if (command === 'plugin:alarm-manager|get_launch_args') {
 					return Promise.resolve([
-						{ id: 557, hour: 7, minute: 0, label: 'No days from native', activeDays: [], triggerAt },
+						{
+							id: 557,
+							hour: 7,
+							minute: 0,
+							label: 'No days from native',
+							activeDays: [],
+							triggerAt,
+						},
 					]);
 				}
 				return Promise.resolve(null);
