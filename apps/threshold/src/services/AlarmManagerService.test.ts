@@ -784,5 +784,43 @@ describe('AlarmManagerService', () => {
 			expect(getAllCalls).toBe(2);
 			expect(AlarmService.save).toHaveBeenCalledTimes(1);
 		});
+
+		it('continues processing remaining imports in a batch after one import fails', async () => {
+			const service = new AlarmManagerService();
+			const triggerAt = Date.now() + 60 * 60_000;
+
+			(AlarmService.save as any)
+				.mockRejectedValueOnce(new Error('transient save failure'))
+				.mockResolvedValueOnce({
+					id: 702,
+					label: 'Second alarm',
+					mode: AlarmMode.Fixed,
+					fixedTime: '08:00',
+					activeDays: [3],
+					enabled: true,
+				});
+
+			(invoke as any).mockImplementation((command: string) => {
+				if (command === 'plugin:alarm-manager|get_launch_args') {
+					return Promise.resolve([
+						{ id: 701, hour: 7, minute: 0, label: 'First alarm', activeDays: [2], triggerAt },
+						{ id: 702, hour: 8, minute: 0, label: 'Second alarm', activeDays: [3], triggerAt },
+					]);
+				}
+				return Promise.resolve(null);
+			});
+
+			await service.init();
+
+			// Both imports' temp native alarms get cancelled regardless of the first one's failure.
+			expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel', { payload: { id: 701 } });
+			expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel', { payload: { id: 702 } });
+
+			// The first import's save failed, but the second still went through.
+			expect(AlarmService.save).toHaveBeenCalledTimes(2);
+			expect(AlarmService.save).toHaveBeenCalledWith(
+				expect.objectContaining({ label: 'Second alarm', fixedTime: '08:00' }),
+			);
+		});
 	});
 });
