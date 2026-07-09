@@ -34,6 +34,7 @@ import { parse, format } from 'date-fns';
 import { AlarmService } from '../services/AlarmService';
 import { AlarmInput, AlarmMode } from '../types/alarm';
 import { alarmSoundPickerService } from '../services/AlarmSoundPickerService';
+import { showToast } from 'tauri-plugin-toast-api';
 import { MusicNote as MusicNoteIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 import { Select, MenuItem, FormControl, SelectChangeEvent } from '@mui/material';
 
@@ -108,6 +109,12 @@ const EditAlarm: React.FC = () => {
 			return;
 		}
 
+		if (mode === AlarmMode.Window && windowStart === windowEnd) {
+			// Inline error already shown below the time pickers -- the scheduler
+			// rejects a zero-length window outright, so don't even round-trip it.
+			return;
+		}
+
 		const alarmData: AlarmInput = {
 			label,
 			mode,
@@ -142,7 +149,11 @@ const EditAlarm: React.FC = () => {
 			navigate({ to: '/home' });
 		} catch (e) {
 			console.error('Failed to save alarm:', e);
-			alert('Failed to save alarm. Please try again.');
+			try {
+				await showToast({ message: 'Failed to save alarm. Please try again.', duration: 'long' });
+			} catch (toastError) {
+				console.warn('[EditAlarm] Failed to show save-failure toast', toastError);
+			}
 		}
 	};
 
@@ -315,11 +326,17 @@ const EditAlarm: React.FC = () => {
 									<FormHelperText sx={{ textAlign: 'center' }}>
 										Alarm will ring once randomly between these times.
 									</FormHelperText>
-									{windowEnd <= windowStart && (
-										<FormHelperText sx={{ textAlign: 'center' }}>
-											This window crosses midnight -- it starts today and ends the next
-											day.
+									{windowStart === windowEnd ? (
+										<FormHelperText error sx={{ textAlign: 'center' }}>
+											Start and end times must be different.
 										</FormHelperText>
+									) : (
+										windowEnd < windowStart && (
+											<FormHelperText sx={{ textAlign: 'center' }}>
+												This window crosses midnight -- it starts today and ends the
+												next day.
+											</FormHelperText>
+										)
 									)}
 								</Stack>
 							)}
