@@ -44,7 +44,6 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         // can't read this macro invocation directly, so the two lists are maintained
         // by hand in parallel.
         .invoke_handler(tauri::generate_handler![
-            commands::schedule,
             commands::cancel,
             commands::get_launch_args,
             commands::pick_alarm_sound,
@@ -117,7 +116,6 @@ mod acl_tests {
     // `permissions/default.toml`, or the ACL silently denies it at runtime (the
     // exact bug fixed in Threshold issue #195).
     const WEBVIEW_COMMANDS: &[&str] = &[
-        "schedule",
         "cancel",
         "get_launch_args",
         "pick_alarm_sound",

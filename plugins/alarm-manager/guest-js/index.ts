@@ -5,12 +5,6 @@
 
 import { invoke } from '@tauri-apps/api/core';
 
-export interface ScheduleRequest {
-	id: number;
-	triggerAt: number;
-	soundUri?: string | null;
-}
-
 export interface CancelRequest {
 	id: number;
 }
@@ -37,10 +31,6 @@ export interface PickedAlarmSound {
 	uri: string | null;
 	isSilent: boolean;
 	title: string | null;
-}
-
-export async function schedule(payload: ScheduleRequest): Promise<void> {
-	await invoke('plugin:alarm-manager|schedule', { payload });
 }
 
 export async function cancel(payload: CancelRequest): Promise<void> {

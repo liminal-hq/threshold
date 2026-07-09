@@ -1,7 +1,6 @@
 [default]
 description = "Default permissions for the alarm-manager plugin"
 permissions = [
-    "allow-schedule",
     "allow-cancel",
     "allow-get-launch-args",
     "allow-pick-alarm-sound",

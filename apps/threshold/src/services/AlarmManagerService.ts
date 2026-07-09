@@ -1,4 +1,6 @@
-// Coordinates alarm lifecycle, native scheduling sync, and ringing UI orchestration
+// Coordinates alarm lifecycle, native import handling, and ringing UI orchestration --
+// native scheduling itself is driven directly by Rust (see plugins/alarm-manager's
+// alarm:scheduled/alarm:cancelled listeners), not from here.
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -6,7 +8,6 @@
 import { APP_NAME } from '../constants';
 import { listen, emit } from '@tauri-apps/api/event';
 import {
-	schedule as scheduleNative,
 	cancel as cancelNative,
 	getLaunchArgs,
 	stopRinging as stopRingingNative,
@@ -30,7 +31,6 @@ type NotificationUpcomingResyncPayload = NotificationUpcomingResyncEvent | null 
 export class AlarmManagerService {
 	private initPromise: Promise<void> | null = null;
 	private router: any = null;
-	private scheduledSignatures = new Map<number, string>();
 
 	public setRouter(router: any) {
 		this.router = router;
@@ -117,11 +117,11 @@ export class AlarmManagerService {
 				console.log('[AlarmManager] Event listener 1/6 registered.');
 
 				console.log('[AlarmManager] Setting up event listener 2/6: alarms:batch:updated...');
-				// Listen for batch events and refresh native schedule
+				// Native scheduling itself is driven Rust-side now (the alarm-manager plugin
+				// listens directly to alarm:scheduled/alarm:cancelled) -- this only resyncs the
+				// JS-rendered "upcoming" pre-notifications, an unrelated UI concern.
 				await listen('alarms:batch:updated', async () => {
 					console.log('[AlarmManager] Received alarms:batch:updated event');
-					const alarms = await AlarmService.getAll();
-					await this.syncNativeAlarms(alarms);
 					await alarmNotificationService.requestUpcomingResync({
 						reason: 'alarm-batch-updated',
 					});
@@ -129,17 +129,14 @@ export class AlarmManagerService {
 				console.log('[AlarmManager] Event listener 2/6 registered.');
 
 				console.log('[AlarmManager] Setting up event listener 3/6: alarm:cancelled...');
-				// Eagerly cancel native alarm and upcoming notification when Rust emits alarm:cancelled.
-				// This fires before alarms:batch:updated and closes the race window where a cancelled
-				// alarm could still fire if the BroadcastReceiver was already dispatched.
+				// Native cancellation is handled Rust-side now; this only cancels the upcoming
+				// pre-notification, which is a separate JS-rendered concern.
 				await listen<{ id: number; reason: string }>('alarm:cancelled', async (event) => {
 					const { id } = event.payload;
 					console.log(
 						`[AlarmManager] Received alarm:cancelled for id=${id}, reason=${event.payload.reason}`,
 					);
-					await this.cancelNativeAlarm(id);
 					await alarmNotificationService.cancelUpcomingNotification(id);
-					this.scheduledSignatures.delete(id);
 				});
 				console.log('[AlarmManager] Event listener 3/6 registered.');
 
@@ -183,10 +180,9 @@ export class AlarmManagerService {
 				await this.checkImports();
 				console.log('[AlarmManager] Native imports check complete.');
 
-				console.log('[AlarmManager] Rescheduling all alarms...');
-				// Initial sync
-				const alarms = await AlarmService.getAll();
-				await this.syncNativeAlarms(alarms);
+				// Native scheduling no longer needs an initial sync here -- Rust's own
+				// heal_on_launch re-emits alarm:scheduled for every enabled alarm on startup,
+				// which the alarm-manager plugin's listener picks up directly.
 				await alarmNotificationService.requestUpcomingResync({ reason: 'manual' });
 				console.log('[AlarmManager] Reschedule complete.');
 
@@ -265,48 +261,6 @@ export class AlarmManagerService {
 		} catch (e) {
 			console.warn('[AlarmManager] Failed to publish toast confirmation', e);
 		}
-	}
-
-	/**
-	 * Sync native alarms with the current state from Rust
-	 */
-	private async syncNativeAlarms(alarms: AlarmRecord[]) {
-		const currentIds = new Set<number>();
-
-		for (const alarm of alarms) {
-			currentIds.add(alarm.id);
-
-			if (alarm.enabled && alarm.nextTrigger && alarm.nextTrigger > Date.now()) {
-				const nextSignature = this.getNativeScheduleSignature(alarm.nextTrigger, alarm.soundUri);
-				const previousSignature = this.scheduledSignatures.get(alarm.id);
-				if (previousSignature !== nextSignature) {
-					const scheduled = await this.scheduleNativeAlarm(
-						alarm.id,
-						alarm.nextTrigger,
-						alarm.soundUri,
-					);
-					if (scheduled) {
-						this.scheduledSignatures.set(alarm.id, nextSignature);
-					}
-				}
-			} else {
-				if (this.scheduledSignatures.has(alarm.id)) {
-					await this.cancelNativeAlarm(alarm.id);
-					this.scheduledSignatures.delete(alarm.id);
-				}
-			}
-		}
-
-		const toCancel = [...this.scheduledSignatures.keys()].filter((id) => !currentIds.has(id));
-		for (const id of toCancel) {
-			console.log(`[AlarmManager] Alarm ${id} removed, cancelling native schedule.`);
-			await this.cancelNativeAlarm(id);
-			this.scheduledSignatures.delete(id);
-		}
-	}
-
-	private getNativeScheduleSignature(timestamp: number, soundUri?: string | null): string {
-		return `${timestamp}|${soundUri ?? ''}`;
 	}
 
 	private async resyncUpcomingNotifications(
@@ -430,21 +384,6 @@ export class AlarmManagerService {
 		const snoozedUntil = Math.max(Date.now() + 60_000, anchor + minutes * 60_000);
 		await alarmNotificationService.cancelUpcomingNotification(id);
 		await AlarmService.snooze(id, snoozedUntil);
-	}
-
-	private async scheduleNativeAlarm(
-		id: number,
-		timestamp: number,
-		soundUri?: string | null,
-	): Promise<boolean> {
-		console.log(`Scheduling alarm ${id} for ${new Date(timestamp).toLocaleString()}`);
-		try {
-			await scheduleNative({ id, triggerAt: timestamp, soundUri });
-			return true;
-		} catch (e: any) {
-			console.error('Failed to schedule native alarm', e.message || e.toString());
-			return false;
-		}
 	}
 
 	private async handleAlarmRing(id: number) {

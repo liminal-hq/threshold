@@ -4,7 +4,6 @@ Default permissions for the alarm-manager plugin
 
 #### This default permission set includes the following:
 
-- `allow-schedule`
 - `allow-cancel`
 - `allow-get-launch-args`
 - `allow-pick-alarm-sound`
@@ -93,32 +92,6 @@ Enables the pick_alarm_sound command without any pre-configured scope.
 <td>
 
 Denies the pick_alarm_sound command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:allow-schedule`
-
-</td>
-<td>
-
-Enables the schedule command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`alarm-manager:deny-schedule`
-
-</td>
-<td>
-
-Denies the schedule command without any pre-configured scope.
 
 </td>
 </tr>
