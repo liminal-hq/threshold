@@ -51,5 +51,5 @@ await listen<PredictiveBackEvent>(PREDICTIVE_BACK_EVENT, (event) => {
 
 ## Architecture Guidelines
 
-- **Manifest Injection:** This plugin owns its (currently empty) permission block via `build.rs`, but `android:enableOnBackInvokedCallback="true"` -- required on `<application>` for any of this to activate -- can't be injected by a plugin at all (it's an attribute on an already-open tag, which `update_android_manifest()` has no path to). See `apps/threshold/src-tauri/build.rs`, which patches it in directly and idempotently on every Android build instead.
+- **Manifest Injection:** This plugin owns its (currently empty) permission block via `build.rs`. The other manifest requirement, `android:enableOnBackInvokedCallback="true"` on `<application>`, ships in the plugin's own `android/src/main/AndroidManifest.xml` and merges into the consuming app's final manifest automatically via Android's standard Gradle library-manifest merge -- the same mechanism `alarm-manager` and `wear-sync` already rely on for their own receivers and services.
 - **Gradle:** Registered via `.android_path("android")` in `build.rs`.
