@@ -372,24 +372,28 @@ impl AlarmCoordinator {
     pub async fn heal_on_launch<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
         log::info!("🔧 Starting heal-on-launch: syncing alarm-manager cache with DB");
 
+        let now = chrono::Utc::now().timestamp_millis();
         let alarms = self.get_all_alarms(app).await?;
-        let enabled_count = alarms
-            .iter()
-            .filter(|a| a.enabled && a.next_trigger.is_some())
-            .count();
+        // An elapsed next_trigger means the alarm already fired and hasn't been advanced to
+        // its next occurrence yet (that only happens once the user dismisses/snoozes it) --
+        // re-emitting scheduling for it here would hand Kotlin a trigger time in the past,
+        // and AlarmManager.setAlarmClock() fires immediately on a past trigger, causing the
+        // alarm to ring a second time moments after the app cold-starts off its own firing.
+        let due: Vec<_> = alarms
+            .into_iter()
+            .filter(|a| a.enabled && a.next_trigger.is_some_and(|t| t > now))
+            .collect();
 
         log::info!(
             "Found {} enabled alarms, re-emitting scheduling events",
-            enabled_count
+            due.len()
         );
 
-        for alarm in alarms {
-            if alarm.enabled && alarm.next_trigger.is_some() {
-                // Re-emit scheduling event to heal SharedPreferences cache
-                // We use the alarm's *current* revision because we aren't changing it, just re-syncing
-                self.emit_alarm_scheduled(app, &alarm, alarm.revision)
-                    .await?;
-            }
+        for alarm in due {
+            // Re-emit scheduling event to heal SharedPreferences cache
+            // We use the alarm's *current* revision because we aren't changing it, just re-syncing
+            self.emit_alarm_scheduled(app, &alarm, alarm.revision)
+                .await?;
         }
 
         log::info!("✅ Heal-on-launch complete");
