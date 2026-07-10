@@ -3,7 +3,7 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-import { getTimeFormat } from 'tauri-plugin-time-prefs-api';
+import { getTimeFormat } from 'tauri-plugin-os-prefs-api';
 import { PlatformUtils } from './PlatformUtils';
 
 export const TimePrefs = {
