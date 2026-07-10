@@ -49,6 +49,16 @@ restore_gen_android() {
 	git -C "$REPO_ROOT" checkout -- "$GEN_ANDROID" 2>/dev/null || true
 	git -C "$REPO_ROOT" clean -fd "$GEN_ANDROID" >/dev/null 2>&1 || true
 }
+
+# This script force-restores gen/android to HEAD when it's done (see restore_gen_android
+# above), which would silently discard any real uncommitted work under that tree -- not just
+# its own regeneration. Refuse to run rather than risk losing an in-progress edit.
+if [ -n "$(git -C "$REPO_ROOT" status --porcelain -- "$GEN_ANDROID")" ]; then
+	echo "${COLOUR_RED}${GEN_ANDROID} has uncommitted changes -- commit, stash, or discard them before running this script.${COLOUR_RESET}" >&2
+	echo "This script force-restores that directory to HEAD when it finishes, which would discard them." >&2
+	exit 1
+fi
+
 trap restore_gen_android EXIT
 
 mkdir -p "$OUT_DIR"
