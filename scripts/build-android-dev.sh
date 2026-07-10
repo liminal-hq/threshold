@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Builds an isolated "Threshold Dev" debug APK for side-by-side testing
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 # Builds an isolated "Threshold Dev" debug APK (ca.liminalhq.threshold.dev), installable
 # side-by-side with a real release install, using the shared tauri-dev-mobile container
 # so no local Android SDK/NDK setup is needed. gen/android is generated and tracked for
@@ -14,9 +19,6 @@
 # without that, each fresh `docker run --rm` would auto-generate a new random debug key,
 # so every build would be signed differently and `adb install -r` over a previous run's
 # install would fail with a signature mismatch instead of updating in place.
-#
-# (c) Copyright 2026 Liminal HQ, Scott Morris
-# SPDX-License-Identifier: Apache-2.0 OR MIT
 
 set -euo pipefail
 
