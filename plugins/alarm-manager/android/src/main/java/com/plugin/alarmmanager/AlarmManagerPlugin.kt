@@ -216,10 +216,32 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         super.load(webView)
         instance = this
         Log.d(TAG, "Plugin loaded.")
+        applyRingingWindowFlags(activity.intent)
         drainPendingAlarmEvents()
         drainPendingSnoozeEvents()
         drainPendingDismissEvents()
         drainPendingImportEvents()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        // TauriActivity's own onNewIntent dispatches here but doesn't update the activity's
+        // intent itself -- without this, activity.intent stays pinned to the stale cold-start
+        // intent instead of the one carrying the alarm trigger data.
+        activity.intent = intent
+        applyRingingWindowFlags(intent)
+    }
+
+    // The manifest's showWhenLocked/turnScreenOn attributes alone aren't reliably honoured
+    // for an activity launched via a notification's full-screen intent on every OS version --
+    // set them again here as a defensive backstop so the ringing screen actually occludes the
+    // keyguard instead of appearing underneath it. Scoped to the ringing deep link only, so a
+    // normal app launch while the phone is locked still requires authentication as expected.
+    private fun applyRingingWindowFlags(intent: Intent?) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) return
+        if (intent?.data?.host == "ringing") {
+            activity.setShowWhenLocked(true)
+            activity.setTurnScreenOn(true)
+        }
     }
 
     @Command
@@ -266,6 +288,14 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             action = AlarmRingingService.ACTION_DISMISS
         }
         activity.startService(intent)
+        // Every path out of the ringing screen (dismiss, snooze, silence-timeout) calls this,
+        // so it's the one place to clear the keyguard-bypass flags applyRingingWindowFlags()
+        // set -- otherwise they'd stay on for the rest of this Activity instance's life, and a
+        // later, unrelated app open while locked could bypass the lock screen too.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            activity.setShowWhenLocked(false)
+            activity.setTurnScreenOn(false)
+        }
         invoke.resolve()
     }
 
