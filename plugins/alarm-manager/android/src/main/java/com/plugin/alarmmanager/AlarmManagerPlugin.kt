@@ -43,16 +43,6 @@ class CancelRequest {
 }
 
 @InvokeArg
-class ImportedAlarm {
-    var id: Int = 0
-    var hour: Int = 0
-    var minute: Int = 0
-    var label: String = ""
-    var activeDays: List<Int> = emptyList()
-    var triggerAt: Long = 0
-}
-
-@InvokeArg
 class PickAlarmSoundOptions {
     var existingUri: String? = null
     var title: String? = null
@@ -75,11 +65,17 @@ class DismissEventHandlerArgs {
     lateinit var handler: Channel
 }
 
+@InvokeArg
+class ImportEventHandlerArgs {
+    lateinit var handler: Channel
+}
+
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
     private var alarmEventChannel: Channel? = null
     private var snoozeEventChannel: Channel? = null
     private var dismissEventChannel: Channel? = null
+    private var importEventChannel: Channel? = null
     @Volatile
     private var alarmPipelineReady: Boolean = false
 
@@ -89,6 +85,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         private const val KEY_PENDING_ALARM_EVENTS = "pending_alarm_events"
         private const val KEY_PENDING_SNOOZE_EVENTS = "pending_snooze_events"
         private const val KEY_PENDING_DISMISS_EVENTS = "pending_dismiss_events"
+        private const val KEY_PENDING_IMPORT_EVENTS = "pending_import_events"
 
         @Volatile
         var instance: AlarmManagerPlugin? = null
@@ -137,6 +134,30 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         }
 
         @Synchronized
+        fun notifyImportRequested(
+            context: Context,
+            id: Int,
+            hour: Int,
+            minute: Int,
+            label: String,
+            activeDays: List<Int>,
+            triggerAt: Long,
+        ) {
+            if (id <= 0) return
+
+            val plugin = instance
+            if (plugin != null &&
+                plugin.dispatchImportRequestedEvent(id, hour, minute, label, activeDays, triggerAt)
+            ) {
+                Log.d(TAG, "Dispatched import requested immediately: id=$id")
+                return
+            }
+
+            queueImportEvent(context, id, hour, minute, label, activeDays, triggerAt)
+            Log.i(TAG, "Queued import requested event (plugin/channel not ready): id=$id")
+        }
+
+        @Synchronized
         private fun queueAlarmEvent(context: Context, alarmId: Int, actualFiredAt: Long) {
             val prefs = context.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
             val queue = JSONArray(prefs.getString(KEY_PENDING_ALARM_EVENTS, "[]"))
@@ -166,15 +187,61 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             })
             prefs.edit().putString(KEY_PENDING_DISMISS_EVENTS, queue.toString()).apply()
         }
+
+        @Synchronized
+        private fun queueImportEvent(
+            context: Context,
+            id: Int,
+            hour: Int,
+            minute: Int,
+            label: String,
+            activeDays: List<Int>,
+            triggerAt: Long,
+        ) {
+            val prefs = context.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
+            val queue = JSONArray(prefs.getString(KEY_PENDING_IMPORT_EVENTS, "[]"))
+            queue.put(JSONObject().apply {
+                put("id", id)
+                put("hour", hour)
+                put("minute", minute)
+                put("label", label)
+                put("activeDays", JSONArray(activeDays))
+                put("triggerAt", triggerAt)
+            })
+            prefs.edit().putString(KEY_PENDING_IMPORT_EVENTS, queue.toString()).apply()
+        }
     }
 
     override fun load(webView: WebView) {
         super.load(webView)
         instance = this
         Log.d(TAG, "Plugin loaded.")
+        applyRingingWindowFlags(activity.intent)
         drainPendingAlarmEvents()
         drainPendingSnoozeEvents()
         drainPendingDismissEvents()
+        drainPendingImportEvents()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        // TauriActivity's own onNewIntent dispatches here but doesn't update the activity's
+        // intent itself -- without this, activity.intent stays pinned to the stale cold-start
+        // intent instead of the one carrying the alarm trigger data.
+        activity.intent = intent
+        applyRingingWindowFlags(intent)
+    }
+
+    // The manifest's showWhenLocked/turnScreenOn attributes alone aren't reliably honoured
+    // for an activity launched via a notification's full-screen intent on every OS version --
+    // set them again here as a defensive backstop so the ringing screen actually occludes the
+    // keyguard instead of appearing underneath it. Scoped to the ringing deep link only, so a
+    // normal app launch while the phone is locked still requires authentication as expected.
+    private fun applyRingingWindowFlags(intent: Intent?) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) return
+        if (intent?.data?.host == "ringing") {
+            activity.setShowWhenLocked(true)
+            activity.setTurnScreenOn(true)
+        }
     }
 
     @Command
@@ -221,6 +288,14 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             action = AlarmRingingService.ACTION_DISMISS
         }
         activity.startService(intent)
+        // Every path out of the ringing screen (dismiss, snooze, silence-timeout) calls this,
+        // so it's the one place to clear the keyguard-bypass flags applyRingingWindowFlags()
+        // set -- otherwise they'd stay on for the rest of this Activity instance's life, and a
+        // later, unrelated app open while locked could bypass the lock screen too.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            activity.setShowWhenLocked(false)
+            activity.setTurnScreenOn(false)
+        }
         invoke.resolve()
     }
 
@@ -249,12 +324,21 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     }
 
     @Command
+    fun setImportEventHandler(invoke: Invoke) {
+        val args = invoke.parseArgs(ImportEventHandlerArgs::class.java)
+        importEventChannel = args.handler
+        Log.d(TAG, "Import event handler channel registered")
+        invoke.resolve()
+    }
+
+    @Command
     fun markAlarmPipelineReady(invoke: Invoke) {
         alarmPipelineReady = true
         Log.d(TAG, "Alarm pipeline marked ready")
         drainPendingAlarmEvents()
         drainPendingSnoozeEvents()
         drainPendingDismissEvents()
+        drainPendingImportEvents()
         invoke.resolve()
     }
 
@@ -290,62 +374,6 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         } else {
             invoke.reject("cancelled")
         }
-    }
-
-    @Command
-    fun getLaunchArgs(invoke: Invoke) {
-        // Check for imported alarms from SetAlarmActivity
-        val prefs = activity.getSharedPreferences("ThresholdImports", Context.MODE_PRIVATE)
-        val allImports = prefs.all
-        val importsList = mutableListOf<ImportedAlarm>()
-
-        for ((key, value) in allImports) {
-            if (key.startsWith("import_") && value is String) {
-                // Always remove the entry, whether or not it parses -- a malformed or
-                // unparseable payload must never be retried forever.
-                try {
-                    val id = key.removePrefix("import_").toInt()
-                    val json = JSONObject(value)
-                    val daysArray = json.optJSONArray("activeDays")
-                    val activeDays = mutableListOf<Int>()
-                    if (daysArray != null) {
-                        for (i in 0 until daysArray.length()) {
-                            activeDays.add(daysArray.getInt(i))
-                        }
-                    }
-
-                    val import = ImportedAlarm()
-                    import.id = id
-                    import.hour = json.getInt("hour")
-                    import.minute = json.getInt("minute")
-                    import.label = json.getString("label")
-                    import.activeDays = activeDays
-                    import.triggerAt = json.optLong("triggerAt", 0)
-                    importsList.add(import)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to parse import: $value", e)
-                } finally {
-                    prefs.edit().remove(key).apply()
-                }
-            }
-        }
-
-        val ret = JSObject()
-        val array = JSArray()
-
-        for (alarm in importsList) {
-            val alarmObj = JSObject()
-            alarmObj.put("id", alarm.id)
-            alarmObj.put("hour", alarm.hour)
-            alarmObj.put("minute", alarm.minute)
-            alarmObj.put("label", alarm.label)
-            alarmObj.put("activeDays", JSArray(alarm.activeDays))
-            alarmObj.put("triggerAt", alarm.triggerAt)
-            array.put(alarmObj)
-        }
-
-        ret.put("value", array)
-        invoke.resolve(ret)
     }
 
     private fun dispatchSnoozeRequestedEvent(alarmId: Int): Boolean {
@@ -390,6 +418,33 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             true
         } catch (e: Exception) {
             Log.w(TAG, "Failed to dispatch native alarm fired event", e)
+            false
+        }
+    }
+
+    private fun dispatchImportRequestedEvent(
+        id: Int,
+        hour: Int,
+        minute: Int,
+        label: String,
+        activeDays: List<Int>,
+        triggerAt: Long,
+    ): Boolean {
+        if (!alarmPipelineReady) return false
+        val channel = importEventChannel ?: return false
+        return try {
+            val event = JSObject().apply {
+                put("id", id)
+                put("hour", hour)
+                put("minute", minute)
+                put("label", label)
+                put("activeDays", JSArray(activeDays))
+                put("triggerAt", triggerAt)
+            }
+            channel.send(event)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to dispatch import requested event", e)
             false
         }
     }
@@ -484,5 +539,40 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         prefs.edit().putString(KEY_PENDING_DISMISS_EVENTS, remaining.toString()).apply()
         Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued dismiss requested event(s)")
+    }
+
+    @Synchronized
+    private fun drainPendingImportEvents() {
+        if (!alarmPipelineReady) return
+        val channel = importEventChannel ?: return
+        val prefs = activity.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
+        val rawQueue = prefs.getString(KEY_PENDING_IMPORT_EVENTS, "[]") ?: "[]"
+        val queue = JSONArray(rawQueue)
+        if (queue.length() == 0) return
+
+        val remaining = JSONArray()
+        for (i in 0 until queue.length()) {
+            val item = queue.optJSONObject(i) ?: continue
+            val id = item.optInt("id", -1)
+            if (id <= 0) continue
+
+            try {
+                val event = JSObject().apply {
+                    put("id", id)
+                    put("hour", item.optInt("hour", 0))
+                    put("minute", item.optInt("minute", 0))
+                    put("label", item.optString("label", ""))
+                    put("activeDays", item.optJSONArray("activeDays") ?: JSONArray())
+                    put("triggerAt", item.optLong("triggerAt", 0))
+                }
+                channel.send(event)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to replay queued import requested event id=$id", e)
+                remaining.put(item)
+            }
+        }
+
+        prefs.edit().putString(KEY_PENDING_IMPORT_EVENTS, remaining.toString()).apply()
+        Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued import requested event(s)")
     }
 }

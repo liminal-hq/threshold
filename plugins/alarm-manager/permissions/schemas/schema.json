@@ -307,18 +307,6 @@
           "markdownDescription": "Denies the cancel command without any pre-configured scope."
         },
         {
-          "description": "Enables the get_launch_args command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-launch-args",
-          "markdownDescription": "Enables the get_launch_args command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the get_launch_args command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-launch-args",
-          "markdownDescription": "Denies the get_launch_args command without any pre-configured scope."
-        },
-        {
           "description": "Enables the pick_alarm_sound command without any pre-configured scope.",
           "type": "string",
           "const": "allow-pick-alarm-sound",
@@ -343,10 +331,10 @@
           "markdownDescription": "Denies the stop_ringing command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-cancel`\n- `allow-get-launch-args`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`",
+          "description": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-cancel`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-cancel`\n- `allow-get-launch-args`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`"
+          "markdownDescription": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-cancel`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`"
         }
       ]
     }

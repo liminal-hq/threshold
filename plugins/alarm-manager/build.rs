@@ -6,12 +6,7 @@
 // Webview-invokable surface only. Commands reached exclusively via
 // `run_mobile_plugin` from Rust (e.g. the pipeline-ready handshake) bypass the
 // ACL entirely and must not be listed here.
-const COMMANDS: &[&str] = &[
-    "cancel",
-    "get_launch_args",
-    "pick_alarm_sound",
-    "stop_ringing",
-];
+const COMMANDS: &[&str] = &["cancel", "pick_alarm_sound", "stop_ringing"];
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)

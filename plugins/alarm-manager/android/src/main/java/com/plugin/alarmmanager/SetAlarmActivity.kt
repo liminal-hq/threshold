@@ -11,8 +11,6 @@ import android.os.Bundle
 import android.provider.AlarmClock
 import android.util.Log
 import java.util.Calendar
-import org.json.JSONArray
-import org.json.JSONObject
 
 // EXTRA_DAYS uses Calendar.SUNDAY(1)..SATURDAY(7); Threshold's activeDays uses 0=Sunday..6=Saturday.
 // Absent/empty requestedDays means "one-time, next occurrence only" per the SET_ALARM contract --
@@ -76,10 +74,20 @@ class SetAlarmActivity : Activity() {
         // 4. Schedule Native (also persists to SharedPrefs for boot recovery)
         AlarmUtils.scheduleAlarm(this, id, triggerAt, null)
 
-        // 5. Store "Launch Payload" for React to import later
-        // We persist this payload in SharedPrefs distinct from the alarm schedule
-        // so that when the app opens, it can read it and sync to SQLite.
-        saveImportPayload(id, hour, minutes, message, activeDays, triggerAt)
+        // 5. Hand off to Rust for real import -- dispatched immediately through the
+        // plugin's Channel if the app is already running and ready, or queued in
+        // SharedPreferences (same convention as the alarm-fired/snooze/dismiss events)
+        // to be drained once the pipeline is ready, since this Activity can be launched
+        // by the OS with the main Tauri process completely cold.
+        AlarmManagerPlugin.notifyImportRequested(
+            applicationContext,
+            id,
+            hour,
+            minutes,
+            message,
+            activeDays,
+            triggerAt,
+        )
 
         // 6. Launch App if not skipping UI
         if (!skipUi) {
@@ -94,22 +102,4 @@ class SetAlarmActivity : Activity() {
         }
     }
 
-    private fun saveImportPayload(
-        id: Int,
-        hour: Int,
-        minutes: Int,
-        label: String,
-        activeDays: List<Int>,
-        triggerAt: Long
-    ) {
-        val prefs = getSharedPreferences("ThresholdImports", MODE_PRIVATE)
-        val payload = JSONObject().apply {
-            put("hour", hour)
-            put("minute", minutes)
-            put("label", label)
-            put("activeDays", JSONArray(activeDays))
-            put("triggerAt", triggerAt)
-        }
-        prefs.edit().putString("import_$id", payload.toString()).apply()
-    }
 }

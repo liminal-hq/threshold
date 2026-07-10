@@ -81,10 +81,6 @@ impl<R: Runtime> AlarmManager<R> {
         }
     }
 
-    pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
-        Ok(vec![])
-    }
-
     pub fn pick_alarm_sound(
         &self,
         _options: PickAlarmSoundOptions,

@@ -19,13 +19,20 @@ pub struct CancelRequest {
     pub id: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportedAlarm {
     pub id: i32,
     pub hour: i32,
     pub minute: i32,
     pub label: String,
+    /// Days of week this alarm is active on, 0=Sunday..6=Saturday. Empty means
+    /// "one-time" per the SET_ALARM contract -- Kotlin already resolves this to a
+    /// single-day array before sending, so it's non-empty in practice, but the type
+    /// doesn't promise that.
+    pub active_days: Vec<i32>,
+    /// Epoch millis of the originally-computed one-shot occurrence, for staleness checks.
+    pub trigger_at: i64,
 }
 
 // Kotlin's PickAlarmSoundOptions arg class declares non-null fields with
@@ -76,4 +83,32 @@ pub struct NativeSnoozeRequestedPayload {
 #[serde(rename_all = "camelCase")]
 pub struct NativeDismissRequestedPayload {
     pub id: i32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn imported_alarm_deserializes_active_days_and_trigger_at_from_kotlins_wire_shape() {
+        // Mirrors the exact JSON AlarmManagerPlugin.kt's getLaunchArgs/import channel
+        // sends -- activeDays and triggerAt were silently dropped by an earlier version
+        // of this struct that didn't declare them, since serde ignores unknown fields
+        // by default rather than erroring. That bug never surfaced in TS unit tests
+        // because those mock invoke() directly with objects that already included both
+        // fields, bypassing this struct's real (de)serialization entirely.
+        let json = r#"{
+            "id": 12345,
+            "hour": 7,
+            "minute": 30,
+            "label": "Wake up",
+            "activeDays": [1, 3, 5],
+            "triggerAt": 1783656000000
+        }"#;
+
+        let imported: ImportedAlarm = serde_json::from_str(json).expect("should deserialize");
+
+        assert_eq!(imported.active_days, vec![1, 3, 5]);
+        assert_eq!(imported.trigger_at, 1783656000000);
+    }
 }

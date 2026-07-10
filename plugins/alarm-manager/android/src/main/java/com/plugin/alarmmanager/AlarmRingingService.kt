@@ -80,7 +80,7 @@ class AlarmRingingService : Service() {
 
         Log.d(TAG, "Starting service for alarm $currentAlarmId with sound $soundUriStr")
 
-        startForegroundNotification()
+        startForegroundNotification(buildLaunchIntent())
         playAudio(soundUriStr)
         startVibration()
 
@@ -99,7 +99,21 @@ class AlarmRingingService : Service() {
         }
     }
 
-    private fun startForegroundNotification() {
+    // Launch intent for the in-app ringing screen, delivered via the notification's full-screen
+    // intent below -- a raw startActivity() call from this service is blocked by Android's
+    // background-activity-launch restrictions (BAL_BLOCK), even during the alarm-clock temp
+    // allowlist window, since that exemption covers starting the foreground service itself, not
+    // an Activity launch from within it. The full-screen-intent PendingIntent path is the one
+    // mechanism the OS actually grants an exemption for here.
+    private fun buildLaunchIntent(): Intent {
+        val deepLinkUri = "threshold://ringing/$currentAlarmId"
+        return Intent(Intent.ACTION_VIEW, Uri.parse(deepLinkUri)).apply {
+            setPackage(packageName)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+    }
+
+    private fun startForegroundNotification(launchIntent: Intent) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -135,13 +149,6 @@ class AlarmRingingService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Launch App Intent with Deep Link
-        val deepLinkUri = "threshold://ringing/$currentAlarmId"
-        val launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLinkUri)).apply {
-            setPackage(packageName)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-
         val contentPendingIntent = PendingIntent.getActivity(
             this,
             currentAlarmId,
@@ -157,6 +164,11 @@ class AlarmRingingService : Service() {
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setFullScreenIntent(contentPendingIntent, true)
             .setOngoing(true)
+            // Without this, the heads-up banner for this same notification can re-render a
+            // few seconds after the full-screen ringing activity is already showing, once the
+            // keyguard-occlude transition settles -- this tells Android not to re-alert once
+            // it's already up.
+            .setOnlyAlertOnce(true)
             .setContentIntent(contentPendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
             .addAction(android.R.drawable.ic_popup_reminder, "Snooze", snoozePendingIntent)

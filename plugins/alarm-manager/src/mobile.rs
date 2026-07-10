@@ -29,6 +29,12 @@ struct DismissEventHandler {
     handler: Channel,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ImportEventHandler {
+    handler: Channel,
+}
+
 // Initialize the plugin
 pub fn init<R: Runtime>(
     app: &tauri::AppHandle<R>,
@@ -120,6 +126,33 @@ pub fn init<R: Runtime>(
             },
         )?;
 
+        // Register a channel for native alarm imports (e.g. from Android's "Set Alarm"
+        // intent, handled by SetAlarmActivity). That Activity can run with the main Tauri
+        // process completely cold, so the payload may arrive queued rather than live --
+        // either way it lands here as an ordinary event, same as the other three.
+        let import_app_handle = app.clone();
+        handle.run_mobile_plugin::<()>(
+            "setImportEventHandler",
+            ImportEventHandler {
+                handler: Channel::new(move |event| {
+                    let payload = match event {
+                        InvokeResponseBody::Json(payload) => {
+                            serde_json::from_str::<ImportedAlarm>(&payload).ok()
+                        }
+                        _ => None,
+                    };
+
+                    if let Some(payload) = payload {
+                        log::info!("alarm-manager: import requested id={}", payload.id);
+                        let _ = import_app_handle.emit("alarm-manager:import-requested", &payload);
+                    } else {
+                        log::warn!("alarm-manager: failed to parse import requested payload");
+                    }
+                    Ok(())
+                }),
+            },
+        )?;
+
         handle
     };
     #[cfg(not(target_os = "android"))]
@@ -140,30 +173,6 @@ impl<R: Runtime> AlarmManager<R> {
 
     pub fn cancel(&self, payload: CancelRequest) -> crate::Result<()> {
         self.invoke_cancel(payload)
-    }
-
-    pub fn get_launch_args(&self) -> crate::Result<Vec<ImportedAlarm>> {
-        let payload: serde_json::Value = self
-            .handle
-            .run_mobile_plugin("getLaunchArgs", ())
-            .map_err(crate::Error::from)?;
-
-        // Compatibility: accept either direct array payloads or `{ value: [...] }`
-        // wrapper objects from the Android plugin.
-        let alarms_value = match payload {
-            serde_json::Value::Array(_) => payload,
-            serde_json::Value::Object(map) => map
-                .get("value")
-                .cloned()
-                .unwrap_or(serde_json::Value::Array(vec![])),
-            _ => serde_json::Value::Array(vec![]),
-        };
-
-        serde_json::from_value::<Vec<ImportedAlarm>>(alarms_value).map_err(|error| {
-            crate::Error::MobilePlugin(format!(
-                "failed to deserialize launch args payload: {error}"
-            ))
-        })
     }
 
     pub fn pick_alarm_sound(

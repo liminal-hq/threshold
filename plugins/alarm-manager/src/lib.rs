@@ -45,7 +45,6 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         // by hand in parallel.
         .invoke_handler(tauri::generate_handler![
             commands::cancel,
-            commands::get_launch_args,
             commands::pick_alarm_sound,
             commands::stop_ringing
         ])
@@ -115,12 +114,7 @@ mod acl_tests {
     // Every command here MUST have a matching `allow-*` permission in
     // `permissions/default.toml`, or the ACL silently denies it at runtime (the
     // exact bug fixed in Threshold issue #195).
-    const WEBVIEW_COMMANDS: &[&str] = &[
-        "cancel",
-        "get_launch_args",
-        "pick_alarm_sound",
-        "stop_ringing",
-    ];
+    const WEBVIEW_COMMANDS: &[&str] = &["cancel", "pick_alarm_sound", "stop_ringing"];
 
     const DEFAULT_TOML: &str = include_str!("../permissions/default.toml");
 

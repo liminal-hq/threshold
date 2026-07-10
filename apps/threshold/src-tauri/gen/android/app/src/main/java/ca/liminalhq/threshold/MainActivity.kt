@@ -8,9 +8,4 @@ class MainActivity : TauriActivity() {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
   }
-
-  override fun onNewIntent(intent: android.content.Intent) {
-    super.onNewIntent(intent)
-    setIntent(intent)
-  }
 }
