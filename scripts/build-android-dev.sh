@@ -29,8 +29,6 @@ DEV_CONFIG="{\"identifier\":\"$DEV_IDENTIFIER\",\"productName\":\"Threshold Dev\
 OUT_DIR="${THRESHOLD_DEV_APK_DIR:-$HOME/threshold-dev-builds}"
 GEN_ANDROID="apps/threshold/src-tauri/gen/android"
 TARGET="${THRESHOLD_DEV_TARGET:-aarch64}"
-DEV_PKG_PATH="$(echo "$DEV_IDENTIFIER" | tr '.' '/')"
-MAIN_ACTIVITY_STAGE="$REPO_ROOT/.threshold-dev-mainactivity.kt.tmp"
 
 if [ -t 1 ]; then
 	COLOUR_RESET=$'\033[0m'
@@ -50,7 +48,6 @@ restore_gen_android() {
 	echo "${COLOUR_YELLOW}Restoring ${GEN_ANDROID} to its committed (real-app) state...${COLOUR_RESET}"
 	git -C "$REPO_ROOT" checkout -- "$GEN_ANDROID" 2>/dev/null || true
 	git -C "$REPO_ROOT" clean -fd "$GEN_ANDROID" >/dev/null 2>&1 || true
-	rm -f "$MAIN_ACTIVITY_STAGE"
 }
 trap restore_gen_android EXIT
 
@@ -60,15 +57,6 @@ BUILD_TARGET_ARG=""
 if [ "$TARGET" != "universal" ]; then
 	BUILD_TARGET_ARG="--target $TARGET"
 fi
-
-# `tauri android init` regenerates MainActivity.kt from Tauri's stock template under the
-# .dev package path, which would drop hand-added Kotlin customisations (e.g. the
-# showWhenLocked/turnScreenOn keyguard backstop for the ringing screen). Stage the real
-# app's MainActivity.kt here (package line rewritten for the .dev identifier) so it can be
-# copied back into place after init but before the build step.
-sed "s/^package .*/package $DEV_IDENTIFIER/" \
-	"$REPO_ROOT/$GEN_ANDROID/app/src/main/java/ca/liminalhq/threshold/MainActivity.kt" \
-	>"$MAIN_ACTIVITY_STAGE"
 
 docker run --rm \
 	-v "$REPO_ROOT:/workspace" \
@@ -81,7 +69,6 @@ docker run --rm \
 		set -e
 		rm -rf '$GEN_ANDROID'
 		pnpm --filter threshold tauri android init --config '$DEV_CONFIG'
-		cp '.threshold-dev-mainactivity.kt.tmp' '$GEN_ANDROID/app/src/main/java/$DEV_PKG_PATH/MainActivity.kt'
 		pnpm --filter threshold tauri android build --debug $BUILD_TARGET_ARG --config '$DEV_CONFIG'
 	"
 
