@@ -32,4 +32,5 @@ dependencies {
     // For @RequiresApi -- androidx.core-ktx (which other plugins pull in for this transitively)
     // is overkill here since nothing else in this plugin needs it.
     implementation("androidx.annotation:annotation:1.7.1")
+    testImplementation("junit:junit:4.13.2")
 }
