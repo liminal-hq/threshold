@@ -15,6 +15,9 @@
 		"build:wear": "bash scripts/build-wear.sh",
 		"dev:desktop": "pnpm --filter threshold tauri dev --config '{\"app\":{\"withGlobalTauri\":true}}'",
 		"dev:android": "pnpm --filter threshold tauri android dev",
+		"dev:android:isolated": "pnpm --filter threshold tauri android dev --debug --config '{\"identifier\":\"ca.liminalhq.threshold.dev\",\"productName\":\"Threshold Dev\"}'",
+		"build:android:isolated": "pnpm --filter threshold tauri android build --debug --config '{\"identifier\":\"ca.liminalhq.threshold.dev\",\"productName\":\"Threshold Dev\"}'",
+		"build:android:dev": "bash scripts/build-android-dev.sh",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"lint:mermaid": "bash scripts/lint-mermaid.sh"
