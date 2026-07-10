@@ -32,7 +32,7 @@ threshold/
 │   │   └── implementation-roadmap.md
 │   ├── plugins/
 │   │   ├── alarm-manager.md
-│   │   ├── time-prefs.md
+│   │   ├── os-prefs.md
 │   │   ├── wear-sync.md
 │   │   ├── plugin-manifest-pattern.md
 │   │   ├── plugin-manifest-quickstart.md
@@ -52,7 +52,7 @@ threshold/
 │   └── ai-agent-usage-guide.md
 └── plugins/
     ├── alarm-manager/
-    ├── time-prefs/
+    ├── os-prefs/
     └── wear-sync/
 ```
 

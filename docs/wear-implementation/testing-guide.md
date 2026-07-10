@@ -230,7 +230,7 @@ all other tags.
 # Phone — full filter (app + plugins + wear-sync + errors from any tag)
 adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* \
   AlarmReceiver:* AlarmRingingService:* BootReceiver:* \
-  SetAlarmActivity:* AlarmService:* ThemeUtils:* TimePrefsPlugin:* \
+  SetAlarmActivity:* AlarmService:* ThemeUtils:* OsPrefsPlugin:* \
   chromium:I Tauri/Console:* *:E \
   WearSyncPlugin:* WearMessageService:* WearSyncService:* \
   WearSyncCache:* BatchCollector:*

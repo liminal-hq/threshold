@@ -29,7 +29,7 @@ pnpm workspace monorepo + Cargo workspace:
   variant names (`Fixed`/`Window`) exactly, since it's referenced by the generated
   types below via `#[ts(type = "AlarmMode")]`
 - `plugins/*` — custom Tauri plugins (alarm-manager, wear-sync, theme-utils,
-  time-prefs, toast, app-management), each with Rust `src/` and Kotlin `android/`
+  os-prefs, predictive-back, toast, app-management), each with Rust `src/` and Kotlin `android/`
 - `vendor/tauri-plugins-workspace` — submodule for the vendored notification plugin
 
 ## Commands
