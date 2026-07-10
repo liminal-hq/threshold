@@ -1,0 +1,71 @@
+/*
+  Predictive-back gesture "peek" -- reveals the real previous screen underneath the
+  current one, live-transformed by the native gesture's progress (RouteStage.tsx).
+*/
+
+.wa-route-stage {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+.wa-route-top {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	z-index: 2;
+	/* Without an opaque background of its own, translating this layer away reveals the
+	   underlay bleeding through its transparent regions instead of just the area to its side.
+	   `--app-background-colour` is this app's existing theme token for exactly this (see
+	   theme/themes.ts, components.css) -- `background-color: inherit` doesn't work here, since
+	   it inherits the ancestor's computed background-color (almost always transparent unless
+	   explicitly set), not a custom property. */
+	background-color: var(--app-background-colour, #fff);
+	will-change: transform, opacity;
+	/* --predictive-back-duration is set once at startup by AnimationScale.ts, scaled by
+	   Android's Developer Options animator duration scale (default 1x -> 220ms). */
+	transition:
+		transform var(--predictive-back-duration, 220ms) ease-out,
+		opacity var(--predictive-back-duration, 220ms) ease-out;
+}
+
+/* Same --predictive-back-duration variable as .wa-route-top above. */
+.wa-route-underlay {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	overflow: hidden;
+	transform-origin: center;
+	background-color: var(--app-background-colour, #fff);
+	will-change: transform;
+	transition: transform var(--predictive-back-duration, 220ms) ease-out;
+}
+
+/* Suspended while a gesture is actively dragging so per-frame progress updates track the
+   finger 1:1 -- re-enabled the instant the gesture ends, animating the snap back (cancelled)
+   or the brief settle (committed). */
+.wa-route-top.wa-dragging,
+.wa-route-underlay.wa-dragging {
+	transition: none;
+}
+
+.wa-route-underlay-scrim {
+	position: absolute;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.3);
+	pointer-events: none;
+}
+
+/* The underlay is only ever rendered while it can't be interacted with anyway (mid-gesture),
+   but this makes that explicit rather than incidental. */
+.wa-route-underlay {
+	pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wa-route-top,
+	.wa-route-underlay {
+		transition: none;
+	}
+}

@@ -7,7 +7,6 @@ import {
 	createRootRoute,
 	createRoute,
 	createRouter,
-	Outlet,
 	redirect,
 	useLocation,
 } from '@tanstack/react-router';
@@ -19,6 +18,7 @@ import EditAlarm from './screens/EditAlarm';
 import Ringing from './screens/Ringing';
 import Settings from './screens/Settings';
 import { routeTransitions } from './utils/RouteTransitions';
+import RouteStage from './components/RouteStage';
 
 // Root layout component
 const RootLayout = () => {
@@ -46,7 +46,7 @@ const RootLayout = () => {
 					viewTransitionName: isMobile ? 'wa-route-slot' : undefined,
 				}}
 			>
-				<Outlet />
+				<RouteStage />
 			</div>
 		</>
 	);

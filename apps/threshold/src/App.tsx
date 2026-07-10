@@ -27,6 +27,8 @@ import { isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notif
 import './theme/components.css';
 import './theme/transitions.css';
 import { routeTransitions } from './utils/RouteTransitions';
+import { predictiveBackController } from './utils/PredictiveBackController';
+import { AnimationScale } from './utils/AnimationScale';
 import { SettingsService } from './services/SettingsService';
 import { alarmManagerService } from './services/AlarmManagerService';
 import { ROUTES } from './constants';
@@ -172,6 +174,15 @@ const App: React.FC = () => {
 			}
 		};
 		initBackButton();
+
+		if (os === 'android') {
+			predictiveBackController.init().catch((e) => {
+				console.error('Failed to initialize predictive back controller', e);
+			});
+			AnimationScale.init().catch((e) => {
+				console.error('Failed to initialize animation scale', e);
+			});
+		}
 	}, []);
 
 	return (

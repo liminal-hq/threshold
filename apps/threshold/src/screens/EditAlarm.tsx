@@ -40,8 +40,16 @@ import { Select, MenuItem, FormControl, SelectChangeEvent } from '@mui/material'
 
 const BUNDLED_ALARMS = [{ title: 'Ambient Drone', uri: '/alarms/ambient_drone.flac' }];
 
-const EditAlarm: React.FC = () => {
-	const { id } = useParams({ from: '/edit/$id' });
+interface EditAlarmProps {
+	// Set only when RouteStage renders this screen standalone as the predictive-back underlay
+	// (i.e. it isn't the router's actual active match, so `useParams({ from: '/edit/$id' })`
+	// would throw). Read straight from the underlay's cached path, not guessed.
+	idOverride?: string;
+}
+
+const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
+	const params = useParams({ strict: false });
+	const id = idOverride ?? (params.id as string);
 	const navigate = useNavigate();
 	const isNew = id === 'new';
 	const is24h = SettingsService.getIs24h();
