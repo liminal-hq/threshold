@@ -1,15 +1,11 @@
 # Tauri Plugin OS Prefs
 
-Native OS preference reads for Threshold -- the custom counterpart to the official
-`@tauri-apps/plugin-os` (which covers static device info like platform/arch/version): this one
-covers dynamic user *preferences* Android exposes that the official plugin doesn't, such as the
-system time format and animation speed.
+Native OS preference reads for Threshold -- the custom counterpart to the official `@tauri-apps/plugin-os` (which covers static device info like platform/arch/version): this one covers dynamic user _preferences_ Android exposes that the official plugin doesn't, such as the system time format and animation speed.
 
 Provides:
 
 - The user's preferred time format (12-hour or 24-hour).
-- Developer Options' "Animator duration scale" (0x/0.5x/1x/2x/5x/10x), for scaling CSS-driven
-  animations proportionally with a user's chosen debug/accessibility speed.
+- Developer Options' "Animator duration scale" (0x/0.5x/1x/2x/5x/10x), for scaling CSS-driven animations proportionally with a user's chosen debug/accessibility speed.
 
 ## Android Permissions
 
@@ -17,10 +13,8 @@ This plugin requires the following permissions:
 
 ### None Required
 
-- **Purpose:** This plugin uses standard Android APIs (`DateFormat.is24HourFormat`,
-  `Settings.Global.getFloat`) that do not require any specific manifest permissions.
-- **Manifest Injection:** The plugin implements the Threshold manifest injection pattern, but
-  currently injects an empty permission block.
+- **Purpose:** This plugin uses standard Android APIs (`DateFormat.is24HourFormat`, `Settings.Global.getFloat`) that do not require any specific manifest permissions.
+- **Manifest Injection:** The plugin implements the Threshold manifest injection pattern, but currently injects an empty permission block.
 
 ## Setup
 

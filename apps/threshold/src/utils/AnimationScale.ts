@@ -32,10 +32,7 @@ export const AnimationScale = {
 		}
 
 		if (typeof document !== 'undefined') {
-			document.documentElement.style.setProperty(
-				CSS_VARIABLE,
-				`${BASE_SETTLE_MS * cachedScale}ms`,
-			);
+			document.documentElement.style.setProperty(CSS_VARIABLE, `${BASE_SETTLE_MS * cachedScale}ms`);
 		}
 	},
 

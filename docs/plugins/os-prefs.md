@@ -4,7 +4,7 @@
 **Status:** Active
 **Platforms:** Android (native), iOS (stub), Desktop (Intl fallback / static defaults)
 
-> This document describes the `os-prefs` Tauri plugin, which reads native OS *preferences* Android exposes that the official `@tauri-apps/plugin-os` (static device info: platform/arch/version) doesn't cover -- the system time format and animation speed. For plugin development patterns, see [Plugin Manifest Pattern](plugin-manifest-pattern.md).
+> This document describes the `os-prefs` Tauri plugin, which reads native OS _preferences_ Android exposes that the official `@tauri-apps/plugin-os` (static device info: platform/arch/version) doesn't cover -- the system time format and animation speed. For plugin development patterns, see [Plugin Manifest Pattern](plugin-manifest-pattern.md).
 
 ## Purpose
 

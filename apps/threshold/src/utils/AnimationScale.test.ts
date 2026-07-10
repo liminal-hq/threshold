@@ -35,9 +35,7 @@ describe('AnimationScale', () => {
 		await AnimationScale.init();
 
 		expect(AnimationScale.getSettleDurationMs()).toBe(220);
-		expect(document.documentElement.style.getPropertyValue('--predictive-back-duration')).toBe(
-			'',
-		);
+		expect(document.documentElement.style.getPropertyValue('--predictive-back-duration')).toBe('');
 	});
 
 	it('scales the settle duration and sets the CSS variable on Android', async () => {
