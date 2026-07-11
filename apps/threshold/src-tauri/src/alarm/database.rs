@@ -203,10 +203,16 @@ impl AlarmDatabase {
             .execute(&mut *tx)
             .await?;
 
-        // Create tombstone
+        // Create tombstone. Upserts on a repeat delete of the same id (e.g. a retried
+        // watch-originated delete message) rather than erroring on the alarm_id primary key --
+        // refreshing to the retry's revision/timestamp is correct since it may be newer.
         sqlx::query(
             "INSERT INTO alarm_tombstones (alarm_id, deleted_at_revision, deleted_at_timestamp, label)
-             VALUES (?, ?, ?, ?)"
+             VALUES (?, ?, ?, ?)
+             ON CONFLICT(alarm_id) DO UPDATE SET
+                deleted_at_revision = excluded.deleted_at_revision,
+                deleted_at_timestamp = excluded.deleted_at_timestamp,
+                label = excluded.label"
         )
         .bind(id)
         .bind(revision)
@@ -954,6 +960,31 @@ mod tests {
 
         let rev2 = db.next_revision().await.unwrap();
         db.delete_with_revision(alarm.id, rev2).await.unwrap();
+
+        let deleted_ids = db.get_deleted_since_revision(rev1).await.unwrap();
+        assert_eq!(deleted_ids.len(), 1);
+        assert_eq!(deleted_ids[0], alarm.id);
+    }
+
+    #[tokio::test]
+    async fn test_delete_with_revision_is_idempotent_on_repeat_delete() {
+        // A retried watch-originated delete for an already-deleted alarm must not error --
+        // alarm_tombstones.alarm_id is a primary key, so re-inserting the same id used to
+        // violate it and surface as a spurious Err from delete_alarm.
+        let db = setup_test_db().await;
+
+        let input = AlarmInput {
+            label: Some("To Delete".into()),
+            ..Default::default()
+        };
+        let rev1 = db.next_revision().await.unwrap();
+        let alarm = db.save(input, None, rev1).await.unwrap();
+
+        let rev2 = db.next_revision().await.unwrap();
+        db.delete_with_revision(alarm.id, rev2).await.unwrap();
+
+        let rev3 = db.next_revision().await.unwrap();
+        db.delete_with_revision(alarm.id, rev3).await.unwrap();
 
         let deleted_ids = db.get_deleted_since_revision(rev1).await.unwrap();
         assert_eq!(deleted_ids.len(), 1);
