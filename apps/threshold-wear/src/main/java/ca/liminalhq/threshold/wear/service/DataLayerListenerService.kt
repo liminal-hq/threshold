@@ -289,9 +289,14 @@ internal fun parseSyncPayload(alarmsJson: String): SyncAction {
             }
             "UpToDate" -> SyncAction.UpToDate
             else -> {
-                // No type field — legacy backwards compatibility: parse as a
-                // plain alarm array (batch publish).
-                SyncAction.ReplaceAll(parseAlarmArray(JSONArray(alarmsJson)))
+                // A JSON object with no recognized "type" field isn't a shape we
+                // understand. This can't be the legacy plain-array format -- that's
+                // handled below, once JSONObject(alarmsJson) has already failed --
+                // so report it directly rather than attempting a JSONArray parse
+                // that can only ever throw on an already-confirmed JSON object.
+                SyncAction.ParseFailure(
+                    JSONException("Unrecognized sync payload type: ${root.optString("type")}"),
+                )
             }
         }
     } catch (e: JSONException) {

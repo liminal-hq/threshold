@@ -102,6 +102,16 @@ class SyncPayloadParsingTest {
         assertTrue(action is SyncAction.ParseFailure)
     }
 
+    @Test
+    fun `JSON object with an unrecognized type field resolves to ParseFailure directly`() {
+        // This is a JSON object (not the legacy plain-array shape), so it must not be
+        // treated as a batch-array payload -- confirms the else branch reports a
+        // parse failure directly rather than reusing the legacy-array fallback.
+        val action = parseSyncPayload("""{"type": "SomethingUnknown"}""")
+
+        assertTrue(action is SyncAction.ParseFailure)
+    }
+
     // Note: parseAlarmArray's per-entry error path calls android.util.Log, which
     // isn't mocked under plain JUnit here (no Robolectric in this module), so a
     // "malformed entry is skipped" test isn't included to keep this file running
