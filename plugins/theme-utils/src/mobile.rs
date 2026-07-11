@@ -9,8 +9,6 @@ use tauri::plugin::PluginHandle;
 use tauri::{plugin::PluginApi, AppHandle, Runtime};
 
 use crate::models::MaterialYouResponse;
-#[cfg(not(target_os = "android"))]
-use crate::models::Palettes;
 
 #[cfg(target_os = "android")]
 const PLUGIN_IDENTIFIER: &str = "com.plugin.themeutils";
@@ -56,17 +54,7 @@ impl<R: Runtime> ThemeUtils<R> {
         #[cfg(not(target_os = "android"))]
         {
             // Stub implementation for iOS -- there is no Material You equivalent.
-            Ok(MaterialYouResponse {
-                supported: false,
-                api_level: 0,
-                palettes: Palettes {
-                    system_accent1: None,
-                    system_accent2: None,
-                    system_accent3: None,
-                    system_neutral1: None,
-                    system_neutral2: None,
-                },
-            })
+            Ok(MaterialYouResponse::unsupported())
         }
     }
 }

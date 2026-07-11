@@ -14,6 +14,23 @@ pub struct MaterialYouResponse {
     pub palettes: Palettes,
 }
 
+impl MaterialYouResponse {
+    /// The response for any platform with no Material You equivalent (desktop, iOS).
+    pub fn unsupported() -> Self {
+        Self {
+            supported: false,
+            api_level: 0,
+            palettes: Palettes {
+                system_accent1: None,
+                system_accent2: None,
+                system_accent3: None,
+                system_neutral1: None,
+                system_neutral2: None,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Palettes {
     pub system_accent1: Option<HashMap<String, String>>,
