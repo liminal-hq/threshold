@@ -10,9 +10,9 @@ use tauri::{
 
 pub use models::*;
 
-#[cfg(not(target_os = "android"))]
+#[cfg(desktop)]
 mod desktop;
-#[cfg(target_os = "android")]
+#[cfg(mobile)]
 mod mobile;
 
 mod commands;
@@ -21,9 +21,9 @@ mod models;
 
 pub use error::{Error, Result};
 
-#[cfg(not(target_os = "android"))]
+#[cfg(desktop)]
 use desktop::ThemeUtils;
-#[cfg(target_os = "android")]
+#[cfg(mobile)]
 use mobile::ThemeUtils;
 
 /// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the theme-utils APIs.
@@ -42,9 +42,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("theme-utils")
         .invoke_handler(tauri::generate_handler![commands::get_material_you_colours])
         .setup(|app, api| {
-            #[cfg(target_os = "android")]
+            #[cfg(mobile)]
             let theme_utils = mobile::init(api, app)?;
-            #[cfg(not(target_os = "android"))]
+            #[cfg(desktop)]
             let theme_utils = desktop::init(api, app)?;
             app.manage(theme_utils);
             Ok(())
