@@ -334,7 +334,18 @@ pub fn run() {
                             }
                             match coord.delete_alarm(&handle, cmd.alarm_id).await {
                                 Ok(_) => log::info!("watch: deleted alarm {}", cmd.alarm_id),
-                                Err(e) => log::error!("watch: failed to delete alarm {}: {e}", cmd.alarm_id),
+                                Err(e) => {
+                                    log::error!("watch: failed to delete alarm {}: {e} — requesting resync", cmd.alarm_id);
+                                    if let Err(sync_error) = coord
+                                        .emit_sync_needed(&handle, alarm::events::SyncReason::ForceSync)
+                                        .await
+                                    {
+                                        log::error!(
+                                            "watch: failed to emit ForceSync after delete error for alarm {}: {sync_error}",
+                                            cmd.alarm_id
+                                        );
+                                    }
+                                }
                             }
                         }
                     });
