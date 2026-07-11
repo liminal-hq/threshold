@@ -212,6 +212,12 @@ const RouteStage: React.FC = () => {
 		// controller updates, even for two consecutive "ended" events with no active drag in
 		// between (e.g. a spurious duplicate native callback), so this effect reliably re-runs
 		// for every event rather than only on active/inactive transitions.
+		//
+		// This also cancels a still-pending finalizeFallbackRef and resets pendingCommitRef:
+		// without that, a brand-new gesture starting while a previous commit's navigation is
+		// still in flight (e.g. a blocked/slow navigation, within the up-to-1-second fallback
+		// window) would leave that orphaned timer free to fire mid-new-gesture, forcibly
+		// hiding the underlay regardless of the new gesture's actual live state.
 		return () => {
 			if (hideTimeoutRef.current) {
 				clearTimeout(hideTimeoutRef.current);
@@ -221,6 +227,11 @@ const RouteStage: React.FC = () => {
 				cancelAnimationFrame(rafRef.current);
 				rafRef.current = null;
 			}
+			if (finalizeFallbackRef.current) {
+				clearTimeout(finalizeFallbackRef.current);
+				finalizeFallbackRef.current = null;
+			}
+			pendingCommitRef.current = false;
 		};
 	}, [pbState, router]);
 
