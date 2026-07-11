@@ -20,8 +20,18 @@ interface ScreenEntry {
  * also single-level-only) -- but the full history has to be kept, not just the last 2 slots:
  * navigating Home -> Edit -> Settings -> back-to-Edit must reveal Home again on a further back
  * gesture, and Home would already be gone if entries were evicted while 2 levels deep at
- * Settings. The array only ever holds cheap React element descriptors, not mounted component
- * instances, so keeping the whole stack costs nothing extra.
+ * Settings.
+ *
+ * Re-visiting *any* earlier entry (not just the one directly below the top) collapses back
+ * down to it, rather than only checking the immediate previous slot: this app's screens form a
+ * star around Home, but a couple of flows (e.g. Settings' test-ringing button) reach a second
+ * leaf without passing back through Home first, and dismissing that leaf navigates forward
+ * (`replace: true`) rather than via `history.back()`. Checking only the adjacent slot would
+ * treat that as "genuinely new" every time and grow the stack by a few entries on every such
+ * cycle, for as long as the app runs. Collapsing to any earlier occurrence bounds growth by the
+ * number of distinct paths ever visited instead -- the array only ever holds cheap React
+ * element descriptors, not mounted component instances, so keeping entries for every screen
+ * that's actually been visited costs nothing extra.
  */
 export class ScreenStack {
 	private entries: ScreenEntry[] = [];
@@ -35,12 +45,12 @@ export class ScreenStack {
 			return;
 		}
 
-		const previousIndex = topIndex - 1;
-		if (previousIndex >= 0 && this.entries[previousIndex].path === path) {
-			// Navigated back to the entry just below the top -- promote it and drop
+		const existingIndex = this.entries.findIndex((entry) => entry.path === path);
+		if (existingIndex >= 0) {
+			// Navigated back to an entry already on the stack -- promote it and drop
 			// whatever was above it.
-			this.entries[previousIndex] = { path, node };
-			this.entries.length = previousIndex + 1;
+			this.entries[existingIndex] = { path, node };
+			this.entries.length = existingIndex + 1;
 			return;
 		}
 

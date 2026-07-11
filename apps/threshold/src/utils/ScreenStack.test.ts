@@ -57,4 +57,24 @@ describe('ScreenStack', () => {
 
 		expect(screenStack.getPrevious()).toEqual({ path: '/home', node: 'home-node' });
 	});
+
+	it('collapses back to an earlier entry even when it is not the immediate previous slot, preventing unbounded growth', () => {
+		screenStack.setCurrent('/home', 'home-node');
+		screenStack.setCurrent('/settings', 'settings-node');
+		screenStack.setCurrent('/ringing/999', 'ringing-node');
+		// Dismissing navigates forward to /home (replace: true), not back() -- /home is not the
+		// entry directly below the top (/settings is), so this only collapses correctly if the
+		// whole stack, not just the adjacent slot, is searched for a match.
+		screenStack.setCurrent('/home', 'home-node-refreshed');
+
+		expect(screenStack.getPrevious()).toBeNull();
+
+		// Repeating the cycle must not grow the stack -- if it did, /settings would show up as
+		// the one-back entry again after revisiting it.
+		screenStack.setCurrent('/settings', 'settings-node-2');
+		screenStack.setCurrent('/ringing/999', 'ringing-node-2');
+		screenStack.setCurrent('/home', 'home-node-2');
+
+		expect(screenStack.getPrevious()).toBeNull();
+	});
 });
