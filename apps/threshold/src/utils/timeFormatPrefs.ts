@@ -6,7 +6,7 @@
 import { getTimeFormat } from 'tauri-plugin-os-prefs-api';
 import { PlatformUtils } from './PlatformUtils';
 
-export const TimePrefs = {
+export const TimeFormatPrefs = {
 	getSystemTimeFormat: async (): Promise<{
 		is24Hour: boolean;
 		source: 'android' | 'ios' | 'intl';
@@ -25,7 +25,7 @@ export const TimePrefs = {
 		}
 
 		// Desktop / Fallback
-		const inferred = TimePrefs.inferredHourPreference();
+		const inferred = TimeFormatPrefs.inferredHourPreference();
 		return {
 			is24Hour: inferred === '24',
 			source: 'intl',

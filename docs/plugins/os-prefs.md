@@ -18,12 +18,12 @@ Tauri v2 does not expose a unified API for these system preferences. This plugin
 
 ### Frontend
 
-Time format is consumed via `SettingsService` or the `TimePrefs` utility wrapper; animation scale is consumed directly from the plugin's guest-js bindings.
+Time format is consumed via `SettingsService` or the `TimeFormatPrefs` utility wrapper; animation scale is consumed directly from the plugin's guest-js bindings.
 
 ```ts
-import { TimePrefs } from '../utils/timePrefs';
+import { TimeFormatPrefs } from '../utils/timeFormatPrefs';
 
-const { is24Hour, source } = await TimePrefs.getSystemTimeFormat();
+const { is24Hour, source } = await TimeFormatPrefs.getSystemTimeFormat();
 ```
 
 - **`is24Hour`**: `boolean` - True if the system prefers 24-hour time.
@@ -59,7 +59,7 @@ The plugin exposes two commands:
 
 ### Desktop (Linux/macOS/Windows)
 
-- **Time format**: The Rust plugin returns a default `false`. The frontend wrapper (`utils/timePrefs.ts`) detects it is running on desktop and bypasses the plugin to use `Intl.DateTimeFormat().resolvedOptions()` instead (prefers `hourCycle` (`h23`/`h24` => 24h), falls back to `hour12`, defaults to 12-hour).
+- **Time format**: The Rust plugin returns a default `false`. The frontend wrapper (`utils/timeFormatPrefs.ts`) detects it is running on desktop and bypasses the plugin to use `Intl.DateTimeFormat().resolvedOptions()` instead (prefers `hourCycle` (`h23`/`h24` => 24h), falls back to `hour12`, defaults to 12-hour).
 - **Animation scale**: Always returns `1.0` -- no equivalent desktop setting wired up.
 
 ## Setup

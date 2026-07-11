@@ -6,7 +6,7 @@
 import { emit } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { sendNotification } from '@tauri-apps/plugin-notification';
-import { TimePrefs } from '../utils/timePrefs';
+import { TimeFormatPrefs } from '../utils/timeFormatPrefs';
 import { ThemeId } from '../theme/themes';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { alarmNotificationService, type NotificationActionType } from './AlarmNotificationService';
@@ -35,7 +35,7 @@ export const SettingsService = {
 	},
 
 	getSystemTimeFormat: async () => {
-		return TimePrefs.getSystemTimeFormat();
+		return TimeFormatPrefs.getSystemTimeFormat();
 	},
 
 	getUseMaterialYou: (): boolean | undefined => {

@@ -36,9 +36,9 @@ tauri-plugin-os-prefs = { path = "../../../plugins/os-prefs" }
 ## Usage
 
 ```ts
-import { TimePrefs } from '../utils/timePrefs';
+import { TimeFormatPrefs } from '../utils/timeFormatPrefs';
 
-const { is24Hour } = await TimePrefs.getSystemTimeFormat();
+const { is24Hour } = await TimeFormatPrefs.getSystemTimeFormat();
 console.log(`User prefers 24-hour time: ${is24Hour}`);
 ```
 
