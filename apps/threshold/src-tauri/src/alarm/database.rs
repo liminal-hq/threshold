@@ -521,7 +521,7 @@ mod tests {
 
         assert_eq!(result.id, 1); // First insert gets ID 1
         assert_eq!(result.label, Some("Morning Alarm".to_string()));
-        assert_eq!(result.enabled, true);
+        assert!(result.enabled);
         assert_eq!(result.mode, AlarmMode::Fixed);
         assert_eq!(result.fixed_time, Some("07:00".to_string()));
         assert_eq!(result.active_days, vec![1, 2, 3, 4, 5]);
@@ -565,7 +565,7 @@ mod tests {
 
         assert_eq!(updated.id, created.id); // ID should remain the same
         assert_eq!(updated.label, Some("Updated".to_string()));
-        assert_eq!(updated.enabled, false);
+        assert!(!updated.enabled);
         assert_eq!(updated.mode, AlarmMode::Window);
         assert_eq!(updated.window_start, Some("08:00".to_string()));
         assert_eq!(updated.window_end, Some("09:00".to_string()));
@@ -692,7 +692,7 @@ mod tests {
             sound_title: None,
         };
         let enabled_alarm = db.save(input_enabled, None, 1).await.unwrap();
-        assert_eq!(enabled_alarm.enabled, true);
+        assert!(enabled_alarm.enabled);
 
         // Test enabled = false
         let input_disabled = AlarmInput {
@@ -708,11 +708,11 @@ mod tests {
             sound_title: None,
         };
         let disabled_alarm = db.save(input_disabled, None, 2).await.unwrap();
-        assert_eq!(disabled_alarm.enabled, false);
+        assert!(!disabled_alarm.enabled);
 
         // Verify by fetching
         let fetched_disabled = db.get_by_id(disabled_alarm.id).await.unwrap();
-        assert_eq!(fetched_disabled.enabled, false);
+        assert!(!fetched_disabled.enabled);
     }
 
     #[tokio::test]
