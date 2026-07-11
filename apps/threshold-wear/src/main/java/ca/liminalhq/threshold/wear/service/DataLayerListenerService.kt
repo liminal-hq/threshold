@@ -18,6 +18,7 @@ import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 private const val TAG = "DataLayerListener"
@@ -51,11 +52,14 @@ class DataLayerListenerService : WearableListenerService() {
             val dataItem = event.dataItem
             if (dataItem.uri.path != DATA_PATH_ALARMS) continue
 
+            repository.setSyncStatus(SyncStatus.SYNCING)
             try {
-                repository.setSyncStatus(SyncStatus.SYNCING)
-
                 val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
-                val alarmsJson = dataMap.getString("alarmsJson") ?: continue
+                val alarmsJson = dataMap.getString("alarmsJson")
+                if (alarmsJson == null) {
+                    Log.w(TAG, "Data item at $DATA_PATH_ALARMS is missing alarmsJson — skipping")
+                    continue
+                }
                 val revision = dataMap.getLong("revision")
 
                 // Persist snooze length from phone settings so the watch
@@ -80,10 +84,13 @@ class DataLayerListenerService : WearableListenerService() {
 
                 // Re-evaluate fallback alarm scheduling after sync
                 app.connectionMonitor.onAlarmsUpdated()
-
-                repository.setSyncStatus(SyncStatus.CONNECTED)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to process alarm data", e)
+            } finally {
+                // Always resolve the sync status on every exit path from this
+                // per-event block — success, the early `continue` above on a
+                // malformed data item, or an exception — so a bad payload can
+                // never strand the UI on "Syncing…" (issue #158).
                 repository.setSyncStatus(SyncStatus.CONNECTED)
             }
         }
@@ -223,69 +230,88 @@ class DataLayerListenerService : WearableListenerService() {
     }
 
     /**
-     * Parse the sync payload and update the repository.
-     *
-     * The payload from the phone is JSON. It can be either:
-     * - A JSON array of alarm IDs (batch publish — IDs only, triggering
-     *   a sync request for full data)
-     * - A JSON object with a "type" field indicating the sync response type
-     *   (UpToDate, Incremental, or FullSync)
+     * Parse the sync payload and update the repository based on the resulting
+     * [SyncAction]. See [parseSyncPayload] for the parsing rules themselves.
      */
     private fun processSyncPayload(
         repository: ca.liminalhq.threshold.wear.data.AlarmRepository,
         alarmsJson: String,
         revision: Long,
     ) {
-        try {
-            val root = JSONObject(alarmsJson)
-            when (root.optString("type")) {
-                "FullSync" -> {
-                    val alarmsArray = root.getJSONArray("allAlarms")
-                    val alarms = parseAlarmArray(alarmsArray)
-                    repository.replaceAll(alarms, revision)
-                }
-                "Incremental" -> {
-                    val updatedArray = root.getJSONArray("updatedAlarms")
-                    val deletedArray = root.getJSONArray("deletedAlarmIds")
-                    val updated = parseAlarmArray(updatedArray)
-                    val deleted = (0 until deletedArray.length()).map { deletedArray.getInt(it) }
-                    repository.applyIncremental(updated, deleted, revision)
-                }
-                "UpToDate" -> {
-                    Log.d(TAG, "Already up to date at revision $revision")
-                }
-                else -> {
-                    // If no type field, try parsing as a full alarm array
-                    // (backwards compatibility with batch publishes)
-                    val array = JSONArray(alarmsJson)
-                    val alarms = parseAlarmArray(array)
-                    if (alarms.isNotEmpty()) {
-                        repository.replaceAll(alarms, revision)
-                    }
-                }
-            }
-        } catch (e: org.json.JSONException) {
-            // Not a JSON object — try as a plain array
-            try {
-                val array = JSONArray(alarmsJson)
-                val alarms = parseAlarmArray(array)
-                if (alarms.isNotEmpty()) {
-                    repository.replaceAll(alarms, revision)
-                }
-            } catch (e2: Exception) {
-                Log.w(TAG, "Could not parse alarm payload: $alarmsJson", e2)
-            }
+        when (val action = parseSyncPayload(alarmsJson)) {
+            is SyncAction.ReplaceAll -> repository.replaceAll(action.alarms, revision)
+            is SyncAction.ApplyIncremental ->
+                repository.applyIncremental(action.updatedAlarms, action.deletedAlarmIds, revision)
+            SyncAction.UpToDate -> Log.d(TAG, "Already up to date at revision $revision")
+            is SyncAction.ParseFailure ->
+                Log.w(TAG, "Could not parse alarm payload: $alarmsJson", action.error)
         }
     }
+}
 
-    private fun parseAlarmArray(array: JSONArray): List<WatchAlarm> {
-        return (0 until array.length()).mapNotNull { i ->
-            try {
-                WatchAlarm.fromJson(array.getJSONObject(i))
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to parse alarm at index $i", e)
-                null
+/**
+ * The repository action a sync payload from the phone resolves to. Kept separate
+ * from [AlarmRepository] and [Log] calls so [parseSyncPayload] can be unit-tested
+ * without the Android framework.
+ */
+internal sealed class SyncAction {
+    data class ReplaceAll(val alarms: List<WatchAlarm>) : SyncAction()
+    data class ApplyIncremental(
+        val updatedAlarms: List<WatchAlarm>,
+        val deletedAlarmIds: List<Int>,
+    ) : SyncAction()
+    object UpToDate : SyncAction()
+    data class ParseFailure(val error: Exception) : SyncAction()
+}
+
+/**
+ * Parse a sync payload from the phone into a [SyncAction].
+ *
+ * The payload is JSON and can be either:
+ * - A JSON object with a "type" field indicating the sync response type
+ *   (FullSync, Incremental, or UpToDate)
+ * - A plain JSON array of alarms (legacy backwards compatibility with batch
+ *   publishes that predate the typed envelope) — including an *empty* array,
+ *   which is a valid, intentional "clear all alarms" signal and must still
+ *   reach [SyncAction.ReplaceAll] rather than being silently dropped.
+ */
+internal fun parseSyncPayload(alarmsJson: String): SyncAction {
+    return try {
+        val root = JSONObject(alarmsJson)
+        when (root.optString("type")) {
+            "FullSync" -> SyncAction.ReplaceAll(parseAlarmArray(root.getJSONArray("allAlarms")))
+            "Incremental" -> {
+                val deletedArray = root.getJSONArray("deletedAlarmIds")
+                SyncAction.ApplyIncremental(
+                    updatedAlarms = parseAlarmArray(root.getJSONArray("updatedAlarms")),
+                    deletedAlarmIds = (0 until deletedArray.length()).map { deletedArray.getInt(it) },
+                )
             }
+            "UpToDate" -> SyncAction.UpToDate
+            else -> {
+                // No type field — legacy backwards compatibility: parse as a
+                // plain alarm array (batch publish).
+                SyncAction.ReplaceAll(parseAlarmArray(JSONArray(alarmsJson)))
+            }
+        }
+    } catch (e: JSONException) {
+        // Not a JSON object at all — legacy plain array format.
+        try {
+            SyncAction.ReplaceAll(parseAlarmArray(JSONArray(alarmsJson)))
+        } catch (e2: Exception) {
+            SyncAction.ParseFailure(e2)
+        }
+    }
+}
+
+/** Parse a JSON array of alarm objects, skipping entries that fail to parse. */
+internal fun parseAlarmArray(array: JSONArray): List<WatchAlarm> {
+    return (0 until array.length()).mapNotNull { i ->
+        try {
+            WatchAlarm.fromJson(array.getJSONObject(i))
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse alarm at index $i", e)
+            null
         }
     }
 }
