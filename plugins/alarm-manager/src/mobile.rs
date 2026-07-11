@@ -5,9 +5,11 @@
 
 use crate::models::*;
 use serde::Serialize;
+#[cfg(target_os = "android")]
+use tauri::plugin::PluginHandle;
 use tauri::{
     ipc::{Channel, InvokeResponseBody},
-    plugin::{PluginApi, PluginHandle},
+    plugin::PluginApi,
     Emitter, Runtime,
 };
 
@@ -155,15 +157,32 @@ pub fn init<R: Runtime>(
 
         handle
     };
+    // iOS: no native plugin to register (deferred). `api` is otherwise unused here --
+    // there is no `PluginApi::handle()` to fall back to (only `config()`/`app()`/`scope()`
+    // exist), so there is nothing to store; every method below returns a "not implemented
+    // on iOS" error instead of touching a handle that was never obtained.
     #[cfg(not(target_os = "android"))]
-    let handle = api.handle().clone();
+    let _ = api;
 
-    Ok(AlarmManager { handle })
+    Ok(AlarmManager {
+        #[cfg(target_os = "android")]
+        handle,
+        #[cfg(not(target_os = "android"))]
+        _marker: std::marker::PhantomData,
+    })
 }
 
 /// Access to the alarm-manager APIs.
 pub struct AlarmManager<R: Runtime> {
+    #[cfg(target_os = "android")]
     handle: PluginHandle<R>,
+    #[cfg(not(target_os = "android"))]
+    _marker: std::marker::PhantomData<R>,
+}
+
+#[cfg(not(target_os = "android"))]
+fn not_implemented_on_ios() -> crate::Error {
+    crate::Error::MobilePlugin("Not implemented on iOS".to_string())
 }
 
 impl<R: Runtime> AlarmManager<R> {
@@ -177,17 +196,28 @@ impl<R: Runtime> AlarmManager<R> {
 
     pub fn pick_alarm_sound(
         &self,
+        #[cfg_attr(not(target_os = "android"), allow(unused_variables))]
         options: PickAlarmSoundOptions,
     ) -> crate::Result<PickedAlarmSound> {
-        self.handle
+        #[cfg(target_os = "android")]
+        return self
+            .handle
             .run_mobile_plugin("pickAlarmSound", options)
-            .map_err(Into::into)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
     }
 
     pub fn stop_ringing(&self) -> crate::Result<()> {
-        self.handle
+        #[cfg(target_os = "android")]
+        return self
+            .handle
             .run_mobile_plugin("stopRinging", ())
-            .map_err(Into::into)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
     }
 
     pub fn mark_alarm_pipeline_ready(&self) -> crate::Result<()> {
@@ -205,15 +235,31 @@ impl<R: Runtime> AlarmManager<R> {
             .map_err(Into::into)
     }
 
-    fn invoke_schedule(&self, payload: ScheduleRequest) -> crate::Result<()> {
-        self.handle
+    fn invoke_schedule(
+        &self,
+        #[cfg_attr(not(target_os = "android"), allow(unused_variables))] payload: ScheduleRequest,
+    ) -> crate::Result<()> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
             .run_mobile_plugin("schedule", payload)
-            .map_err(Into::into)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
     }
 
-    fn invoke_cancel(&self, payload: CancelRequest) -> crate::Result<()> {
-        self.handle
+    fn invoke_cancel(
+        &self,
+        #[cfg_attr(not(target_os = "android"), allow(unused_variables))] payload: CancelRequest,
+    ) -> crate::Result<()> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
             .run_mobile_plugin("cancel", payload)
-            .map_err(Into::into)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
     }
 }
