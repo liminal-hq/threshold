@@ -21,8 +21,9 @@ The project is a **Tauri v2 Monorepo** managed with `pnpm`.
 - `apps/threshold`: The main Tauri application.
 - `packages/core`: Shared TypeScript types and scheduler logic (`calculateNextTrigger`).
 - `plugins/alarm-manager`: Custom Tauri plugin wrapping Android's `AlarmManager`.
-- `plugins/time-prefs`: Custom Tauri plugin for 12/24h time format preference.
+- `plugins/os-prefs`: Custom Tauri plugin for 12/24h time format preference and animation-speed scale.
 - `plugins/theme-utils`: Custom Tauri plugin for Material You dynamic colour extraction.
+- `plugins/predictive-back`: Custom Tauri plugin bridging Android's predictive-back gesture.
 
 ## 3. Requirements
 

@@ -1,0 +1,5 @@
+[default]
+description = "Default permissions for the predictive-back plugin"
+permissions = [
+    "allow-set-can-go-back",
+]

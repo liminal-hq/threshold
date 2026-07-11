@@ -3,9 +3,10 @@ members = [
     "apps/threshold/src-tauri",
     "plugins/alarm-manager",
     "plugins/app-management",
+    "plugins/predictive-back",
     "plugins/wear-sync",
     "plugins/theme-utils",
-    "plugins/time-prefs",
+    "plugins/os-prefs",
     "plugins/toast",
 ]
 exclude = ["vendor/tauri-plugins-workspace"]

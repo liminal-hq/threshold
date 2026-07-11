@@ -38,8 +38,9 @@
 		"tauri-plugin-alarm-manager-api": "workspace:*",
 		"tauri-plugin-app-events-api": "^0.2.0",
 		"tauri-plugin-app-management-api": "workspace:*",
+		"tauri-plugin-os-prefs-api": "workspace:*",
+		"tauri-plugin-predictive-back-api": "workspace:*",
 		"tauri-plugin-theme-utils-api": "workspace:*",
-		"tauri-plugin-time-prefs-api": "workspace:*",
 		"tauri-plugin-toast-api": "workspace:*"
 	},
 	"devDependencies": {

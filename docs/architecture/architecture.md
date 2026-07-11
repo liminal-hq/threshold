@@ -235,8 +235,9 @@ app.listen("alarms:changed", move |event| {
 
 ### 5. Other Plugins
 
-- **time-prefs** (`plugins/time-prefs/`): Reads the device's 12/24-hour time format preference. Used by the UI to display times correctly.
+- **os-prefs** (`plugins/os-prefs/`): Reads the device's 12/24-hour time format preference and Developer Options' animator duration scale. Used by the UI to display times correctly and scale animations proportionally.
 - **theme-utils** (`plugins/theme-utils/`): Extracts Material You dynamic colours from the Android wallpaper for theming.
+- **predictive-back** (`plugins/predictive-back/`): Bridges Android's predictive-back gesture (API 33+) to the webview so `RouteStage` can render a real-time "peek" of the previous screen.
 
 ---
 

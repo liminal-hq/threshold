@@ -18,7 +18,8 @@ tauri-plugin-sql = { version = "2.0.0", features = ["sqlite"] }
 sqlx = { version = "0.8.2", features = ["sqlite", "runtime-tokio"] }
 
 tauri-plugin-alarm-manager = { path = "../../../plugins/alarm-manager" }
-tauri-plugin-time-prefs = { path = "../../../plugins/time-prefs" }
+tauri-plugin-predictive-back = { path = "../../../plugins/predictive-back" }
+tauri-plugin-os-prefs = { path = "../../../plugins/os-prefs" }
 tauri-plugin-theme-utils = { path = "../../../plugins/theme-utils" }
 tauri-plugin-app-management = { path = "../../../plugins/app-management" }
 tauri-plugin-wear-sync = { path = "../../../plugins/wear-sync" }

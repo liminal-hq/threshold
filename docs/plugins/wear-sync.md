@@ -192,9 +192,7 @@ For the full flow, see [architecture/wear-os-companion.md](../architecture/wear-
 | `markWatchPipelineReady` | Mark app listener readiness and drain queued messages         |
 | `sendAlarmRing`          | Send `/threshold/alarm_ring` message to all connected watches |
 
-**No `guest-js`, by design.** Unlike alarm-manager, theme-utils, time-prefs, and
-app-management, this plugin has no TypeScript-facing surface at all — the webview never
-calls `invoke('plugin:wear-sync|...')` directly. Every command above is driven from the
+**No `guest-js`, by design.** Unlike alarm-manager, theme-utils, os-prefs, and app-management, this plugin has no TypeScript-facing surface at all — the webview never calls `invoke('plugin:wear-sync|...')` directly. Every command above is driven from the
 Rust side (`AlarmCoordinator` events → `run_mobile_plugin(...)`, per the Channels rule in
 `CLAUDE.md`), and every event wear-sync itself emits targets the Rust app layer
 (`apps/threshold/src-tauri/src/lib.rs`), not the webview (see Events below) — TS has no

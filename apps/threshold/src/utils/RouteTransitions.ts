@@ -38,31 +38,28 @@ export class RouteTransitions {
 			return 'none';
 		}
 
+		let direction: TransitionDirection;
+
 		// Check for override (e.g. hardware back button)
 		if (this.nextDirectionOverride) {
-			const direction = this.nextDirectionOverride;
+			direction = this.nextDirectionOverride;
 			this.nextDirectionOverride = null;
-			this.updateStack(toPath, direction);
-			return direction;
+		} else {
+			const currentPath = this.stack[this.stack.length - 1];
+			const previousPath = this.stack[this.stack.length - 2];
+
+			if (currentPath === toPath) {
+				direction = 'none';
+			} else if (previousPath === toPath) {
+				direction = 'backwards';
+			} else {
+				direction = 'forwards';
+			}
 		}
 
-		const currentPath = this.stack[this.stack.length - 1];
+		this.updateStack(toPath, direction);
 
-		// Same page?
-		if (currentPath === toPath) {
-			return 'none';
-		}
-
-		// Check if going back to previous page in stack
-		const previousPath = this.stack[this.stack.length - 2];
-		if (previousPath === toPath) {
-			this.updateStack(toPath, 'backwards');
-			return 'backwards';
-		}
-
-		// Default to forwards
-		this.updateStack(toPath, 'forwards');
-		return 'forwards';
+		return direction;
 	}
 
 	/**

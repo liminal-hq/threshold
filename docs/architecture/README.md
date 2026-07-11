@@ -36,5 +36,5 @@ Core application architecture for Threshold — event system, data models, and i
 
 ## Related
 
-- **[Plugin specs](../plugins/)** — alarm-manager, time-prefs, wear-sync
+- **[Plugin specs](../plugins/)** — alarm-manager, os-prefs, wear-sync
 - **[Wear OS docs](../wear-implementation/)** — UI mockups and Wear-specific design

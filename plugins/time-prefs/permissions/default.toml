@@ -1,5 +1,0 @@
-[default]
-description = "Default permissions for the time-prefs plugin"
-permissions = [
-    "allow-get-time-format",
-]

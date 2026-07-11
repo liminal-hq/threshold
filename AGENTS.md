@@ -3,6 +3,7 @@
 ## Table of Contents
 
 - [Localization and Spelling](#localization-and-spelling)
+- [Markdown Formatting](#markdown-formatting)
 - [Commit Messages](#commit-messages)
 - [Play Console Release Notes](#play-console-release-notes)
 - [Pull Request Titles](#pull-request-titles)
@@ -26,6 +27,13 @@ Examples:
 - `neighbour` instead of `neighbor`
 - `cancelled` instead of `canceled`
 - `licence` (noun) vs `license` (verb) - though in UI context usually "Licence"
+
+## Markdown Formatting
+
+**REQUIREMENT:** Do not hard-wrap markdown prose. Write each paragraph or bullet as a single unwrapped line in the source, no matter how long — let the renderer (GitHub, a browser, an editor's soft-wrap) reflow it for display. This applies everywhere: commit bodies, PR descriptions, docs under `docs/`, README files, code comments written in Markdown.
+
+- Manual line breaks mid-paragraph don't survive Markdown rendering as intended (they either collapse into the same line anyway or break formatting), and they create noisy diffs when a later edit only changes one word but reflows the whole wrapped block.
+- This does not apply to genuinely separate list items, headings, or intentional line breaks (e.g. two-space trailing breaks, blank lines between paragraphs) — only to breaking up one continuous sentence/paragraph across multiple lines.
 
 ## Commit Messages
 

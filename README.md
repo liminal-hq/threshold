@@ -12,7 +12,8 @@ This repository is a `pnpm` workspace monorepo.
 - `plugins/alarm-manager`: Native alarm scheduling bridge
 - `plugins/app-management`: Mobile lifecycle/app-management helpers
 - `plugins/theme-utils`: System theme and Material You utilities
-- `plugins/time-prefs`: 12/24-hour time preference bridge
+- `plugins/os-prefs`: 12/24-hour time preference & animation-speed bridge
+- `plugins/predictive-back`: Android predictive-back gesture bridge
 - `plugins/wear-sync`: Wear OS sync integration plugin
 - `plugins/toast`: Android toast bridge plugin
 
@@ -82,7 +83,7 @@ TUI behaviour:
 ## Android logging
 
 ```bash
-adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* AlarmReceiver:* AlarmRingingService:* BootReceiver:* SetAlarmActivity:* AlarmService:* ThemeUtils:* TimePrefsPlugin:* chromium:I Tauri/Console:* *:E > logcat.log
+adb logcat -s threshold:* AlarmManager:* AlarmManagerPlugin:* AlarmReceiver:* AlarmRingingService:* BootReceiver:* SetAlarmActivity:* AlarmService:* ThemeUtils:* OsPrefsPlugin:* PredictiveBackPlugin:* chromium:I Tauri/Console:* *:E > logcat.log
 ```
 
 ## Documentation

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Required for OnBackAnimationCallback to actually activate (API 33+). This is an
+         attribute on <application>, not a new element, so it can't be injected via
+         update_android_manifest() in build.rs, which only inserts child elements before a
+         closing tag. Android's own Gradle manifest merger handles it instead, the same way
+         alarm-manager's and wear-sync's own <application> children merge into the consuming
+         app's final manifest automatically. -->
+    <application android:enableOnBackInvokedCallback="true">
+    </application>
+</manifest>
