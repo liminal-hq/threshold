@@ -4,10 +4,9 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use serde::de::DeserializeOwned;
-use tauri::{
-    plugin::{PluginApi, PluginHandle},
-    AppHandle, Runtime,
-};
+#[cfg(target_os = "android")]
+use tauri::plugin::PluginHandle;
+use tauri::{plugin::PluginApi, AppHandle, Runtime};
 
 // initializes the Kotlin or Swift plugin classes
 pub fn init<R: Runtime, C: DeserializeOwned>(
@@ -17,22 +16,34 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     #[cfg(target_os = "android")]
     let handle = api.register_android_plugin("com.plugin.app_management", "AppManagementPlugin")?;
 
-    // NOTE: iOS implementation is deferred. We intentionally do not register an iOS plugin here.
-    // On iOS we don't register anything because we are providing a Rust-side stub only.
+    // NOTE: iOS implementation is deferred. We intentionally do not register an iOS plugin here
+    // -- there is no `PluginApi::handle()` to fall back to either (only `config()`/`app()`/
+    // `scope()` exist), so there is nothing to store; `minimize_app` returns a stub error
+    // instead of ever touching a handle that was never obtained.
     #[cfg(not(target_os = "android"))]
-    let handle = api.handle().clone();
+    let _ = api;
 
-    Ok(AppManagement(handle))
+    Ok(AppManagement {
+        #[cfg(target_os = "android")]
+        handle,
+        #[cfg(not(target_os = "android"))]
+        _marker: std::marker::PhantomData,
+    })
 }
 
 /// Access to the app-management APIs.
-pub struct AppManagement<R: Runtime>(PluginHandle<R>);
+pub struct AppManagement<R: Runtime> {
+    #[cfg(target_os = "android")]
+    handle: PluginHandle<R>,
+    #[cfg(not(target_os = "android"))]
+    _marker: std::marker::PhantomData<R>,
+}
 
 impl<R: Runtime> AppManagement<R> {
     pub fn minimize_app(&self) -> crate::Result<()> {
         #[cfg(target_os = "android")]
         return self
-            .0
+            .handle
             .run_mobile_plugin("minimizeApp", ())
             .map_err(Into::into);
 
