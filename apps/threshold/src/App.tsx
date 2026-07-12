@@ -29,6 +29,7 @@ import './theme/transitions.css';
 import { routeTransitions } from './utils/RouteTransitions';
 import { predictiveBackController } from './utils/PredictiveBackController';
 import { AnimationScale } from './utils/AnimationScale';
+import { screenStack } from './utils/ScreenStack';
 import { SettingsService } from './services/SettingsService';
 import { alarmManagerService } from './services/AlarmManagerService';
 import { ROUTES } from './constants';
@@ -156,9 +157,15 @@ const App: React.FC = () => {
 							return false; // Prevent default (do nothing)
 						}
 
-						// Check if we can go back.
-						// window.history.length > 1 is the standard browser way to check history depth.
-						if (window.history.length > 1) {
+						// Check if we can go back. Deliberately uses screenStack (which tracks
+						// the app's real navigation depth, collapsing back down on a return to
+						// an earlier screen) rather than window.history.length -- that's a
+						// cumulative count of every entry ever pushed this session, so it never
+						// drops back down and stays truthy forever after the first navigation,
+						// wrongly treating Home as "can go back" and swallowing the back
+						// gesture/button instead of minimizing the app (see RouteStage.tsx's
+						// matching canGoBack effect for the same fix).
+						if (screenStack.getPrevious() !== null) {
 							// Signal that this is a backward navigation
 							routeTransitions.setNextDirection('backwards');
 							router.history.back();
