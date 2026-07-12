@@ -104,13 +104,21 @@ const RouteStage: React.FC = () => {
 	// Desktop's set_can_go_back is a harmless no-op, but there's still nothing for it to do
 	// there -- skip the round-trip entirely, matching how router.tsx already gates
 	// defaultViewTransition on PlatformUtils.isMobile().
+	//
+	// Deliberately checks screenStack.getPrevious() rather than window.history.length: the
+	// latter is a cumulative count of every entry ever pushed this session -- it never goes
+	// back down when you navigate back to an earlier screen (e.g. Home -> Settings -> Home
+	// still leaves history.length at 2+), so it stays truthy forever after the first
+	// navigation, wrongly enabling the gesture on Home. screenStack already tracks the
+	// app's real navigation depth (collapsing back down on a return-to-earlier-screen), so
+	// it's null exactly when there's genuinely nowhere left to go back to in-app.
 	useEffect(() => {
 		if (!PlatformUtils.isMobile()) {
 			return;
 		}
 		const canGoBack =
 			!location.pathname.startsWith(ROUTES.RINGING) &&
-			window.history.length > 1 &&
+			screenStack.getPrevious() !== null &&
 			!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		predictiveBackController.setCanGoBack(canGoBack);
 	}, [location.pathname]);
