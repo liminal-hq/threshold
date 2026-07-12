@@ -19,6 +19,12 @@
 # without that, each fresh `docker run --rm` would auto-generate a new random debug key,
 # so every build would be signed differently and `adb install -r` over a previous run's
 # install would fail with a signature mismatch instead of updating in place.
+#
+# The Android SDK directory is persisted too -- the image already bakes in the Build-Tools/
+# Platform version this project's compileSdk actually needs, but AGP's dependency metadata
+# checks can still reach for an older Build-Tools/Platform baseline (observed: 35/34) that
+# isn't in the image. Without a persistent volume here, `--rm` throws that away every run,
+# so it re-downloads from Google's servers on every single build instead of once.
 
 set -euo pipefail
 
@@ -73,6 +79,7 @@ docker run --rm \
 	-v threshold-android-gradle-cache:/home/vscode/.gradle \
 	-v threshold-android-cargo-cache:/home/vscode/.cargo/registry \
 	-v threshold-android-keystore:/home/vscode/.android \
+	-v threshold-android-sdk-extras:/home/vscode/Android/Sdk \
 	-w /workspace \
 	"$IMAGE" \
 	bash -c "

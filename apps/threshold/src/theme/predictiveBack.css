@@ -15,6 +15,14 @@
 	width: 100%;
 	height: 100%;
 	z-index: 2;
+	/* .wa-route-slot (router.tsx) is documented as "the single scroll container for every
+	   screen", but this wrapper -- needed so the gesture has a fixed-size layer to slide --
+	   sits between it and the routed content, so a screen taller than the viewport (e.g.
+	   Settings) no longer reaches that ancestor's scrollbar and gets clipped by
+	   .wa-route-stage's overflow: hidden instead. This layer is the routed content's actual
+	   viewport now, so it needs to be the one that scrolls. */
+	overflow-y: auto;
+	overflow-x: hidden;
 	/* Without an opaque background of its own, translating this layer away reveals the
 	   underlay bleeding through its transparent regions instead of just the area to its side.
 	   `--app-background-colour` is this app's existing theme token for exactly this (see
