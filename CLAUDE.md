@@ -23,9 +23,8 @@ pnpm workspace monorepo + Cargo workspace:
   `src-tauri/` (`src-tauri/gen/android` is generated Gradle — don't hand-edit)
 - `apps/threshold-wear` — native Kotlin/Compose Wear OS app (own Gradle project)
 - `apps/site` — static landing page
-- `packages/core` — shared TS types (`@threshold/core`); its `scheduler.ts` is legacy
-  and unused — production scheduling is Rust (see below). Its `types.ts` (`AlarmMode`,
-  `Alarm`) is still live, though — `AlarmMode`'s member names must match Rust's enum
+- `packages/core` — shared TS types only (`@threshold/core/types`); production
+  scheduling is Rust (see below). `AlarmMode`'s member names must match Rust's enum
   variant names (`Fixed`/`Window`) exactly, since it's referenced by the generated
   types below via `#[ts(type = "AlarmMode")]`
 - `plugins/*` — custom Tauri plugins (alarm-manager, wear-sync, theme-utils,

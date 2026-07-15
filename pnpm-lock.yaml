@@ -139,17 +139,10 @@ importers:
         version: 1.6.1(@types/node@25.0.9)(jsdom@27.4.0)
 
   packages/core:
-    dependencies:
-      date-fns:
-        specifier: ^3.0.0
-        version: 3.6.0
     devDependencies:
       typescript:
         specifier: ^5.0.0
         version: 5.8.3
-      vitest:
-        specifier: ^1.0.0
-        version: 1.6.1(@types/node@25.0.9)(jsdom@27.4.0)
 
   plugins/alarm-manager:
     dependencies:
