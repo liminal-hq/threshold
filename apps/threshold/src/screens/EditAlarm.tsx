@@ -78,6 +78,11 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 
 	const [daysError, setDaysError] = useState(false);
 	const [imminentTrigger, setImminentTrigger] = useState<number | null>(null);
+	// Set once the imminent-trigger dialog below fires for a brand new alarm -- AlarmService.save
+	// always persists before that check runs, so the row already exists at that point even though
+	// the route is still "/edit/new". Without this, choosing "Adjust" and saving again would save
+	// with no id and create a second, duplicate alarm instead of updating the one just created.
+	const [savedAlarmId, setSavedAlarmId] = useState<number | null>(null);
 
 	// Minutes-until-trigger below which we warn the user before leaving the screen --
 	// catches an accidental Start/End swap in Window mode producing a near-term ring.
@@ -142,6 +147,8 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 
 		if (!isNew) {
 			alarmData.id = parseInt(id);
+		} else if (savedAlarmId !== null) {
+			alarmData.id = savedAlarmId;
 		}
 
 		try {
@@ -150,6 +157,7 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 			if (saved.nextTrigger) {
 				const minutesUntil = (saved.nextTrigger - Date.now()) / 60000;
 				if (minutesUntil >= 0 && minutesUntil <= IMMINENT_TRIGGER_THRESHOLD_MINUTES) {
+					setSavedAlarmId(saved.id);
 					setImminentTrigger(saved.nextTrigger);
 					return;
 				}
@@ -406,6 +414,11 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 								onChange={(e) => setLabel(e.target.value)}
 								fullWidth
 								variant="outlined"
+								// Without this, the floating label only shrinks on focus/value -- since this
+								// field always has a placeholder rendered underneath it, the empty/unfocused
+								// state shows "Label" sitting on top of the placeholder text instead of
+								// floated above the outline.
+								InputLabelProps={{ shrink: true }}
 								sx={{
 									mb: 2,
 									'& .MuiOutlinedInput-root': {
