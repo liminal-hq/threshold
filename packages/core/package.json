@@ -7,23 +7,13 @@
 		"./types": {
 			"source": "./src/types.ts",
 			"default": "./dist/types.js"
-		},
-		"./scheduler": {
-			"source": "./src/scheduler.ts",
-			"default": "./dist/scheduler.js"
 		}
 	},
 	"scripts": {
 		"build": "tsc",
-		"test": "vitest run",
-		"test:ci": "vitest run --reporter=junit --reporter=default --outputFile.junit=junit.xml",
 		"typecheck": "tsc --noEmit"
 	},
-	"dependencies": {
-		"date-fns": "^3.0.0"
-	},
 	"devDependencies": {
-		"typescript": "^5.0.0",
-		"vitest": "^1.0.0"
+		"typescript": "^5.0.0"
 	}
 }
