@@ -5,7 +5,7 @@ import { motion, useMotionValue, useTransform, animate } from 'motion/react';
 const PULL_THRESHOLD = 72;
 
 interface PullToRefreshProps {
-	onRefresh: () => void;
+	onRefresh: () => void | Promise<void>;
 	children: React.ReactNode;
 }
 
@@ -23,17 +23,22 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 
 	const startYRef = useRef<number | null>(null);
 
+	// The router's `.wa-route-slot` is the app's single scroll container (see router.tsx) --
+	// this component doesn't scroll itself, so the "are we at the top" guard has to read
+	// that ancestor's scrollTop, not this Box's own.
+	const getScrollParent = () => containerRef.current?.closest<HTMLElement>('.wa-route-slot') ?? null;
+
 	const handlePointerDown = useCallback((e: React.PointerEvent) => {
-		const el = containerRef.current;
-		if (!el || el.scrollTop > 0 || isRefreshing) return;
+		const scrollParent = getScrollParent();
+		if (!scrollParent || scrollParent.scrollTop > 0 || isRefreshing) return;
 		startYRef.current = e.clientY;
 		setIsDragging(true);
 	}, [isRefreshing]);
 
 	const handlePointerMove = useCallback((e: React.PointerEvent) => {
 		if (!isDragging || startYRef.current === null) return;
-		const el = containerRef.current;
-		if (!el || el.scrollTop > 0) {
+		const scrollParent = getScrollParent();
+		if (!scrollParent || scrollParent.scrollTop > 0) {
 			setIsDragging(false);
 			pullY.set(0);
 			startYRef.current = null;
@@ -50,25 +55,29 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 		setIsDragging(false);
 		startYRef.current = null;
 
-		const currentPull = pullY.get();
-		if (currentPull >= PULL_THRESHOLD) {
-			setIsRefreshing(true);
-			onRefresh();
-			// Reset after a short delay to show the spinner
-			setTimeout(() => {
-				setIsRefreshing(false);
-				if (prefersReducedMotion) {
-					pullY.set(0);
-				} else {
-					animate(pullY, 0, { type: 'spring', stiffness: 300, damping: 30 });
-				}
-			}, 600);
-		} else {
+		const settle = () => {
 			if (prefersReducedMotion) {
 				pullY.set(0);
 			} else {
 				animate(pullY, 0, { type: 'spring', stiffness: 300, damping: 30 });
 			}
+		};
+
+		const currentPull = pullY.get();
+		if (currentPull >= PULL_THRESHOLD) {
+			setIsRefreshing(true);
+			// Keep the spinner up for the real duration of the refresh, and don't let a
+			// rejected refresh vanish silently -- reflect actual completion, not a guess.
+			Promise.resolve(onRefresh())
+				.catch((e) => {
+					console.error('[PullToRefresh] Refresh failed:', e);
+				})
+				.finally(() => {
+					setIsRefreshing(false);
+					settle();
+				});
+		} else {
+			settle();
 		}
 	}, [isDragging, pullY, onRefresh, prefersReducedMotion]);
 
@@ -81,7 +90,10 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 			onPointerCancel={handlePointerUp}
 			sx={{
 				position: 'relative',
-				touchAction: 'pan-x',
+				// pan-y (not pan-x): this wraps a vertically-scrolling list, and must match
+				// SwipeToDeleteRow's own touchAction so their intersection still allows native
+				// vertical scrolling instead of cancelling it out entirely.
+				touchAction: 'pan-y',
 				overflowY: 'auto',
 				flexGrow: 1,
 			}}
