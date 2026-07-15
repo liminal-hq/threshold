@@ -43,7 +43,9 @@ pnpm -r run typecheck              # tsc --noEmit across all TS packages (CI-gat
 cargo test --workspace            # Rust tests (app + plugins)
 pnpm format                       # prettier
 pnpm build:desktop | build:android | build:wear
-pnpm version:release              # interactive release TUI (phone + wear versions)
+pnpm version:release              # interactive release TUI (phone + wear versions); supports
+                                   # `-- --ci --bump <patch|minor|major|x.y.z>` for scripted/agent use
+                                   # -- see docs/infrastructure/release-build.md for the full runbook
 ```
 
 CI (`.github/workflows/test.yml`) runs a TS type-check, vitest, and `cargo nextest` with

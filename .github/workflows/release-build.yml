@@ -589,6 +589,39 @@ jobs:
             release-assets/android/**
           if-no-files-found: error
 
+      # Both Play deploy steps are no-ops (via `if:`) until their secrets/vars are set, so this
+      # workflow stays green for anyone who hasn't configured Play Console access yet. See
+      # docs/infrastructure/release-build.md#google-play-deployment for full setup.
+      #
+      # mappingFile/debugSymbols aren't wired up yet -- releaseFiles is documented as supporting
+      # glob patterns (fast-glob), but mappingFile/debugSymbols are only documented as taking a
+      # single exact path, and those filenames are version-stamped by the collect-artefacts step
+      # above. Worth adding once the core deploy is proven end-to-end.
+      - name: Deploy phone release to Google Play (draft)
+        if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ca.liminalhq.threshold
+          releaseFiles: release-assets/android/threshold-phone-v*.aab
+          tracks: internal
+          status: draft
+          whatsNewDirectory: distribution/whatsnew
+
+      # packageName is unconfirmed -- the Wear app may need its own separate Play Console listing
+      # (TODO once verified). Set the PLAY_WEAR_PACKAGE_NAME repository variable to enable this
+      # step; it stays a no-op without it.
+      - name: Deploy Wear release to Google Play (draft)
+        if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' && vars.PLAY_WEAR_PACKAGE_NAME != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ vars.PLAY_WEAR_PACKAGE_NAME }}
+          releaseFiles: release-assets/android/threshold-wear-v*.aab
+          tracks: internal
+          status: draft
+          whatsNewDirectory: distribution/whatsnew-wear
+
       - name: Summarise Android build
         if: always()
         env:
