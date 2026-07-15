@@ -296,25 +296,25 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 							</ToggleButtonGroup>
 
 							{mode === AlarmMode.Fixed ? (
-								<Box
-									sx={{
-										mb: 2,
-										// A couple of extra pixels of top padding so the floating label's
-										// natural overshoot above the outline (roughly half its own height)
-										// has room to render instead of being clipped by this Box's own
-										// overflow: hidden, which otherwise cuts straight through it.
-										pt: isMobile ? 1 : 0,
-										borderRadius: UI.card.borderRadius,
-										overflow: 'hidden',
-									}}
-								>
+								<Box sx={{ mb: 2 }}>
 									{isMobile ? (
 										<MuiTimePicker
 											label="Time"
 											value={parseTime(fixedTime)}
 											onChange={(newValue) => handleTimeChange(newValue, setFixedTime)}
 											ampm={!is24h}
-											slotProps={{ textField: { fullWidth: true } }}
+											// Match the Label field below: set the radius directly on the
+											// actual bordered element rather than clipping an outer Box to a
+											// different radius than the field's own default border curve,
+											// which left the corners looking mismatched/cut off.
+											slotProps={{
+												textField: {
+													fullWidth: true,
+													sx: {
+														'& .MuiOutlinedInput-root': { borderRadius: UI.card.borderRadius },
+													},
+												},
+											}}
 										/>
 									) : (
 										<Box
@@ -341,14 +341,28 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 												value={parseTime(windowStart)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowStart)}
 												ampm={!is24h}
-												slotProps={{ textField: { fullWidth: true } }}
+												slotProps={{
+													textField: {
+														fullWidth: true,
+														sx: {
+															'& .MuiOutlinedInput-root': { borderRadius: UI.card.borderRadius },
+														},
+													},
+												}}
 											/>
 											<MuiTimePicker
 												label="End Window"
 												value={parseTime(windowEnd)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowEnd)}
 												ampm={!is24h}
-												slotProps={{ textField: { fullWidth: true } }}
+												slotProps={{
+													textField: {
+														fullWidth: true,
+														sx: {
+															'& .MuiOutlinedInput-root': { borderRadius: UI.card.borderRadius },
+														},
+													},
+												}}
 											/>
 										</>
 									) : (
