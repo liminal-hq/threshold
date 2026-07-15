@@ -31,8 +31,8 @@
 
 ## Platform Mapping Matrix
 
-| Concept ID | Mobile Expression | Desktop Expression |
-|---|---|---|
+| Concept ID    | Mobile Expression        | Desktop Expression        |
+| ------------- | ------------------------ | ------------------------- |
 | `{SCREEN}-C1` | how it appears on mobile | how it appears on desktop |
 
 ## Platform Behaviour

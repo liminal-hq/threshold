@@ -37,12 +37,12 @@
 
 ## Platform Mapping Matrix
 
-| Concept ID | Mobile Expression | Desktop Expression |
-|---|---|---|
-| `SETTINGS-C1` | grouped MUI lists with subheaders | grouped MUI lists with subheaders |
-| `SETTINGS-C2` | toggle/select updates via `SettingsService` | toggle/select updates via `SettingsService` |
+| Concept ID    | Mobile Expression                              | Desktop Expression                           |
+| ------------- | ---------------------------------------------- | -------------------------------------------- |
+| `SETTINGS-C1` | grouped MUI lists with subheaders              | grouped MUI lists with subheaders            |
+| `SETTINGS-C2` | toggle/select updates via `SettingsService`    | toggle/select updates via `SettingsService`  |
 | `SETTINGS-C3` | theme select + conditional Material You toggle | theme select without Material You extraction |
-| `SETTINGS-C4` | developer rows + mobile-only watch test | developer rows + desktop ring window flow |
+| `SETTINGS-C4` | developer rows + mobile-only watch test        | developer rows + desktop ring window flow    |
 
 ## Platform Behaviour
 
@@ -61,15 +61,18 @@
 ## Layout Anatomy
 
 1. header zone
+
 - mobile toolbar or desktop inline title row
 
 2. settings content zone
+
 - `Appearance`
 - `Alarm Settings`
 - `General`
 - `Developer`
 
 3. dialogue zone
+
 - snooze-length picker dialogue (1 to 30 minutes)
 
 ## Content Contract

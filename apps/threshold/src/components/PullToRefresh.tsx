@@ -1,3 +1,8 @@
+// Gesture-driven pull-to-refresh wrapper for the mobile alarm list
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import React, { useRef, useState, useCallback } from 'react';
 import { Box, CircularProgress } from '@mui/material';
 import { motion, useMotionValue, useTransform, animate } from 'motion/react';
@@ -18,37 +23,43 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 	const spinnerScale = useTransform(pullY, [0, PULL_THRESHOLD], [0.5, 1]);
 
 	const prefersReducedMotion =
-		typeof window !== 'undefined' &&
-		window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 	const startYRef = useRef<number | null>(null);
 
 	// The router's `.wa-route-slot` is the app's single scroll container (see router.tsx) --
 	// this component doesn't scroll itself, so the "are we at the top" guard has to read
 	// that ancestor's scrollTop, not this Box's own.
-	const getScrollParent = () => containerRef.current?.closest<HTMLElement>('.wa-route-slot') ?? null;
+	const getScrollParent = () =>
+		containerRef.current?.closest<HTMLElement>('.wa-route-slot') ?? null;
 
-	const handlePointerDown = useCallback((e: React.PointerEvent) => {
-		const scrollParent = getScrollParent();
-		if (!scrollParent || scrollParent.scrollTop > 0 || isRefreshing) return;
-		startYRef.current = e.clientY;
-		setIsDragging(true);
-	}, [isRefreshing]);
+	const handlePointerDown = useCallback(
+		(e: React.PointerEvent) => {
+			const scrollParent = getScrollParent();
+			if (!scrollParent || scrollParent.scrollTop > 0 || isRefreshing) return;
+			startYRef.current = e.clientY;
+			setIsDragging(true);
+		},
+		[isRefreshing],
+	);
 
-	const handlePointerMove = useCallback((e: React.PointerEvent) => {
-		if (!isDragging || startYRef.current === null) return;
-		const scrollParent = getScrollParent();
-		if (!scrollParent || scrollParent.scrollTop > 0) {
-			setIsDragging(false);
-			pullY.set(0);
-			startYRef.current = null;
-			return;
-		}
-		const delta = Math.max(0, e.clientY - startYRef.current);
-		// Dampen the pull for a natural feel
-		const dampened = Math.min(delta * 0.5, PULL_THRESHOLD * 1.5);
-		pullY.set(dampened);
-	}, [isDragging, pullY]);
+	const handlePointerMove = useCallback(
+		(e: React.PointerEvent) => {
+			if (!isDragging || startYRef.current === null) return;
+			const scrollParent = getScrollParent();
+			if (!scrollParent || scrollParent.scrollTop > 0) {
+				setIsDragging(false);
+				pullY.set(0);
+				startYRef.current = null;
+				return;
+			}
+			const delta = Math.max(0, e.clientY - startYRef.current);
+			// Dampen the pull for a natural feel
+			const dampened = Math.min(delta * 0.5, PULL_THRESHOLD * 1.5);
+			pullY.set(dampened);
+		},
+		[isDragging, pullY],
+	);
 
 	const handlePointerUp = useCallback(() => {
 		if (!isDragging) return;

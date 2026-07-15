@@ -6,10 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { IconButton, Fab, List, Box, Button, Container } from '@mui/material';
 import { MobileToolbar } from '../components/MobileToolbar';
-import {
-	Add as AddIcon,
-	SettingsOutlined as SettingsOutlinedIcon,
-} from '@mui/icons-material';
+import { Add as AddIcon, SettingsOutlined as SettingsOutlinedIcon } from '@mui/icons-material';
 
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { useNavigate } from '@tanstack/react-router';
@@ -41,11 +38,10 @@ const Home: React.FC = () => {
 	};
 
 	const handleDelete = async (id: number) => {
-		console.log(`[DELETE_DEBUG] handleDelete called for id: ${id}`);
 		try {
 			await AlarmService.delete(id);
 		} catch (e) {
-			console.error(`[DELETE_DEBUG] ERROR in handleDelete:`, e);
+			console.error('Failed to delete alarm:', e);
 		}
 	};
 
@@ -62,18 +58,19 @@ const Home: React.FC = () => {
 			{isMobile && (
 				<MobileToolbar
 					title={APP_NAME}
-					menuItems={[
-						{ label: 'Settings', onClick: handleSettingsClick }
-					]}
+					menuItems={[{ label: 'Settings', onClick: handleSettingsClick }]}
 				/>
 			)}
 
-			<Container maxWidth={false} sx={{
-				mt: 0,
-				pt: 2,
-				pb: 10,
-				px: 2,
-			}}>
+			<Container
+				maxWidth={false}
+				sx={{
+					mt: 0,
+					pt: 2,
+					pb: 10,
+					px: 2,
+				}}
+			>
 				<NextAlarmBanner alarms={alarms} is24h={is24h} />
 				{isMobile ? (
 					<PullToRefresh onRefresh={refresh}>
@@ -105,22 +102,28 @@ const Home: React.FC = () => {
 			</Container>
 
 			{/* Floating Add Button */}
-			<Box sx={!isMobile ? {
-				position: 'fixed',
-				bottom: 0,
-				left: 0,
-				right: 0,
-				zIndex: 1000,
-				p: 2,
-				bgcolor: 'background.paper',
-				borderTop: '1px solid',
-				borderColor: 'divider'
-			} : {
-				position: 'fixed',
-				bottom: 32,
-				right: 32,
-				zIndex: 1000
-			}}>
+			<Box
+				sx={
+					!isMobile
+						? {
+								position: 'fixed',
+								bottom: 0,
+								left: 0,
+								right: 0,
+								zIndex: 1000,
+								p: 2,
+								bgcolor: 'background.paper',
+								borderTop: '1px solid',
+								borderColor: 'divider',
+							}
+						: {
+								position: 'fixed',
+								bottom: 32,
+								right: 32,
+								zIndex: 1000,
+							}
+				}
+			>
 				{!isMobile ? (
 					<Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
 						<Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
@@ -134,7 +137,11 @@ const Home: React.FC = () => {
 								Add Alarm
 							</Button>
 						</Box>
-						<IconButton onClick={handleSettingsClick} aria-label="settings" sx={{ position: 'absolute', right: 0 }}>
+						<IconButton
+							onClick={handleSettingsClick}
+							aria-label="settings"
+							sx={{ position: 'absolute', right: 0 }}
+						>
 							<SettingsOutlinedIcon />
 						</IconButton>
 					</Box>

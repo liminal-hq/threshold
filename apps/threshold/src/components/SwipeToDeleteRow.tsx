@@ -25,8 +25,7 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 	const controls = useAnimation();
 	const [isDeleting, setIsDeleting] = useState(false);
 	const prefersReducedMotion =
-		typeof window !== 'undefined' &&
-		window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 	const containerRef = useRef<HTMLDivElement>(null);
 

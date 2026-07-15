@@ -45,17 +45,17 @@ Export typed constants derived from MUI spacing and palette roles. No hardcoded 
 // Colours are never hardcoded here — use palette roles at call site.
 
 export const UI = {
-  card: {
-    borderRadius: '14px',       // Alarm card corner radius
-    accentRailWidth: '6px',     // Left accent rail on alarm cards
-    mobilePadding: 2,           // MUI spacing units (px = * 8)
-  },
-  banner: {
-    borderRadius: '14px',
-  },
-  footer: {
-    height: 56,                 // px — desktop bottom action bar height
-  },
+	card: {
+		borderRadius: '14px', // Alarm card corner radius
+		accentRailWidth: '6px', // Left accent rail on alarm cards
+		mobilePadding: 2, // MUI spacing units (px = * 8)
+	},
+	banner: {
+		borderRadius: '14px',
+	},
+	footer: {
+		height: 56, // px — desktop bottom action bar height
+	},
 } as const;
 ```
 
@@ -84,6 +84,7 @@ export function accentRailSx(enabled: boolean) { … }
 **Files:** `apps/threshold/src/components/AlarmItem.tsx`
 
 **Changes:**
+
 - Restructure the `Card` interior to support the left accent rail.
 - The `Card` itself gains `position: 'relative'` and `overflow: 'hidden'` (already has `overflow: 'hidden'` via `borderRadius`; confirm and set explicitly).
 - Add a `Box` as the first child of the card: `position: 'absolute'`, `left: 0`, `top: 0`, `bottom: 0`, `width: UI.card.accentRailWidth`, background colour from `accentRailSx(alarm.enabled)`.
@@ -93,6 +94,7 @@ export function accentRailSx(enabled: boolean) { … }
 - Keep desktop delete `IconButton` and `Switch` unchanged.
 
 **Acceptance check:**
+
 - Enabled alarm shows accent rail in `primary.main` colour.
 - Disabled alarm shows accent rail in a muted tone (e.g. `text.disabled` or `action.disabled`).
 - Rail is visible under all 6 themes in both light and dark variants.
@@ -105,6 +107,7 @@ export function accentRailSx(enabled: boolean) { … }
 **New component to create:** `apps/threshold/src/components/NextAlarmBanner.tsx`
 
 `NextAlarmBanner` accepts `alarms: AlarmRecord[]` and `is24h: boolean`. Internally:
+
 - Filters to `enabled && nextTrigger && nextTrigger > Date.now()`.
 - Sorts ascending by `nextTrigger`.
 - Takes the first result. Returns `null` if none.
@@ -112,12 +115,14 @@ export function accentRailSx(enabled: boolean) { … }
 - Renders a `Box` using `sx` with `bgcolor: 'primary.main'` at low opacity (use `alpha()` from `@mui/material/styles`) or a subtle gradient — no hardcoded colours.
 
 In `Home.tsx`:
+
 - Render `<NextAlarmBanner alarms={alarms} is24h={is24h} />` between the toolbar (or top of container) and the alarm list.
 - On mobile: inside the scrollable container, above the list.
 - On desktop: inside the content area, above the `List`.
 - Adjust `pt` on the container if needed to prevent overlap.
 
 **Acceptance check:**
+
 - Banner appears when at least one enabled alarm has a future `nextTrigger`.
 - Banner disappears when all alarms are disabled.
 - Banner updates when `alarms` context updates (event-driven — no extra polling).
@@ -130,6 +135,7 @@ In `Home.tsx`:
 **New component to create:** `apps/threshold/src/components/PullToRefresh.tsx`
 
 Build using Framer Motion (`motion` package already in dependencies). Pattern:
+
 - Track vertical drag on the scroll container via `useDragControls` or `useMotionValue`.
 - Only activate when `scrollTop === 0` and drag direction is downward.
 - Show a spinner/indicator at a threshold (e.g. 72px pull distance).
@@ -138,10 +144,12 @@ Build using Framer Motion (`motion` package already in dependencies). Pattern:
 - Respect `prefers-reduced-motion` — if reduced motion, skip animation and call refresh immediately on release.
 
 In `Home.tsx`:
+
 - Remove the `RefreshIcon` `IconButton` from `MobileToolbar` `endAction` on mobile (set `endAction` to `undefined`; the overflow ⋮ menu with Settings stays).
 - Wrap the mobile alarm list in `<PullToRefresh onRefresh={refresh}>`.
 
 **Acceptance check:**
+
 - Pull gesture triggers `refresh()` on mobile.
 - No visible refresh icon in toolbar.
 - Settings still accessible via overflow ⋮ menu.
@@ -153,6 +161,7 @@ In `Home.tsx`:
 **Files:** `apps/threshold/src/screens/Home.tsx`
 
 **Changes:**
+
 - Remove the fixed top-right `IconButton` (`position: 'fixed', top: '48px', right: '16px'`) for Settings on desktop.
 - In the desktop footer `Box`, add a `IconButton` with `SettingsOutlinedIcon` to the right of the `Button`. Use `flexDirection: 'row'`, `alignItems: 'center'`, `gap: 1` or similar on the footer's inner `Box`.
 - The `Button` keeps `maxWidth: 400, mx: 'auto'` and `display: 'flex'`.
@@ -160,6 +169,7 @@ In `Home.tsx`:
 - Adjust `mt` on the content container: currently `mt: 8` on desktop to clear the fixed settings button. After removing that button, reduce to `mt: 0` (the `TitleBar` is 32px and the content container gets `marginTop: '32px'` from the router layout — check `router.tsx`).
 
 **Acceptance check:**
+
 - Settings gear appears in the footer zone on desktop only.
 - No settings button at top-right on desktop.
 - `mt` correction means content does not start too far from the title bar.
@@ -174,6 +184,7 @@ In `Home.tsx`:
 This screen is a visual refresh only. Logic, validation, and save flow are unchanged.
 
 **Changes:**
+
 - Apply `borderRadius: UI.card.borderRadius` to the time picker input containers (the `Box` wrapping `MuiTimePicker` on mobile and the `DesktopCustomTimePicker` container on desktop) for visual consistency.
 - Apply consistent `borderRadius` and `bgcolor: 'background.paper'` + `border: 1px solid` + `borderColor: 'divider'` to the label `TextField` and sound picker `Paper` row to match the card language.
 - Sound picker row on mobile: confirm `Paper` with `variant="outlined"` renders with correct theme border colour. Currently uses `bgcolor: 'action.hover'` on hover — keep.
@@ -182,6 +193,7 @@ This screen is a visual refresh only. Logic, validation, and save flow are uncha
 - No layout or form order changes.
 
 **Acceptance check:**
+
 - Form renders correctly in both Fixed and Window modes on both platforms.
 - Day selector border visible in dark mode (was broken with hardcoded value).
 - All fields use theme border tokens — no hardcoded colours.
@@ -196,10 +208,12 @@ This screen is a visual refresh only. Logic, validation, and save flow are uncha
 **Files:** `apps/threshold/src/screens/Settings.tsx`
 
 **Changes:**
+
 - No structural or visual changes to mobile Settings. The existing flat transparent `List` layout under `ListSubheader` labels is the target state.
 - Confirm the outer `Box` (`height: '100%', overflowY: 'auto'`) scrolls correctly end-to-end so the Developer section is reachable. No code change needed unless testing reveals clipping.
 
 **Acceptance check:**
+
 - All settings rows visible and reachable by scrolling on mobile.
 - No layout regressions.
 
@@ -231,6 +245,7 @@ Add `const [activeSection, setActiveSection] = useState<'appearance' | 'alarmSet
 **`mt` correction:** Current desktop uses `mt: 2` on the `Container`. With the new layout, set `mt: 0` on the outer `Box` — `RootLayout` already provides `marginTop: '32px'` for the `TitleBar`.
 
 **Acceptance check:**
+
 - Nav rail shows four items; active item highlighted in `primary.main`.
 - Clicking each nav item switches the right panel content without navigation.
 - Material You row visible on desktop but clearly labelled "Android only" and non-interactive.
@@ -245,6 +260,7 @@ Add `const [activeSection, setActiveSection] = useState<'appearance' | 'alarmSet
 **Files:** `Home.tsx`, `EditAlarm.tsx`, `Settings.tsx`
 
 **Checks to perform:**
+
 - Confirm `mt` on each desktop screen correctly accounts for the 32px `TitleBar` (set via `marginTop: '32px'` in `router.tsx`'s `RootLayout`). Any screen using `mt: 2` or `mt: 8` should be reviewed.
 - Confirm footer `Box` on `Home.tsx` and `EditAlarm.tsx` does not overlap content. Both currently use `pb: 10` / `pb: !isMobile ? 10 : 0` — verify the footer height (`UI.footer.height = 56`) is cleared.
 - Confirm `NextAlarmBanner` on desktop does not push content off-screen.
@@ -255,6 +271,7 @@ Add `const [activeSection, setActiveSection] = useState<'appearance' | 'alarmSet
 ## Phase 6 — QA and accessibility pass
 
 **Checks:**
+
 - Contrast ratio on accent rail colours under all 6 themes (light + dark variants).
 - Contrast ratio on `NextAlarmBanner` text against banner background.
 - Touch target size on mobile FAB (currently `size="large"` — confirm 48dp minimum).
@@ -268,18 +285,18 @@ Add `const [activeSection, setActiveSection] = useState<'appearance' | 'alarmSet
 
 ## File change summary
 
-| File | Phase | Type |
-|---|---|---|
-| `src-tauri/tauri.conf.json` | 1 | Edit (window size) |
-| `src/theme/uiTokens.ts` | 1 | New |
-| `src/theme/alarmCardStyles.ts` | 1 | New |
-| `src/components/AlarmItem.tsx` | 2a | Edit |
-| `src/components/NextAlarmBanner.tsx` | 2b | New |
-| `src/components/PullToRefresh.tsx` | 2c | New |
-| `src/screens/Home.tsx` | 2b, 2c, 2d | Edit |
-| `src/components/DaySelector.tsx` | 3 | Edit (bug fix) |
-| `src/screens/EditAlarm.tsx` | 3 | Edit |
-| `src/screens/Settings.tsx` | 4 | Edit (desktop nav rail + mobile verify) |
+| File                                 | Phase      | Type                                    |
+| ------------------------------------ | ---------- | --------------------------------------- |
+| `src-tauri/tauri.conf.json`          | 1          | Edit (window size)                      |
+| `src/theme/uiTokens.ts`              | 1          | New                                     |
+| `src/theme/alarmCardStyles.ts`       | 1          | New                                     |
+| `src/components/AlarmItem.tsx`       | 2a         | Edit                                    |
+| `src/components/NextAlarmBanner.tsx` | 2b         | New                                     |
+| `src/components/PullToRefresh.tsx`   | 2c         | New                                     |
+| `src/screens/Home.tsx`               | 2b, 2c, 2d | Edit                                    |
+| `src/components/DaySelector.tsx`     | 3          | Edit (bug fix)                          |
+| `src/screens/EditAlarm.tsx`          | 3          | Edit                                    |
+| `src/screens/Settings.tsx`           | 4          | Edit (desktop nav rail + mobile verify) |
 
 ---
 

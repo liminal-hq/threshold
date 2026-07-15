@@ -83,7 +83,11 @@ const Settings: React.FC = () => {
 
 	const renderAppearance = (px: number) => (
 		<List
-			subheader={isMobile ? <ListSubheader sx={{ bgcolor: 'transparent' }}>Appearance</ListSubheader> : undefined}
+			subheader={
+				isMobile ? (
+					<ListSubheader sx={{ bgcolor: 'transparent' }}>Appearance</ListSubheader>
+				) : undefined
+			}
 		>
 			<ListItem sx={{ px }}>
 				<FormControl fullWidth>
@@ -106,7 +110,8 @@ const Settings: React.FC = () => {
 
 			{/* Material You Toggle: visible on mobile only when system theme + Android; always visible on desktop */}
 			{isMobile ? (
-				theme === 'system' && isAndroid && (
+				theme === 'system' &&
+				isAndroid && (
 					<ListItem sx={{ px }}>
 						<ListItemText primary="Use Material You" secondary="Use dynamic system colours" />
 						<Switch
@@ -133,11 +138,7 @@ const Settings: React.FC = () => {
 
 			<ListItem sx={{ px }}>
 				<ListItemText primary="Force Dark Mode" secondary="Override system colour scheme" />
-				<Switch
-					edge="end"
-					checked={forceDark}
-					onChange={(e) => setForceDark(e.target.checked)}
-				/>
+				<Switch edge="end" checked={forceDark} onChange={(e) => setForceDark(e.target.checked)} />
 			</ListItem>
 		</List>
 	);
@@ -145,7 +146,9 @@ const Settings: React.FC = () => {
 	const renderAlarmSettings = (px: number) => (
 		<List
 			subheader={
-				isMobile ? <ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Alarm Settings</ListSubheader> : undefined
+				isMobile ? (
+					<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Alarm Settings</ListSubheader>
+				) : undefined
 			}
 		>
 			<ListItem sx={{ px }}>
@@ -171,10 +174,7 @@ const Settings: React.FC = () => {
 				</FormControl>
 			</ListItem>
 
-			<ListItemButton
-				onClick={() => setSnoozeDialogOpen(true)}
-				sx={{ px }}
-			>
+			<ListItemButton onClick={() => setSnoozeDialogOpen(true)} sx={{ px }}>
 				<ListItemText
 					primary="Snooze Length"
 					secondary={`${snoozeLength} minute${snoozeLength > 1 ? 's' : ''}`}
@@ -186,14 +186,13 @@ const Settings: React.FC = () => {
 	const renderGeneral = (px: number) => (
 		<List
 			subheader={
-				isMobile ? <ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>General</ListSubheader> : undefined
+				isMobile ? (
+					<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>General</ListSubheader>
+				) : undefined
 			}
 		>
 			<ListItem sx={{ px }}>
-				<ListItemText
-					primary="24-Hour Time"
-					secondary="Use 24-hour format for time display"
-				/>
+				<ListItemText primary="24-Hour Time" secondary="Use 24-hour format for time display" />
 				<Switch
 					edge="end"
 					checked={is24h}
@@ -206,7 +205,9 @@ const Settings: React.FC = () => {
 	const renderDeveloper = (px: number) => (
 		<List
 			subheader={
-				isMobile ? <ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Developer</ListSubheader> : undefined
+				isMobile ? (
+					<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Developer</ListSubheader>
+				) : undefined
 			}
 		>
 			<ListItem sx={{ px }}>
@@ -315,10 +316,7 @@ const Settings: React.FC = () => {
 			)}
 
 			<ListItem sx={{ px }}>
-				<ListItemText
-					primary="Force Synchronise"
-					secondary="Request an immediate watch sync"
-				/>
+				<ListItemText primary="Force Synchronise" secondary="Request an immediate watch sync" />
 				<IconButton
 					edge="end"
 					onClick={async () => {
@@ -377,11 +375,7 @@ const Settings: React.FC = () => {
 						},
 					}}
 				>
-					{isExportingLogs ? (
-						<CircularProgress size={20} color="inherit" />
-					) : (
-						<FileDownloadIcon />
-					)}
+					{isExportingLogs ? <CircularProgress size={20} color="inherit" /> : <FileDownloadIcon />}
 				</IconButton>
 			</ListItem>
 		</List>
@@ -435,26 +429,30 @@ const Settings: React.FC = () => {
 							<Typography variant="h4">Settings</Typography>
 						</Box>
 
-						<Box sx={{
-							display: 'flex',
-							flexDirection: 'row',
-							flexGrow: 1,
-							gap: 2,
-							overflow: 'hidden',
-							px: 3,
-							pb: 3,
-							pt: 2,
-						}}>
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: 'row',
+								flexGrow: 1,
+								gap: 2,
+								overflow: 'hidden',
+								px: 3,
+								pb: 3,
+								pt: 2,
+							}}
+						>
 							{/* Left nav rail */}
-							<Box sx={{
-								width: 220,
-								flexShrink: 0,
-								bgcolor: 'background.default',
-								border: '1px solid',
-								borderColor: 'divider',
-								borderRadius: '14px',
-								p: 1,
-							}}>
+							<Box
+								sx={{
+									width: 220,
+									flexShrink: 0,
+									bgcolor: 'background.default',
+									border: '1px solid',
+									borderColor: 'divider',
+									borderRadius: '14px',
+									p: 1,
+								}}
+							>
 								<List disablePadding>
 									{NAV_ITEMS.map((item) => (
 										<ListItemButton
@@ -480,15 +478,17 @@ const Settings: React.FC = () => {
 							</Box>
 
 							{/* Right detail panel */}
-							<Box sx={{
-								flexGrow: 1,
-								overflowY: 'auto',
-								bgcolor: 'background.paper',
-								border: '1px solid',
-								borderColor: 'divider',
-								borderRadius: '14px',
-								p: 3,
-							}}>
+							<Box
+								sx={{
+									flexGrow: 1,
+									overflowY: 'auto',
+									bgcolor: 'background.paper',
+									border: '1px solid',
+									borderColor: 'divider',
+									borderRadius: '14px',
+									p: 3,
+								}}
+							>
 								{renderDesktopSectionContent()}
 							</Box>
 						</Box>

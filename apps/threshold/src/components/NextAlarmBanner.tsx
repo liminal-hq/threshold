@@ -1,10 +1,19 @@
-import React from 'react';
+// Home screen banner showing the next upcoming alarm and its countdown
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { AccessTime as AccessTimeIcon } from '@mui/icons-material';
 import { AlarmRecord } from '../types/alarm';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { UI } from '../theme/uiTokens';
+
+// The countdown's finest unit is minutes, so a tick this often keeps it from
+// visibly lagging without re-rendering far more than the display needs.
+const COUNTDOWN_TICK_MS = 30_000;
 
 interface NextAlarmBannerProps {
 	alarms: AlarmRecord[];
@@ -14,11 +23,16 @@ interface NextAlarmBannerProps {
 export const NextAlarmBanner: React.FC<NextAlarmBannerProps> = ({ alarms, is24h }) => {
 	const theme = useTheme();
 
-	const now = Date.now();
+	const [now, setNow] = useState(() => Date.now());
+
+	useEffect(() => {
+		const interval = setInterval(() => setNow(Date.now()), COUNTDOWN_TICK_MS);
+		return () => clearInterval(interval);
+	}, []);
+
 	const nextAlarm = alarms
 		.filter((a) => a.enabled && a.nextTrigger && a.nextTrigger > now)
-		.sort((a, b) => a.nextTrigger! - b.nextTrigger!)
-		[0];
+		.sort((a, b) => a.nextTrigger! - b.nextTrigger!)[0];
 
 	if (!nextAlarm) return null;
 
@@ -53,7 +67,7 @@ export const NextAlarmBanner: React.FC<NextAlarmBannerProps> = ({ alarms, is24h 
 		>
 			<AccessTimeIcon sx={{ color: 'primary.main', fontSize: 20 }} />
 			<Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-				Next alarm in {countdown}  ·  Scheduled: {formattedTime}
+				Next alarm in {countdown} · Scheduled: {formattedTime}
 			</Typography>
 		</Box>
 	);

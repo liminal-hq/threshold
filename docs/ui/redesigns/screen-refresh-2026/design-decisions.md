@@ -144,26 +144,32 @@ Material You support remains automatic through existing `ThemeContext` and setti
 ## 8) Proposed implementation phases
 
 1. Foundation pass
+
 - Create shared screen-level spacing, card, and typography tokens based on current theme system.
 - Add reusable style helpers for accent rail, grouped section cards, and banner treatment.
 
 2. Home redesign
+
 - Update `Home.tsx` and `AlarmItem.tsx` styling to match new card language.
 - Keep existing data, toggles, delete, and navigation behaviour.
 
 3. Edit/New redesign
+
 - Update `EditAlarm.tsx` layout/styling only, preserve control logic.
 
 4. Settings redesign
+
 - Keep mobile close to current settings structure.
 - Improve spacing and grouping clarity.
 - Avoid bubble-heavy and line-heavy presentation treatments.
 - Apply left-category/right-panel composition for desktop concepts.
 
 5. Desktop polish pass
+
 - Validate desktop spacing, fixed action bars, and title bar interaction fit.
 
 6. QA and accessibility pass
+
 - Contrast checks under all themes (including Material You)
 - Reduced motion sanity checks
 - Touch target checks (mobile)

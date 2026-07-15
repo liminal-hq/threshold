@@ -39,12 +39,12 @@
 
 ## Platform Mapping Matrix
 
-| Concept ID | Mobile Expression | Desktop Expression |
-|---|---|---|
-| `EDIT-C1` | scrollable editor under toolbar | centred container with in-page title |
-| `EDIT-C2` | full-width toggle button group | full-width toggle button group |
-| `EDIT-C3` | MUI mobile `TimePicker` fields | desktop custom time picker |
-| `EDIT-C5` | toolbar save action | fixed footer save action |
+| Concept ID | Mobile Expression               | Desktop Expression                   |
+| ---------- | ------------------------------- | ------------------------------------ |
+| `EDIT-C1`  | scrollable editor under toolbar | centred container with in-page title |
+| `EDIT-C2`  | full-width toggle button group  | full-width toggle button group       |
+| `EDIT-C3`  | MUI mobile `TimePicker` fields  | desktop custom time picker           |
+| `EDIT-C5`  | toolbar save action             | fixed footer save action             |
 
 ## Platform Behaviour
 
@@ -64,9 +64,11 @@
 ## Layout Anatomy
 
 1. header zone
+
 - mobile toolbar or desktop title block
 
 2. form content zone
+
 - mode selector (`Fixed Time` / `Window`)
 - time inputs
 - label input
@@ -74,6 +76,7 @@
 - sound control
 
 3. fixed action zone (desktop only)
+
 - cancel and save buttons fixed to bottom edge
 
 ## Content Contract

@@ -38,12 +38,12 @@
 
 ## Platform Mapping Matrix
 
-| Concept ID | Mobile Expression | Desktop Expression |
-|---|---|---|
-| `HOME-C1` | mapped alarm rows in content container | mapped alarm rows inside MUI `List` |
-| `HOME-C2` | row tap + swipe wrapper + switch | row click + delete icon + switch |
-| `HOME-C3` | floating FAB at bottom-right | fixed footer contained button |
-| `HOME-C4` | overflow menu item in toolbar | fixed icon button (current), bottom-zone gear (planned) |
+| Concept ID | Mobile Expression                      | Desktop Expression                                      |
+| ---------- | -------------------------------------- | ------------------------------------------------------- |
+| `HOME-C1`  | mapped alarm rows in content container | mapped alarm rows inside MUI `List`                     |
+| `HOME-C2`  | row tap + swipe wrapper + switch       | row click + delete icon + switch                        |
+| `HOME-C3`  | floating FAB at bottom-right           | fixed footer contained button                           |
+| `HOME-C4`  | overflow menu item in toolbar          | fixed icon button (current), bottom-zone gear (planned) |
 
 ## Platform Behaviour
 
@@ -65,14 +65,17 @@
 ## Layout Anatomy
 
 1. header zone
+
 - mobile toolbar with title, refresh, and overflow
 - desktop in-screen fixed Settings icon (current baseline)
 
 2. content zone
+
 - full-height scroll container
 - alarm rows from `useAlarms()` context
 
 3. fixed action zone
+
 - mobile floating FAB
 - desktop full-width footer with primary add button
 

@@ -282,7 +282,13 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 											slotProps={{ textField: { fullWidth: true } }}
 										/>
 									) : (
-										<Box sx={{ display: 'flex', justifyContent: 'center', borderRadius: UI.card.borderRadius }}>
+										<Box
+											sx={{
+												display: 'flex',
+												justifyContent: 'center',
+												borderRadius: UI.card.borderRadius,
+											}}
+										>
 											<DesktopCustomTimePicker
 												value={fixedTime}
 												onChange={setFixedTime}
@@ -316,24 +322,26 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 												<Typography variant="subtitle2" gutterBottom>
 													Start Window
 												</Typography>
-												<Box sx={{
-													display: 'flex',
-													justifyContent: 'center',
-													borderRadius: UI.card.borderRadius,
-													'& .time-picker-container': {
-														padding: '8px',
-														gap: '8px',
-													},
-													'& .time-value-input': {
-														width: '60px',
-														fontSize: '1.6rem',
-														padding: '8px 0',
-													},
-													'& .time-control-btn': {
-														width: '32px',
-														height: '26px',
-													},
-												}}>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'center',
+														borderRadius: UI.card.borderRadius,
+														'& .time-picker-container': {
+															padding: '8px',
+															gap: '8px',
+														},
+														'& .time-value-input': {
+															width: '60px',
+															fontSize: '1.6rem',
+															padding: '8px 0',
+														},
+														'& .time-control-btn': {
+															width: '32px',
+															height: '26px',
+														},
+													}}
+												>
 													<DesktopCustomTimePicker
 														value={windowStart}
 														onChange={setWindowStart}
@@ -345,24 +353,26 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 												<Typography variant="subtitle2" gutterBottom>
 													End Window
 												</Typography>
-												<Box sx={{
-													display: 'flex',
-													justifyContent: 'center',
-													borderRadius: UI.card.borderRadius,
-													'& .time-picker-container': {
-														padding: '8px',
-														gap: '8px',
-													},
-													'& .time-value-input': {
-														width: '60px',
-														fontSize: '1.6rem',
-														padding: '8px 0',
-													},
-													'& .time-control-btn': {
-														width: '32px',
-														height: '26px',
-													},
-												}}>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'center',
+														borderRadius: UI.card.borderRadius,
+														'& .time-picker-container': {
+															padding: '8px',
+															gap: '8px',
+														},
+														'& .time-value-input': {
+															width: '60px',
+															fontSize: '1.6rem',
+															padding: '8px 0',
+														},
+														'& .time-control-btn': {
+															width: '32px',
+															height: '26px',
+														},
+													}}
+												>
 													<DesktopCustomTimePicker
 														value={windowEnd}
 														onChange={setWindowEnd}

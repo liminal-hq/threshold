@@ -108,16 +108,24 @@ export const TitleBar: React.FC = () => {
 		sections: [
 			{
 				items: [
-					...(isMaximizable && isResizable ? [{
-						id: isMaximized ? 'restore' : 'maximize',
-						label: isMaximized ? 'Restore' : 'Maximize',
-						icon: isMaximized ? 'WindowRestoreIcon' : 'WindowMaximizeIcon',
-					}] : []),
-					...(isMinimizable ? [{
-						id: 'minimize',
-						label: 'Minimize',
-						icon: 'WindowMinimizeIcon',
-					}] : []),
+					...(isMaximizable && isResizable
+						? [
+								{
+									id: isMaximized ? 'restore' : 'maximize',
+									label: isMaximized ? 'Restore' : 'Maximize',
+									icon: isMaximized ? 'WindowRestoreIcon' : 'WindowMaximizeIcon',
+								},
+							]
+						: []),
+					...(isMinimizable
+						? [
+								{
+									id: 'minimize',
+									label: 'Minimize',
+									icon: 'WindowMinimizeIcon',
+								},
+							]
+						: []),
 				],
 			},
 			{ items: [{ id: 'move', label: 'Move', icon: 'MoveIcon' }] },
@@ -140,8 +148,16 @@ export const TitleBar: React.FC = () => {
 	const MacControls = () => (
 		<div className="window-controls mac">
 			<button onClick={close} className="control-button mac-close" title="Close" />
-			{isMinimizable && <button onClick={minimize} className="control-button mac-minimize" title="Minimize" />}
-			{isMaximizable && isResizable && <button onClick={toggleMaximize} className="control-button mac-maximize" title={isMaximized ? 'Restore' : 'Maximize'} />}
+			{isMinimizable && (
+				<button onClick={minimize} className="control-button mac-minimize" title="Minimize" />
+			)}
+			{isMaximizable && isResizable && (
+				<button
+					onClick={toggleMaximize}
+					className="control-button mac-maximize"
+					title={isMaximized ? 'Restore' : 'Maximize'}
+				/>
+			)}
 		</div>
 	);
 
