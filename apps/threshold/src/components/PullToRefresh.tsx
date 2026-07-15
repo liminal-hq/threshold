@@ -56,6 +56,9 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 	// whichever family sourceRef names.
 	const activeIdRef = useRef<number | null>(null);
 	const startYRef = useRef<number | null>(null);
+	// Tracked alongside Y purely to detect a horizontal-dominant gesture (see handleMove) -- this
+	// component otherwise has no use for X at all.
+	const startXRef = useRef<number | null>(null);
 	const refreshingRef = useRef(false);
 	const onRefreshRef = useRef(onRefresh);
 	onRefreshRef.current = onRefresh;
@@ -106,19 +109,21 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 			sourceRef.current = null;
 			activeIdRef.current = null;
 			startYRef.current = null;
+			startXRef.current = null;
 			pullY.set(0);
 		};
 
-		const beginTracking = (source: 'touch' | 'pointer', id: number, y: number) => {
+		const beginTracking = (source: 'touch' | 'pointer', id: number, x: number, y: number) => {
 			sourceRef.current = source;
 			activeIdRef.current = id;
+			startXRef.current = x;
 			startYRef.current = y;
 			gestureRef.current = 'tracking';
 		};
 
-		// Shared arm/commit/track decision given the gesture's current Y and a way to cancel
+		// Shared arm/commit/track decision given the gesture's current X/Y and a way to cancel
 		// the browser's default action for this specific move event.
-		const handleMove = (y: number, preventDefault: () => void) => {
+		const handleMove = (x: number, y: number, preventDefault: () => void) => {
 			if (gestureRef.current === 'idle' || startYRef.current === null) return;
 			const rawDelta = y - startYRef.current;
 
@@ -140,6 +145,18 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 			// movement is unambiguously a deliberate downward pull.
 			const scrollParent = getScrollParent();
 			if (!scrollParent || scrollParent.scrollTop > 0) {
+				abandon();
+				return;
+			}
+			// This gesture may also be a horizontal swipe over the topmost row (the only row a
+			// pull can ever start on) deciding to reveal SwipeToDeleteRow's own delete action --
+			// that component makes the mirror-image check (apps/threshold/src/components/
+			// SwipeToDeleteRow.tsx) so only one of the two ever claims a given gesture. Without
+			// this, a diagonal-enough drag could cross this gesture's own vertical arm threshold
+			// while the row's swipe was also engaging, letting both react to the same touch at
+			// once.
+			const rawDeltaX = startXRef.current === null ? 0 : x - startXRef.current;
+			if (Math.abs(rawDeltaX) > Math.abs(rawDelta)) {
 				abandon();
 				return;
 			}
@@ -207,14 +224,14 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 			const scrollParent = getScrollParent();
 			if (!scrollParent || scrollParent.scrollTop > 0) return;
 			const touch = e.touches[0];
-			beginTracking('touch', touch.identifier, touch.clientY);
+			beginTracking('touch', touch.identifier, touch.clientX, touch.clientY);
 		};
 
 		const handleTouchMove = (e: TouchEvent) => {
 			if (sourceRef.current !== 'touch') return;
 			const touch = getOwnTouch(e.touches);
 			if (!touch) return;
-			handleMove(touch.clientY, () => e.preventDefault());
+			handleMove(touch.clientX, touch.clientY, () => e.preventDefault());
 		};
 
 		const handleTouchEnd = (e: TouchEvent) => {
@@ -236,12 +253,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 			if (e.button !== 0) return;
 			const scrollParent = getScrollParent();
 			if (!scrollParent || scrollParent.scrollTop > 0) return;
-			beginTracking('pointer', e.pointerId, e.clientY);
+			beginTracking('pointer', e.pointerId, e.clientX, e.clientY);
 		};
 
 		const handlePointerMove = (e: PointerEvent) => {
 			if (sourceRef.current !== 'pointer' || e.pointerId !== activeIdRef.current) return;
-			handleMove(e.clientY, () => e.preventDefault());
+			handleMove(e.clientX, e.clientY, () => e.preventDefault());
 		};
 
 		const handlePointerEnd = (e: PointerEvent) => {

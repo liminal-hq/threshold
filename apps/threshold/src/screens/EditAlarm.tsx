@@ -303,7 +303,13 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 											value={parseTime(fixedTime)}
 											onChange={(newValue) => handleTimeChange(newValue, setFixedTime)}
 											ampm={!is24h}
-											slotProps={{ textField: { fullWidth: true } }}
+											// Without this, the floating label only shrinks once the field is
+											// focused -- since this picker always shows a real time value (never
+											// genuinely empty), the label should always sit above the outline
+											// instead of overlapping the displayed time.
+											slotProps={{
+												textField: { fullWidth: true, InputLabelProps: { shrink: true } },
+											}}
 										/>
 									) : (
 										<Box
@@ -330,14 +336,18 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 												value={parseTime(windowStart)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowStart)}
 												ampm={!is24h}
-												slotProps={{ textField: { fullWidth: true } }}
+												slotProps={{
+													textField: { fullWidth: true, InputLabelProps: { shrink: true } },
+												}}
 											/>
 											<MuiTimePicker
 												label="End Window"
 												value={parseTime(windowEnd)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowEnd)}
 												ampm={!is24h}
-												slotProps={{ textField: { fullWidth: true } }}
+												slotProps={{
+													textField: { fullWidth: true, InputLabelProps: { shrink: true } },
+												}}
 											/>
 										</>
 									) : (

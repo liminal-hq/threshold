@@ -75,6 +75,10 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 		activePointerIdRef.current = e.pointerId;
 		gestureStartRef.current = { x: e.clientX, y: e.clientY };
 		axisDecidedRef.current = false;
+		// A prior gesture on this row may have been a vertical-dominant one, which marks isDrag
+		// true to suppress its own tap (see handleRowPointerMove) -- reset it here so a genuine
+		// tap after that gesture isn't suppressed too.
+		isDrag.current = false;
 		// Without capturing, pointerup/pointercancel fire on whatever element is physically
 		// under the pointer at release -- not necessarily this row (e.g. a mouse drag released
 		// outside the row's bounds before the axis is decided). handleRowPointerEnd would then
@@ -99,8 +103,14 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 		axisDecidedRef.current = true;
 		if (Math.abs(dx) > Math.abs(dy)) {
 			dragControls.start(e);
+		} else {
+			// Vertical-dominant -- never engage Framer's drag for this gesture, but this was still
+			// real, deliberate movement (most often a pull-to-refresh attempt starting on this
+			// exact row, since it's the topmost one). Framer's own tap recognizer doesn't know
+			// that, and without isDrag being set here, releasing over the row after an abandoned
+			// or short pull attempt was being misread as a tap and navigating into Edit.
+			isDrag.current = true;
 		}
-		// else: vertical-dominant -- never engage Framer's drag for this gesture at all.
 	};
 
 	const handleRowPointerEnd = (e: React.PointerEvent) => {
