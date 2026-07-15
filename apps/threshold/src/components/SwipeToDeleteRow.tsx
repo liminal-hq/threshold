@@ -10,6 +10,7 @@ import {
 	useTransform,
 	PanInfo,
 	useAnimation,
+	useDragControls,
 	Transition,
 } from 'motion/react';
 import { Box, ButtonBase } from '@mui/material';
@@ -41,6 +42,7 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 }) => {
 	const x = useMotionValue(0);
 	const controls = useAnimation();
+	const dragControls = useDragControls();
 	const [isDeleting, setIsDeleting] = useState(false);
 	const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -48,6 +50,47 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 
 	// Track drag to distinguish tap vs swipe
 	const isDrag = useRef(false);
+
+	// Framer's default drag-on-touch behaviour engages purely from x-axis movement, with no
+	// awareness of the list's own vertical gestures (e.g. pull-to-refresh, which always starts
+	// on the topmost row since that's the only place it can arm). dragListener={false} below
+	// plus manually calling dragControls.start() here defers engaging Framer's drag entirely
+	// until a small initial movement clearly favours the horizontal axis -- a vertical-dominant
+	// gesture (a pull, or just scrolling) never reveals the delete background at all, instead
+	// of revealing it and only refusing to actually *delete* once released.
+	const AXIS_DECISION_THRESHOLD = 5;
+	const gestureStartRef = useRef<{ x: number; y: number } | null>(null);
+	const axisDecidedRef = useRef(false);
+	const activePointerIdRef = useRef<number | null>(null);
+
+	const handleRowPointerDown = (e: React.PointerEvent) => {
+		if (activePointerIdRef.current !== null) return;
+		activePointerIdRef.current = e.pointerId;
+		gestureStartRef.current = { x: e.clientX, y: e.clientY };
+		axisDecidedRef.current = false;
+	};
+
+	const handleRowPointerMove = (e: React.PointerEvent) => {
+		if (e.pointerId !== activePointerIdRef.current || axisDecidedRef.current) return;
+		const start = gestureStartRef.current;
+		if (!start) return;
+		const dx = e.clientX - start.x;
+		const dy = e.clientY - start.y;
+		if (Math.abs(dx) < AXIS_DECISION_THRESHOLD && Math.abs(dy) < AXIS_DECISION_THRESHOLD) return;
+
+		axisDecidedRef.current = true;
+		if (Math.abs(dx) > Math.abs(dy)) {
+			dragControls.start(e);
+		}
+		// else: vertical-dominant -- never engage Framer's drag for this gesture at all.
+	};
+
+	const handleRowPointerEnd = (e: React.PointerEvent) => {
+		if (e.pointerId !== activePointerIdRef.current) return;
+		activePointerIdRef.current = null;
+		gestureStartRef.current = null;
+		axisDecidedRef.current = false;
+	};
 
 	const handleDragStart = () => {
 		isDrag.current = false;
@@ -173,8 +216,14 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 			{/* Foreground Layer (Swipeable Content) */}
 			<motion.div
 				drag="x"
+				dragListener={false}
+				dragControls={dragControls}
 				dragConstraints={{ left: 0, right: 0 }}
 				dragElastic={0.5}
+				onPointerDown={handleRowPointerDown}
+				onPointerMove={handleRowPointerMove}
+				onPointerUp={handleRowPointerEnd}
+				onPointerCancel={handleRowPointerEnd}
 				onDragStart={handleDragStart}
 				onDrag={handleDrag}
 				onDragEnd={handleDragEnd}
