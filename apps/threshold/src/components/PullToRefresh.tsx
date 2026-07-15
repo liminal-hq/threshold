@@ -44,7 +44,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 	// gesture (rather than separate dragging/committed booleans) so there's no combination of
 	// the two that doesn't correspond to a real, named phase of the gesture.
 	const gestureRef = useRef<GestureState>('idle');
-	const pointerIdRef = useRef<number | null>(null);
+	// Which listener family owns the current gesture -- see the effect below for why touch and
+	// pointer input are handled by two separate listener sets rather than one.
+	const sourceRef = useRef<'touch' | 'pointer' | null>(null);
+	// Touch identifier or pointerId of the specific finger/pointer being tracked, scoped to
+	// whichever family sourceRef names.
+	const activeIdRef = useRef<number | null>(null);
 	const startYRef = useRef<number | null>(null);
 	const refreshingRef = useRef(false);
 	const onRefreshRef = useRef(onRefresh);
@@ -67,8 +72,18 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 	// only way to reliably claim a vertical drag back from native scroll is a genuinely
 	// non-passive listener attached via addEventListener -- that forces the browser to wait for
 	// this handler to run (and lets its preventDefault() actually cancel the scroll) before
-	// committing. Pointer Events (not Touch Events) are used here so mouse and pen input --
-	// common on modern tablets/2-in-1 Android devices, not just touch -- get the same gesture.
+	// committing.
+	//
+	// Touch input is handled via raw Touch Events (not Pointer Events), which is the
+	// empirically-verified-working path on this app's Android WebView. Pointer Events were
+	// tried for all input (to cover mouse/pen too) but touch generates *implicit pointer
+	// capture* on pointerdown, unlike mouse -- combined with calling preventDefault() on the
+	// captured pointer's move events, this WebView would sometimes never deliver a matching
+	// pointerup, wedging the gesture in its 'committed' state forever and silently blocking all
+	// further interaction with the list. Mouse and pen (real hardware on modern Android
+	// tablets/2-in-1s) don't have that quirk, so they're handled by a separate Pointer Events
+	// listener set below that explicitly ignores touch-origin pointer events (sourceRef keeps
+	// the two families mutually exclusive for a given gesture).
 	useEffect(() => {
 		const el = containerRef.current;
 		if (!el) return;
@@ -83,27 +98,24 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 
 		const abandon = () => {
 			gestureRef.current = 'idle';
-			pointerIdRef.current = null;
+			sourceRef.current = null;
+			activeIdRef.current = null;
 			startYRef.current = null;
 			pullY.set(0);
 		};
 
-		const handlePointerDown = (e: PointerEvent) => {
-			if (refreshingRef.current || gestureRef.current !== 'idle') return;
-			// Ignore secondary mouse/pen buttons (right-click, barrel button) -- only a primary
-			// press/touch should ever start the gesture.
-			if (e.button !== 0) return;
-			const scrollParent = getScrollParent();
-			if (!scrollParent || scrollParent.scrollTop > 0) return;
-			pointerIdRef.current = e.pointerId;
-			startYRef.current = e.clientY;
+		const beginTracking = (source: 'touch' | 'pointer', id: number, y: number) => {
+			sourceRef.current = source;
+			activeIdRef.current = id;
+			startYRef.current = y;
 			gestureRef.current = 'tracking';
 		};
 
-		const handlePointerMove = (e: PointerEvent) => {
-			if (e.pointerId !== pointerIdRef.current) return;
+		// Shared arm/commit/track decision given the gesture's current Y and a way to cancel
+		// the browser's default action for this specific move event.
+		const handleMove = (y: number, preventDefault: () => void) => {
 			if (gestureRef.current === 'idle' || startYRef.current === null) return;
-			const rawDelta = e.clientY - startYRef.current;
+			const rawDelta = y - startYRef.current;
 
 			if (gestureRef.current === 'committed') {
 				if (rawDelta <= 0) {
@@ -112,9 +124,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 					abandon();
 					return;
 				}
-				e.preventDefault();
-				const dampened = Math.min(rawDelta * 0.5, PULL_THRESHOLD * 1.5);
-				pullY.set(dampened);
+				preventDefault();
+				pullY.set(Math.min(rawDelta * 0.5, PULL_THRESHOLD * 1.5));
 				return;
 			}
 
@@ -136,16 +147,15 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 			if (rawDelta < PULL_ARM_THRESHOLD) return;
 
 			gestureRef.current = 'committed';
-			e.preventDefault();
-			const dampened = Math.min(rawDelta * 0.5, PULL_THRESHOLD * 1.5);
-			pullY.set(dampened);
+			preventDefault();
+			pullY.set(Math.min(rawDelta * 0.5, PULL_THRESHOLD * 1.5));
 		};
 
-		const handlePointerEnd = (e: PointerEvent) => {
-			if (e.pointerId !== pointerIdRef.current) return;
+		const finish = () => {
 			const wasCommitted = gestureRef.current === 'committed';
 			gestureRef.current = 'idle';
-			pointerIdRef.current = null;
+			sourceRef.current = null;
+			activeIdRef.current = null;
 			startYRef.current = null;
 
 			if (!wasCommitted) {
@@ -173,12 +183,76 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 			}
 		};
 
+		// --- Touch ---
+		const getOwnTouch = (touches: TouchList): Touch | null => {
+			for (let i = 0; i < touches.length; i++) {
+				if (touches[i].identifier === activeIdRef.current) return touches[i];
+			}
+			return null;
+		};
+
+		const handleTouchStart = (e: TouchEvent) => {
+			if (refreshingRef.current || gestureRef.current !== 'idle') return;
+			if (e.touches.length !== 1) return;
+			const scrollParent = getScrollParent();
+			if (!scrollParent || scrollParent.scrollTop > 0) return;
+			const touch = e.touches[0];
+			beginTracking('touch', touch.identifier, touch.clientY);
+		};
+
+		const handleTouchMove = (e: TouchEvent) => {
+			if (sourceRef.current !== 'touch') return;
+			const touch = getOwnTouch(e.touches);
+			if (!touch) return;
+			handleMove(touch.clientY, () => e.preventDefault());
+		};
+
+		const handleTouchEnd = (e: TouchEvent) => {
+			if (sourceRef.current !== 'touch') return;
+			const ourTouchEnded = Array.from(e.changedTouches).some(
+				(t) => t.identifier === activeIdRef.current,
+			);
+			if (!ourTouchEnded) return;
+			finish();
+		};
+
+		// --- Pointer (mouse/pen only -- touch-origin pointer events are ignored entirely,
+		// deferring to the touch listeners above). ---
+		const handlePointerDown = (e: PointerEvent) => {
+			if (e.pointerType === 'touch') return;
+			if (refreshingRef.current || gestureRef.current !== 'idle') return;
+			// Ignore secondary mouse/pen buttons (right-click, barrel button) -- only a primary
+			// press should ever start the gesture.
+			if (e.button !== 0) return;
+			const scrollParent = getScrollParent();
+			if (!scrollParent || scrollParent.scrollTop > 0) return;
+			beginTracking('pointer', e.pointerId, e.clientY);
+		};
+
+		const handlePointerMove = (e: PointerEvent) => {
+			if (sourceRef.current !== 'pointer' || e.pointerId !== activeIdRef.current) return;
+			handleMove(e.clientY, () => e.preventDefault());
+		};
+
+		const handlePointerEnd = (e: PointerEvent) => {
+			if (sourceRef.current !== 'pointer' || e.pointerId !== activeIdRef.current) return;
+			finish();
+		};
+
+		el.addEventListener('touchstart', handleTouchStart, { passive: true });
+		el.addEventListener('touchmove', handleTouchMove, { passive: false });
+		el.addEventListener('touchend', handleTouchEnd, { passive: true });
+		el.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 		el.addEventListener('pointerdown', handlePointerDown, { passive: true });
 		el.addEventListener('pointermove', handlePointerMove, { passive: false });
 		el.addEventListener('pointerup', handlePointerEnd, { passive: true });
 		el.addEventListener('pointercancel', handlePointerEnd, { passive: true });
 
 		return () => {
+			el.removeEventListener('touchstart', handleTouchStart);
+			el.removeEventListener('touchmove', handleTouchMove);
+			el.removeEventListener('touchend', handleTouchEnd);
+			el.removeEventListener('touchcancel', handleTouchEnd);
 			el.removeEventListener('pointerdown', handlePointerDown);
 			el.removeEventListener('pointermove', handlePointerMove);
 			el.removeEventListener('pointerup', handlePointerEnd);

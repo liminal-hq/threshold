@@ -4,16 +4,32 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import React, { useRef, useState } from 'react';
-import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'motion/react';
+import {
+	motion,
+	useMotionValue,
+	useTransform,
+	PanInfo,
+	useAnimation,
+	Transition,
+} from 'motion/react';
 import { Box, ButtonBase } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { usePrefersReducedMotion } from '../utils/usePrefersReducedMotion';
+
+// Hoisted to module scope -- calling motion.create(Box) inside the component would create a
+// new component type on every render, remounting the whole row (and losing its animation
+// state) each time.
+const MotionBox = motion.create(Box);
 
 interface SwipeToDeleteRowProps {
 	children: React.ReactNode;
 	onDelete: () => void | Promise<void>;
 	onClick?: () => void;
 	deleteThreshold?: number; // 0-1, relative to width
+	// Drives the layout ("FLIP") animation that slides the remaining rows into the gap once
+	// this one is removed -- passed in by AlarmItem so both the mobile and desktop row wrappers
+	// share the same reduced-motion/animator-duration-scale-aware transition.
+	reflowTransition: Transition;
 }
 
 export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
@@ -21,6 +37,7 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 	onDelete,
 	onClick,
 	deleteThreshold = 0.35,
+	reflowTransition,
 }) => {
 	const x = useMotionValue(0);
 	const controls = useAnimation();
@@ -103,8 +120,10 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 	const leftIconScale = useTransform(x, [0, 50], [0.5, 1]);
 
 	return (
-		<Box
+		<MotionBox
 			ref={containerRef}
+			layout
+			transition={reflowTransition}
 			sx={{
 				position: 'relative',
 				overflow: 'hidden',
@@ -178,6 +197,6 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 					{children}
 				</ButtonBase>
 			</motion.div>
-		</Box>
+		</MotionBox>
 	);
 };

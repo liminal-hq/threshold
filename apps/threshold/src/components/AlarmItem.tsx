@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Card, Typography, Switch, IconButton, Box, Stack } from '@mui/material';
+import { motion } from 'motion/react';
 import {
 	Delete as DeleteIcon,
 	Shuffle as ShuffleIcon,
@@ -17,6 +18,13 @@ import { PlatformUtils } from '../utils/PlatformUtils';
 import { SwipeToDeleteRow } from './SwipeToDeleteRow';
 import { accentRailSx } from '../theme/alarmCardStyles';
 import { UI } from '../theme/uiTokens';
+import { usePrefersReducedMotion } from '../utils/usePrefersReducedMotion';
+import { AnimationScale } from '../utils/AnimationScale';
+
+// Hoisted to module scope -- calling motion.create(Box) inside the component would create a
+// new component type on every render, remounting the whole row (and losing its animation
+// state) each time.
+const MotionBox = motion.create(Box);
 
 interface AlarmItemProps {
 	alarm: AlarmRecord;
@@ -34,6 +42,13 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 	onClick,
 }) => {
 	const isMobile = PlatformUtils.isMobile();
+	const prefersReducedMotion = usePrefersReducedMotion();
+	// Lets the remaining rows smoothly slide into the gap when one above/below them is deleted
+	// (Framer's layout-animation/FLIP technique), scaled by the same OS animator-duration-scale
+	// setting the predictive-back settle animation already respects.
+	const reflowTransition = prefersReducedMotion
+		? { duration: 0 }
+		: { duration: AnimationScale.getSettleDurationMs() / 1000, ease: 'easeOut' as const };
 	const formatTime = (timeStr?: string | null) => {
 		if (!timeStr) return '--:--';
 		return TimeFormatHelper.formatTimeString(timeStr, is24h);
@@ -127,11 +142,15 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 
 	if (isMobile) {
 		return (
-			<SwipeToDeleteRow onDelete={onDelete} onClick={onClick}>
+			<SwipeToDeleteRow onDelete={onDelete} onClick={onClick} reflowTransition={reflowTransition}>
 				{InnerContent}
 			</SwipeToDeleteRow>
 		);
 	}
 
-	return <Box sx={{ mb: 2 }}>{InnerContent}</Box>;
+	return (
+		<MotionBox layout transition={reflowTransition} sx={{ mb: 2 }}>
+			{InnerContent}
+		</MotionBox>
+	);
 };
