@@ -34,5 +34,14 @@ export function accentRailSx(enabled: boolean): SxProps<Theme> {
 		width: UI.card.accentRailWidth,
 		bgcolor: enabled ? 'primary.main' : 'action.disabled',
 		pointerEvents: 'none',
+		// --wa-animation-duration is set once at startup by AnimationScale.ts from Android's
+		// Developer Options animator duration scale -- reused here (rather than a hardcoded
+		// duration) so this transition speeds up/slows down along with every other animation
+		// the OS setting already governs, instead of drifting out of sync with its own fixed
+		// value.
+		transition: 'background-color var(--wa-animation-duration, 220ms) ease',
+		'@media (prefers-reduced-motion: reduce)': {
+			transition: 'none',
+		},
 	};
 }

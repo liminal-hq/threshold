@@ -1,4 +1,4 @@
-// Reads Android's animator duration scale and applies it to predictive-back's animations
+// Reads Android's animator duration scale and applies it to the app's UI animations
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -7,14 +7,19 @@ import { getAnimatorDurationScale } from 'tauri-plugin-os-prefs-api';
 import { PlatformUtils } from './PlatformUtils';
 
 const BASE_SETTLE_MS = 220;
-const CSS_VARIABLE = '--predictive-back-duration';
+// Named generically (not e.g. --predictive-back-duration) since this is now the app's shared
+// OS-animator-duration-scale-aware duration, referenced by predictiveBack.css's settle
+// transitions and by other unrelated UI animations (e.g. the alarm list's reflow/entrance and
+// accent-rail transitions) that want to stay in step with the same system setting.
+const CSS_VARIABLE = '--wa-animation-duration';
 
 let cachedScale = 1;
 
 export const AnimationScale = {
 	/**
-	 * Fetches the OS's animator duration scale once and applies it to the CSS custom property
-	 * predictiveBack.css's transitions reference, so they speed up/slow down along with a
+	 * Fetches the OS's animator duration scale once and applies it to the shared CSS custom
+	 * property predictiveBack.css and other UI transitions (e.g. the alarm list's reflow/entrance
+	 * and accent-rail colour transitions) reference, so they all speed up/slow down along with a
 	 * user's Developer Options setting instead of a fixed duration. No-ops on non-Android
 	 * platforms, where the scale is always 1 (the default).
 	 */

@@ -12,6 +12,7 @@ import {
 	useAnimation,
 	useDragControls,
 	Transition,
+	MotionProps,
 } from 'motion/react';
 import { Box, ButtonBase } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -31,6 +32,10 @@ interface SwipeToDeleteRowProps {
 	// this one is removed -- passed in by AlarmItem so both the mobile and desktop row wrappers
 	// share the same reduced-motion/animator-duration-scale-aware transition.
 	reflowTransition: Transition;
+	// Fade/slide-in played once when a genuinely new row mounts (returning from Add/Edit) --
+	// passed in by AlarmItem so both the mobile and desktop row wrappers share the same
+	// reduced-motion-aware entrance animation.
+	enterAnimation?: Pick<MotionProps, 'initial' | 'animate'>;
 }
 
 export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
@@ -39,6 +44,7 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 	onClick,
 	deleteThreshold = 0.35,
 	reflowTransition,
+	enterAnimation,
 }) => {
 	const x = useMotionValue(0);
 	const controls = useAnimation();
@@ -175,6 +181,7 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 			ref={containerRef}
 			layout
 			transition={reflowTransition}
+			{...enterAnimation}
 			sx={{
 				position: 'relative',
 				overflow: 'hidden',

@@ -20,7 +20,7 @@ vi.mock('tauri-plugin-os-prefs-api', () => ({
 describe('AnimationScale', () => {
 	beforeEach(() => {
 		vi.resetModules();
-		document.documentElement.style.removeProperty('--predictive-back-duration');
+		document.documentElement.style.removeProperty('--wa-animation-duration');
 	});
 
 	afterEach(() => {
@@ -35,7 +35,7 @@ describe('AnimationScale', () => {
 		await AnimationScale.init();
 
 		expect(AnimationScale.getSettleDurationMs()).toBe(220);
-		expect(document.documentElement.style.getPropertyValue('--predictive-back-duration')).toBe('');
+		expect(document.documentElement.style.getPropertyValue('--wa-animation-duration')).toBe('');
 	});
 
 	it('scales the settle duration and sets the CSS variable on Android', async () => {
@@ -48,7 +48,7 @@ describe('AnimationScale', () => {
 		await AnimationScale.init();
 
 		expect(AnimationScale.getSettleDurationMs()).toBe(440);
-		expect(document.documentElement.style.getPropertyValue('--predictive-back-duration')).toBe(
+		expect(document.documentElement.style.getPropertyValue('--wa-animation-duration')).toBe(
 			'440ms',
 		);
 	});

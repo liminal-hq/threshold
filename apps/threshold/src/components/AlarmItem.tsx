@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Card, Typography, Switch, IconButton, Box, Stack } from '@mui/material';
-import { motion } from 'motion/react';
+import { motion, MotionProps } from 'motion/react';
 import {
 	Delete as DeleteIcon,
 	Shuffle as ShuffleIcon,
@@ -49,6 +49,13 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 	const reflowTransition = prefersReducedMotion
 		? { duration: 0 }
 		: { duration: AnimationScale.getSettleDurationMs() / 1000, ease: 'easeOut' as const };
+	// A new alarm (returning from Add/Edit) fades and slides in rather than just appearing --
+	// React only mounts (and thus plays initial->animate for) a row when its key is new, so
+	// this never replays for existing rows re-rendering when a sibling is added/removed
+	// elsewhere in the list.
+	const enterAnimation: Pick<MotionProps, 'initial' | 'animate'> = prefersReducedMotion
+		? {}
+		: { initial: { opacity: 0, y: -8 }, animate: { opacity: 1, y: 0 } };
 	const formatTime = (timeStr?: string | null) => {
 		if (!timeStr) return '--:--';
 		return TimeFormatHelper.formatTimeString(timeStr, is24h);
@@ -142,14 +149,19 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 
 	if (isMobile) {
 		return (
-			<SwipeToDeleteRow onDelete={onDelete} onClick={onClick} reflowTransition={reflowTransition}>
+			<SwipeToDeleteRow
+				onDelete={onDelete}
+				onClick={onClick}
+				reflowTransition={reflowTransition}
+				enterAnimation={enterAnimation}
+			>
 				{InnerContent}
 			</SwipeToDeleteRow>
 		);
 	}
 
 	return (
-		<MotionBox layout transition={reflowTransition} sx={{ mb: 2 }}>
+		<MotionBox layout transition={reflowTransition} {...enterAnimation} sx={{ mb: 2 }}>
 			{InnerContent}
 		</MotionBox>
 	);

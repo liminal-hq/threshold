@@ -30,14 +30,14 @@
 	   it inherits the ancestor's computed background-color (almost always transparent unless
 	   explicitly set), not a custom property. */
 	background-color: var(--app-background-colour, #fff);
-	/* --predictive-back-duration is set once at startup by AnimationScale.ts, scaled by
+	/* --wa-animation-duration is set once at startup by AnimationScale.ts, scaled by
 	   Android's Developer Options animator duration scale (default 1x -> 220ms). */
 	transition:
-		transform var(--predictive-back-duration, 220ms) ease-out,
-		opacity var(--predictive-back-duration, 220ms) ease-out;
+		transform var(--wa-animation-duration, 220ms) ease-out,
+		opacity var(--wa-animation-duration, 220ms) ease-out;
 }
 
-/* Same --predictive-back-duration variable as .wa-route-top above. */
+/* Same --wa-animation-duration variable as .wa-route-top above. */
 .wa-route-underlay {
 	position: absolute;
 	inset: 0;
@@ -45,7 +45,7 @@
 	overflow: hidden;
 	transform-origin: center;
 	background-color: var(--app-background-colour, #fff);
-	transition: transform var(--predictive-back-duration, 220ms) ease-out;
+	transition: transform var(--wa-animation-duration, 220ms) ease-out;
 }
 
 /* Suspended while a gesture is actively dragging so per-frame progress updates track the
