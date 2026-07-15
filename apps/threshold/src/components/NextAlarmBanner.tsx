@@ -25,10 +25,15 @@ export const NextAlarmBanner: React.FC<NextAlarmBannerProps> = ({ alarms, is24h 
 
 	const [now, setNow] = useState(() => Date.now());
 
+	// Whether there's anything for this banner to ever show -- independent of `now`, so this
+	// doesn't retrigger the effect below on every tick, only when the alarm list itself changes.
+	const hasUpcoming = alarms.some((a) => a.enabled && a.nextTrigger);
+
 	useEffect(() => {
+		if (!hasUpcoming) return;
 		const interval = setInterval(() => setNow(Date.now()), COUNTDOWN_TICK_MS);
 		return () => clearInterval(interval);
-	}, []);
+	}, [hasUpcoming]);
 
 	const nextAlarm = alarms
 		.filter((a) => a.enabled && a.nextTrigger && a.nextTrigger > now)

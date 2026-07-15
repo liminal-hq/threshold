@@ -17,6 +17,7 @@ import {
 import { Box, ButtonBase } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { usePrefersReducedMotion } from '../utils/usePrefersReducedMotion';
+import { AnimationScale } from '../utils/AnimationScale';
 
 // Hoisted to module scope -- calling motion.create(Box) inside the component would create a
 // new component type on every render, remounting the whole row (and losing its animation
@@ -74,6 +75,17 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 		activePointerIdRef.current = e.pointerId;
 		gestureStartRef.current = { x: e.clientX, y: e.clientY };
 		axisDecidedRef.current = false;
+		// Without capturing, pointerup/pointercancel fire on whatever element is physically
+		// under the pointer at release -- not necessarily this row (e.g. a mouse drag released
+		// outside the row's bounds before the axis is decided). handleRowPointerEnd would then
+		// never run, leaving activePointerIdRef permanently non-null and silently disabling this
+		// row's swipe/tap gestures for the rest of the session.
+		try {
+			e.currentTarget.setPointerCapture(e.pointerId);
+		} catch {
+			// Capture is a best-effort safety net -- if the browser refuses it for this pointer
+			// type, the gesture still works exactly as it did before this fix.
+		}
 	};
 
 	const handleRowPointerMove = (e: React.PointerEvent) => {
@@ -137,7 +149,7 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 				const direction = offset > 0 ? 1 : -1;
 				await controls.start({
 					x: direction * width * 1.5,
-					transition: { duration: 0.2 },
+					transition: { duration: AnimationScale.getSettleDurationMs() / 1000 },
 				});
 				onDelete();
 			}

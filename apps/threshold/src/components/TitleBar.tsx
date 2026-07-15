@@ -42,11 +42,18 @@ export const TitleBar: React.FC = () => {
 
 		const updateState = async () => {
 			try {
-				setIsMaximized(await appWindow.isMaximized());
-				setIsMaximizable(await appWindow.isMaximizable());
-				setIsMinimizable(await appWindow.isMinimizable());
-				setIsResizable(await appWindow.isResizable());
-				setIsAlwaysOnTop(await appWindow.isAlwaysOnTop());
+				const [maximized, maximizable, minimizable, resizable, alwaysOnTop] = await Promise.all([
+					appWindow.isMaximized(),
+					appWindow.isMaximizable(),
+					appWindow.isMinimizable(),
+					appWindow.isResizable(),
+					appWindow.isAlwaysOnTop(),
+				]);
+				setIsMaximized(maximized);
+				setIsMaximizable(maximizable);
+				setIsMinimizable(minimizable);
+				setIsResizable(resizable);
+				setIsAlwaysOnTop(alwaysOnTop);
 			} catch (e) {
 				console.error('Failed to check window state', e);
 			}
@@ -62,8 +69,16 @@ export const TitleBar: React.FC = () => {
 
 	const minimize = () => appWindow.minimize();
 	const toggleMaximize = async () => {
-		await appWindow.toggleMaximize();
-		setIsMaximized(await appWindow.isMaximized());
+		// The maximize/unmaximize/toggle-maximize capabilities are deliberately not granted
+		// today (the window is locked non-resizable), so this button is never rendered --
+		// but if that ever changes without the capability grant also being restored, this
+		// should fail quietly rather than throw an unhandled rejection on click.
+		try {
+			await appWindow.toggleMaximize();
+			setIsMaximized(await appWindow.isMaximized());
+		} catch (e) {
+			console.error('Failed to toggle maximize', e);
+		}
 	};
 	const close = () => appWindow.close();
 
@@ -71,8 +86,12 @@ export const TitleBar: React.FC = () => {
 	const handleContextMenu = async (e: React.MouseEvent) => {
 		e.preventDefault();
 		try {
-			setIsMaximized(await appWindow.isMaximized());
-			setIsAlwaysOnTop(await appWindow.isAlwaysOnTop());
+			const [maximized, alwaysOnTop] = await Promise.all([
+				appWindow.isMaximized(),
+				appWindow.isAlwaysOnTop(),
+			]);
+			setIsMaximized(maximized);
+			setIsAlwaysOnTop(alwaysOnTop);
 		} catch (err) {
 			console.error(err);
 		}

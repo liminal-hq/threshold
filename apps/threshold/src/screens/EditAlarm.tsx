@@ -174,6 +174,22 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 		}
 	};
 
+	// AlarmService.save (above) already persisted and scheduled this alarm before this dialog
+	// could even appear -- "Adjust" only closes the dialog, it doesn't undo that. Without this,
+	// a user who chooses "Adjust" and then abandons the screen (back button, app switch) instead
+	// of saving again leaves a live, scheduled alarm they explicitly declined to confirm. Disable
+	// it immediately so it can't ring until the user actually re-saves; a subsequent Save (via
+	// savedAlarmId, above) re-enables it as part of the normal update.
+	const handleAdjust = async () => {
+		setImminentTrigger(null);
+		if (savedAlarmId === null) return;
+		try {
+			await AlarmService.toggle(savedAlarmId, false);
+		} catch (e) {
+			console.error('Failed to disable unconfirmed alarm', e);
+		}
+	};
+
 	const handleSoundChange = async (event: SelectChangeEvent) => {
 		const val = event.target.value;
 
@@ -565,7 +581,7 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
-					<Button onClick={() => setImminentTrigger(null)}>Adjust</Button>
+					<Button onClick={handleAdjust}>Adjust</Button>
 					<Button variant="contained" onClick={() => navigate({ to: '/home' })}>
 						Keep It
 					</Button>

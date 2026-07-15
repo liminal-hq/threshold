@@ -94,11 +94,13 @@ const App: React.FC = () => {
 				try {
 					await win.setDecorations(false); // Force removal of native title bar
 					// await win.setSize(new LogicalSize(450, 800));
-					// Only centre on first launch (no saved position yet)
-					const pos = await win.outerPosition();
-					if (pos.x === 0 && pos.y === 0) {
-						await win.center();
-					}
+					// tauri-plugin-window-state (lib.rs, StateFlags::POSITION) already restores a
+					// saved position before this runs, so there's nothing left to do here on a
+					// returning launch. A (0, 0)-position check used to stand in for "no saved
+					// position yet", but outerPosition() legitimately reports (0, 0) on Wayland
+					// regardless of actual position, and a user can genuinely park the window at
+					// the screen origin -- both cases were wrongly forced back to centre on every
+					// subsequent launch, defeating the plugin's restore entirely.
 				} catch (e) {
 					console.error('Failed to resize/decorate window:', e);
 				}
