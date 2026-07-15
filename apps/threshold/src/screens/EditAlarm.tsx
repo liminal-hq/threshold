@@ -311,7 +311,9 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 												textField: {
 													fullWidth: true,
 													sx: {
-														'& .MuiOutlinedInput-root': { borderRadius: UI.card.borderRadius },
+														'& .MuiPickersOutlinedInput-root': {
+															borderRadius: UI.card.borderRadius,
+														},
 													},
 												},
 											}}
@@ -345,7 +347,9 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 													textField: {
 														fullWidth: true,
 														sx: {
-															'& .MuiOutlinedInput-root': { borderRadius: UI.card.borderRadius },
+															'& .MuiPickersOutlinedInput-root': {
+																borderRadius: UI.card.borderRadius,
+															},
 														},
 													},
 												}}
@@ -359,7 +363,9 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 													textField: {
 														fullWidth: true,
 														sx: {
-															'& .MuiOutlinedInput-root': { borderRadius: UI.card.borderRadius },
+															'& .MuiPickersOutlinedInput-root': {
+																borderRadius: UI.card.borderRadius,
+															},
 														},
 													},
 												}}
