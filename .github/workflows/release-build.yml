@@ -623,6 +623,14 @@ jobs:
       # track shows independent "Phones and tablets" and "Wear OS" release rows under the one
       # app. Same packageName as the phone step; deriveWearVersionCode's +1_000_000_000 offset
       # (tools/release-tui/src/lib/version.ts) is what keeps their version codes from colliding.
+      #
+      # Track name is "wear:qa", not "internal" or "wear:internal" -- per Google's own Play
+      # Developer API docs (developers.google.com/android-publisher/tracks), form-factor track
+      # IDs are computed as "[prefix]:defaultTrackName", and the default track name for Internal
+      # Testing is "qa" (not "internal"), for form-factor tracks specifically. Wear OS's prefix is
+      # "wear". Unverified against this app's actual Play Console track list yet -- if this is
+      # wrong, the action's error message lists the real available track names, which is the
+      # fastest way to confirm/correct it.
       - name: Deploy Wear release to Google Play (draft)
         if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
         uses: r0adkll/upload-google-play@v1
@@ -630,7 +638,7 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: ca.liminalhq.threshold
           releaseFiles: release-assets/android/threshold-wear-v*.aab
-          tracks: internal
+          tracks: wear:qa
           status: draft
           whatsNewDirectory: distribution/whatsnew-wear
           mappingFile: ${{ steps.play_asset_paths.outputs.wear_mapping_file }}
