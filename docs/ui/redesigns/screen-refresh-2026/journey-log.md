@@ -1,6 +1,7 @@
 # Screen Redesign Journey Log
 
 This log tracks redesign progress for Threshold screen updates.
+
 Each entry includes:
 
 - what changed
