@@ -296,23 +296,26 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 							</ToggleButtonGroup>
 
 							{mode === AlarmMode.Fixed ? (
-								<Box sx={{ mb: 2, borderRadius: UI.card.borderRadius, overflow: 'hidden' }}>
+								<Box
+									sx={{
+										mb: 2,
+										// A couple of extra pixels of top padding so the floating label's
+										// natural overshoot above the outline (roughly half its own height)
+										// has room to render instead of being clipped by this Box's own
+										// overflow: hidden, which otherwise cuts straight through it.
+										pt: isMobile ? 1 : 0,
+										borderRadius: UI.card.borderRadius,
+										overflow: 'hidden',
+									}}
+								>
 									{isMobile ? (
-										<>
-											{/* A floating InputLabel here fights MUI's notch-width sizing for this
-											    picker specifically -- forcing shrink moves the label but leaves the
-											    outline's gap the wrong width, so the border cuts through the text.
-											    An external caption (matching Repeats/Sound below) sidesteps it. */}
-											<Typography variant="subtitle2" gutterBottom>
-												Time
-											</Typography>
-											<MuiTimePicker
-												value={parseTime(fixedTime)}
-												onChange={(newValue) => handleTimeChange(newValue, setFixedTime)}
-												ampm={!is24h}
-												slotProps={{ textField: { fullWidth: true } }}
-											/>
-										</>
+										<MuiTimePicker
+											label="Time"
+											value={parseTime(fixedTime)}
+											onChange={(newValue) => handleTimeChange(newValue, setFixedTime)}
+											ampm={!is24h}
+											slotProps={{ textField: { fullWidth: true } }}
+										/>
 									) : (
 										<Box
 											sx={{
@@ -333,21 +336,15 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 								<Stack spacing={2} sx={{ mb: 2 }}>
 									{isMobile ? (
 										<>
-											{/* External captions, not floating InputLabels -- see the Time field
-											    above for why. */}
-											<Typography variant="subtitle2" gutterBottom>
-												Start Window
-											</Typography>
 											<MuiTimePicker
+												label="Start Window"
 												value={parseTime(windowStart)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowStart)}
 												ampm={!is24h}
 												slotProps={{ textField: { fullWidth: true } }}
 											/>
-											<Typography variant="subtitle2" gutterBottom>
-												End Window
-											</Typography>
 											<MuiTimePicker
+												label="End Window"
 												value={parseTime(windowEnd)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowEnd)}
 												ampm={!is24h}
