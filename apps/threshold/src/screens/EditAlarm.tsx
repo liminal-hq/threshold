@@ -298,19 +298,21 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 							{mode === AlarmMode.Fixed ? (
 								<Box sx={{ mb: 2, borderRadius: UI.card.borderRadius, overflow: 'hidden' }}>
 									{isMobile ? (
-										<MuiTimePicker
-											label="Time"
-											value={parseTime(fixedTime)}
-											onChange={(newValue) => handleTimeChange(newValue, setFixedTime)}
-											ampm={!is24h}
-											// Without this, the floating label only shrinks once the field is
-											// focused -- since this picker always shows a real time value (never
-											// genuinely empty), the label should always sit above the outline
-											// instead of overlapping the displayed time.
-											slotProps={{
-												textField: { fullWidth: true, InputLabelProps: { shrink: true } },
-											}}
-										/>
+										<>
+											{/* A floating InputLabel here fights MUI's notch-width sizing for this
+											    picker specifically -- forcing shrink moves the label but leaves the
+											    outline's gap the wrong width, so the border cuts through the text.
+											    An external caption (matching Repeats/Sound below) sidesteps it. */}
+											<Typography variant="subtitle2" gutterBottom>
+												Time
+											</Typography>
+											<MuiTimePicker
+												value={parseTime(fixedTime)}
+												onChange={(newValue) => handleTimeChange(newValue, setFixedTime)}
+												ampm={!is24h}
+												slotProps={{ textField: { fullWidth: true } }}
+											/>
+										</>
 									) : (
 										<Box
 											sx={{
@@ -331,23 +333,25 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 								<Stack spacing={2} sx={{ mb: 2 }}>
 									{isMobile ? (
 										<>
+											{/* External captions, not floating InputLabels -- see the Time field
+											    above for why. */}
+											<Typography variant="subtitle2" gutterBottom>
+												Start Window
+											</Typography>
 											<MuiTimePicker
-												label="Start Window"
 												value={parseTime(windowStart)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowStart)}
 												ampm={!is24h}
-												slotProps={{
-													textField: { fullWidth: true, InputLabelProps: { shrink: true } },
-												}}
+												slotProps={{ textField: { fullWidth: true } }}
 											/>
+											<Typography variant="subtitle2" gutterBottom>
+												End Window
+											</Typography>
 											<MuiTimePicker
-												label="End Window"
 												value={parseTime(windowEnd)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowEnd)}
 												ampm={!is24h}
-												slotProps={{
-													textField: { fullWidth: true, InputLabelProps: { shrink: true } },
-												}}
+												slotProps={{ textField: { fullWidth: true } }}
 											/>
 										</>
 									) : (
