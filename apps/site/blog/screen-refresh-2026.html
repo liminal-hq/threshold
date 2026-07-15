@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+		<title>The 2026 Screen Refresh — Threshold</title>
+		<link rel="icon" type="image/svg+xml" href="../assets/app-icon.svg" />
+		<meta
+			name="description"
+			content="A look at Threshold's Home, Edit, Settings, and window-management redesign — and the gesture-arbitration problem that took the longest to get right."
+		/>
+
+		<meta property="og:type" content="article" />
+		<meta
+			property="og:url"
+			content="https://threshold.liminalhq.ca/blog/screen-refresh-2026.html"
+		/>
+		<meta property="og:title" content="The 2026 Screen Refresh — Threshold" />
+		<meta
+			property="og:description"
+			content="A look at Threshold's Home, Edit, Settings, and window-management redesign — and the gesture-arbitration problem that took the longest to get right."
+		/>
+
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script>
+			tailwind.config = {
+				darkMode: 'class',
+				theme: {
+					extend: {
+						fontFamily: {
+							sans: ['Inter', 'sans-serif'],
+						},
+					},
+				},
+			};
+		</script>
+		<style>
+			html {
+				scroll-behavior: smooth;
+			}
+		</style>
+	</head>
+	<body
+		class="bg-slate-50 text-slate-800 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100"
+	>
+		<nav
+			class="bg-white/80 dark:bg-slate-950/80 backdrop-blur-lg border-b border-slate-100 dark:border-slate-900 sticky top-0 z-50 transition-colors duration-300"
+		>
+			<div class="container mx-auto px-6 py-4 flex items-center justify-between">
+				<a href="../index.html" class="flex items-center gap-3">
+					<img src="../assets/app-icon.svg" alt="Threshold" class="w-9 h-9 rounded-lg shadow-md" />
+					<span class="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight"
+						>Threshold</span
+					>
+				</a>
+				<a
+					href="../index.html"
+					class="text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-medium text-sm"
+				>
+					&larr; Back to site
+				</a>
+			</div>
+		</nav>
+
+		<article class="px-6 py-20">
+			<div class="container mx-auto max-w-3xl">
+				<p
+					class="text-amber-600 dark:text-amber-400 font-mono text-sm tracking-wider uppercase mb-4"
+				>
+					Product &amp; Engineering &middot; July 2026
+				</p>
+				<h1
+					class="text-4xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-8 leading-tight tracking-tight"
+				>
+					The 2026 screen refresh
+				</h1>
+				<p
+					class="text-xl md:text-2xl text-slate-600 dark:text-slate-400 mb-16 leading-relaxed font-light"
+				>
+					Home, Edit, Settings, and the desktop window all got rebuilt this cycle. The visible part
+					was the easy part. The interesting part was making a pull-to-refresh gesture and a
+					swipe-to-delete gesture agree on who owns your thumb.
+				</p>
+
+				<div
+					class="prose-content space-y-8 text-lg leading-relaxed text-slate-700 dark:text-slate-300"
+				>
+					<p>
+						Threshold's Home, Edit, and Settings screens hadn't changed shape in a long time. This
+						pass rebuilt all three, plus the desktop window itself, from a set of mockups and a
+						phase-by-phase implementation plan through to shipped code &mdash; then kept going
+						through several rounds of on-device testing once the mockups met a real Android WebView
+						and a real thumb.
+					</p>
+
+					<h2 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 pt-8">
+						What actually changed
+					</h2>
+					<p>
+						<strong class="text-slate-900 dark:text-slate-100">Home</strong> gained a next-alarm
+						banner with a gradient fill and a live countdown, coloured accent rails on each alarm
+						card so enabled/disabled state reads at a glance, and pull-to-refresh on mobile. The Add
+						Alarm button is centred in its own action zone, with the Settings gear positioned
+						independently to its right rather than crowding the same row.
+					</p>
+					<p>
+						<strong class="text-slate-900 dark:text-slate-100">Edit</strong> puts the Window mode's
+						start/end time pickers side by side on desktop instead of stacking them, tightens up
+						vertical spacing throughout, and constrains the form to a sane width so it doesn't
+						sprawl across a wide window. New alarms now fade and slide into the list instead of just
+						appearing, and deleting one lets the rows below it slide smoothly into the gap &mdash;
+						both scaled by whatever animation speed you've set in Android's Developer Options, and
+						both skipped entirely if you've asked the system for reduced motion.
+					</p>
+					<p>
+						<strong class="text-slate-900 dark:text-slate-100">Settings</strong> gets a proper
+						desktop treatment: a navigation rail down the left with four sections (Appearance, Alarm
+						Settings, General, Developer) and a content panel on the right, instead of a
+						phone-shaped list stretched across a wide window. Mobile keeps its flat list unchanged
+						&mdash; this was purely a "use the width you actually have" problem, not a redesign of
+						the settings themselves.
+					</p>
+					<p>
+						And the <strong class="text-slate-900 dark:text-slate-100">desktop window</strong> is
+						now locked to a fixed 760&times;680 shape with a custom title bar whose buttons are
+						driven live from Tauri's own window capabilities, rather than assumed. Only its position
+						is remembered between launches, which turned out to matter more than expected &mdash;
+						more on that below.
+					</p>
+
+					<h2 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 pt-8">
+						The part that took the longest: two gestures, one thumb
+					</h2>
+					<p>
+						Home's alarm list has two competing touch gestures live on the same surface at the same
+						time: pull down anywhere to refresh, or swipe an individual row left or right to reveal
+						its delete action. Both start from an identical touch on the identical row &mdash;
+						pull-to-refresh can only ever arm from the very top of the list, which is exactly where
+						the topmost alarm's swipe target also lives.
+					</p>
+					<p>
+						The first version of this shipped with each gesture deciding independently whether it
+						owned a given touch, using different signals: the row's swipe watched the ratio of
+						horizontal to vertical movement over a few pixels, while the pull watched vertical
+						movement in isolation. Independent heuristics on a shared touch surface don't stay
+						independent for long. A diagonal-enough drag could cross the pull's arm threshold while
+						the row had already, correctly, decided the same gesture was a horizontal swipe &mdash;
+						so both would engage at once, and you'd see a row's delete background revealed while the
+						whole screen also tried to slide into a refresh. Conversely, a short or abandoned pull
+						attempt over a row, one that never moved enough to convince either gesture it should
+						fully commit, could still get read by the row's own tap recognizer as a plain tap and
+						navigate into Edit &mdash; the worst kind of accidental action for a settings-heavy
+						list.
+					</p>
+					<p>
+						The fix in both directions was to make each gesture aware of the other's decision
+						criteria rather than just its own: the pull now also tracks horizontal movement and
+						backs off the instant horizontal movement dominates vertical, deferring to the row's
+						swipe; and the row now explicitly marks a decided-but-declined vertical gesture as "this
+						was real movement, not a tap," so an abandoned pull can't accidentally fire a click on
+						the way past. Neither gesture needed to know about the other's internals &mdash; just
+						enough of its decision boundary to stay out of its way.
+					</p>
+					<p>
+						A second, quieter problem lived one layer down: Android's WebView handles touch input
+						and pointer input differently enough that it mattered. Pointer Events looked like the
+						cleaner API &mdash; one code path for touch, mouse, and pen &mdash; until it turned out
+						that a touch-origin pointer gets <em>implicit</em> capture on press, and combined with
+						cancelling the browser's default handling mid-gesture, this particular WebView could
+						simply never deliver the matching release event. The gesture would wedge itself
+						permanently in a "committed" state, and the entire list would stop responding to touch
+						until the app restarted. The fix was to stop asking one API to do two jobs: raw Touch
+						Events for actual fingers (the empirically reliable path here), and Pointer Events
+						filtered down to mouse and pen only &mdash; both still fully supported, since plenty of
+						modern tablets and 2-in-1s expect a pointer to work like a pointer.
+					</p>
+
+					<h2 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 pt-8">
+						Small things that were bigger than they looked
+					</h2>
+					<p>
+						The desktop window used to force itself back to the centre of the screen on every launch
+						whenever it read its own position as <code>(0, 0)</code>, on the assumption that meant
+						"never positioned before." It's not a safe assumption: some Linux compositors report
+						<code>(0, 0)</code> for a window's position regardless of where it actually is, and a
+						window genuinely parked in the screen's corner reads exactly the same way. Once we added
+						real position persistence, that heuristic started actively fighting it &mdash;
+						overriding a correctly restored position on every single launch. The fix was simply to
+						trust the thing already doing the restoring and delete the guess.
+					</p>
+					<p>
+						And in a redesign built around motion &mdash; entrance animations, reflow animations,
+						colour transitions on toggle &mdash; it mattered that all of it tracks the same system
+						setting rather than each animation picking its own fixed duration. Everything new here
+						reads from one shared, OS-scaled duration, the same one the existing predictive-back
+						gesture already used, so changing your device's animation speed (or asking for none at
+						all) changes the whole app consistently instead of leaving one corner of the UI out of
+						step with the rest.
+					</p>
+
+					<p class="pt-8 text-slate-500 dark:text-slate-400 italic">
+						All of this shipped after several rounds of testing on an actual phone, not just a
+						simulator &mdash; which is exactly how the gesture-arbitration bugs above got found in
+						the first place.
+					</p>
+				</div>
+
+				<div class="mt-16 pt-8 border-t border-slate-100 dark:border-slate-900">
+					<a
+						href="../index.html"
+						class="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold hover:underline"
+					>
+						&larr; Back to threshold.liminalhq.ca
+					</a>
+				</div>
+			</div>
+		</article>
+
+		<footer
+			class="bg-white dark:bg-slate-950 py-12 px-6 border-t border-slate-100 dark:border-slate-900 transition-colors duration-300"
+		>
+			<div
+				class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-sm text-slate-400 dark:text-slate-500 font-medium"
+			>
+				<p>&copy; 2026 Liminal HQ. All rights reserved.</p>
+				<div class="flex gap-8">
+					<a
+						href="https://github.com/liminal-hq/threshold"
+						class="hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+						>GitHub</a
+					>
+					<a
+						href="https://github.com/liminal-hq/threshold/issues"
+						class="hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+						>Issues</a
+					>
+				</div>
+			</div>
+		</footer>
+
+		<script>
+			(function () {
+				const storedTheme = localStorage.getItem('theme');
+				const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				const shouldUseDark = storedTheme ? storedTheme === 'dark' : prefersDark;
+				document.documentElement.classList.toggle('dark', shouldUseDark);
+			})();
+		</script>
+	</body>
+</html>
