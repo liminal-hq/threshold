@@ -589,14 +589,23 @@ jobs:
             release-assets/android/**
           if-no-files-found: error
 
+      # r0adkll/upload-google-play's `releaseFiles` resolves through fast-glob, but `mappingFile`
+      # and `debugSymbols` are checked with a literal fs.existsSync() against the exact string --
+      # no glob expansion (confirmed by reading its src/main.ts and src/input-validation.ts). The
+      # collect-artefacts step above names both with the version baked in, so resolve the exact
+      # paths here rather than passing an unexpandable glob. A missing/empty output is safe: the
+      # action treats an empty string input as "not set" and skips it, per the same source check.
+      - name: Resolve Play deploy asset paths
+        id: play_asset_paths
+        run: |
+          phone_debug_symbols=$(find release-assets/android -type f -name 'threshold-phone-native-debug-symbols-v*.zip' | sort | head -n1 || true)
+          wear_mapping_file=$(find release-assets/android -type f -name 'wear-mapping-v*.txt' | sort | head -n1 || true)
+          echo "phone_debug_symbols=${phone_debug_symbols}" >> "$GITHUB_OUTPUT"
+          echo "wear_mapping_file=${wear_mapping_file}" >> "$GITHUB_OUTPUT"
+
       # Both Play deploy steps are no-ops (via `if:`) until their secrets/vars are set, so this
       # workflow stays green for anyone who hasn't configured Play Console access yet. See
       # docs/infrastructure/release-build.md#google-play-deployment for full setup.
-      #
-      # mappingFile/debugSymbols aren't wired up yet -- releaseFiles is documented as supporting
-      # glob patterns (fast-glob), but mappingFile/debugSymbols are only documented as taking a
-      # single exact path, and those filenames are version-stamped by the collect-artefacts step
-      # above. Worth adding once the core deploy is proven end-to-end.
       - name: Deploy phone release to Google Play (draft)
         if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
         uses: r0adkll/upload-google-play@v1
@@ -607,20 +616,24 @@ jobs:
           tracks: internal
           status: draft
           whatsNewDirectory: distribution/whatsnew
+          debugSymbols: ${{ steps.play_asset_paths.outputs.phone_debug_symbols }}
 
-      # packageName is unconfirmed -- the Wear app may need its own separate Play Console listing
-      # (TODO once verified). Set the PLAY_WEAR_PACKAGE_NAME repository variable to enable this
-      # step; it stays a no-op without it.
+      # Confirmed via Play Console: Wear is a separate release train within the same app listing
+      # (ca.liminalhq.threshold), not a separate package -- Play Console's "Internal testing"
+      # track shows independent "Phones and tablets" and "Wear OS" release rows under the one
+      # app. Same packageName as the phone step; deriveWearVersionCode's +1_000_000_000 offset
+      # (tools/release-tui/src/lib/version.ts) is what keeps their version codes from colliding.
       - name: Deploy Wear release to Google Play (draft)
-        if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' && vars.PLAY_WEAR_PACKAGE_NAME != '' }}
+        if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: ${{ vars.PLAY_WEAR_PACKAGE_NAME }}
+          packageName: ca.liminalhq.threshold
           releaseFiles: release-assets/android/threshold-wear-v*.aab
           tracks: internal
           status: draft
           whatsNewDirectory: distribution/whatsnew-wear
+          mappingFile: ${{ steps.play_asset_paths.outputs.wear_mapping_file }}
 
       - name: Summarise Android build
         if: always()

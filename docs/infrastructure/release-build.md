@@ -145,16 +145,15 @@ Both steps are unconditional no-ops (via their `if:` conditions) until configure
 1. Enable the Google Play Android Developer API for a Google Cloud project: <https://console.cloud.google.com/apis/library/androidpublisher.googleapis.com>.
 2. Create a service account in that project (IAM & Admin -> Service accounts -> Create service account). It doesn't need any GCP IAM roles -- permissions are granted entirely from Play Console in the next step.
 3. Create a JSON key for that service account and save the **contents** (not the file path) as the `PLAY_SERVICE_ACCOUNT_JSON` repository secret.
-4. In Play Console (Users and permissions), invite the service account's email and grant it access to the phone app (`ca.liminalhq.threshold`). Repeat for the Wear app once its package name is confirmed (see below) -- the same service account and secret can cover both apps as long as it's granted access to each.
-5. If the Wear app has its own separate Play Console listing (to be confirmed -- see the open question below), set the **`PLAY_WEAR_PACKAGE_NAME`** repository variable (Settings -> Secrets and variables -> Actions -> Variables) to its package name. The Wear deploy step stays a no-op without it.
+4. In Play Console (Users and permissions), invite the service account's email and grant it access to `ca.liminalhq.threshold`. One grant covers both deploy steps -- see below.
+
+### Play and Wear: one app, one listing, separate release trains
+
+Confirmed via Play Console: phone and Wear are **not** separate apps or listings. Play Console's "Internal testing" track for `ca.liminalhq.threshold` shows two independent release rows -- one tagged "Phones and tablets / Chrome OS / Android XR", one tagged "Wear OS" -- each with its own version code and rollout, but both under the one app. `deriveWearVersionCode` (`tools/release-tui/src/lib/version.ts`) already accounts for this: it adds `1_000_000_000` to the phone's derived version code specifically so the two never collide within the shared package. Both deploy steps above use the same `packageName: ca.liminalhq.threshold` -- no second listing, no second service-account grant, no separate package name to track down.
 
 ### Play's first-release requirement
 
-The Play Developer API refuses to touch a package that has never had a manual upload through the Play Console UI. `ca.liminalhq.threshold` already has release history (confirmed: v0.1.9 is live on the internal track), so the phone deploy step should work once configured. Whether the same is true for the Wear app depends on how it's currently listed -- see the open question below.
-
-### Open question: is the Wear app a separate Play Console listing?
-
-The phone app's Play Store listing shows "Available on more devices" including a Wear form factor, which would normally suggest a bundled/embedded listing (one package, one listing, Play serving the right binary per device type). However, Wear uploads have historically been a separate manual step in Play Console for this app. Until this is confirmed, the Wear deploy step above assumes a **separate** package name/listing (configured via `PLAY_WEAR_PACKAGE_NAME`) -- adjust this section and the workflow step once verified.
+The Play Developer API refuses to touch a package that has never had a manual upload through the Play Console UI. `ca.liminalhq.threshold` already has release history for both release trains (confirmed: v0.1.9 is live on the internal track for both phone and Wear), so both deploy steps should work once the secret above is configured.
 
 ### Release notes
 
