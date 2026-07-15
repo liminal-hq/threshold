@@ -1,6 +1,7 @@
 /* App shell foundation: html/body/#root are pinned to exactly the viewport size
-   and clipped, so .wa-route-slot (the single app-wide scroll container, see
-   router.tsx) is the only place that actually scrolls. Without the overflow
+   and clipped, so scrolling happens inside the route tree instead (.wa-route-slot
+   in router.tsx, though in practice .wa-route-top nested inside it -- see that
+   file's comment -- is the element that actually scrolls). Without the overflow
    clamp here, an overflowing body just grows past the viewport and the whole
    page scrolls natively instead -- individual screens should not need their
    own height/overflow rules; this is the one place that owns it. */

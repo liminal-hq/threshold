@@ -7,6 +7,7 @@ import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'motion/react';
 import { Box, ButtonBase } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { usePrefersReducedMotion } from '../utils/usePrefersReducedMotion';
 
 interface SwipeToDeleteRowProps {
 	children: React.ReactNode;
@@ -24,8 +25,7 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 	const x = useMotionValue(0);
 	const controls = useAnimation();
 	const [isDeleting, setIsDeleting] = useState(false);
-	const prefersReducedMotion =
-		typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const prefersReducedMotion = usePrefersReducedMotion();
 
 	const containerRef = useRef<HTMLDivElement>(null);
 

@@ -38,12 +38,20 @@ export const NextAlarmBanner: React.FC<NextAlarmBannerProps> = ({ alarms, is24h 
 
 	const triggerDate = new Date(nextAlarm.nextTrigger!);
 	const diffMs = nextAlarm.nextTrigger! - now;
-	const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+	const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+	const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 	const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
+	// Once the countdown spans multiple days, minute-level precision isn't useful --
+	// show day+hour instead of a triple-digit hour count like "166h 45m".
 	const countdownParts: string[] = [];
-	if (diffHours > 0) countdownParts.push(`${diffHours}h`);
-	countdownParts.push(`${diffMinutes}m`);
+	if (diffDays > 0) {
+		countdownParts.push(`${diffDays}d`);
+		if (diffHours > 0) countdownParts.push(`${diffHours}h`);
+	} else {
+		if (diffHours > 0) countdownParts.push(`${diffHours}h`);
+		countdownParts.push(`${diffMinutes}m`);
+	}
 	const countdown = countdownParts.join(' ');
 
 	const formattedTime = TimeFormatHelper.format(triggerDate, is24h);

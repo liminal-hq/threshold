@@ -38,9 +38,16 @@ const RootLayout = () => {
 				style={{
 					marginTop: showTitleBar ? '32px' : '0px',
 					height: showTitleBar ? 'calc(100% - 32px)' : '100%',
-					// The single scroll container for every screen -- individual screens should
-					// not manage their own height/overflow. Ringing opts out locally (see
-					// ringing.css) since it's a small fixed-size surface that shouldn't scroll.
+					// NOTE: despite the name, this is no longer the element that actually scrolls.
+					// <RouteStage/> (rendered as this div's only child) wraps routed content in
+					// .wa-route-stage (overflow: hidden, for the predictive-back gesture layer) and
+					// .wa-route-top (its own overflow-y: auto) -- .wa-route-top is the real per-
+					// screen scroll viewport now (see predictiveBack.css and PullToRefresh.tsx's
+					// getScrollParent()). This overflowY is kept as a fallback in case RouteStage
+					// ever renders content that bypasses .wa-route-top, not as the primary scroller.
+					// Individual screens still should not manage their own height/overflow.
+					// Ringing opts out locally (see ringing.css) since it's a small fixed-size
+					// surface that shouldn't scroll.
 					overflowY: isRingingWindow ? 'hidden' : 'auto',
 					// @ts-ignore - viewTransitionName is not yet in standard React types
 					viewTransitionName: isMobile ? 'wa-route-slot' : undefined,

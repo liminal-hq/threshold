@@ -54,7 +54,7 @@ const Home: React.FC = () => {
 	};
 
 	return (
-		<Box>
+		<Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 			{isMobile && (
 				<MobileToolbar
 					title={APP_NAME}
@@ -69,6 +69,9 @@ const Home: React.FC = () => {
 					pt: 2,
 					pb: 10,
 					px: 2,
+					flexGrow: 1,
+					display: 'flex',
+					flexDirection: 'column',
 				}}
 			>
 				<NextAlarmBanner alarms={alarms} is24h={is24h} />
