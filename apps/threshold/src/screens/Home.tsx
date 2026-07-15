@@ -6,15 +6,13 @@
 import React, { useState, useEffect } from 'react';
 import { IconButton, Fab, List, Box, Button, Container } from '@mui/material';
 import { MobileToolbar } from '../components/MobileToolbar';
-import {
-	Add as AddIcon,
-	SettingsOutlined as SettingsOutlinedIcon,
-	Refresh as RefreshIcon,
-} from '@mui/icons-material';
+import { Add as AddIcon, SettingsOutlined as SettingsOutlinedIcon } from '@mui/icons-material';
 
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { useNavigate } from '@tanstack/react-router';
 import { AlarmItem } from '../components/AlarmItem';
+import { NextAlarmBanner } from '../components/NextAlarmBanner';
+import { PullToRefresh } from '../components/PullToRefresh';
 import { SettingsService } from '../services/SettingsService';
 import { APP_NAME } from '../constants';
 import { AlarmService } from '../services/AlarmService';
@@ -40,11 +38,10 @@ const Home: React.FC = () => {
 	};
 
 	const handleDelete = async (id: number) => {
-		console.log(`[DELETE_DEBUG] handleDelete called for id: ${id}`);
 		try {
 			await AlarmService.delete(id);
 		} catch (e) {
-			console.error(`[DELETE_DEBUG] ERROR in handleDelete:`, e);
+			console.error('Failed to delete alarm:', e);
 		}
 	};
 
@@ -57,55 +54,40 @@ const Home: React.FC = () => {
 	};
 
 	return (
-		<Box>
+		<Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 			{isMobile && (
 				<MobileToolbar
 					title={APP_NAME}
-					endAction={
-						<IconButton color="inherit" onClick={() => refresh()}>
-							<RefreshIcon />
-						</IconButton>
-					}
 					menuItems={[{ label: 'Settings', onClick: handleSettingsClick }]}
 				/>
-			)}
-
-			{/* Desktop settings button */}
-			{!isMobile && (
-				<Box
-					sx={{
-						position: 'fixed',
-						top: '48px',
-						right: '16px',
-						zIndex: 1000,
-					}}
-				>
-					<IconButton onClick={() => navigate({ to: '/settings' })} size="large">
-						<SettingsOutlinedIcon />
-					</IconButton>
-				</Box>
 			)}
 
 			<Container
 				maxWidth={false}
 				sx={{
-					mt: !isMobile ? 8 : 0,
-					pt: isMobile ? 2 : 0, // Add top padding on mobile to clear header/prevent blend
+					mt: 0,
+					pt: 2,
 					pb: 10,
-					px: 2, // Always add padding for "inset" bubble look
+					px: 2,
+					flexGrow: 1,
+					display: 'flex',
+					flexDirection: 'column',
 				}}
 			>
+				<NextAlarmBanner alarms={alarms} is24h={is24h} />
 				{isMobile ? (
-					alarms.map((alarm) => (
-						<AlarmItem
-							key={alarm.id}
-							alarm={alarm}
-							is24h={is24h}
-							onToggle={(enabled) => handleToggle(alarm, enabled)}
-							onDelete={() => handleDelete(alarm.id)}
-							onClick={() => handleEdit(alarm.id)}
-						/>
-					))
+					<PullToRefresh onRefresh={refresh}>
+						{alarms.map((alarm) => (
+							<AlarmItem
+								key={alarm.id}
+								alarm={alarm}
+								is24h={is24h}
+								onToggle={(enabled) => handleToggle(alarm, enabled)}
+								onDelete={() => handleDelete(alarm.id)}
+								onClick={() => handleEdit(alarm.id)}
+							/>
+						))}
+					</PullToRefresh>
 				) : (
 					<List>
 						{alarms.map((alarm) => (
@@ -133,35 +115,45 @@ const Home: React.FC = () => {
 								right: 0,
 								zIndex: 1000,
 								p: 2,
-								bgcolor: 'background.paper', // Ensure it has background on desktop footer
+								bgcolor: 'background.paper',
 								borderTop: '1px solid',
 								borderColor: 'divider',
 							}
 						: {
 								position: 'fixed',
-								bottom: 32, // More breathing room from bottom
-								right: 32, // More breathing room from right
+								bottom: 32,
+								right: 32,
 								zIndex: 1000,
 							}
 				}
 			>
 				{!isMobile ? (
-					<Button
-						variant="contained"
-						color="secondary"
-						fullWidth
-						startIcon={<AddIcon />}
-						onClick={handleAdd}
-						sx={{ maxWidth: 400, mx: 'auto', display: 'flex' }}
-					>
-						Add Alarm
-					</Button>
+					<Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+						<Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+							<Button
+								variant="contained"
+								color="secondary"
+								startIcon={<AddIcon />}
+								onClick={handleAdd}
+								sx={{ maxWidth: 400, width: '100%' }}
+							>
+								Add Alarm
+							</Button>
+						</Box>
+						<IconButton
+							onClick={handleSettingsClick}
+							aria-label="settings"
+							sx={{ position: 'absolute', right: 0 }}
+						>
+							<SettingsOutlinedIcon />
+						</IconButton>
+					</Box>
 				) : (
 					<Fab
 						color="secondary"
 						aria-label="add"
 						onClick={handleAdd}
-						size="large" // Larger button for better ergonomics
+						size="large"
 						sx={{ borderRadius: '16px' }}
 					>
 						<AddIcon />

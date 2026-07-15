@@ -30,15 +30,14 @@
 	   it inherits the ancestor's computed background-color (almost always transparent unless
 	   explicitly set), not a custom property. */
 	background-color: var(--app-background-colour, #fff);
-	will-change: transform, opacity;
-	/* --predictive-back-duration is set once at startup by AnimationScale.ts, scaled by
+	/* --wa-animation-duration is set once at startup by AnimationScale.ts, scaled by
 	   Android's Developer Options animator duration scale (default 1x -> 220ms). */
 	transition:
-		transform var(--predictive-back-duration, 220ms) ease-out,
-		opacity var(--predictive-back-duration, 220ms) ease-out;
+		transform var(--wa-animation-duration, 220ms) ease-out,
+		opacity var(--wa-animation-duration, 220ms) ease-out;
 }
 
-/* Same --predictive-back-duration variable as .wa-route-top above. */
+/* Same --wa-animation-duration variable as .wa-route-top above. */
 .wa-route-underlay {
 	position: absolute;
 	inset: 0;
@@ -46,8 +45,7 @@
 	overflow: hidden;
 	transform-origin: center;
 	background-color: var(--app-background-colour, #fff);
-	will-change: transform;
-	transition: transform var(--predictive-back-duration, 220ms) ease-out;
+	transition: transform var(--wa-animation-duration, 220ms) ease-out;
 }
 
 /* Suspended while a gesture is actively dragging so per-frame progress updates track the
@@ -56,6 +54,25 @@
 .wa-route-top.wa-dragging,
 .wa-route-underlay.wa-dragging {
 	transition: none;
+}
+
+/* will-change: transform is scoped to only while dragging or settling, never applied to
+   .wa-route-top/.wa-route-underlay unconditionally: it (or any other transform) establishes a
+   new containing block for position: fixed descendants, which broke every screen's
+   fixed-position elements (e.g. Home's floating Add button moving along with .wa-route-top's
+   own scroll instead of staying anchored to the true viewport, and the same for any fixed
+   element in the underlay's rendered screen) for the entire time the app is open, not just
+   mid-gesture. `wa-settling` (RouteStage.tsx) covers the brief window after wa-dragging is
+   removed but before the settle/snap-back CSS transition above has actually finished -- without
+   it, will-change would be gone exactly when that transition is running. */
+.wa-route-top.wa-dragging,
+.wa-route-top.wa-settling {
+	will-change: transform, opacity;
+}
+
+.wa-route-underlay.wa-dragging,
+.wa-route-underlay.wa-settling {
+	will-change: transform;
 }
 
 .wa-route-underlay-scrim {

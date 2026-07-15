@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Card, Typography, Switch, IconButton, Box, Stack } from '@mui/material';
+import { motion, MotionProps } from 'motion/react';
 import {
 	Delete as DeleteIcon,
 	Shuffle as ShuffleIcon,
@@ -15,6 +16,15 @@ import { format } from 'date-fns';
 import { TimeFormatHelper } from '../utils/TimeFormatHelper';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SwipeToDeleteRow } from './SwipeToDeleteRow';
+import { accentRailSx } from '../theme/alarmCardStyles';
+import { UI } from '../theme/uiTokens';
+import { usePrefersReducedMotion } from '../utils/usePrefersReducedMotion';
+import { AnimationScale } from '../utils/AnimationScale';
+
+// Hoisted to module scope -- calling motion.create(Box) inside the component would create a
+// new component type on every render, remounting the whole row (and losing its animation
+// state) each time.
+const MotionBox = motion.create(Box);
 
 interface AlarmItemProps {
 	alarm: AlarmRecord;
@@ -32,6 +42,20 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 	onClick,
 }) => {
 	const isMobile = PlatformUtils.isMobile();
+	const prefersReducedMotion = usePrefersReducedMotion();
+	// Lets the remaining rows smoothly slide into the gap when one above/below them is deleted
+	// (Framer's layout-animation/FLIP technique), scaled by the same OS animator-duration-scale
+	// setting the predictive-back settle animation already respects.
+	const reflowTransition = prefersReducedMotion
+		? { duration: 0 }
+		: { duration: AnimationScale.getSettleDurationMs() / 1000, ease: 'easeOut' as const };
+	// A new alarm (returning from Add/Edit) fades and slides in rather than just appearing --
+	// React only mounts (and thus plays initial->animate for) a row when its key is new, so
+	// this never replays for existing rows re-rendering when a sibling is added/removed
+	// elsewhere in the list.
+	const enterAnimation: Pick<MotionProps, 'initial' | 'animate'> = prefersReducedMotion
+		? {}
+		: { initial: { opacity: 0, y: -8 }, animate: { opacity: 1, y: 0 } };
 	const formatTime = (timeStr?: string | null) => {
 		if (!timeStr) return '--:--';
 		return TimeFormatHelper.formatTimeString(timeStr, is24h);
@@ -58,21 +82,23 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 			onClick={!isMobile ? onClick : undefined}
 			sx={{
 				width: '100%',
-				// Mobile "bubble" styling is handled by the wrapper now
 				mb: isMobile ? 0 : undefined,
 				display: 'flex',
 				justifyContent: 'space-between',
 				alignItems: 'center',
 				p: 2,
+				pl: 1.5,
 				cursor: 'pointer',
-				borderRadius: isMobile ? '16px' : undefined, // Bubble look on mobile, default on desktop
-				// Ionic items are usually list items.
-				// Let's keep card look but maybe reduced elevation or spacing on mobile
-				boxShadow: isMobile ? 'none' : undefined, // Remove shadow inside the swipe row
+				position: 'relative',
+				overflow: 'hidden',
+				borderRadius: isMobile ? UI.card.borderRadius : undefined,
+				boxShadow: isMobile ? 'none' : undefined,
 				bgcolor: 'background.paper',
-				borderBottom: isMobile ? 'none' : undefined, // Remove list separator look
+				borderBottom: isMobile ? 'none' : undefined,
 			}}
 		>
+			{/* Accent rail */}
+			<Box sx={accentRailSx(alarm.enabled)} />
 			<Box sx={{ display: 'flex', flexDirection: 'column' }}>
 				<Typography variant="h5" component="div" sx={{ fontWeight: 'bold' }}>
 					{timeDisplay}
@@ -123,11 +149,20 @@ export const AlarmItem: React.FC<AlarmItemProps> = ({
 
 	if (isMobile) {
 		return (
-			<SwipeToDeleteRow onDelete={onDelete} onClick={onClick}>
+			<SwipeToDeleteRow
+				onDelete={onDelete}
+				onClick={onClick}
+				reflowTransition={reflowTransition}
+				enterAnimation={enterAnimation}
+			>
 				{InnerContent}
 			</SwipeToDeleteRow>
 		);
 	}
 
-	return <Box sx={{ mb: 2 }}>{InnerContent}</Box>;
+	return (
+		<MotionBox layout transition={reflowTransition} {...enterAnimation} sx={{ mb: 2 }}>
+			{InnerContent}
+		</MotionBox>
+	);
 };

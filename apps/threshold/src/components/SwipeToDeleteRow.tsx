@@ -4,15 +4,39 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 import React, { useRef, useState } from 'react';
-import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'motion/react';
+import {
+	motion,
+	useMotionValue,
+	useTransform,
+	PanInfo,
+	useAnimation,
+	useDragControls,
+	Transition,
+	MotionProps,
+} from 'motion/react';
 import { Box, ButtonBase } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { usePrefersReducedMotion } from '../utils/usePrefersReducedMotion';
+import { AnimationScale } from '../utils/AnimationScale';
+
+// Hoisted to module scope -- calling motion.create(Box) inside the component would create a
+// new component type on every render, remounting the whole row (and losing its animation
+// state) each time.
+const MotionBox = motion.create(Box);
 
 interface SwipeToDeleteRowProps {
 	children: React.ReactNode;
 	onDelete: () => void | Promise<void>;
 	onClick?: () => void;
 	deleteThreshold?: number; // 0-1, relative to width
+	// Drives the layout ("FLIP") animation that slides the remaining rows into the gap once
+	// this one is removed -- passed in by AlarmItem so both the mobile and desktop row wrappers
+	// share the same reduced-motion/animator-duration-scale-aware transition.
+	reflowTransition: Transition;
+	// Fade/slide-in played once when a genuinely new row mounts (returning from Add/Edit) --
+	// passed in by AlarmItem so both the mobile and desktop row wrappers share the same
+	// reduced-motion-aware entrance animation.
+	enterAnimation?: Pick<MotionProps, 'initial' | 'animate'>;
 }
 
 export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
@@ -20,15 +44,81 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 	onDelete,
 	onClick,
 	deleteThreshold = 0.35,
+	reflowTransition,
+	enterAnimation,
 }) => {
 	const x = useMotionValue(0);
 	const controls = useAnimation();
+	const dragControls = useDragControls();
 	const [isDeleting, setIsDeleting] = useState(false);
+	const prefersReducedMotion = usePrefersReducedMotion();
 
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	// Track drag to distinguish tap vs swipe
 	const isDrag = useRef(false);
+
+	// Framer's default drag-on-touch behaviour engages purely from x-axis movement, with no
+	// awareness of the list's own vertical gestures (e.g. pull-to-refresh, which always starts
+	// on the topmost row since that's the only place it can arm). dragListener={false} below
+	// plus manually calling dragControls.start() here defers engaging Framer's drag entirely
+	// until a small initial movement clearly favours the horizontal axis -- a vertical-dominant
+	// gesture (a pull, or just scrolling) never reveals the delete background at all, instead
+	// of revealing it and only refusing to actually *delete* once released.
+	const AXIS_DECISION_THRESHOLD = 5;
+	const gestureStartRef = useRef<{ x: number; y: number } | null>(null);
+	const axisDecidedRef = useRef(false);
+	const activePointerIdRef = useRef<number | null>(null);
+
+	const handleRowPointerDown = (e: React.PointerEvent) => {
+		if (activePointerIdRef.current !== null) return;
+		activePointerIdRef.current = e.pointerId;
+		gestureStartRef.current = { x: e.clientX, y: e.clientY };
+		axisDecidedRef.current = false;
+		// A prior gesture on this row may have been a vertical-dominant one, which marks isDrag
+		// true to suppress its own tap (see handleRowPointerMove) -- reset it here so a genuine
+		// tap after that gesture isn't suppressed too.
+		isDrag.current = false;
+		// Without capturing, pointerup/pointercancel fire on whatever element is physically
+		// under the pointer at release -- not necessarily this row (e.g. a mouse drag released
+		// outside the row's bounds before the axis is decided). handleRowPointerEnd would then
+		// never run, leaving activePointerIdRef permanently non-null and silently disabling this
+		// row's swipe/tap gestures for the rest of the session.
+		try {
+			e.currentTarget.setPointerCapture(e.pointerId);
+		} catch {
+			// Capture is a best-effort safety net -- if the browser refuses it for this pointer
+			// type, the gesture still works exactly as it did before this fix.
+		}
+	};
+
+	const handleRowPointerMove = (e: React.PointerEvent) => {
+		if (e.pointerId !== activePointerIdRef.current || axisDecidedRef.current) return;
+		const start = gestureStartRef.current;
+		if (!start) return;
+		const dx = e.clientX - start.x;
+		const dy = e.clientY - start.y;
+		if (Math.abs(dx) < AXIS_DECISION_THRESHOLD && Math.abs(dy) < AXIS_DECISION_THRESHOLD) return;
+
+		axisDecidedRef.current = true;
+		if (Math.abs(dx) > Math.abs(dy)) {
+			dragControls.start(e);
+		} else {
+			// Vertical-dominant -- never engage Framer's drag for this gesture, but this was still
+			// real, deliberate movement (most often a pull-to-refresh attempt starting on this
+			// exact row, since it's the topmost one). Framer's own tap recognizer doesn't know
+			// that, and without isDrag being set here, releasing over the row after an abandoned
+			// or short pull attempt was being misread as a tap and navigating into Edit.
+			isDrag.current = true;
+		}
+	};
+
+	const handleRowPointerEnd = (e: React.PointerEvent) => {
+		if (e.pointerId !== activePointerIdRef.current) return;
+		activePointerIdRef.current = null;
+		gestureStartRef.current = null;
+		axisDecidedRef.current = false;
+	};
 
 	const handleDragStart = () => {
 		isDrag.current = false;
@@ -51,20 +141,37 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 		// 2. High velocity fling (>500) in EITHER direction
 		const isPastThreshold = Math.abs(offset) > width * deleteThreshold;
 		const isFastFling = Math.abs(velocity) > 500;
+		// This row's own drag="x" tracks x-axis movement independent of whatever the list's
+		// vertical gestures (e.g. pull-to-refresh, which starts on this exact row since it's
+		// the topmost one) are doing with the same touch. A fast, mostly-vertical release can
+		// still pick up incidental x offset/velocity from natural hand motion, so only commit
+		// to a delete when the horizontal movement actually dominates the vertical -- otherwise
+		// releasing a vertical pull gesture over this row can delete it by accident.
+		const isHorizontalDominant =
+			Math.abs(offset) > Math.abs(info.offset.y) && Math.abs(velocity) >= Math.abs(info.velocity.y);
 
-		if ((isPastThreshold || isFastFling) && !isDeleting) {
+		if (isHorizontalDominant && (isPastThreshold || isFastFling) && !isDeleting) {
 			setIsDeleting(true);
-			// Animate off screen in the direction of the swipe
-			const direction = offset > 0 ? 1 : -1;
-			await controls.start({
-				x: direction * width * 1.5,
-				transition: { duration: 0.2 },
-			});
-			// Trigger delete callback
-			onDelete();
+			if (prefersReducedMotion) {
+				onDelete();
+			} else {
+				// Animate off screen in the direction of the swipe
+				const direction = offset > 0 ? 1 : -1;
+				await controls.start({
+					x: direction * width * 1.5,
+					transition: { duration: AnimationScale.getSettleDurationMs() / 1000 },
+				});
+				onDelete();
+			}
 		} else {
 			// Spring back to start
-			controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } });
+			if (prefersReducedMotion) {
+				await controls.start({ x: 0, transition: { duration: 0 } });
+			} else {
+				await controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } });
+			}
+			// Reset drag flag so subsequent taps register as clicks
+			isDrag.current = false;
 		}
 	};
 
@@ -92,8 +199,11 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 	const leftIconScale = useTransform(x, [0, 50], [0.5, 1]);
 
 	return (
-		<Box
+		<MotionBox
 			ref={containerRef}
+			layout
+			transition={reflowTransition}
+			{...enterAnimation}
 			sx={{
 				position: 'relative',
 				overflow: 'hidden',
@@ -135,8 +245,14 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 			{/* Foreground Layer (Swipeable Content) */}
 			<motion.div
 				drag="x"
+				dragListener={false}
+				dragControls={dragControls}
 				dragConstraints={{ left: 0, right: 0 }}
 				dragElastic={0.5}
+				onPointerDown={handleRowPointerDown}
+				onPointerMove={handleRowPointerMove}
+				onPointerUp={handleRowPointerEnd}
+				onPointerCancel={handleRowPointerEnd}
 				onDragStart={handleDragStart}
 				onDrag={handleDrag}
 				onDragEnd={handleDragEnd}
@@ -167,6 +283,6 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 					{children}
 				</ButtonBase>
 			</motion.div>
-		</Box>
+		</MotionBox>
 	);
 };

@@ -35,6 +35,7 @@ import { AlarmService } from '../services/AlarmService';
 import { AlarmInput, AlarmMode } from '../types/alarm';
 import { alarmSoundPickerService } from '../services/AlarmSoundPickerService';
 import { showToast } from 'tauri-plugin-toast-api';
+import { UI } from '../theme/uiTokens';
 import { MusicNote as MusicNoteIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 import { Select, MenuItem, FormControl, SelectChangeEvent } from '@mui/material';
 
@@ -77,6 +78,11 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 
 	const [daysError, setDaysError] = useState(false);
 	const [imminentTrigger, setImminentTrigger] = useState<number | null>(null);
+	// Set once the imminent-trigger dialog below fires for a brand new alarm -- AlarmService.save
+	// always persists before that check runs, so the row already exists at that point even though
+	// the route is still "/edit/new". Without this, choosing "Adjust" and saving again would save
+	// with no id and create a second, duplicate alarm instead of updating the one just created.
+	const [savedAlarmId, setSavedAlarmId] = useState<number | null>(null);
 
 	// Minutes-until-trigger below which we warn the user before leaving the screen --
 	// catches an accidental Start/End swap in Window mode producing a near-term ring.
@@ -141,6 +147,8 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 
 		if (!isNew) {
 			alarmData.id = parseInt(id);
+		} else if (savedAlarmId !== null) {
+			alarmData.id = savedAlarmId;
 		}
 
 		try {
@@ -149,6 +157,7 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 			if (saved.nextTrigger) {
 				const minutesUntil = (saved.nextTrigger - Date.now()) / 60000;
 				if (minutesUntil >= 0 && minutesUntil <= IMMINENT_TRIGGER_THRESHOLD_MINUTES) {
+					setSavedAlarmId(saved.id);
 					setImminentTrigger(saved.nextTrigger);
 					return;
 				}
@@ -162,6 +171,22 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 			} catch (toastError) {
 				console.warn('[EditAlarm] Failed to show save-failure toast', toastError);
 			}
+		}
+	};
+
+	// AlarmService.save (above) already persisted and scheduled this alarm before this dialog
+	// could even appear -- "Adjust" only closes the dialog, it doesn't undo that. Without this,
+	// a user who chooses "Adjust" and then abandons the screen (back button, app switch) instead
+	// of saving again leaves a live, scheduled alarm they explicitly declined to confirm. Disable
+	// it immediately so it can't ring until the user actually re-saves; a subsequent Save (via
+	// savedAlarmId, above) re-enables it as part of the normal update.
+	const handleAdjust = async () => {
+		setImminentTrigger(null);
+		if (savedAlarmId === null) return;
+		try {
+			await AlarmService.toggle(savedAlarmId, false);
+		} catch (e) {
+			console.error('Failed to disable unconfirmed alarm', e);
 		}
 	};
 
@@ -238,22 +263,24 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 			)}
 			<Box>
 				<Container
-					maxWidth="sm"
+					maxWidth={isMobile ? 'sm' : false}
 					sx={{
-						py: 3,
-						mt: !isMobile ? 2 : 0,
+						py: isMobile ? 3 : 2,
+						mt: 0,
+						px: isMobile ? 2 : 4,
+						...(!isMobile && { maxWidth: 700 }),
 					}}
 				>
 					{!isMobile && (
-						<Box sx={{ mb: 4 }}>
+						<Box sx={{ mb: 2 }}>
 							<Typography variant="h4" gutterBottom>
 								{isNew ? 'New Alarm' : 'Edit Alarm'}
 							</Typography>
 						</Box>
 					)}
 
-					<Stack spacing={3} sx={{ pb: !isMobile ? 10 : 0 }}>
-						<Paper elevation={0} sx={{ p: isMobile ? 0 : 3, bgcolor: 'transparent' }}>
+					<Stack spacing={2} sx={{ pb: !isMobile ? 10 : 0 }}>
+						<Paper elevation={0} sx={{ p: 0, bgcolor: 'transparent' }}>
 							<ToggleButtonGroup
 								value={mode}
 								exclusive
@@ -262,34 +289,53 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 								}}
 								fullWidth
 								color="primary"
-								sx={{ mb: 3 }}
+								sx={{ mb: 2 }}
 							>
 								<ToggleButton value={AlarmMode.Fixed}>Fixed Time</ToggleButton>
 								<ToggleButton value={AlarmMode.Window}>Window</ToggleButton>
 							</ToggleButtonGroup>
 
 							{mode === AlarmMode.Fixed ? (
-								<Box sx={{ mb: 3 }}>
+								<Box sx={{ mb: 2 }}>
 									{isMobile ? (
 										<MuiTimePicker
 											label="Time"
 											value={parseTime(fixedTime)}
 											onChange={(newValue) => handleTimeChange(newValue, setFixedTime)}
 											ampm={!is24h}
-											slotProps={{ textField: { fullWidth: true } }}
+											// Match the Label field below: set the radius directly on the
+											// actual bordered element rather than clipping an outer Box to a
+											// different radius than the field's own default border curve,
+											// which left the corners looking mismatched/cut off.
+											slotProps={{
+												textField: {
+													fullWidth: true,
+													sx: {
+														'& .MuiPickersOutlinedInput-root': {
+															borderRadius: UI.card.borderRadius,
+														},
+													},
+												},
+											}}
 										/>
 									) : (
-										<div style={{ display: 'flex', justifyContent: 'center' }}>
+										<Box
+											sx={{
+												display: 'flex',
+												justifyContent: 'center',
+												borderRadius: UI.card.borderRadius,
+											}}
+										>
 											<DesktopCustomTimePicker
 												value={fixedTime}
 												onChange={setFixedTime}
 												is24h={is24h}
 											/>
-										</div>
+										</Box>
 									)}
 								</Box>
 							) : (
-								<Stack spacing={2} sx={{ mb: 3 }}>
+								<Stack spacing={2} sx={{ mb: 2 }}>
 									{isMobile ? (
 										<>
 											<MuiTimePicker
@@ -297,39 +343,99 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 												value={parseTime(windowStart)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowStart)}
 												ampm={!is24h}
-												slotProps={{ textField: { fullWidth: true } }}
+												slotProps={{
+													textField: {
+														fullWidth: true,
+														sx: {
+															'& .MuiPickersOutlinedInput-root': {
+																borderRadius: UI.card.borderRadius,
+															},
+														},
+													},
+												}}
 											/>
 											<MuiTimePicker
 												label="End Window"
 												value={parseTime(windowEnd)}
 												onChange={(newValue) => handleTimeChange(newValue, setWindowEnd)}
 												ampm={!is24h}
-												slotProps={{ textField: { fullWidth: true } }}
+												slotProps={{
+													textField: {
+														fullWidth: true,
+														sx: {
+															'& .MuiPickersOutlinedInput-root': {
+																borderRadius: UI.card.borderRadius,
+															},
+														},
+													},
+												}}
 											/>
 										</>
 									) : (
-										<>
-											<Typography variant="subtitle2" align="center">
-												Start Window
-											</Typography>
-											<div style={{ display: 'flex', justifyContent: 'center' }}>
-												<DesktopCustomTimePicker
-													value={windowStart}
-													onChange={setWindowStart}
-													is24h={is24h}
-												/>
-											</div>
-											<Typography variant="subtitle2" align="center">
-												End Window
-											</Typography>
-											<div style={{ display: 'flex', justifyContent: 'center' }}>
-												<DesktopCustomTimePicker
-													value={windowEnd}
-													onChange={setWindowEnd}
-													is24h={is24h}
-												/>
-											</div>
-										</>
+										<Box sx={{ display: 'flex', gap: 2 }}>
+											<Box sx={{ flex: 1, minWidth: 0 }}>
+												<Typography variant="subtitle2" gutterBottom>
+													Start Window
+												</Typography>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'center',
+														borderRadius: UI.card.borderRadius,
+														'& .time-picker-container': {
+															padding: '8px',
+															gap: '8px',
+														},
+														'& .time-value-input': {
+															width: '60px',
+															fontSize: '1.6rem',
+															padding: '8px 0',
+														},
+														'& .time-control-btn': {
+															width: '32px',
+															height: '26px',
+														},
+													}}
+												>
+													<DesktopCustomTimePicker
+														value={windowStart}
+														onChange={setWindowStart}
+														is24h={is24h}
+													/>
+												</Box>
+											</Box>
+											<Box sx={{ flex: 1, minWidth: 0 }}>
+												<Typography variant="subtitle2" gutterBottom>
+													End Window
+												</Typography>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'center',
+														borderRadius: UI.card.borderRadius,
+														'& .time-picker-container': {
+															padding: '8px',
+															gap: '8px',
+														},
+														'& .time-value-input': {
+															width: '60px',
+															fontSize: '1.6rem',
+															padding: '8px 0',
+														},
+														'& .time-control-btn': {
+															width: '32px',
+															height: '26px',
+														},
+													}}
+												>
+													<DesktopCustomTimePicker
+														value={windowEnd}
+														onChange={setWindowEnd}
+														is24h={is24h}
+													/>
+												</Box>
+											</Box>
+										</Box>
 									)}
 									<FormHelperText sx={{ textAlign: 'center' }}>
 										Alarm will ring once randomly between these times.
@@ -355,7 +461,17 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 								onChange={(e) => setLabel(e.target.value)}
 								fullWidth
 								variant="outlined"
-								sx={{ mb: 3 }}
+								// Without this, the floating label only shrinks on focus/value -- since this
+								// field always has a placeholder rendered underneath it, the empty/unfocused
+								// state shows "Label" sitting on top of the placeholder text instead of
+								// floated above the outline.
+								InputLabelProps={{ shrink: true }}
+								sx={{
+									mb: 2,
+									'& .MuiOutlinedInput-root': {
+										borderRadius: UI.card.borderRadius,
+									},
+								}}
 							/>
 
 							<Box>
@@ -390,7 +506,9 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 											alignItems: 'center',
 											cursor: 'pointer',
 											'&:hover': { bgcolor: 'action.hover' },
-											borderRadius: 1,
+											borderRadius: UI.card.borderRadius,
+											bgcolor: 'background.paper',
+											borderColor: 'divider',
 										}}
 									>
 										<MusicNoteIcon sx={{ mr: 2, color: 'text.secondary' }} />
@@ -494,7 +612,7 @@ const EditAlarm: React.FC<EditAlarmProps> = ({ idOverride }) => {
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
-					<Button onClick={() => setImminentTrigger(null)}>Adjust</Button>
+					<Button onClick={handleAdjust}>Adjust</Button>
 					<Button variant="contained" onClick={() => navigate({ to: '/home' })}>
 						Keep It
 					</Button>

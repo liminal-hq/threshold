@@ -12,6 +12,7 @@ import {
 import { screenStack } from '../utils/ScreenStack';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { AnimationScale } from '../utils/AnimationScale';
+import { usePrefersReducedMotion } from '../utils/usePrefersReducedMotion';
 import { ROUTES } from '../constants';
 import Home from '../screens/Home';
 import EditAlarm from '../screens/EditAlarm';
@@ -81,6 +82,11 @@ const RouteStage: React.FC = () => {
 	// cancelled-gesture snap-back can animate correctly -- see the effect below.
 	const [displayProgress, setDisplayProgress] = useState(0);
 	const [isDragging, setIsDragging] = useState(false);
+	// True from the moment a gesture ends until its settle/snap-back CSS transition has actually
+	// finished (~settleMs later) -- distinct from isDragging (which flips off immediately so the
+	// transition can re-enable), this keeps will-change applied for the one window it's needed:
+	// the transition itself, not the 1:1 drag tracking that has transitions disabled anyway.
+	const [isSettling, setIsSettling] = useState(false);
 	const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const rafRef = useRef<number | null>(null);
 	const progressRef = useRef(0);
@@ -92,6 +98,7 @@ const RouteStage: React.FC = () => {
 
 	const location = useLocation();
 	const router = useRouter();
+	const prefersReducedMotion = usePrefersReducedMotion();
 
 	// Record what's currently rendered so the entry one level back is available the moment a
 	// predictive-back gesture starts from wherever we navigate to next.
@@ -119,9 +126,9 @@ const RouteStage: React.FC = () => {
 		const canGoBack =
 			!location.pathname.startsWith(ROUTES.RINGING) &&
 			screenStack.getPrevious() !== null &&
-			!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			!prefersReducedMotion;
 		predictiveBackController.setCanGoBack(canGoBack);
-	}, [location.pathname]);
+	}, [location.pathname, prefersReducedMotion]);
 
 	useEffect(() => predictiveBackController.subscribe(setPbState), []);
 
@@ -169,6 +176,7 @@ const RouteStage: React.FC = () => {
 
 		if (pbState.active) {
 			setIsDragging(true);
+			setIsSettling(false);
 			setShowUnderlay(true);
 			return;
 		}
@@ -181,6 +189,7 @@ const RouteStage: React.FC = () => {
 		// giving the browser a valid "before" state to animate from.
 		const committed = progressRef.current >= 1;
 		setIsDragging(false);
+		setIsSettling(true);
 		rafRef.current = requestAnimationFrame(() => {
 			setDisplayProgress(committed ? 1 : 0);
 			rafRef.current = null;
@@ -192,6 +201,7 @@ const RouteStage: React.FC = () => {
 		// before disappearing/navigating.
 		const settleMs = AnimationScale.getSettleDurationMs();
 		hideTimeoutRef.current = setTimeout(() => {
+			setIsSettling(false);
 			if (committed) {
 				// Only navigate once the top layer has visibly finished sliding away, matching
 				// how native Android's own predictive-back completes the motion regardless of
@@ -248,8 +258,8 @@ const RouteStage: React.FC = () => {
 	const shouldRenderUnderlay = showUnderlay && previous !== null;
 
 	const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
-	const topClassName = `wa-route-top${isDragging ? ' wa-dragging' : ''}`;
-	const underlayClassName = `wa-route-underlay${isDragging ? ' wa-dragging' : ''}`;
+	const topClassName = `wa-route-top${isDragging ? ' wa-dragging' : ''}${isSettling ? ' wa-settling' : ''}`;
+	const underlayClassName = `wa-route-underlay${isDragging ? ' wa-dragging' : ''}${isSettling ? ' wa-settling' : ''}`;
 
 	const topStyle: React.CSSProperties = shouldRenderUnderlay
 		? { transform: `translateX(${progress * windowWidth}px)`, opacity: 1 - progress }

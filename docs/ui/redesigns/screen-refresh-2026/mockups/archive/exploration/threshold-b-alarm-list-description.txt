@@ -1,0 +1,1 @@
+Alarm List / Home — A "next alarm banner" at the top shows the actual randomly-scheduled time, not just the window. Cards use a left-edge accent bar as a one-glance status indicator: orange = on, muted blue = off. Opacity fades inactive cards back naturally without hiding them.

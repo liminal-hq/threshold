@@ -1,0 +1,9 @@
+Four SVGs, one per design principle, all sharing the Threshold palette (Deep Night Blue, Vibrant Orange accents, dark surfaces):
+
+**01 — Soft Transitions & Motion** — Three phone frames at varying opacity illustrate the slide-in/slide-out navigation, with a spring swipe-delete demo and the pulsing wake-up circle using concentric rings. A "Reduced Motion" badge appears in the corner.
+
+**02 — Bubble Shapes & Subtle Depth** — Three stacked alarm cards with 16px radii and annotated corner measurements. A layered elevation diagram shows how depth is achieved with soft ambient shadows rather than harsh ones, paired with a radius-scale comparison grid.
+
+**03 — Calming Colours & Theming** — Core palette swatches (Deep Night Blue + Vibrant Orange "Actions only"), a Material You wallpaper→algorithm→adapted-UI flow diagram, and three atmospheric custom theme chips: `canadian-cottage-winter`, `georgian-bay-plunge`, and the default `deep-night`.
+
+**04 — Minimal Cognitive Load** — A centred phone mockup shows the single primary action (`Add Alarm`) with generous whitespace above it. Annotation cards call out the one-action-per-screen rule, high contrast, glanceable layout, and the 48dp touch target (shown as a dashed circle around the button).

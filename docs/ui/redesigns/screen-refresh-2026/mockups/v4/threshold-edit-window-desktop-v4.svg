@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 960" width="1600" height="960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1423"/>
+      <stop offset="100%" stop-color="#121f34"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b283e"/>
+      <stop offset="100%" stop-color="#162233"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .fieldLabel { font-size: 16px; fill: #8fa8c8; font-weight: 600; letter-spacing: 0.5px; }
+      .helper { font-size: 15px; fill: #6f88a9; }
+      .noteTitle { font-size: 19px; fill: #dbe8fb; font-weight: 700; }
+      .noteBody { font-size: 15px; fill: #a7bad5; }
+    ]]></style>
+  </defs>
+
+  <rect width="1600" height="960" fill="url(#bg)"/>
+  <text class="t eyebrow" x="48" y="48">THRESHOLD REDESIGN V4 — EDIT / WINDOW ALARM DESKTOP</text>
+
+  <!-- App window -->
+  <g transform="translate(80 72)">
+    <rect width="1000" height="780" rx="12" fill="url(#panel)" stroke="#2e4362"/>
+
+    <!-- TitleBar.tsx -->
+    <rect x="0" y="0" width="1000" height="32" rx="12" fill="#17253b"/>
+    <rect x="0" y="20" width="1000" height="12" fill="#17253b"/>
+    <text class="t" x="500" y="22" text-anchor="middle" style="font-size:13px;fill:#8faac8;font-weight:500;">Threshold</text>
+    <circle cx="952" cy="16" r="8" fill="#2a3f5f"/>
+    <text class="t" x="952" y="21" text-anchor="middle" style="font-size:11px;fill:#adc1dd;">−</text>
+    <circle cx="978" cy="16" r="8" fill="#2a3f5f"/>
+    <text class="t" x="978" y="21" text-anchor="middle" style="font-size:12px;fill:#adc1dd;">✕</text>
+
+    <!-- In-content title -->
+    <text class="t" x="36" y="74" style="font-size:28px;fill:#edf4ff;font-weight:700;">Edit Alarm</text>
+
+    <!-- Form -->
+    <g transform="translate(150 96)">
+
+      <!-- Mode toggle — Window active -->
+      <rect x="0" y="0" width="700" height="46" rx="12" fill="#26354c"/>
+      <!-- Fixed Time inactive -->
+      <text class="t" x="178" y="29" text-anchor="middle" style="font-size:17px;fill:#7a94b4;">Fixed Time</text>
+      <!-- Window active -->
+      <rect x="352" y="4" width="344" height="38" rx="9" fill="#4c8dff"/>
+      <text class="t" x="524" y="29" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">Window</text>
+
+      <!-- Start Window + End Window side by side — desktop custom TimePicker -->
+      <text class="t fieldLabel" x="0" y="80">Start Window</text>
+      <rect x="0" y="88" width="338" height="92" rx="14" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t" x="169" y="152" text-anchor="middle" style="font-size:54px;fill:#f4f8ff;font-weight:700;letter-spacing:-2px;">02:00</text>
+
+      <text class="t fieldLabel" x="362" y="80">End Window</text>
+      <rect x="362" y="88" width="338" height="92" rx="14" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t" x="531" y="152" text-anchor="middle" style="font-size:54px;fill:#f4f8ff;font-weight:700;letter-spacing:-2px;">02:30</text>
+
+      <!-- Helper text -->
+      <text class="t helper" x="350" y="204" text-anchor="middle">Alarm will ring once randomly between these times.</text>
+
+      <!-- Label -->
+      <text class="t fieldLabel" x="0" y="238">Label</text>
+      <rect x="0" y="246" width="700" height="48" rx="10" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t" x="16" y="277" style="font-size:18px;fill:#95abc9;">Alarm Label (e.g. Wake Up)</text>
+
+      <!-- Repeats -->
+      <text class="t fieldLabel" x="0" y="326">Repeats</text>
+      <g transform="translate(0 334)">
+        <circle cx="26"  cy="26" r="22" fill="#4c8dff"/><text class="t" x="26"  y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">M</text>
+        <circle cx="78"  cy="26" r="22" fill="#4c8dff"/><text class="t" x="78"  y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">T</text>
+        <circle cx="130" cy="26" r="22" fill="#4c8dff"/><text class="t" x="130" y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">W</text>
+        <circle cx="182" cy="26" r="22" fill="#4c8dff"/><text class="t" x="182" y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">T</text>
+        <circle cx="234" cy="26" r="22" fill="#4c8dff"/><text class="t" x="234" y="33" text-anchor="middle" style="font-size:15px;fill:#fff;font-weight:700;">F</text>
+        <circle cx="286" cy="26" r="22" fill="#324764"/><text class="t" x="286" y="33" text-anchor="middle" style="font-size:15px;fill:#b2c5dc;">S</text>
+        <circle cx="338" cy="26" r="22" fill="#324764"/><text class="t" x="338" y="33" text-anchor="middle" style="font-size:15px;fill:#b2c5dc;">S</text>
+      </g>
+
+      <!-- Sound -->
+      <text class="t fieldLabel" x="0" y="412">Sound</text>
+      <rect x="0" y="420" width="700" height="48" rx="10" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t" x="16" y="451" style="font-size:18px;fill:#e3edfc;">Ambient Drone</text>
+      <text class="t" x="686" y="451" text-anchor="end" style="font-size:19px;fill:#8fa8c8;">▾</text>
+    </g>
+
+    <!-- Fixed footer -->
+    <rect x="0" y="724" width="1000" height="56" fill="#142132"/>
+    <rect x="750" y="734" width="110" height="34" rx="8" fill="none" stroke="#4c8dff" stroke-width="1.5"/>
+    <text class="t" x="805" y="756" text-anchor="middle" style="font-size:16px;fill:#7fb3ff;">Cancel</text>
+    <rect x="874" y="734" width="110" height="34" rx="8" fill="#4c8dff"/>
+    <text class="t" x="929" y="756" text-anchor="middle" style="font-size:16px;fill:#fff;font-weight:700;">Save Alarm</text>
+  </g>
+
+  <!-- Annotation: side-by-side pickers -->
+  <g transform="translate(1122 140)">
+    <rect width="210" height="150" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Side-by-side pickers</text>
+    <text class="t noteBody" x="14" y="58">Desktop has room for</text>
+    <text class="t noteBody" x="14" y="78">Start and End Window</text>
+    <text class="t noteBody" x="14" y="98">pickers side by side.</text>
+    <text class="t noteBody" x="14" y="118">Each uses the custom</text>
+    <text class="t noteBody" x="14" y="138">desktop TimePicker.tsx.</text>
+  </g>
+  <line x1="1122" y1="198" x2="1082" y2="240" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: helper text -->
+  <g transform="translate(1122 340)">
+    <rect width="210" height="110" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Helper text</text>
+    <text class="t noteBody" x="14" y="58">Explains random ring</text>
+    <text class="t noteBody" x="14" y="78">behaviour below the</text>
+    <text class="t noteBody" x="14" y="98">two picker controls.</text>
+  </g>
+  <line x1="1122" y1="390" x2="1082" y2="350" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: same logic -->
+  <g transform="translate(1122 500)">
+    <rect width="210" height="100" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Same logic</text>
+    <text class="t noteBody" x="14" y="58">Validation and save</text>
+    <text class="t noteBody" x="14" y="78">path unchanged.</text>
+  </g>
+</svg>

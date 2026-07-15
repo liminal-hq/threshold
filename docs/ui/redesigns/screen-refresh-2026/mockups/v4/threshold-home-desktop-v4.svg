@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 960" width="1600" height="960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1423"/>
+      <stop offset="100%" stop-color="#121f34"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b283e"/>
+      <stop offset="100%" stop-color="#162233"/>
+    </linearGradient>
+    <linearGradient id="banner" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4c8dff" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#4c8dff" stop-opacity="0.03"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .noteTitle { font-size: 19px; fill: #dbe8fb; font-weight: 700; }
+      .noteBody { font-size: 15px; fill: #a7bad5; }
+    ]]></style>
+  </defs>
+
+  <rect width="1600" height="960" fill="url(#bg)"/>
+  <text class="t eyebrow" x="48" y="48">THRESHOLD REDESIGN V4 — HOME DESKTOP</text>
+
+  <!-- App window -->
+  <g transform="translate(80 72)">
+    <rect width="1000" height="780" rx="12" fill="url(#panel)" stroke="#2e4362"/>
+
+    <!-- TitleBar.tsx — 32px, centred title, linux controls right -->
+    <rect x="0" y="0" width="1000" height="32" rx="12" fill="#17253b"/>
+    <rect x="0" y="20" width="1000" height="12" fill="#17253b"/>
+    <text class="t" x="500" y="22" text-anchor="middle" style="font-size:13px;fill:#8faac8;font-weight:500;">Threshold</text>
+    <circle cx="952" cy="16" r="8" fill="#2a3f5f"/>
+    <text class="t" x="952" y="21" text-anchor="middle" style="font-size:11px;fill:#adc1dd;">−</text>
+    <circle cx="978" cy="16" r="8" fill="#2a3f5f"/>
+    <text class="t" x="978" y="21" text-anchor="middle" style="font-size:12px;fill:#adc1dd;">✕</text>
+
+    <!-- App title -->
+    <text class="t" x="36" y="74" style="font-size:32px;fill:#edf4ff;font-weight:700;">Threshold</text>
+
+    <!-- Next alarm banner -->
+    <rect x="28" y="90" width="944" height="60" rx="14" fill="url(#banner)" stroke="#4c8dff" stroke-opacity="0.28"/>
+    <text class="t" x="52" y="124" style="font-size:20px;fill:#7fb3ff;font-weight:700;">Next alarm in 6h 47m  ·  Scheduled: 6:47 AM tomorrow</text>
+
+    <!-- Alarm row 1 — disabled: time + label only, no status text -->
+    <g transform="translate(28 168)">
+      <rect width="944" height="88" rx="14" fill="#26354c" stroke="#385072"/>
+      <rect x="0" y="12" width="7" height="62" rx="3.5" fill="#6f83a4"/>
+      <text class="t" x="24" y="50" style="font-size:36px;fill:#f3f7ff;font-weight:700;letter-spacing:-1px;">22:33</text>
+      <text class="t" x="26" y="74" style="font-size:18px;fill:#a9bad1;">Alarm</text>
+      <text class="t" x="860" y="50" text-anchor="middle" style="font-size:19px;fill:#566a87;">🗑</text>
+      <rect x="882" y="28" width="54" height="28" rx="14" fill="#3b4c66"/>
+      <circle cx="897" cy="42" r="11" fill="#d9e1ee"/>
+    </g>
+
+    <!-- Alarm row 2 — disabled: time + label only -->
+    <g transform="translate(28 268)">
+      <rect width="944" height="88" rx="14" fill="#26354c" stroke="#385072"/>
+      <rect x="0" y="12" width="7" height="62" rx="3.5" fill="#6f83a4"/>
+      <text class="t" x="24" y="50" style="font-size:32px;fill:#f0f6ff;font-weight:700;letter-spacing:-1px;">02:00 - 02:30</text>
+      <text class="t" x="26" y="74" style="font-size:18px;fill:#a9bad1;">Test Alarm</text>
+      <text class="t" x="860" y="50" text-anchor="middle" style="font-size:19px;fill:#566a87;">🗑</text>
+      <rect x="882" y="28" width="54" height="28" rx="14" fill="#3b4c66"/>
+      <circle cx="897" cy="42" r="11" fill="#d9e1ee"/>
+    </g>
+
+    <!-- Alarm row 3 — enabled: time + label + icon + next trigger -->
+    <g transform="translate(28 368)">
+      <rect width="944" height="88" rx="14" fill="#2a3a52" stroke="#3e5679"/>
+      <rect x="0" y="12" width="7" height="62" rx="3.5" fill="#4c8dff"/>
+      <text class="t" x="24" y="50" style="font-size:36px;fill:#f3f7ff;font-weight:700;letter-spacing:-1px;">09:27</text>
+      <text class="t" x="26" y="74" style="font-size:18px;fill:#a9bad1;">Francis!  ⏰ Sun 09:27</text>
+      <text class="t" x="860" y="50" text-anchor="middle" style="font-size:19px;fill:#566a87;">🗑</text>
+      <rect x="882" y="28" width="54" height="28" rx="14" fill="#4c8dff"/>
+      <circle cx="921" cy="42" r="11" fill="#ffffff"/>
+    </g>
+
+    <!-- Bottom action zone -->
+    <rect x="0" y="724" width="1000" height="56" fill="#142132"/>
+    <!-- centred button, maxWidth ~400, mirrors code: maxWidth: 400, mx: auto -->
+    <rect x="300" y="734" width="400" height="36" rx="8" fill="#4c8dff"/>
+    <text class="t" x="500" y="758" text-anchor="middle" style="font-size:17px;fill:#fff;font-weight:700;">+ Add Alarm</text>
+    <!-- settings gear to the right of button, within footer zone -->
+    <rect x="714" y="734" width="36" height="36" rx="8" fill="#1f334b" stroke="#345476"/>
+    <text class="t" x="732" y="757" text-anchor="middle" style="font-size:18px;fill:#8fb8e8;">⚙</text>
+  </g>
+
+  <!-- Annotation: button width -->
+  <g transform="translate(1122 160)">
+    <rect width="210" height="130" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Add button</text>
+    <text class="t noteBody" x="14" y="58">Centred, maxWidth 400.</text>
+    <text class="t noteBody" x="14" y="78">Matches code today.</text>
+    <text class="t noteBody" x="14" y="98">Gear sits to the right</text>
+    <text class="t noteBody" x="14" y="118">in the same footer zone.</text>
+  </g>
+  <line x1="1122" y1="220" x2="1082" y2="762" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: card content -->
+  <g transform="translate(1122 340)">
+    <rect width="210" height="120" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Disabled cards</text>
+    <text class="t noteBody" x="14" y="58">Show time + label only.</text>
+    <text class="t noteBody" x="14" y="78">No "Disabled" status text.</text>
+    <text class="t noteBody" x="14" y="98">Enabled: add icon + trigger.</text>
+  </g>
+  <line x1="1122" y1="398" x2="1082" y2="350" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: TitleBar -->
+  <g transform="translate(1122 500)">
+    <rect width="210" height="100" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">TitleBar.tsx</text>
+    <text class="t noteBody" x="14" y="58">32px app-drawn bar.</text>
+    <text class="t noteBody" x="14" y="78">decorations: false.</text>
+  </g>
+  <line x1="1122" y1="528" x2="1082" y2="120" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+</svg>

@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 420" width="600" height="420" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1b2a"/>
+      <stop offset="100%" stop-color="#162840"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3f60"/>
+      <stop offset="100%" stop-color="#152d48"/>
+    </linearGradient>
+    <linearGradient id="cardGrad2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#163a5a"/>
+      <stop offset="100%" stop-color="#0f2237"/>
+    </linearGradient>
+    <filter id="cardShadow">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="subtleShadow">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="420" fill="url(#bg2)"/>
+  <pattern id="dots2" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+    <circle cx="15" cy="15" r="1" fill="#ffffff" fill-opacity="0.04"/>
+  </pattern>
+  <rect width="600" height="420" fill="url(#dots2)"/>
+
+  <!-- Section label -->
+  <text x="30" y="38" font-size="10" fill="#FF7043" letter-spacing="3" font-weight="600">02 — BUBBLE SHAPES &amp; SUBTLE DEPTH</text>
+
+  <!-- === MAIN ALARM CARDS === -->
+
+  <!-- Card 1 — Primary alarm, full styling -->
+  <g transform="translate(55, 75)" filter="url(#cardShadow)">
+    <rect width="240" height="90" rx="16" fill="url(#cardGrad)" stroke="#2a5f8a" stroke-width="1"/>
+    <!-- Left accent bar -->
+    <rect x="0" y="16" width="4" height="58" rx="2" fill="#FF7043"/>
+    <!-- Time -->
+    <text x="22" y="44" font-size="28" fill="#ffffff" font-weight="700" letter-spacing="-1">7:00</text>
+    <text x="22" y="60" font-size="10" fill="#FF7043" opacity="0.9" font-weight="500">± 30 min window · Weekdays</text>
+    <text x="22" y="74" font-size="9" fill="#7ca0bf" opacity="0.8">Morning Gentle Rise</text>
+    <!-- Toggle switch -->
+    <rect x="190" y="35" width="34" height="19" rx="9.5" fill="#FF7043"/>
+    <circle cx="214" cy="44.5" r="7.5" fill="#ffffff"/>
+    <!-- 3-dot menu -->
+    <circle cx="200" cy="22" r="2" fill="#7ca0bf" opacity="0.5"/>
+    <circle cx="208" cy="22" r="2" fill="#7ca0bf" opacity="0.5"/>
+    <circle cx="216" cy="22" r="2" fill="#7ca0bf" opacity="0.5"/>
+  </g>
+
+  <!-- 16px radius annotation on Card 1 -->
+  <g opacity="0.7">
+    <!-- corner arc indicator top-left -->
+    <path d="M55,91 Q55,75 71,75" fill="none" stroke="#FF7043" stroke-width="1" stroke-dasharray="3,2"/>
+    <line x1="44" y1="91" x2="55" y2="91" stroke="#FF7043" stroke-width="1" opacity="0.5"/>
+    <line x1="71" y1="65" x2="71" y2="75" stroke="#FF7043" stroke-width="1" opacity="0.5"/>
+    <text x="34" y="97" font-size="8" fill="#FF7043" text-anchor="end">16px</text>
+    <text x="34" y="107" font-size="8" fill="#FF7043" text-anchor="end">radius</text>
+  </g>
+
+  <!-- Card 2 — disabled/dimmer -->
+  <g transform="translate(55, 180)" filter="url(#subtleShadow)">
+    <rect width="240" height="72" rx="16" fill="url(#cardGrad2)" stroke="#1a3a58" stroke-width="1"/>
+    <rect x="0" y="12" width="4" height="48" rx="2" fill="#546e7a"/>
+    <text x="22" y="38" font-size="24" fill="#7ca0bf" font-weight="600" letter-spacing="-1">8:30</text>
+    <text x="22" y="54" font-size="9" fill="#4a6a80" opacity="0.9">Weekend · Disabled</text>
+    <!-- Toggle OFF -->
+    <rect x="190" y="27" width="34" height="19" rx="9.5" fill="#2a4a6a"/>
+    <circle cx="199" cy="36.5" r="7.5" fill="#5a7a9a"/>
+  </g>
+
+  <!-- Card 3 — smaller, faint -->
+  <g transform="translate(55, 268)" filter="url(#subtleShadow)" opacity="0.6">
+    <rect width="240" height="60" rx="16" fill="#0f2237" stroke="#152d48" stroke-width="1"/>
+    <rect x="0" y="10" width="4" height="40" rx="2" fill="#2a4a6a"/>
+    <text x="22" y="33" font-size="20" fill="#5a7a9a" font-weight="600">9:15</text>
+    <text x="22" y="47" font-size="9" fill="#2a4a6a">Flex window only</text>
+  </g>
+
+  <!-- === DEPTH / LAYERING DIAGRAM === -->
+  <text x="370" y="95" font-size="9" fill="#4a6a80" text-anchor="middle" letter-spacing="1">ELEVATION LAYERS</text>
+
+  <!-- Layer 0 — background -->
+  <rect x="320" y="108" width="100" height="60" rx="8" fill="#0a1929" stroke="#162840" stroke-width="1"/>
+  <text x="370" y="143" font-size="8" fill="#2a4a6a" text-anchor="middle">Background</text>
+
+  <!-- Layer 1 — surface -->
+  <rect x="330" y="118" width="100" height="60" rx="10" fill="#152d48" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="380" y="153" font-size="8" fill="#4a6a80" text-anchor="middle">Surface</text>
+
+  <!-- Layer 2 — card -->
+  <rect x="340" y="128" width="100" height="60" rx="12" fill="url(#cardGrad)" stroke="#2a5f8a" stroke-width="1"/>
+  <text x="390" y="163" font-size="8" fill="#a0c0df" text-anchor="middle">Card  +8dp</text>
+
+  <!-- Layer 3 — action (topmost) -->
+  <rect x="350" y="138" width="100" height="60" rx="14" fill="#1e3f60" stroke="#3a6f9a" stroke-width="1.5"/>
+  <text x="400" y="176" font-size="8" fill="#ffffff" opacity="0.8" text-anchor="middle">Action  +16dp</text>
+
+  <!-- Elevation arrows -->
+  <line x1="460" y1="190" x2="460" y2="120" stroke="#FF7043" stroke-width="1" opacity="0.5"/>
+  <polygon points="456,122 460,112 464,122" fill="#FF7043" opacity="0.5"/>
+  <text x="468" y="155" font-size="8" fill="#FF7043" opacity="0.7">+dp</text>
+
+  <!-- === NO HARSH SHADOWS callout === -->
+  <g transform="translate(318, 225)">
+    <rect width="164" height="28" rx="14" fill="#0a1929" stroke="#1e3a5f" stroke-width="1"/>
+    <text x="82" y="15" font-size="9" fill="#7ca0bf" text-anchor="middle">No harsh shadows</text>
+    <text x="82" y="25" font-size="8" fill="#4a6a80" text-anchor="middle">soft ambient depth only</text>
+  </g>
+
+  <!-- === BORDER RADIUS reference grid === -->
+  <text x="370" y="278" font-size="9" fill="#4a6a80" text-anchor="middle" letter-spacing="1">RADIUS SCALE</text>
+
+  <g transform="translate(318, 290)">
+    <!-- 8px -->
+    <rect x="0" y="0" width="30" height="30" rx="4" fill="#1e3a5f" stroke="#2a5080" stroke-width="1"/>
+    <text x="15" y="42" font-size="7" fill="#4a6a80" text-anchor="middle">8px</text>
+    <!-- 12px -->
+    <rect x="42" y="0" width="30" height="30" rx="6" fill="#1e4570" stroke="#2a5080" stroke-width="1"/>
+    <text x="57" y="42" font-size="7" fill="#4a6a80" text-anchor="middle">12px</text>
+    <!-- 16px — highlighted -->
+    <rect x="84" y="0" width="30" height="30" rx="8" fill="#1e4570" stroke="#FF7043" stroke-width="1.5"/>
+    <text x="99" y="42" font-size="7" fill="#FF7043" text-anchor="middle" font-weight="600">16px ✓</text>
+    <!-- 24px -->
+    <rect x="126" y="0" width="30" height="30" rx="15" fill="#1e3a5f" stroke="#2a5080" stroke-width="1"/>
+    <text x="141" y="42" font-size="7" fill="#4a6a80" text-anchor="middle">full</text>
+  </g>
+
+  <text x="370" y="358" font-size="8" fill="#4a6a80" text-anchor="middle">Uniform 16px enforced on all cards &amp; list items</text>
+
+  <!-- Bottom rule -->
+  <line x1="30" y1="388" x2="570" y2="388" stroke="#2a4060" stroke-width="1"/>
+  <text x="30" y="408" font-size="10" fill="#4a6a80">Threshold · Liminal HQ</text>
+  <text x="570" y="408" font-size="10" fill="#4a6a80" text-anchor="end">Soft, never sharp</text>
+</svg>

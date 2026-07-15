@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1280" width="900" height="1280">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#101a2d"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#151f33"/>
+      <stop offset="100%" stop-color="#0f1727"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .h { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .title { font-size: 34px; fill: #edf4ff; font-weight: 700; }
+      .body { font-size: 20px; fill: #a7bad5; }
+      .small { font-size: 17px; fill: #7e93b4; }
+    ]]></style>
+  </defs>
+
+  <rect width="900" height="1280" fill="url(#bg)"/>
+  <text class="t h" x="48" y="66">THRESHOLD REDESIGN V1 - SETTINGS MOBILE</text>
+
+  <g transform="translate(250 98)">
+    <rect width="400" height="1080" rx="52" fill="#0b101a" stroke="#1b2940" stroke-width="2"/>
+    <rect x="14" y="16" width="372" height="1048" rx="40" fill="url(#screen)"/>
+
+    <rect x="24" y="34" width="348" height="70" rx="20" fill="#1f2d44"/>
+    <text class="t" x="42" y="76" style="font-size:26px;fill:#c5d5ea;">&lt;</text>
+    <text class="t" x="198" y="78" text-anchor="middle" style="font-size:28px;fill:#eef4ff;font-weight:700;">Settings</text>
+
+    <g transform="translate(28 124)">
+      <text class="t small" x="0" y="20">APPEARANCE</text>
+      <rect x="0" y="30" width="344" height="166" rx="18" fill="#23324a" stroke="#385072"/>
+      <text class="t body" x="18" y="66">Theme</text>
+      <rect x="186" y="44" width="140" height="34" rx="10" fill="#1a273c"/>
+      <text class="t" x="256" y="66" text-anchor="middle" style="font-size:16px;fill:#d8e4f6;">System (Auto)</text>
+
+      <text class="t body" x="18" y="112">Use Material You</text>
+      <rect x="276" y="94" width="52" height="28" rx="14" fill="#4d6393"/>
+      <circle cx="312" cy="108" r="11" fill="#bfd1ff"/>
+
+      <text class="t body" x="18" y="154">Force Dark Mode</text>
+      <rect x="276" y="136" width="52" height="28" rx="14" fill="#3e4f6f"/>
+      <circle cx="290" cy="150" r="11" fill="#dbe5f3"/>
+    </g>
+
+    <g transform="translate(28 334)">
+      <text class="t small" x="0" y="20">ALARM SETTINGS</text>
+      <rect x="0" y="30" width="344" height="136" rx="18" fill="#23324a" stroke="#385072"/>
+      <text class="t body" x="18" y="70">Silence After</text>
+      <text class="t" x="326" y="70" text-anchor="end" style="font-size:18px;fill:#dbe8fb;">20 minutes</text>
+      <line x1="18" y1="84" x2="326" y2="84" stroke="#334b6d"/>
+      <text class="t body" x="18" y="118">Snooze Length</text>
+      <text class="t" x="326" y="118" text-anchor="end" style="font-size:18px;fill:#dbe8fb;">10 minutes</text>
+    </g>
+
+    <g transform="translate(28 514)">
+      <text class="t small" x="0" y="20">GENERAL</text>
+      <rect x="0" y="30" width="344" height="76" rx="18" fill="#23324a" stroke="#385072"/>
+      <text class="t body" x="18" y="74">24-Hour Time</text>
+      <rect x="276" y="56" width="52" height="28" rx="14" fill="#3e4f6f"/>
+      <circle cx="290" cy="70" r="11" fill="#dbe5f3"/>
+    </g>
+
+    <g transform="translate(28 638)">
+      <text class="t small" x="0" y="20">DEVELOPER</text>
+      <rect x="0" y="30" width="344" height="262" rx="18" fill="#23324a" stroke="#385072"/>
+      <text class="t body" x="18" y="66">Test Alarm Ring</text>
+      <circle cx="314" cy="60" r="15" fill="#ff7a3d"/>
+      <text class="t" x="314" y="66" text-anchor="middle" style="font-size:14px;fill:#fff;">B</text>
+
+      <text class="t body" x="18" y="108">Test Watch Ring</text>
+      <circle cx="314" cy="102" r="15" fill="#4d6393"/>
+      <text class="t" x="314" y="108" text-anchor="middle" style="font-size:14px;fill:#fff;">W</text>
+
+      <text class="t body" x="18" y="150">Force Synchronise</text>
+      <circle cx="314" cy="144" r="15" fill="#4d6393"/>
+      <text class="t" x="314" y="150" text-anchor="middle" style="font-size:14px;fill:#fff;">S</text>
+
+      <text class="t body" x="18" y="192">Test Notification</text>
+      <circle cx="314" cy="186" r="15" fill="#4d6393"/>
+      <text class="t" x="314" y="192" text-anchor="middle" style="font-size:14px;fill:#fff;">N</text>
+
+      <text class="t body" x="18" y="234">Download Event Logs</text>
+      <circle cx="314" cy="228" r="15" fill="#4d6393"/>
+      <text class="t" x="314" y="234" text-anchor="middle" style="font-size:14px;fill:#fff;">D</text>
+    </g>
+  </g>
+
+  <g transform="translate(48 250)">
+    <rect width="170" height="128" rx="16" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t" x="14" y="34" style="font-size:20px;fill:#dbe8fb;font-weight:700;">Grouping</text>
+    <text class="t body" x="14" y="62">Cards split by</text>
+    <text class="t body" x="14" y="88">mental model</text>
+    <text class="t small" x="14" y="112">not raw controls</text>
+  </g>
+  <line x1="218" y1="314" x2="250" y2="348" stroke="#58739b" stroke-dasharray="4 4"/>
+
+  <g transform="translate(676 438)">
+    <rect width="178" height="128" rx="16" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t" x="14" y="34" style="font-size:20px;fill:#dbe8fb;font-weight:700;">Theme control</text>
+    <text class="t body" x="14" y="62">Material You remains</text>
+    <text class="t body" x="14" y="88">conditional on Android</text>
+    <text class="t small" x="14" y="112">same behaviour as today</text>
+  </g>
+  <line x1="676" y1="504" x2="648" y2="504" stroke="#58739b" stroke-dasharray="4 4"/>
+</svg>

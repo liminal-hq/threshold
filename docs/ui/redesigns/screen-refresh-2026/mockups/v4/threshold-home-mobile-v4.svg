@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 1640" width="1100" height="1640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#111b2e"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#151f33"/>
+      <stop offset="100%" stop-color="#0f1727"/>
+    </linearGradient>
+    <linearGradient id="banner" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ff8f5d" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ff8f5d" stop-opacity="0.04"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .noteTitle { font-size: 19px; fill: #dbe8fb; font-weight: 700; }
+      .noteBody { font-size: 15px; fill: #a7bad5; }
+    ]]></style>
+  </defs>
+
+  <rect width="1100" height="1640" fill="url(#bg)"/>
+  <text class="t eyebrow" x="48" y="56">THRESHOLD REDESIGN V4 — HOME MOBILE</text>
+
+  <!-- Phone shell — wider -->
+  <g transform="translate(230 80)">
+    <rect width="560" height="1460" rx="56" fill="#0a0f1a" stroke="#1b2940" stroke-width="2"/>
+    <rect x="14" y="16" width="532" height="1428" rx="44" fill="url(#screen)"/>
+
+    <!-- Status bar -->
+    <text class="t" x="36" y="60" style="font-size:14px;fill:#6f88a9;">02:54</text>
+    <text class="t" x="510" y="60" text-anchor="end" style="font-size:14px;fill:#6f88a9;">4G 17%</text>
+
+    <!-- MobileToolbar: title left, overflow ⋮ right (no refresh icon — pull-to-refresh instead) -->
+    <rect x="14" y="70" width="532" height="56" fill="#151f33"/>
+    <text class="t" x="36" y="107" style="font-size:30px;fill:#e9f0fa;font-weight:700;">Threshold</text>
+    <!-- overflow menu dot -->
+    <circle cx="498" cy="98" r="3" fill="#adc1dd"/>
+    <circle cx="498" cy="88" r="3" fill="#adc1dd"/>
+    <circle cx="498" cy="108" r="3" fill="#adc1dd"/>
+
+    <!-- Next alarm banner -->
+    <rect x="28" y="144" width="504" height="88" rx="22" fill="url(#banner)" stroke="#ff8f5d" stroke-opacity="0.30"/>
+    <text class="t" x="54" y="178" style="font-size:22px;fill:#ff9a70;font-weight:700;">Next alarm in 6h 47m</text>
+    <text class="t" x="54" y="206" style="font-size:18px;fill:#9cb1cc;">Scheduled: 6:47 AM tomorrow</text>
+
+    <!-- Alarm card 1 — disabled, muted rail -->
+    <g transform="translate(28 254)">
+      <rect width="504" height="142" rx="22" fill="#273245" stroke="#34455f"/>
+      <rect x="0" y="24" width="7" height="90" rx="3.5" fill="#6f83a4"/>
+      <text class="t" x="26" y="72" style="font-size:48px;fill:#f5f8ff;font-weight:700;letter-spacing:-1px;">22:33</text>
+      <text class="t" x="26" y="100" style="font-size:22px;fill:#a9bad1;">Alarm</text>
+      <text class="t" x="26" y="124" style="font-size:18px;fill:#7f90a8;">Disabled</text>
+      <!-- toggle off -->
+      <rect x="428" y="56" width="58" height="30" rx="15" fill="#3b4c66"/>
+      <circle cx="443" cy="71" r="12" fill="#d9e1ee"/>
+    </g>
+
+    <!-- Alarm card 2 — disabled, muted rail -->
+    <g transform="translate(28 414)">
+      <rect width="504" height="142" rx="22" fill="#273245" stroke="#34455f"/>
+      <rect x="0" y="24" width="7" height="90" rx="3.5" fill="#6f83a4"/>
+      <text class="t" x="26" y="72" style="font-size:40px;fill:#f1f6ff;font-weight:700;letter-spacing:-1px;">02:00 - 02:30</text>
+      <text class="t" x="26" y="100" style="font-size:22px;fill:#a9bad1;">Test Alarm</text>
+      <text class="t" x="26" y="124" style="font-size:18px;fill:#7f90a8;">Disabled</text>
+      <!-- toggle off -->
+      <rect x="428" y="56" width="58" height="30" rx="15" fill="#3b4c66"/>
+      <circle cx="443" cy="71" r="12" fill="#d9e1ee"/>
+    </g>
+
+    <!-- Alarm card 3 — enabled, accent rail -->
+    <g transform="translate(28 574)">
+      <rect width="504" height="142" rx="22" fill="#2a364b" stroke="#3e5272"/>
+      <rect x="0" y="24" width="7" height="90" rx="3.5" fill="#4c8dff"/>
+      <text class="t" x="26" y="72" style="font-size:48px;fill:#f5f8ff;font-weight:700;letter-spacing:-1px;">09:27</text>
+      <text class="t" x="26" y="100" style="font-size:22px;fill:#a9bad1;">Francis!</text>
+      <!-- clock icon + next trigger -->
+      <text class="t" x="26" y="126" style="font-size:16px;fill:#adc1dd;">⏰</text>
+      <text class="t" x="46" y="126" style="font-size:18px;fill:#9db4d4;">Sun 09:27</text>
+      <!-- toggle on: primary #4c8dff -->
+      <rect x="428" y="56" width="58" height="30" rx="15" fill="#4c8dff"/>
+      <circle cx="472" cy="71" r="12" fill="#ffffff"/>
+    </g>
+
+    <!-- FAB — bottom right, rounded square -->
+    <rect x="456" y="1340" width="68" height="68" rx="20" fill="#4c8dff"/>
+    <text class="t" x="490" y="1384" text-anchor="middle" style="font-size:42px;fill:#fff;font-weight:300;">+</text>
+
+    <!-- Home bar -->
+    <rect x="200" y="1416" width="160" height="6" rx="3" fill="#ced9eb" fill-opacity="0.35"/>
+  </g>
+
+  <!-- Annotation: pull-to-refresh -->
+  <g transform="translate(44 310)">
+    <rect width="164" height="130" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Pull-to-refresh</text>
+    <text class="t noteBody" x="14" y="60">No refresh icon in</text>
+    <text class="t noteBody" x="14" y="80">toolbar. Pull down</text>
+    <text class="t noteBody" x="14" y="100">gesture replaces it.</text>
+    <text class="t noteBody" x="14" y="120">Settings in ⋮ menu.</text>
+  </g>
+  <line x1="208" y1="368" x2="228" y2="368" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: next alarm banner -->
+  <g transform="translate(830 200)">
+    <rect width="186" height="120" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Next alarm banner</text>
+    <text class="t noteBody" x="14" y="60">Derived from alarms</text>
+    <text class="t noteBody" x="14" y="80">sorted by nextTrigger.</text>
+    <text class="t noteBody" x="14" y="100">No new state needed.</text>
+  </g>
+  <line x1="830" y1="258" x2="796" y2="220" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: accent rail -->
+  <g transform="translate(830 420)">
+    <rect width="186" height="120" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Accent rail</text>
+    <text class="t noteBody" x="14" y="60">Enabled: primary.main</text>
+    <text class="t noteBody" x="14" y="80">Disabled: muted tone</text>
+    <text class="t noteBody" x="14" y="100">from palette — no hex.</text>
+  </g>
+  <line x1="830" y1="478" x2="796" y2="590" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: swipe to delete preserved -->
+  <g transform="translate(44 520)">
+    <rect width="164" height="110" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Swipe-to-delete</text>
+    <text class="t noteBody" x="14" y="60">SwipeToDeleteRow</text>
+    <text class="t noteBody" x="14" y="80">wrapper unchanged.</text>
+    <text class="t noteBody" x="14" y="100">Spring feel preserved.</text>
+  </g>
+</svg>

@@ -6,7 +6,12 @@
 import React, { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { platform } from '@tauri-apps/plugin-os';
-import { WindowMinimizeIcon, WindowCloseIcon } from './Icons/Icons';
+import {
+	WindowMinimizeIcon,
+	WindowMaximizeIcon,
+	WindowRestoreIcon,
+	WindowCloseIcon,
+} from './Icons/Icons';
 import { ContextMenu } from './ContextMenu/ContextMenu';
 import type { MenuModel } from './ContextMenu/types';
 import './TitleBar.css';
@@ -14,7 +19,10 @@ import { APP_NAME } from '../constants';
 
 export const TitleBar: React.FC = () => {
 	const [platformType, setPlatformType] = useState<'mac' | 'linux' | 'win'>('linux');
-	// const [isMaximized, setIsMaximized] = useState(false);
+	const [isMaximized, setIsMaximized] = useState(false);
+	const [isMaximizable, setIsMaximizable] = useState(false);
+	const [isMinimizable, setIsMinimizable] = useState(true);
+	const [isResizable, setIsResizable] = useState(false);
 	const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -34,8 +42,18 @@ export const TitleBar: React.FC = () => {
 
 		const updateState = async () => {
 			try {
-				// setIsMaximized(await appWindow.isMaximized());
-				setIsAlwaysOnTop(await appWindow.isAlwaysOnTop());
+				const [maximized, maximizable, minimizable, resizable, alwaysOnTop] = await Promise.all([
+					appWindow.isMaximized(),
+					appWindow.isMaximizable(),
+					appWindow.isMinimizable(),
+					appWindow.isResizable(),
+					appWindow.isAlwaysOnTop(),
+				]);
+				setIsMaximized(maximized);
+				setIsMaximizable(maximizable);
+				setIsMinimizable(minimizable);
+				setIsResizable(resizable);
+				setIsAlwaysOnTop(alwaysOnTop);
 			} catch (e) {
 				console.error('Failed to check window state', e);
 			}
@@ -51,8 +69,16 @@ export const TitleBar: React.FC = () => {
 
 	const minimize = () => appWindow.minimize();
 	const toggleMaximize = async () => {
-		await appWindow.toggleMaximize();
-		// setIsMaximized(await appWindow.isMaximized());
+		// The maximize/unmaximize/toggle-maximize capabilities are deliberately not granted
+		// today (the window is locked non-resizable), so this button is never rendered --
+		// but if that ever changes without the capability grant also being restored, this
+		// should fail quietly rather than throw an unhandled rejection on click.
+		try {
+			await appWindow.toggleMaximize();
+			setIsMaximized(await appWindow.isMaximized());
+		} catch (e) {
+			console.error('Failed to toggle maximize', e);
+		}
 	};
 	const close = () => appWindow.close();
 
@@ -60,8 +86,12 @@ export const TitleBar: React.FC = () => {
 	const handleContextMenu = async (e: React.MouseEvent) => {
 		e.preventDefault();
 		try {
-			// setIsMaximized(await appWindow.isMaximized());
-			setIsAlwaysOnTop(await appWindow.isAlwaysOnTop());
+			const [maximized, alwaysOnTop] = await Promise.all([
+				appWindow.isMaximized(),
+				appWindow.isAlwaysOnTop(),
+			]);
+			setIsMaximized(maximized);
+			setIsAlwaysOnTop(alwaysOnTop);
 		} catch (err) {
 			console.error(err);
 		}
@@ -97,16 +127,24 @@ export const TitleBar: React.FC = () => {
 		sections: [
 			{
 				items: [
-					// {
-					// 	id: isMaximized ? 'restore' : 'maximize',
-					// 	label: isMaximized ? 'Restore' : 'Maximize',
-					// 	icon: isMaximized ? 'WindowRestoreIcon' : 'WindowMaximizeIcon',
-					// },
-					{
-						id: 'minimize',
-						label: 'Minimize',
-						icon: 'WindowMinimizeIcon',
-					},
+					...(isMaximizable && isResizable
+						? [
+								{
+									id: isMaximized ? 'restore' : 'maximize',
+									label: isMaximized ? 'Restore' : 'Maximize',
+									icon: isMaximized ? 'WindowRestoreIcon' : 'WindowMaximizeIcon',
+								},
+							]
+						: []),
+					...(isMinimizable
+						? [
+								{
+									id: 'minimize',
+									label: 'Minimize',
+									icon: 'WindowMinimizeIcon',
+								},
+							]
+						: []),
 				],
 			},
 			{ items: [{ id: 'move', label: 'Move', icon: 'MoveIcon' }] },
@@ -129,24 +167,36 @@ export const TitleBar: React.FC = () => {
 	const MacControls = () => (
 		<div className="window-controls mac">
 			<button onClick={close} className="control-button mac-close" title="Close" />
-			<button onClick={minimize} className="control-button mac-minimize" title="Minimize" />
-			{/* <button onClick={toggleMaximize} className="control-button mac-maximize" title="Maximize" /> */}
+			{isMinimizable && (
+				<button onClick={minimize} className="control-button mac-minimize" title="Minimize" />
+			)}
+			{isMaximizable && isResizable && (
+				<button
+					onClick={toggleMaximize}
+					className="control-button mac-maximize"
+					title={isMaximized ? 'Restore' : 'Maximize'}
+				/>
+			)}
 		</div>
 	);
 
 	// Windows Controls
 	const WinControls = () => (
 		<div className="window-controls win">
-			<button onClick={minimize} className="control-button win-minimize" title="Minimize">
-				<WindowMinimizeIcon />
-			</button>
-			{/* <button
-				onClick={toggleMaximize}
-				className="control-button win-maximize"
-				title={isMaximized ? 'Restore' : 'Maximize'}
-			>
-				{isMaximized ? <WindowRestoreIcon /> : <WindowMaximizeIcon />}
-			</button> */}
+			{isMinimizable && (
+				<button onClick={minimize} className="control-button win-minimize" title="Minimize">
+					<WindowMinimizeIcon />
+				</button>
+			)}
+			{isMaximizable && isResizable && (
+				<button
+					onClick={toggleMaximize}
+					className="control-button win-maximize"
+					title={isMaximized ? 'Restore' : 'Maximize'}
+				>
+					{isMaximized ? <WindowRestoreIcon /> : <WindowMaximizeIcon />}
+				</button>
+			)}
 			<button onClick={close} className="control-button win-close" title="Close">
 				<WindowCloseIcon />
 			</button>
@@ -156,16 +206,20 @@ export const TitleBar: React.FC = () => {
 	// Linux Controls (Adwaita-style)
 	const LinuxControls = () => (
 		<div className="window-controls linux">
-			<button onClick={minimize} className="control-button linux-minimize" title="Minimize">
-				<WindowMinimizeIcon />
-			</button>
-			{/* <button
-				onClick={toggleMaximize}
-				className="control-button linux-maximize"
-				title={isMaximized ? 'Restore' : 'Maximize'}
-			>
-				{isMaximized ? <WindowRestoreIcon /> : <WindowMaximizeIcon />}
-			</button> */}
+			{isMinimizable && (
+				<button onClick={minimize} className="control-button linux-minimize" title="Minimize">
+					<WindowMinimizeIcon />
+				</button>
+			)}
+			{isMaximizable && isResizable && (
+				<button
+					onClick={toggleMaximize}
+					className="control-button linux-maximize"
+					title={isMaximized ? 'Restore' : 'Maximize'}
+				>
+					{isMaximized ? <WindowRestoreIcon /> : <WindowMaximizeIcon />}
+				</button>
+			)}
 			<button onClick={close} className="control-button linux-close" title="Close">
 				<WindowCloseIcon />
 			</button>

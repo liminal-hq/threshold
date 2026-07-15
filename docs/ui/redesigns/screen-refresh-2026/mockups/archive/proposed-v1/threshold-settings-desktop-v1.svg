@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 860" width="1360" height="860">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1423"/>
+      <stop offset="100%" stop-color="#121f34"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b283e"/>
+      <stop offset="100%" stop-color="#162233"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .h { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .title { font-size: 34px; fill: #edf4ff; font-weight: 700; }
+      .body { font-size: 20px; fill: #a7bad5; }
+      .small { font-size: 16px; fill: #7f95b6; }
+    ]]></style>
+  </defs>
+
+  <rect width="1360" height="860" fill="url(#bg)"/>
+  <text class="t h" x="36" y="48">THRESHOLD REDESIGN V1 - SETTINGS DESKTOP</text>
+
+  <rect x="28" y="66" width="1304" height="34" rx="8" fill="#17253b" stroke="#2a3e5c"/>
+  <text class="t small" x="56" y="89">Threshold</text>
+
+  <g transform="translate(120 130)">
+    <rect width="1120" height="650" rx="28" fill="url(#panel)" stroke="#2e4362"/>
+    <text class="t title" x="36" y="58">Settings</text>
+
+    <g transform="translate(36 98)">
+      <rect width="248" height="516" rx="20" fill="#1a273b" stroke="#2f4564"/>
+      <text class="t small" x="18" y="42">SECTIONS</text>
+      <rect x="14" y="58" width="220" height="44" rx="12" fill="#ff7a3d"/>
+      <text class="t" x="124" y="86" text-anchor="middle" style="font-size:18px;fill:#fff;font-weight:700;">Appearance</text>
+      <rect x="14" y="112" width="220" height="44" rx="12" fill="#24344d"/>
+      <text class="t" x="124" y="140" text-anchor="middle" style="font-size:18px;fill:#c7d6ea;">Alarm Settings</text>
+      <rect x="14" y="166" width="220" height="44" rx="12" fill="#24344d"/>
+      <text class="t" x="124" y="194" text-anchor="middle" style="font-size:18px;fill:#c7d6ea;">General</text>
+      <rect x="14" y="220" width="220" height="44" rx="12" fill="#24344d"/>
+      <text class="t" x="124" y="248" text-anchor="middle" style="font-size:18px;fill:#c7d6ea;">Developer</text>
+    </g>
+
+    <g transform="translate(308 98)">
+      <rect width="776" height="516" rx="20" fill="#223148" stroke="#365073"/>
+
+      <text class="t" x="24" y="42" style="font-size:26px;fill:#deebfd;font-weight:700;">Appearance</text>
+
+      <rect x="24" y="62" width="728" height="68" rx="14" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t body" x="42" y="104">Theme</text>
+      <rect x="540" y="80" width="192" height="34" rx="10" fill="#2a3f5f"/>
+      <text class="t" x="636" y="103" text-anchor="middle" style="font-size:16px;fill:#d6e3f6;">System (Auto)</text>
+
+      <rect x="24" y="142" width="728" height="68" rx="14" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t body" x="42" y="184">Use Material You</text>
+      <rect x="680" y="162" width="52" height="28" rx="14" fill="#4d6393"/>
+      <circle cx="716" cy="176" r="11" fill="#bfd1ff"/>
+
+      <rect x="24" y="222" width="728" height="68" rx="14" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t body" x="42" y="264">Force Dark Mode</text>
+      <rect x="680" y="242" width="52" height="28" rx="14" fill="#3e4f6f"/>
+      <circle cx="694" cy="256" r="11" fill="#dbe5f3"/>
+
+      <text class="t" x="24" y="338" style="font-size:26px;fill:#deebfd;font-weight:700;">Alarm Settings</text>
+      <rect x="24" y="356" width="352" height="62" rx="14" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t body" x="42" y="394">Silence After</text>
+      <text class="t" x="356" y="394" text-anchor="end" style="font-size:18px;fill:#dbe8fb;">20 minutes</text>
+
+      <rect x="400" y="356" width="352" height="62" rx="14" fill="#1c2b41" stroke="#324a6b"/>
+      <text class="t body" x="418" y="394">Snooze Length</text>
+      <text class="t" x="732" y="394" text-anchor="end" style="font-size:18px;fill:#dbe8fb;">10 minutes</text>
+
+      <text class="t" x="24" y="468" style="font-size:20px;fill:#9eb4d4;">Developer tools remain grouped at bottom, unchanged in function</text>
+    </g>
+  </g>
+
+  <g transform="translate(1246 200)">
+    <rect width="86" height="190" rx="16" fill="#16253a" stroke="#2e4362"/>
+    <text class="t" x="43" y="30" text-anchor="middle" style="font-size:14px;fill:#d8e5f8;">Desktop</text>
+    <text class="t" x="43" y="58" text-anchor="middle" style="font-size:14px;fill:#d8e5f8;">scan path</text>
+    <line x1="43" y1="80" x2="43" y2="160" stroke="#5a769e" stroke-dasharray="4 4"/>
+    <polygon points="43,170 38,160 48,160" fill="#5a769e"/>
+  </g>
+</svg>

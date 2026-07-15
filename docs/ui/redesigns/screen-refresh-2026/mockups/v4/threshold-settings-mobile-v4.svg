@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1640" width="900" height="1640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1423"/>
+      <stop offset="100%" stop-color="#121f34"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#151f33"/>
+      <stop offset="100%" stop-color="#0f1727"/>
+    </linearGradient>
+    <style><![CDATA[
+      .t { font-family: "Avenir Next", "Nunito Sans", "Segoe UI", sans-serif; }
+      .eyebrow { font-size: 14px; letter-spacing: 2px; fill: #ff8f5d; font-weight: 700; }
+      .subheader { font-size: 13px; fill: #7f95b6; font-weight: 700; letter-spacing: 1.2px; }
+      .rowPrimary { font-size: 20px; fill: #dbe8fb; }
+      .rowSecondary { font-size: 15px; fill: #8fa8c8; }
+      .rowValue { font-size: 16px; fill: #8fa8c8; }
+      .noteTitle { font-size: 20px; fill: #dbe8fb; font-weight: 700; }
+      .noteBody { font-size: 16px; fill: #a7bad5; }
+    ]]></style>
+  </defs>
+
+  <!-- Canvas background -->
+  <rect width="900" height="1640" fill="url(#bg)"/>
+  <text class="t eyebrow" x="48" y="64">THRESHOLD — SETTINGS MOBILE (CODE-FAITHFUL, V4)</text>
+
+  <!-- Phone shell -->
+  <g transform="translate(230 88)">
+    <rect width="440" height="1460" rx="52" fill="#0a0f1a" stroke="#2e4362" stroke-width="2"/>
+    <rect x="14" y="16" width="412" height="1428" rx="40" fill="url(#screen)"/>
+
+    <!-- Status bar -->
+    <text class="t" x="32" y="56" style="font-size:13px;fill:#6f88a9;">02:54</text>
+    <text class="t" x="390" y="56" text-anchor="end" style="font-size:13px;fill:#6f88a9;">4G 17%</text>
+
+    <!-- MobileToolbar: back + title, no trailing action -->
+    <rect x="24" y="68" width="392" height="52" rx="0" fill="#151f33"/>
+    <text class="t" x="40" y="101" style="font-size:22px;fill:#adc5e0;">‹</text>
+    <text class="t" x="220" y="102" text-anchor="middle" style="font-size:22px;fill:#f0f6ff;font-weight:700;">Settings</text>
+
+    <!-- ─── APPEARANCE ─────────────────────────── -->
+    <text class="t subheader" x="36" y="154">APPEARANCE</text>
+
+    <!-- Theme select row -->
+    <rect x="24" y="162" width="392" height="64" rx="0" fill="none"/>
+    <text class="t rowPrimary" x="36" y="191">Theme</text>
+    <!-- select outline -->
+    <rect x="24" y="200" width="392" height="44" rx="8" fill="#1b2b43" stroke="#2f4564"/>
+    <text class="t" x="40" y="228" style="font-size:17px;fill:#c5d9f0;">System (Auto)</text>
+    <text class="t" x="400" y="228" text-anchor="end" style="font-size:18px;fill:#8fa8c8;">▾</text>
+
+    <!-- Material You row (shown: system theme + Android) -->
+    <rect x="24" y="252" width="392" height="58" rx="0" fill="none"/>
+    <text class="t rowPrimary" x="36" y="275">Use Material You</text>
+    <text class="t rowSecondary" x="36" y="295">Use dynamic system colours</text>
+    <!-- switch ON: primary #4c8dff -->
+    <rect x="358" y="260" width="52" height="28" rx="14" fill="#4c8dff"/>
+    <circle cx="396" cy="274" r="11" fill="#ffffff"/>
+
+    <!-- Force Dark Mode row -->
+    <rect x="24" y="318" width="392" height="58" rx="0" fill="none"/>
+    <line x1="24" y1="318" x2="416" y2="318" stroke="#1e2f47" stroke-width="1"/>
+    <text class="t rowPrimary" x="36" y="341">Force Dark Mode</text>
+    <text class="t rowSecondary" x="36" y="361">Override system colour scheme</text>
+    <!-- switch OFF -->
+    <rect x="358" y="326" width="52" height="28" rx="14" fill="#2a3d58"/>
+    <circle cx="370" cy="340" r="11" fill="#c5d2e4"/>
+
+    <!-- ─── ALARM SETTINGS ─────────────────────── -->
+    <text class="t subheader" x="36" y="414">ALARM SETTINGS</text>
+
+    <!-- Silence After select row -->
+    <rect x="24" y="422" width="392" height="64" rx="0" fill="none"/>
+    <text class="t rowPrimary" x="36" y="451">Silence After</text>
+    <rect x="24" y="460" width="392" height="44" rx="8" fill="#1b2b43" stroke="#2f4564"/>
+    <text class="t" x="40" y="488" style="font-size:17px;fill:#c5d9f0;">20 minutes</text>
+    <text class="t" x="400" y="488" text-anchor="end" style="font-size:18px;fill:#8fa8c8;">▾</text>
+
+    <!-- Snooze Length tappable row -->
+    <rect x="24" y="512" width="392" height="58" rx="0" fill="none"/>
+    <line x1="24" y1="512" x2="416" y2="512" stroke="#1e2f47" stroke-width="1"/>
+    <text class="t rowPrimary" x="36" y="536">Snooze Length</text>
+    <text class="t rowSecondary" x="36" y="556">10 minutes</text>
+    <!-- disclosure chevron -->
+    <text class="t" x="402" y="548" text-anchor="end" style="font-size:22px;fill:#4a6585;">›</text>
+
+    <!-- ─── GENERAL ────────────────────────────── -->
+    <text class="t subheader" x="36" y="610">GENERAL</text>
+
+    <!-- 24-Hour Time row -->
+    <rect x="24" y="618" width="392" height="58" rx="0" fill="none"/>
+    <text class="t rowPrimary" x="36" y="641">24-Hour Time</text>
+    <text class="t rowSecondary" x="36" y="661">Use 24-hour format for time display</text>
+    <!-- switch OFF -->
+    <rect x="358" y="626" width="52" height="28" rx="14" fill="#2a3d58"/>
+    <circle cx="370" cy="640" r="11" fill="#c5d2e4"/>
+
+    <!-- ─── DEVELOPER ──────────────────────────── -->
+    <text class="t subheader" x="36" y="720">DEVELOPER</text>
+
+    <!-- Test Alarm Ring — primary.main #4c8dff -->
+    <rect x="24" y="728" width="392" height="64" rx="0" fill="none"/>
+    <text class="t rowPrimary" x="36" y="752">Test Alarm Ring</text>
+    <text class="t rowSecondary" x="36" y="772">Trigger a sample alarm to test ringing</text>
+    <rect x="364" y="734" width="40" height="40" rx="20" fill="#4c8dff"/>
+    <text class="t" x="384" y="759" text-anchor="middle" style="font-size:18px;fill:#fff;">🔔</text>
+
+    <!-- Test Watch Ring — secondary.main #2563eb (mobile-only) -->
+    <rect x="24" y="800" width="392" height="64" rx="0" fill="none"/>
+    <line x1="24" y1="800" x2="416" y2="800" stroke="#1e2f47" stroke-width="1"/>
+    <text class="t rowPrimary" x="36" y="824">Test Watch Ring</text>
+    <text class="t rowSecondary" x="36" y="844">Send a test ring to the connected watch</text>
+    <rect x="364" y="806" width="40" height="40" rx="20" fill="#2563eb"/>
+    <text class="t" x="384" y="831" text-anchor="middle" style="font-size:18px;fill:#fff;">⌚</text>
+
+    <!-- Force Synchronise — secondary.main #2563eb -->
+    <rect x="24" y="872" width="392" height="64" rx="0" fill="none"/>
+    <line x1="24" y1="872" x2="416" y2="872" stroke="#1e2f47" stroke-width="1"/>
+    <text class="t rowPrimary" x="36" y="896">Force Synchronise</text>
+    <text class="t rowSecondary" x="36" y="916">Request an immediate watch sync</text>
+    <rect x="364" y="878" width="40" height="40" rx="20" fill="#2563eb"/>
+    <text class="t" x="384" y="903" text-anchor="middle" style="font-size:18px;fill:#fff;">🔄</text>
+
+    <!-- Test Notification — secondary.main #2563eb -->
+    <rect x="24" y="944" width="392" height="64" rx="0" fill="none"/>
+    <line x1="24" y1="944" x2="416" y2="944" stroke="#1e2f47" stroke-width="1"/>
+    <text class="t rowPrimary" x="36" y="968">Test Notification</text>
+    <text class="t rowSecondary" x="36" y="988">Send a test notification with actions</text>
+    <rect x="364" y="950" width="40" height="40" rx="20" fill="#2563eb"/>
+    <text class="t" x="384" y="975" text-anchor="middle" style="font-size:18px;fill:#fff;">📩</text>
+
+    <!-- Download Event Logs — info.main #0288d1 -->
+    <rect x="24" y="1016" width="392" height="64" rx="0" fill="none"/>
+    <line x1="24" y1="1016" x2="416" y2="1016" stroke="#1e2f47" stroke-width="1"/>
+    <text class="t rowPrimary" x="36" y="1040">Download Event Logs</text>
+    <text class="t rowSecondary" x="36" y="1060">Save event logs to send to the developer</text>
+    <rect x="364" y="1022" width="40" height="40" rx="20" fill="#0288d1"/>
+    <text class="t" x="384" y="1047" text-anchor="middle" style="font-size:18px;fill:#fff;">⬇</text>
+
+    <!-- Home bar -->
+    <rect x="152" y="1408" width="136" height="6" rx="3" fill="#ced9eb" fill-opacity="0.35"/>
+  </g>
+
+  <!-- Annotation: code-faithful note -->
+  <g transform="translate(44 280)">
+    <rect width="162" height="196" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Code-faithful</text>
+    <text class="t noteBody" x="14" y="60">This mockup shows</text>
+    <text class="t noteBody" x="14" y="82">current Settings.tsx</text>
+    <text class="t noteBody" x="14" y="104">structure exactly —</text>
+    <text class="t noteBody" x="14" y="126">no redesign applied.</text>
+    <text class="t noteBody" x="14" y="148">Mobile settings stays</text>
+    <text class="t noteBody" x="14" y="170">close to this shape.</text>
+  </g>
+  <line x1="206" y1="370" x2="228" y2="370" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: icon button colours -->
+  <g transform="translate(688 660)">
+    <rect width="176" height="188" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Dev icon colours</text>
+    <text class="t noteBody" x="14" y="60">🔔 primary.main</text>
+    <text class="t noteBody" x="14" y="82">   #4c8dff</text>
+    <text class="t noteBody" x="14" y="108">⌚🔄📩 secondary</text>
+    <text class="t noteBody" x="14" y="130">   #2563eb</text>
+    <text class="t noteBody" x="14" y="156">⬇ info.main</text>
+    <text class="t noteBody" x="14" y="178">   #0288d1</text>
+  </g>
+  <line x1="688" y1="750" x2="670" y2="780" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: mobile-only rows -->
+  <g transform="translate(688 880)">
+    <rect width="176" height="116" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Mobile-only</text>
+    <text class="t noteBody" x="14" y="60">Test Watch Ring</text>
+    <text class="t noteBody" x="14" y="82">row is hidden</text>
+    <text class="t noteBody" x="14" y="104">on desktop.</text>
+  </g>
+  <line x1="688" y1="932" x2="670" y2="870" stroke="#4f6a8c" stroke-dasharray="4 4"/>
+
+  <!-- Annotation: theme tokens reminder -->
+  <g transform="translate(44 520)">
+    <rect width="162" height="140" rx="14" fill="#111c2f" stroke="#2e4362"/>
+    <text class="t noteTitle" x="14" y="34">Theme tokens</text>
+    <text class="t noteBody" x="14" y="60">Colours shown are</text>
+    <text class="t noteBody" x="14" y="82">deep-night dark for</text>
+    <text class="t noteBody" x="14" y="104">comparison only.</text>
+    <text class="t noteBody" x="14" y="126">Use palette roles.</text>
+  </g>
+</svg>

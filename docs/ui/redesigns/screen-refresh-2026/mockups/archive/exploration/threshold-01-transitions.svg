@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 420" width="600" height="420" font-family="system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1b2a"/>
+      <stop offset="100%" stop-color="#162840"/>
+    </linearGradient>
+    <linearGradient id="screenGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#0f2237"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softShadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <!-- Spring/rubber band path clipping -->
+    <clipPath id="phoneClip">
+      <rect x="0" y="0" width="90" height="160" rx="12"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="420" fill="url(#bg)"/>
+
+  <!-- Subtle grid dots -->
+  <pattern id="dots" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+    <circle cx="15" cy="15" r="1" fill="#ffffff" fill-opacity="0.04"/>
+  </pattern>
+  <rect width="600" height="420" fill="url(#dots)"/>
+
+  <!-- Section label -->
+  <text x="30" y="38" font-size="10" fill="#FF7043" letter-spacing="3" font-weight="600" opacity="0.9">01 — SOFT TRANSITIONS &amp; MOTION</text>
+
+  <!-- === PHONE FRAMES (3 total, sliding motion) === -->
+
+  <!-- Ghost phone LEFT (sliding out) -->
+  <g transform="translate(58, 100)" opacity="0.18">
+    <rect width="90" height="160" rx="12" fill="#1e3a5f" stroke="#2a5080" stroke-width="1.5"/>
+    <rect x="6" y="16" width="78" height="130" rx="6" fill="#0f2237"/>
+    <!-- status bar line -->
+    <rect x="12" y="22" width="40" height="3" rx="1.5" fill="#ffffff" opacity="0.3"/>
+    <rect x="12" y="50" width="65" height="8" rx="4" fill="#ffffff" opacity="0.15"/>
+    <rect x="12" y="65" width="45" height="6" rx="3" fill="#ffffff" opacity="0.1"/>
+    <!-- Button -->
+    <rect x="12" y="120" width="65" height="18" rx="9" fill="#FF7043" opacity="0.4"/>
+  </g>
+
+  <!-- Motion arrow trail between ghost and center -->
+  <g opacity="0.5">
+    <line x1="155" y1="180" x2="185" y2="180" stroke="#FF7043" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <polygon points="183,176 190,180 183,184" fill="#FF7043"/>
+  </g>
+
+  <!-- CENTER phone (active, full opacity) -->
+  <g transform="translate(200, 80)" filter="url(#softShadow)">
+    <rect width="110" height="192" rx="16" fill="#1e3a5f" stroke="#2a6099" stroke-width="1.5"/>
+    <!-- Camera notch -->
+    <rect x="38" y="7" width="34" height="5" rx="2.5" fill="#0d1b2a"/>
+    <!-- Screen -->
+    <rect x="7" y="18" width="96" height="162" rx="8" fill="url(#screenGrad)"/>
+    <!-- Status bar -->
+    <text x="14" y="32" font-size="7" fill="#ffffff" opacity="0.5">9:07</text>
+    <circle cx="90" cy="28" r="2.5" fill="#4caf50" opacity="0.7"/>
+    <circle cx="83" cy="28" r="2.5" fill="#ffffff" opacity="0.3"/>
+    <!-- Alarm card -->
+    <rect x="14" y="44" width="82" height="52" rx="8" fill="#0f2237" stroke="#2a5080" stroke-width="1"/>
+    <text x="22" y="60" font-size="8" fill="#ffffff" opacity="0.5" font-weight="500">ALARM</text>
+    <text x="22" y="76" font-size="18" fill="#ffffff" font-weight="700">7:00</text>
+    <text x="22" y="88" font-size="7" fill="#FF7043" opacity="0.9">± 30 min window</text>
+    <!-- Toggle -->
+    <rect x="78" y="72" width="16" height="9" rx="4.5" fill="#FF7043"/>
+    <circle cx="89" cy="76.5" r="3.5" fill="#ffffff"/>
+    <!-- Second smaller card -->
+    <rect x="14" y="103" width="82" height="40" rx="8" fill="#0f2237" stroke="#1e3a5f" stroke-width="1"/>
+    <text x="22" y="119" font-size="7" fill="#ffffff" opacity="0.4">ALARM</text>
+    <text x="22" y="133" font-size="14" fill="#ffffff" opacity="0.6" font-weight="600">8:30</text>
+    <!-- Bottom nav -->
+    <rect x="7" y="150" width="96" height="30" rx="8" fill="#0a1929"/>
+    <circle cx="35" cy="165" r="4" fill="#FF7043"/>
+    <rect x="50" y="162" width="16" height="3" rx="1.5" fill="#ffffff" opacity="0.3"/>
+    <rect x="50" y="168" width="10" height="2" rx="1" fill="#ffffff" opacity="0.2"/>
+    <circle cx="90" cy="165" r="4" fill="#ffffff" opacity="0.2"/>
+  </g>
+
+  <!-- Motion arrow trail to right -->
+  <g opacity="0.5">
+    <line x1="318" y1="180" x2="348" y2="180" stroke="#FF7043" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <polygon points="346,176 353,180 346,184" fill="#FF7043"/>
+  </g>
+
+  <!-- Ghost phone RIGHT (sliding in) -->
+  <g transform="translate(356, 100)" opacity="0.22">
+    <rect width="90" height="160" rx="12" fill="#1e3a5f" stroke="#2a5080" stroke-width="1.5"/>
+    <rect x="6" y="16" width="78" height="130" rx="6" fill="#0f2237"/>
+    <text x="18" y="50" font-size="8" fill="#ffffff" opacity="0.4">Settings</text>
+    <rect x="12" y="60" width="65" height="6" rx="3" fill="#ffffff" opacity="0.1"/>
+    <rect x="12" y="72" width="50" height="6" rx="3" fill="#ffffff" opacity="0.08"/>
+    <rect x="12" y="84" width="58" height="6" rx="3" fill="#ffffff" opacity="0.06"/>
+  </g>
+
+  <!-- === SPRING / RUBBER BAND swipe demo === -->
+  <!-- Label -->
+  <text x="470" y="95" font-size="9" fill="#a0b4c8" text-anchor="middle">Swipe-to-delete</text>
+  <text x="470" y="107" font-size="9" fill="#a0b4c8" text-anchor="middle">spring physics</text>
+
+  <!-- Swipe card at rest -->
+  <g transform="translate(430, 118)">
+    <!-- Red delete bg -->
+    <rect width="80" height="36" rx="8" fill="#b71c1c" opacity="0.7"/>
+    <text x="60" y="22" font-size="9" fill="#ffffff" opacity="0.8" text-anchor="middle">Delete</text>
+    <!-- Card shifted right (rubber banding) -->
+    <g transform="translate(14, 0)">
+      <rect width="66" height="36" rx="8" fill="#1e3a5f" stroke="#2a5080" stroke-width="1"/>
+      <text x="12" y="23" font-size="11" fill="#ffffff" font-weight="600">7:00</text>
+    </g>
+    <!-- Spring indicator lines -->
+    <line x1="80" y1="18" x2="94" y2="18" stroke="#FF7043" stroke-width="1" stroke-dasharray="2,2" opacity="0.6"/>
+    <text x="96" y="21" font-size="7" fill="#FF7043" opacity="0.8">⟵ snap</text>
+  </g>
+
+  <!-- === PULSING ALARM screen demo === -->
+  <text x="470" y="195" font-size="9" fill="#a0b4c8" text-anchor="middle">Wake-up pulse</text>
+
+  <g transform="translate(440, 208)">
+    <!-- Outer pulse ring 1 -->
+    <circle cx="30" cy="30" r="28" fill="none" stroke="#FF7043" stroke-width="1.5" opacity="0.15"/>
+    <!-- Outer pulse ring 2 -->
+    <circle cx="30" cy="30" r="22" fill="none" stroke="#FF7043" stroke-width="1.5" opacity="0.25"/>
+    <!-- Inner circle -->
+    <circle cx="30" cy="30" r="16" fill="#FF7043" opacity="0.85" filter="url(#glow)"/>
+    <!-- Clock hands -->
+    <line x1="30" y1="30" x2="30" y2="18" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+    <line x1="30" y1="30" x2="38" y2="34" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- === REDUCED MOTION badge === -->
+  <g transform="translate(430, 290)">
+    <rect width="80" height="24" rx="12" fill="#1e3a5f" stroke="#2a5080" stroke-width="1"/>
+    <circle cx="16" cy="12" r="4" fill="#4caf50" opacity="0.8"/>
+    <text x="26" y="16" font-size="8" fill="#a0b4c8">Reduced motion</text>
+  </g>
+  <text x="470" y="330" font-size="8" fill="#4a6a80" text-anchor="middle">respects system prefs</text>
+
+  <!-- === ANNOTATIONS === -->
+  <!-- Slide-in label -->
+  <text x="300" y="300" font-size="9" fill="#4a6a80" text-anchor="middle">← slides out</text>
+  <text x="300" y="315" font-size="9" fill="#a0b4c8" text-anchor="middle" font-weight="500">View Transitions API</text>
+  <text x="300" y="330" font-size="9" fill="#4a6a80" text-anchor="middle">slides in →</text>
+
+  <!-- Title bottom -->
+  <line x1="30" y1="388" x2="570" y2="388" stroke="#2a4060" stroke-width="1"/>
+  <text x="30" y="408" font-size="10" fill="#4a6a80">Threshold · Liminal HQ</text>
+  <text x="570" y="408" font-size="10" fill="#4a6a80" text-anchor="end">Natural, never jarring</text>
+</svg>
