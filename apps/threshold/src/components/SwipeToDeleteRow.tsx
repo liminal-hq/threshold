@@ -70,8 +70,16 @@ export const SwipeToDeleteRow: React.FC<SwipeToDeleteRowProps> = ({
 		// 2. High velocity fling (>500) in EITHER direction
 		const isPastThreshold = Math.abs(offset) > width * deleteThreshold;
 		const isFastFling = Math.abs(velocity) > 500;
+		// This row's own drag="x" tracks x-axis movement independent of whatever the list's
+		// vertical gestures (e.g. pull-to-refresh, which starts on this exact row since it's
+		// the topmost one) are doing with the same touch. A fast, mostly-vertical release can
+		// still pick up incidental x offset/velocity from natural hand motion, so only commit
+		// to a delete when the horizontal movement actually dominates the vertical -- otherwise
+		// releasing a vertical pull gesture over this row can delete it by accident.
+		const isHorizontalDominant =
+			Math.abs(offset) > Math.abs(info.offset.y) && Math.abs(velocity) >= Math.abs(info.velocity.y);
 
-		if ((isPastThreshold || isFastFling) && !isDeleting) {
+		if (isHorizontalDominant && (isPastThreshold || isFastFling) && !isDeleting) {
 			setIsDeleting(true);
 			if (prefersReducedMotion) {
 				onDelete();

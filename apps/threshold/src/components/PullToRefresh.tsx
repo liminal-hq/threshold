@@ -13,6 +13,11 @@ const PULL_THRESHOLD = 72;
 // scroll) -- without this, a drag that starts scrolling normally and merely jitters downward by
 // a pixel or two would suddenly get hijacked into the pull gesture mid-scroll.
 const PULL_ARM_THRESHOLD = 10;
+// The actual refresh (an IPC round-trip to re-fetch alarms) is often near-instant, which reads
+// as broken -- the spinner would appear and vanish in the same frame, giving no visible
+// confirmation the pull actually did anything. Enforce a minimum, so it's always visible long
+// enough to register as real feedback.
+const MIN_REFRESH_DISPLAY_MS = 500;
 const RING_SIZE = 28;
 const RING_STROKE = 3;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
@@ -167,17 +172,22 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
 			if (currentPull >= PULL_THRESHOLD) {
 				refreshingRef.current = true;
 				setIsRefreshing(true);
-				// Keep the spinner up for the real duration of the refresh, and don't let a
-				// rejected refresh vanish silently -- reflect actual completion, not a guess.
-				Promise.resolve(onRefreshRef.current())
-					.catch((e) => {
+				// Keep the spinner up for the real duration of the refresh (or the minimum
+				// display time, whichever is longer), and don't let a rejected refresh vanish
+				// silently -- reflect actual completion, not a guess.
+				const minDisplay = prefersReducedMotionRef.current
+					? Promise.resolve()
+					: new Promise<void>((resolve) => setTimeout(resolve, MIN_REFRESH_DISPLAY_MS));
+				Promise.all([
+					Promise.resolve(onRefreshRef.current()).catch((e) => {
 						console.error('[PullToRefresh] Refresh failed:', e);
-					})
-					.finally(() => {
-						refreshingRef.current = false;
-						setIsRefreshing(false);
-						settle();
-					});
+					}),
+					minDisplay,
+				]).finally(() => {
+					refreshingRef.current = false;
+					setIsRefreshing(false);
+					settle();
+				});
 			} else {
 				settle();
 			}
