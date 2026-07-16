@@ -344,6 +344,10 @@ jobs:
     container:
       image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
       options: --user 0
+    # The `secrets` context isn't readable from a step's `if:` (only from `env:`/`with:`/`run:`),
+    # so the Play deploy steps below gate on this job-level env var instead of secrets directly.
+    env:
+      PLAY_DEPLOY_READY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -607,7 +611,7 @@ jobs:
       # workflow stays green for anyone who hasn't configured Play Console access yet. See
       # docs/infrastructure/release-build.md#google-play-deployment for full setup.
       - name: Deploy phone release to Google Play (draft)
-        if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        if: ${{ env.PLAY_DEPLOY_READY == 'true' }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -635,7 +639,7 @@ jobs:
       # against this app's own Play Console track list -- if wrong, the action's error message
       # lists the real available track names, which is the fastest way to confirm/correct it.
       - name: Deploy Wear release to Google Play (draft)
-        if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        if: ${{ env.PLAY_DEPLOY_READY == 'true' }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
