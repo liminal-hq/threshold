@@ -28,7 +28,9 @@ export function findLocalTagDate(tagName: string): string | null {
 }
 
 export function findLocalTagCommit(tagName: string): string | null {
-	const result = git('rev-parse', '--short', `refs/tags/${tagName}`);
+	// Peel with ^{commit} -- applyTag() below creates annotated tags, and rev-parse on an
+	// annotated tag ref returns the tag object's own SHA, not the commit it points to.
+	const result = git('rev-parse', '--short', `refs/tags/${tagName}^{commit}`);
 	if (result.status !== 0) return null;
 	return result.stdout.trim() || null;
 }
