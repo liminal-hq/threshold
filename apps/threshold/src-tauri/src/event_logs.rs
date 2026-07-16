@@ -305,7 +305,11 @@ mod tests {
         ));
         std::fs::create_dir_all(&dir).unwrap();
 
-        std::fs::write(dir.join("Threshold-alarm-manager.log"), "native alarm event").unwrap();
+        std::fs::write(
+            dir.join("Threshold-alarm-manager.log"),
+            "native alarm event",
+        )
+        .unwrap();
         std::fs::write(dir.join("unrelated.log"), "should not appear").unwrap();
 
         let result = read_and_format_logs(
