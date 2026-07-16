@@ -1,1 +1,9 @@
-Refreshed Home, Edit Alarm, and Settings screens with smoother entrance animations and gesture handling, plus predictive-back support with a live screen peek. Alarm scheduling now runs natively for better reliability. Fixed a ghost notification on delete, stuck scrolling on some screens, and several sync issues with the Wear companion app.
+🔔 What's New
+• Refreshed Home, Edit Alarm, and Settings screens with smoother animations
+• Predictive-back gesture support with a live screen peek
+• Alarm scheduling now runs fully natively for better reliability
+
+🦿 Fixes
+• Fixed a ghost notification left behind on alarm delete
+• Fixed scrolling getting stuck on some screens
+• Fixed sync issues with the Wear companion app
