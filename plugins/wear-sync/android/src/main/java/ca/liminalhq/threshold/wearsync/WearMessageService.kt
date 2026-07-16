@@ -155,8 +155,10 @@ class WearMessageService : WearableListenerService() {
 
                 val dataItem = dataClient.putDataItem(request.asPutDataRequest()).await()
                 Log.d(TAG, "Published cached data to watch: uri=${dataItem.uri}, revision=$revision")
+                NativeEventLog.log(applicationContext, TAG, "Served offline sync from cache at revision $revision")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to publish cached data to watch", e)
+                NativeEventLog.log(applicationContext, TAG, "Failed to publish cached data to watch: ${e.message}")
             }
         }
     }
@@ -170,6 +172,7 @@ class WearMessageService : WearableListenerService() {
      */
     private fun handleOfflineWrite(path: String, data: String) {
         Log.i(TAG, "Watch write received offline ($path), starting WearSyncService")
+        NativeEventLog.log(applicationContext, TAG, "Offline write received path=$path, starting WearSyncService")
         WearSyncQueue.enqueue(this, path, data)
 
         val serviceIntent = Intent(this, WearSyncService::class.java).apply {

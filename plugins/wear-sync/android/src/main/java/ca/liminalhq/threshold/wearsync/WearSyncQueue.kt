@@ -37,6 +37,7 @@ object WearSyncQueue {
 
         prefs.edit().putString(KEY_QUEUE, array.toString()).apply()
         Log.d(TAG, "Enqueued message: path=$path (queue size: ${array.length()})")
+        NativeEventLog.log(context, TAG, "Enqueued message path=$path (queue size: ${array.length()})")
     }
 
     /** Drain all queued messages and clear the queue. Returns list of (path, data) pairs. */
@@ -58,6 +59,7 @@ object WearSyncQueue {
 
         prefs.edit().remove(KEY_QUEUE).apply()
         Log.d(TAG, "Drained ${messages.size} queued message(s)")
+        NativeEventLog.log(context, TAG, "Drained ${messages.size} queued message(s)")
         return messages
     }
 

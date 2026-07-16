@@ -11,6 +11,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import ca.liminalhq.threshold.wear.NativeEventLog
 import ca.liminalhq.threshold.wear.data.WatchAlarm
 
 private const val TAG = "WearAlarmScheduler"
@@ -79,6 +80,11 @@ class WearAlarmScheduler(private val context: Context) {
         saveScheduledIds(scheduledIds)
 
         Log.d(TAG, "Reconciled: $scheduled scheduled, $cancelled cancelled (${orphanedIds.size} orphaned)")
+        NativeEventLog.log(
+            context,
+            TAG,
+            "Reconciled fallback schedule: $scheduled scheduled, $cancelled cancelled (${orphanedIds.size} orphaned)",
+        )
     }
 
     /**
@@ -106,6 +112,7 @@ class WearAlarmScheduler(private val context: Context) {
         alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
 
         Log.d(TAG, "Scheduled alarm ${alarm.id} at $triggerAt (${alarm.hour}:${"%02d".format(alarm.minute)} '${alarm.label}')")
+        NativeEventLog.log(context, TAG, "Scheduled fallback alarm id=${alarm.id} at $triggerAt")
     }
 
     /**
@@ -131,6 +138,7 @@ class WearAlarmScheduler(private val context: Context) {
         saveScheduledIds(ids)
 
         Log.d(TAG, "Scheduled snooze for alarm $alarmId in ${delayMinutes}m (trigger at $triggerAt)")
+        NativeEventLog.log(context, TAG, "Scheduled fallback snooze id=$alarmId in ${delayMinutes}m")
     }
 
     /** Cancel a single alarm by its ID. */
@@ -142,6 +150,7 @@ class WearAlarmScheduler(private val context: Context) {
         saveScheduledIds(ids)
 
         Log.d(TAG, "Cancelled alarm $alarmId")
+        NativeEventLog.log(context, TAG, "Cancelled fallback alarm id=$alarmId")
     }
 
     /** Cancel all local alarms for the given list and clear tracked IDs. */

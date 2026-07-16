@@ -7,6 +7,7 @@ package ca.liminalhq.threshold.wear.service
 
 import android.content.Context
 import android.util.Log
+import ca.liminalhq.threshold.wear.NativeEventLog
 import ca.liminalhq.threshold.wear.data.AlarmRepository
 import ca.liminalhq.threshold.wear.data.SyncStatus
 import com.google.android.gms.wearable.Node
@@ -125,10 +126,12 @@ class PhoneConnectionMonitor(
         if (connected) {
             repository.setSyncStatus(SyncStatus.CONNECTED)
             Log.i(TAG, "Phone connected — cancelling local fallback alarms")
+            NativeEventLog.log(context, TAG, "Phone connected -- cancelling local fallback alarms")
             scheduler.cancelAll(repository.alarms.value)
         } else {
             repository.setSyncStatus(SyncStatus.OFFLINE)
             Log.i(TAG, "Phone disconnected — scheduling local fallback alarms")
+            NativeEventLog.log(context, TAG, "Phone disconnected -- scheduling local fallback alarms")
             scheduler.reconcile(repository.alarms.value)
         }
     }
