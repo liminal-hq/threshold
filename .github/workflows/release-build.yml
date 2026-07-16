@@ -742,16 +742,17 @@ jobs:
           echo "Prepared release upload files:"
           ls -lah release-assets/publish
 
-      # Runs after every file is staged and before the release is published, so checksums.txt
-      # itself ends up covering every other asset without covering itself. It's picked up by the
-      # same release-assets/publish/* glob as everything else in the "Publish GitHub release"
-      # step below -- no separate upload wiring needed.
+      # SHA256SUMS, matching the naming convention already established in liminal-hq/spindle's
+      # own release.yml. Runs after every file is staged and before the release is published, so
+      # SHA256SUMS itself ends up covering every other asset without covering itself. It's picked
+      # up by the same release-assets/publish/* glob as everything else in the "Publish GitHub
+      # release" step below -- no separate upload wiring needed.
       - name: Generate release checksums
         working-directory: release-assets/publish
         run: |
           set -euo pipefail
-          sha256sum -- * > checksums.txt
-          cat checksums.txt
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
 
       - name: Remove existing release assets for tag
         env:

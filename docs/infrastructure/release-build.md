@@ -43,7 +43,7 @@ It will:
 - build desktop artefacts
 - build signed Android phone + Wear artefacts (`.aab`, `.apk`)
 - collect mapping files and native debug symbols (when available)
-- generate a `checksums.txt` (SHA-256, one line per artefact) covering every published file
+- generate a `SHA256SUMS` file (one line per artefact) covering every published file
 - publish a GitHub Release with curated distributable artefacts attached
 - remove existing assets on reruns so release pages stay clean
 
@@ -137,7 +137,7 @@ Phone and Wear draft releases are pushed to Google Play's internal track automat
 
 ### Verifying a downloaded artefact
 
-Every GitHub Release includes a `checksums.txt` with a SHA-256 line per artefact. To verify a downloaded file hasn't been corrupted or tampered with, download both it and `checksums.txt` into the same directory and run `sha256sum -c checksums.txt` (Linux/macOS) or `certutil -hashfile <file> SHA256` (Windows) and compare against the matching line.
+Every GitHub Release includes a `SHA256SUMS` file with one line per artefact (same naming convention as `liminal-hq/spindle`). To verify a downloaded file hasn't been corrupted or tampered with, download both it and `SHA256SUMS` into the same directory and run `sha256sum -c SHA256SUMS` (Linux/macOS) or `certutil -hashfile <file> SHA256` (Windows) and compare against the matching line.
 
 ## Google Play Deployment
 
