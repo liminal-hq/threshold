@@ -37,8 +37,12 @@ interface CommanderCliOptions {
 	bump?: string;
 	redo?: boolean;
 	build?: boolean;
-	noCommit?: boolean;
-	noWebSync?: boolean;
+	// Commander's --no-X shorthand negates the *positive* form: passing --no-commit sets
+	// options.commit to false (true by default), it does not set an options.noCommit property at
+	// all. Reading a noCommit/noWebSync key here (as this used to) is always undefined, so the
+	// flags silently did nothing regardless of whether they were passed.
+	commit?: boolean;
+	webSync?: boolean;
 	dryRun?: boolean;
 }
 
@@ -80,8 +84,8 @@ function parseCliArgs(argv: string[]): ParsedCliArgs {
 		bump: options.bump ?? null,
 		redo: Boolean(options.redo),
 		build: Boolean(options.build),
-		noCommit: Boolean(options.noCommit),
-		noWebSync: Boolean(options.noWebSync),
+		noCommit: options.commit === false,
+		noWebSync: options.webSync === false,
 		dryRun: Boolean(options.dryRun),
 	};
 
