@@ -12,7 +12,9 @@ use tauri_plugin_wear_sync::WearSyncExt;
 // the log directory -- the Data Layer round trip has no synchronous completion signal,
 // so this just gives it a fixed window rather than blocking indefinitely on an
 // unreachable/asleep watch. If it's too slow or unreachable, the export still proceeds
-// with whatever's already on disk.
+// with whatever's already on disk. Android-only: no watch pairing is possible from
+// desktop at all, so there's nothing to wait for there.
+#[cfg(target_os = "android")]
 const WATCH_LOG_WAIT: std::time::Duration = std::time::Duration::from_secs(3);
 
 // Caps the assembled export at a reasonable size for a diagnostic dump sent to the
@@ -192,11 +194,16 @@ pub async fn export_event_logs(app: AppHandle, destination: String) -> Result<St
 /// content included when it's reachable, without blocking indefinitely when
 /// it isn't. See `plugins/wear-sync/android/.../WearMessageService.kt`'s
 /// `writeWatchLog` for where the response actually gets written.
+///
+/// The wait itself only applies on Android -- wear-sync's `request_watch_logs`
+/// is an unconditional no-op everywhere else (no watch pairing is possible from
+/// desktop at all), so waiting there would just be a fixed delay for nothing.
 #[tauri::command]
 pub async fn request_watch_logs(app: AppHandle) -> Result<(), String> {
     if let Err(error) = app.wear_sync().request_watch_logs() {
         log::warn!("event_logs: failed to request watch logs: {error}");
     }
+    #[cfg(target_os = "android")]
     tokio::time::sleep(WATCH_LOG_WAIT).await;
     Ok(())
 }
