@@ -6,6 +6,14 @@
 use std::{fs, path::PathBuf, time::SystemTime};
 
 use tauri::{AppHandle, Manager};
+use tauri_plugin_wear_sync::WearSyncExt;
+
+// Bounded wait for the watch's log response to land on disk before the export reads
+// the log directory -- the Data Layer round trip has no synchronous completion signal,
+// so this just gives it a fixed window rather than blocking indefinitely on an
+// unreachable/asleep watch. If it's too slow or unreachable, the export still proceeds
+// with whatever's already on disk.
+const WATCH_LOG_WAIT: std::time::Duration = std::time::Duration::from_secs(3);
 
 // Caps the assembled export at a reasonable size for a diagnostic dump sent to the
 // developer -- previously `usize::MAX`, which made the truncation logic below a no-op.
@@ -176,6 +184,21 @@ pub async fn export_event_logs(app: AppHandle, destination: String) -> Result<St
     })
     .await
     .map_err(|err| format!("Failed to spawn blocking task: {err}"))?
+}
+
+/// Asks the watch to send its own native event log over, then waits a bounded
+/// amount of time for the response to land on disk before returning -- so a
+/// caller doing `request_watch_logs` then `get_event_logs` gets the watch's
+/// content included when it's reachable, without blocking indefinitely when
+/// it isn't. See `plugins/wear-sync/android/.../WearMessageService.kt`'s
+/// `writeWatchLog` for where the response actually gets written.
+#[tauri::command]
+pub async fn request_watch_logs(app: AppHandle) -> Result<(), String> {
+    if let Err(error) = app.wear_sync().request_watch_logs() {
+        log::warn!("event_logs: failed to request watch logs: {error}");
+    }
+    tokio::time::sleep(WATCH_LOG_WAIT).await;
+    Ok(())
 }
 
 #[tauri::command]

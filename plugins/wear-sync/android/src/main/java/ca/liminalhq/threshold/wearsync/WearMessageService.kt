@@ -8,6 +8,7 @@ package ca.liminalhq.threshold.wearsync
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import java.io.File
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.PutDataMapRequest
@@ -25,7 +26,9 @@ private const val PATH_SAVE_ALARM = "/threshold/save_alarm"
 private const val PATH_DELETE_ALARM = "/threshold/delete_alarm"
 private const val PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
 private const val PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
+private const val PATH_LOG_RESPONSE = "/threshold/log_response"
 private const val DATA_PATH_ALARMS = "/threshold/alarms"
+private const val WATCH_LOG_FILE_NAME = "Threshold-watch.log"
 
 /**
  * Receives messages from the watch via the Wear Data Layer and routes
@@ -53,7 +56,20 @@ class WearMessageService : WearableListenerService() {
         val data = String(messageEvent.data, Charsets.UTF_8)
         Log.d(TAG, "Message received: path=$path, bytes=${messageEvent.data.size}")
 
+        // Handled independent of plugin/Rust state -- this is a plain file write, not
+        // routed through the Tauri event pipeline at all, so it works identically
+        // whether or not Rust/webview happens to be booted right now.
+        if (path == PATH_LOG_RESPONSE) {
+            writeWatchLog(data)
+            return
+        }
+
         val plugin = WearSyncPlugin.instance
+        NativeEventLog.log(
+            applicationContext,
+            TAG,
+            "Message received path=$path, pluginLoaded=${plugin != null}, channelReady=${plugin?.isChannelReady}",
+        )
         if (plugin != null) {
             // Normal path: plugin is loaded, route through Tauri events
             when (path) {
@@ -85,6 +101,26 @@ class WearMessageService : WearableListenerService() {
             else -> {
                 Log.w(TAG, "Unknown message path (offline): $path")
             }
+        }
+    }
+
+    /**
+     * Write the watch's log content into Tauri's own `app_log_dir()`
+     * (`context.filesDir.parentFile/logs`, same directory [NativeEventLog] on this
+     * side writes into), so it merges into the existing "Export event log" feature
+     * automatically -- no Rust involvement needed for the write itself, only for
+     * triggering the original request via [WearSyncPlugin.requestWatchLogs].
+     */
+    private fun writeWatchLog(content: String) {
+        try {
+            val logsDir = File(applicationContext.filesDir.parentFile, "logs")
+            if (!logsDir.exists()) {
+                logsDir.mkdirs()
+            }
+            File(logsDir, WATCH_LOG_FILE_NAME).writeText(content)
+            Log.d(TAG, "Wrote watch log (${content.length} chars) to $logsDir")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to write watch log", e)
         }
     }
 

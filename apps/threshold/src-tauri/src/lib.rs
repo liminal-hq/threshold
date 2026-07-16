@@ -112,6 +112,7 @@ pub fn run() {
     builder = builder.invoke_handler(tauri::generate_handler![
         event_logs::export_event_logs,
         event_logs::get_event_logs,
+        event_logs::request_watch_logs,
         commands::get_alarms,
         commands::get_alarm,
         commands::save_alarm,
@@ -158,29 +159,26 @@ pub fn run() {
                 log::LevelFilter::Info
             };
 
+            // One explicit format for every platform rather than leaning on the plugin's own
+            // per-platform default (mobile's default omits a timestamp entirely, which made
+            // an earlier on-device incident hard to reconstruct from the exported log; desktop's
+            // default already includes one, but a different format than mobile's -- unified here
+            // so entries from every platform line up the same way in the persisted log file).
             let log_builder = tauri_plugin_log::Builder::default()
                 .level(log_level)
                 .level_for("jni", log::LevelFilter::Warn)
-                .level_for("tao", log::LevelFilter::Info);
-
-            #[cfg(mobile)]
-            {
-                let log_builder = log_builder.format(|out, message, record| {
+                .level_for("tao", log::LevelFilter::Info)
+                .format(|out, message, record| {
                     out.finish(format_args!(
-                        "[{}][{}] {}",
+                        "[{}][{}][{}] {}",
+                        chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
                         record.level(),
                         record.target(),
                         message
                     ))
                 });
 
-                app.handle().plugin(log_builder.build())?;
-            }
-
-            #[cfg(not(mobile))]
-            {
-                app.handle().plugin(log_builder.build())?;
-            }
+            app.handle().plugin(log_builder.build())?;
 
             // Initialise database and coordinator
             let db = tauri::async_runtime::block_on(async {

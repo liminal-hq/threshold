@@ -174,6 +174,24 @@ impl<R: Runtime> WearSync<R> {
             .map_err(Into::into)
     }
 
+    /// Ask connected watch nodes to send their own native event log back, to be
+    /// merged into the phone's "Export event log" feature. Fire-and-forget --
+    /// returns once the request is sent, doesn't wait for the watch's reply
+    /// (which arrives later via a separate Data Layer message, handled entirely
+    /// on the Kotlin side with no further Rust involvement).
+    pub fn request_watch_logs(&self) -> crate::Result<()> {
+        #[cfg(not(target_os = "android"))]
+        {
+            log::debug!("wear-sync: request_watch_logs no-op on non-Android mobile target");
+            return Ok(());
+        }
+
+        #[cfg(target_os = "android")]
+        self.handle
+            .run_mobile_plugin("requestWatchLogs", ())
+            .map_err(Into::into)
+    }
+
     /// Mark the watch message pipeline as ready on Kotlin side.
     ///
     /// Called after the app has registered its watch event listeners so the

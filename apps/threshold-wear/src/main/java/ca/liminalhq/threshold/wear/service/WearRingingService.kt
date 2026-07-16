@@ -23,6 +23,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import ca.liminalhq.threshold.wear.NativeEventLog
 import ca.liminalhq.threshold.wear.presentation.RingingActivity
 
 /**
@@ -85,11 +86,13 @@ class WearRingingService : Service() {
         when (intent.action) {
             ACTION_DISMISS -> {
                 Log.d(TAG, "Dismiss action received")
+                NativeEventLog.log(applicationContext, TAG, "Dismiss action received for alarm id=$currentAlarmId")
                 stopSelf()
                 return START_NOT_STICKY
             }
             ACTION_SNOOZE -> {
                 Log.d(TAG, "Snooze action received")
+                NativeEventLog.log(applicationContext, TAG, "Snooze action received for alarm id=$currentAlarmId")
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -103,10 +106,16 @@ class WearRingingService : Service() {
         val snoozeLength = intent.getIntExtra(EXTRA_SNOOZE_LENGTH, 10)
 
         Log.d(TAG, "Starting ringing for alarm $currentAlarmId ($hour:$minute '$label')")
+        NativeEventLog.log(applicationContext, TAG, "Ringing service starting for alarm id=$currentAlarmId")
 
         val foregroundStarted = startForegroundNotification(hour, minute, label, snoozeLength)
         if (!foregroundStarted) {
             Log.e(TAG, "Failed to enter foreground; stopping ringing service")
+            NativeEventLog.log(
+                applicationContext,
+                TAG,
+                "Failed to enter foreground for alarm id=$currentAlarmId -- stopping",
+            )
             launchRingingActivity(hour, minute, label, snoozeLength)
             stopSelf(startId)
             return START_NOT_STICKY
@@ -121,6 +130,7 @@ class WearRingingService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "Service destroying")
+        NativeEventLog.log(applicationContext, TAG, "Ringing service destroying for alarm id=$currentAlarmId")
         ringingAlarmId = -1
         stopAudio()
         stopVibration()

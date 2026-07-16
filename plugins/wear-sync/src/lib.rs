@@ -135,10 +135,18 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                                 is_24_hour_known: fired.is_24_hour_known,
                             };
 
-                            if let Err(error) = wear_sync.send_alarm_ring(request) {
-                                log::error!(
-                                    "wear-sync: failed to send alarm ring to watch: {error}"
-                                );
+                            let alarm_id = request.alarm_id;
+                            match wear_sync.send_alarm_ring(request) {
+                                Ok(()) => {
+                                    log::info!(
+                                        "wear-sync: sent alarm ring to watch for id={alarm_id}"
+                                    );
+                                }
+                                Err(error) => {
+                                    log::error!(
+                                        "wear-sync: failed to send alarm ring to watch: {error}"
+                                    );
+                                }
                             }
                         });
                     }
@@ -166,10 +174,18 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                             let request = AlarmDismissRequest {
                                 alarm_id: dismissed.id,
                             };
-                            if let Err(error) = wear_sync.send_alarm_dismiss(request) {
-                                log::error!(
-                                    "wear-sync: failed to send alarm dismiss to watch: {error}"
-                                );
+                            let alarm_id = request.alarm_id;
+                            match wear_sync.send_alarm_dismiss(request) {
+                                Ok(()) => {
+                                    log::info!(
+                                        "wear-sync: sent alarm dismiss to watch for id={alarm_id}"
+                                    );
+                                }
+                                Err(error) => {
+                                    log::error!(
+                                        "wear-sync: failed to send alarm dismiss to watch: {error}"
+                                    );
+                                }
                             }
                         });
                     }
@@ -204,10 +220,18 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                                 alarm_id: snoozed.id,
                                 snooze_length_minutes,
                             };
-                            if let Err(error) = wear_sync.send_alarm_snooze(request) {
-                                log::error!(
-                                    "wear-sync: failed to send alarm snooze to watch: {error}"
-                                );
+                            let alarm_id = request.alarm_id;
+                            match wear_sync.send_alarm_snooze(request) {
+                                Ok(()) => {
+                                    log::info!(
+                                        "wear-sync: sent alarm snooze to watch for id={alarm_id}"
+                                    );
+                                }
+                                Err(error) => {
+                                    log::error!(
+                                        "wear-sync: failed to send alarm snooze to watch: {error}"
+                                    );
+                                }
                             }
                         });
                     }
