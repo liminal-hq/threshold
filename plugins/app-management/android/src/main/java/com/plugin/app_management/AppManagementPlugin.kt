@@ -21,11 +21,14 @@ class AppManagementPlugin(private val activity: Activity): Plugin(activity) {
         // moveTaskToBack(true) minimizes the activity without killing it.
         // It effectively behaves like the Home button.
         val success = activity.moveTaskToBack(true)
-        NativeEventLog.log(activity, TAG, "minimizeApp called, moveTaskToBack result=$success")
         if (success) {
             invoke.resolve()
         } else {
             invoke.reject("Failed to move task to back")
         }
+        // Logged after resolving: this call is on the blocking `run_mobile_plugin` path
+        // awaited from a directly-invoked Tauri command, so resolving first means the
+        // logging I/O (see NativeEventLog.kt) no longer adds to that wait.
+        NativeEventLog.log(activity, TAG, "minimizeApp called, moveTaskToBack result=$success")
     }
 }
