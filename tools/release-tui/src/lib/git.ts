@@ -96,7 +96,13 @@ export function createRedoCommit(message: string): void {
 }
 
 export function applyTag(tagName: string, force = false): void {
-	const args = force ? ['tag', '-f', tagName] : ['tag', tagName];
+	// Annotated (-a), not lightweight -- this repo has tag.gpgsign=true configured, and a signed
+	// tag must be a real Git object with a message, not just a ref pointing at a commit. Without
+	// -m, git tries to open an editor for the message and fails outright in a non-interactive
+	// shell.
+	const args = force
+		? ['tag', '-f', '-a', tagName, '-m', `Release ${tagName}`]
+		: ['tag', '-a', tagName, '-m', `Release ${tagName}`];
 	const result = git(...args);
 	if (result.status !== 0) throw new Error(`Failed to tag ${tagName}: ${result.stderr.trim()}`);
 }
