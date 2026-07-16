@@ -81,7 +81,7 @@ impl<R: Runtime> AlarmManager<R> {
         }
     }
 
-    pub fn pick_alarm_sound(
+    pub async fn pick_alarm_sound(
         &self,
         _options: PickAlarmSoundOptions,
     ) -> crate::Result<PickedAlarmSound> {
