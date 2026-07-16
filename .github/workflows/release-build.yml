@@ -589,6 +589,63 @@ jobs:
             release-assets/android/**
           if-no-files-found: error
 
+      # r0adkll/upload-google-play's `releaseFiles` resolves through fast-glob, but `mappingFile`
+      # and `debugSymbols` are checked with a literal fs.existsSync() against the exact string --
+      # no glob expansion (confirmed by reading its src/main.ts and src/input-validation.ts). The
+      # collect-artefacts step above names both with the version baked in, so resolve the exact
+      # paths here rather than passing an unexpandable glob. A missing/empty output is safe: the
+      # action treats an empty string input as "not set" and skips it, per the same source check.
+      - name: Resolve Play deploy asset paths
+        id: play_asset_paths
+        run: |
+          phone_debug_symbols=$(find release-assets/android -type f -name 'threshold-phone-native-debug-symbols-v*.zip' | sort | head -n1 || true)
+          wear_mapping_file=$(find release-assets/android -type f -name 'wear-mapping-v*.txt' | sort | head -n1 || true)
+          echo "phone_debug_symbols=${phone_debug_symbols}" >> "$GITHUB_OUTPUT"
+          echo "wear_mapping_file=${wear_mapping_file}" >> "$GITHUB_OUTPUT"
+
+      # Both Play deploy steps are no-ops (via `if:`) until their secrets/vars are set, so this
+      # workflow stays green for anyone who hasn't configured Play Console access yet. See
+      # docs/infrastructure/release-build.md#google-play-deployment for full setup.
+      - name: Deploy phone release to Google Play (draft)
+        if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ca.liminalhq.threshold
+          releaseFiles: release-assets/android/threshold-phone-v*.aab
+          tracks: internal
+          status: draft
+          whatsNewDirectory: distribution/whatsnew
+          debugSymbols: ${{ steps.play_asset_paths.outputs.phone_debug_symbols }}
+
+      # Confirmed via Play Console: Wear is a separate release train within the same app listing
+      # (ca.liminalhq.threshold), not a separate package -- Play Console's "Internal testing"
+      # track shows independent "Phones and tablets" and "Wear OS" release rows under the one
+      # app. Same packageName as the phone step; deriveWearVersionCode's +1_000_000_000 offset
+      # (tools/release-tui/src/lib/version.ts) is what keeps their version codes from colliding.
+      #
+      # Track name is "wear:internal" -- confirmed by reading real, currently-running production
+      # workflows for this exact scenario (phone + Wear, same package, dedicated form-factor
+      # tracks): Home Assistant's official Android app (fastlane/Fastfile,
+      # github.com/home-assistant/android) deploys `track: 'wear:internal'` alongside `track:
+      # 'internal'` for phone in the same lane, and promotes wear:internal -> wear:beta ->
+      # production in lockstep with the phone tracks; joreilly/Confetti does the same. (An
+      # earlier version of this comment said "wear:qa" based on a doc fetch that turned out to be
+      # unreliable -- corrected after checking real-world usage instead.) Still not verified
+      # against this app's own Play Console track list -- if wrong, the action's error message
+      # lists the real available track names, which is the fastest way to confirm/correct it.
+      - name: Deploy Wear release to Google Play (draft)
+        if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ca.liminalhq.threshold
+          releaseFiles: release-assets/android/threshold-wear-v*.aab
+          tracks: wear:internal
+          status: draft
+          whatsNewDirectory: distribution/whatsnew-wear
+          mappingFile: ${{ steps.play_asset_paths.outputs.wear_mapping_file }}
+
       - name: Summarise Android build
         if: always()
         env:
@@ -684,6 +741,18 @@ jobs:
 
           echo "Prepared release upload files:"
           ls -lah release-assets/publish
+
+      # SHA256SUMS, matching the naming convention already established in liminal-hq/spindle's
+      # own release.yml. Runs after every file is staged and before the release is published, so
+      # SHA256SUMS itself ends up covering every other asset without covering itself. It's picked
+      # up by the same release-assets/publish/* glob as everything else in the "Publish GitHub
+      # release" step below -- no separate upload wiring needed.
+      - name: Generate release checksums
+        working-directory: release-assets/publish
+        run: |
+          set -euo pipefail
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
 
       - name: Remove existing release assets for tag
         env:
