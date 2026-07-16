@@ -290,10 +290,16 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
 
     /**
      * Ask connected watch nodes to send their own native event log back, so it
-     * can be merged into the phone's "Export event log" feature. Fire-and-forget:
-     * resolves immediately once the request is sent, doesn't wait for a reply --
-     * the watch's response (if any) arrives later via [WearMessageService] on its
-     * own MSG_PATH_LOG_RESPONSE path and is written straight to the log directory.
+     * can be merged into the phone's "Export event log" feature. Fire-and-forget
+     * as far as the watch's actual reply goes: resolves once the request is sent
+     * (or immediately if there's no node to send it to), doesn't wait for a reply
+     * -- the watch's response (if any) arrives later via [WearMessageService] on
+     * its own MSG_PATH_LOG_RESPONSE path and is written straight to the log
+     * directory.
+     *
+     * Resolves with `{"connected": Boolean}` so the Rust side can tell "no watch
+     * paired at all" apart from "request sent, might still be waiting on a reply"
+     * -- the caller only needs to wait out its bounded window in the latter case.
      */
     @Command
     fun requestWatchLogs(invoke: Invoke) {
@@ -302,7 +308,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                 val nodes = nodeClient.connectedNodes.await()
                 if (nodes.isEmpty()) {
                     Log.d(TAG, "No connected watch nodes — skipping log request")
-                    invoke.resolve()
+                    invoke.resolve(JSObject().apply { put("connected", false) })
                     return@launch
                 }
 
@@ -310,7 +316,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     messageClient.sendMessage(node.id, MSG_PATH_LOG_REQUEST, ByteArray(0)).await()
                     Log.d(TAG, "Requested watch logs from ${node.displayName}")
                 }
-                invoke.resolve()
+                invoke.resolve(JSObject().apply { put("connected", true) })
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to request watch logs", e)
                 invoke.reject("Failed to request watch logs: ${e.message}")

@@ -22,9 +22,16 @@ import java.util.Locale
  * Duplicated from alarm-manager/wear-sync's copies of the same utility rather
  * than shared -- no shared native module exists yet (see issue #255's Part A
  * design discussion).
+ *
+ * Each plugin's copy writes to its own distinct file (this one:
+ * `Threshold-app-management.log`) rather than sharing one file across plugins --
+ * `read_and_format_logs()` merges every `Threshold*.log` file it finds, so
+ * splitting by plugin needs no Rust-side change and, more importantly, means
+ * there's no file for two independently-`@Synchronized` copies of this object
+ * (one per plugin) to race over in the first place.
  */
 object NativeEventLog {
-	private const val FILE_NAME = "Threshold-native.log"
+	private const val FILE_NAME = "Threshold-app-management.log"
 	private const val MAX_BYTES = 512 * 1024L
 	private val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
 

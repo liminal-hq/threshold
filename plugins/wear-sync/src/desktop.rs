@@ -50,8 +50,8 @@ impl<R: Runtime> WearSync<R> {
         Ok(())
     }
 
-    pub fn request_watch_logs(&self) -> crate::Result<()> {
+    pub async fn request_watch_logs(&self) -> crate::Result<bool> {
         log::debug!("wear-sync: desktop stub — request_watch_logs (no-op)");
-        Ok(())
+        Ok(false)
     }
 }

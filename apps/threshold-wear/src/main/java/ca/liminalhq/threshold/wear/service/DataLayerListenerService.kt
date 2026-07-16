@@ -21,6 +21,7 @@ import com.google.android.gms.wearable.WearableListenerService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONException
@@ -46,6 +47,15 @@ private const val PATH_LOG_REQUEST = "/threshold/log_request"
 class DataLayerListenerService : WearableListenerService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Matches WearSyncService's own cleanup -- without this, handleLogRequest's
+        // in-flight coroutine (and the SupervisorJob backing it) outlives this service
+        // instance with nothing left to cancel it if the system tears the service down
+        // mid-request.
+        scope.cancel()
+    }
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         val app = application as? ThresholdWearApp ?: run {

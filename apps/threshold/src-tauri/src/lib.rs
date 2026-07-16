@@ -164,6 +164,14 @@ pub fn run() {
             // an earlier on-device incident hard to reconstruct from the exported log; desktop's
             // default already includes one, but a different format than mobile's -- unified here
             // so entries from every platform line up the same way in the persisted log file).
+            //
+            // Local time, not UTC (unlike the rest of the Rust backend's persisted/emitted
+            // timestamps, e.g. alarm/mod.rs, alarm/database.rs) -- deliberately, since this
+            // log exists to be read by a human next to the device correlating against an
+            // alarm's local wall-clock trigger time and the device's own system clock, and
+            // that's exactly what an on-device incident this feature was built for needed.
+            // The numeric UTC offset (%:z) is included so the clock basis is unambiguous
+            // rather than assumed, since it now differs from the rest of the codebase.
             let log_builder = tauri_plugin_log::Builder::default()
                 .level(log_level)
                 .level_for("jni", log::LevelFilter::Warn)
@@ -171,7 +179,7 @@ pub fn run() {
                 .format(|out, message, record| {
                     out.finish(format_args!(
                         "[{}][{}][{}] {}",
-                        chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
+                        chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f %:z"),
                         record.level(),
                         record.target(),
                         message
