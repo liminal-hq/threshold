@@ -5,6 +5,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { PATHS, REPO_ROOT_MARKER } from './constants.js';
 import { deriveTauriVersionCode } from './version.js';
 
@@ -38,6 +39,9 @@ function readJson(filePath: string): Record<string, unknown> {
 
 function writeJson(filePath: string, data: Record<string, unknown>): void {
 	fs.writeFileSync(filePath, `${JSON.stringify(data, null, '\t')}\n`, 'utf8');
+	// JSON.stringify always expands arrays onto multiple lines; Prettier collapses short ones
+	// (e.g. tauri.conf.json's `"allow": ["**"]`), so a raw stringify fails CI's format:check.
+	spawnSync('pnpm', ['exec', 'prettier', '--write', filePath], { encoding: 'utf8' });
 }
 
 function parseWearVersionName(gradleText: string): string {
