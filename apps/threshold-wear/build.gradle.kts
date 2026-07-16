@@ -14,8 +14,8 @@ android {
         applicationId = "ca.liminalhq.threshold"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1000001009
-        versionName = "0.1.9"
+        versionCode = 1000002000
+        versionName = "0.2.0"
     }
 
     signingConfigs {
