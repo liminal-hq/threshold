@@ -344,10 +344,6 @@ jobs:
     container:
       image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
       options: --user 0
-    # The `secrets` context isn't readable from a step's `if:` (only from `env:`/`with:`/`run:`),
-    # so the Play deploy steps below gate on this job-level env var instead of secrets directly.
-    env:
-      PLAY_DEPLOY_READY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -593,63 +589,6 @@ jobs:
             release-assets/android/**
           if-no-files-found: error
 
-      # r0adkll/upload-google-play's `releaseFiles` resolves through fast-glob, but `mappingFile`
-      # and `debugSymbols` are checked with a literal fs.existsSync() against the exact string --
-      # no glob expansion (confirmed by reading its src/main.ts and src/input-validation.ts). The
-      # collect-artefacts step above names both with the version baked in, so resolve the exact
-      # paths here rather than passing an unexpandable glob. A missing/empty output is safe: the
-      # action treats an empty string input as "not set" and skips it, per the same source check.
-      - name: Resolve Play deploy asset paths
-        id: play_asset_paths
-        run: |
-          phone_debug_symbols=$(find release-assets/android -type f -name 'threshold-phone-native-debug-symbols-v*.zip' | sort | head -n1 || true)
-          wear_mapping_file=$(find release-assets/android -type f -name 'wear-mapping-v*.txt' | sort | head -n1 || true)
-          echo "phone_debug_symbols=${phone_debug_symbols}" >> "$GITHUB_OUTPUT"
-          echo "wear_mapping_file=${wear_mapping_file}" >> "$GITHUB_OUTPUT"
-
-      # Both Play deploy steps are no-ops (via `if:`) until their secrets/vars are set, so this
-      # workflow stays green for anyone who hasn't configured Play Console access yet. See
-      # docs/infrastructure/release-build.md#google-play-deployment for full setup.
-      - name: Deploy phone release to Google Play (draft)
-        if: ${{ env.PLAY_DEPLOY_READY == 'true' }}
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: ca.liminalhq.threshold
-          releaseFiles: release-assets/android/threshold-phone-v*.aab
-          tracks: internal
-          status: draft
-          whatsNewDirectory: distribution/whatsnew
-          debugSymbols: ${{ steps.play_asset_paths.outputs.phone_debug_symbols }}
-
-      # Confirmed via Play Console: Wear is a separate release train within the same app listing
-      # (ca.liminalhq.threshold), not a separate package -- Play Console's "Internal testing"
-      # track shows independent "Phones and tablets" and "Wear OS" release rows under the one
-      # app. Same packageName as the phone step; deriveWearVersionCode's +1_000_000_000 offset
-      # (tools/release-tui/src/lib/version.ts) is what keeps their version codes from colliding.
-      #
-      # Track name is "wear:internal" -- confirmed by reading real, currently-running production
-      # workflows for this exact scenario (phone + Wear, same package, dedicated form-factor
-      # tracks): Home Assistant's official Android app (fastlane/Fastfile,
-      # github.com/home-assistant/android) deploys `track: 'wear:internal'` alongside `track:
-      # 'internal'` for phone in the same lane, and promotes wear:internal -> wear:beta ->
-      # production in lockstep with the phone tracks; joreilly/Confetti does the same. (An
-      # earlier version of this comment said "wear:qa" based on a doc fetch that turned out to be
-      # unreliable -- corrected after checking real-world usage instead.) Still not verified
-      # against this app's own Play Console track list -- if wrong, the action's error message
-      # lists the real available track names, which is the fastest way to confirm/correct it.
-      - name: Deploy Wear release to Google Play (draft)
-        if: ${{ env.PLAY_DEPLOY_READY == 'true' }}
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: ca.liminalhq.threshold
-          releaseFiles: release-assets/android/threshold-wear-v*.aab
-          tracks: wear:internal
-          status: draft
-          whatsNewDirectory: distribution/whatsnew-wear
-          mappingFile: ${{ steps.play_asset_paths.outputs.wear_mapping_file }}
-
       - name: Summarise Android build
         if: always()
         env:
@@ -694,6 +633,100 @@ jobs:
           rm -f .ci/signing/upload-keystore.jks
           rm -f apps/threshold/src-tauri/gen/android/keystore.properties
           rm -f apps/threshold-wear/keystore.properties
+
+  # Kept separate from build-android so a Play Console problem (bad track name, API hiccup,
+  # unconfigured secret) can't fail the build job itself -- publish-release only needs
+  # build-android to succeed, not this job, so the GitHub Release still ships with its desktop
+  # and Android assets even if this job fails outright.
+  deploy-android-play:
+    runs-on: ubuntu-24.04
+    needs: [prepare-release, build-android]
+    if: needs.prepare-release.outputs.should_release == 'true'
+    # The `secrets` context isn't readable from a step's `if:` (only from `env:`/`with:`/`run:`),
+    # so the Play deploy steps below gate on this job-level env var instead of secrets directly.
+    env:
+      PLAY_DEPLOY_READY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+    steps:
+      - name: Download Android artefacts
+        uses: actions/download-artifact@v8
+        with:
+          name: android-artefacts
+          path: release-assets/android
+
+      # r0adkll/upload-google-play's `releaseFiles` resolves through fast-glob, but `mappingFile`
+      # and `debugSymbols` are checked with a literal fs.existsSync() against the exact string --
+      # no glob expansion (confirmed by reading its src/main.ts and src/input-validation.ts). The
+      # build-android job names both with the version baked in, so resolve the exact paths here
+      # rather than passing an unexpandable glob. A missing/empty output is safe: the action
+      # treats an empty string input as "not set" and skips it, per the same source check.
+      - name: Resolve Play deploy asset paths
+        id: play_asset_paths
+        run: |
+          phone_debug_symbols=$(find release-assets/android -type f -name 'threshold-phone-native-debug-symbols-v*.zip' | sort | head -n1 || true)
+          wear_mapping_file=$(find release-assets/android -type f -name 'wear-mapping-v*.txt' | sort | head -n1 || true)
+          echo "phone_debug_symbols=${phone_debug_symbols}" >> "$GITHUB_OUTPUT"
+          echo "wear_mapping_file=${wear_mapping_file}" >> "$GITHUB_OUTPUT"
+
+      # Both Play deploy steps are no-ops (via `if:`) until their secrets/vars are set, so this
+      # workflow stays green for anyone who hasn't configured Play Console access yet. See
+      # docs/infrastructure/release-build.md#google-play-deployment for full setup.
+      - name: Deploy phone release to Google Play (draft)
+        id: deploy_phone_play
+        if: ${{ env.PLAY_DEPLOY_READY == 'true' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ca.liminalhq.threshold
+          releaseFiles: release-assets/android/threshold-phone-v*.aab
+          tracks: internal
+          status: draft
+          whatsNewDirectory: distribution/whatsnew
+          debugSymbols: ${{ steps.play_asset_paths.outputs.phone_debug_symbols }}
+
+      # Confirmed via Play Console: Wear is a separate release train within the same app listing
+      # (ca.liminalhq.threshold), not a separate package -- Play Console's "Internal testing"
+      # track shows independent "Phones and tablets" and "Wear OS" release rows under the one
+      # app. Same packageName as the phone step; deriveWearVersionCode's +1_000_000_000 offset
+      # (tools/release-tui/src/lib/version.ts) is what keeps their version codes from colliding.
+      #
+      # Track name is "wear:internal" -- confirmed by reading real, currently-running production
+      # workflows for this exact scenario (phone + Wear, same package, dedicated form-factor
+      # tracks): Home Assistant's official Android app (fastlane/Fastfile,
+      # github.com/home-assistant/android) deploys `track: 'wear:internal'` alongside `track:
+      # 'internal'` for phone in the same lane, and promotes wear:internal -> wear:beta ->
+      # production in lockstep with the phone tracks; joreilly/Confetti does the same. (An
+      # earlier version of this comment said "wear:qa" based on a doc fetch that turned out to be
+      # unreliable -- corrected after checking real-world usage instead.) Still not verified
+      # against this app's own Play Console track list -- if wrong, the action's error message
+      # lists the real available track names, which is the fastest way to confirm/correct it.
+      - name: Deploy Wear release to Google Play (draft)
+        id: deploy_wear_play
+        if: ${{ env.PLAY_DEPLOY_READY == 'true' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ca.liminalhq.threshold
+          releaseFiles: release-assets/android/threshold-wear-v*.aab
+          tracks: wear:internal
+          status: draft
+          whatsNewDirectory: distribution/whatsnew-wear
+          mappingFile: ${{ steps.play_asset_paths.outputs.wear_mapping_file }}
+
+      - name: Summarise Play deploy
+        if: always()
+        env:
+          PHONE_DEPLOY_RESULT: ${{ steps.deploy_phone_play.outcome }}
+          WEAR_DEPLOY_RESULT: ${{ steps.deploy_wear_play.outcome }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag_name }}
+        run: |
+          {
+            echo "## Google Play Deploy Summary"
+            echo ""
+            echo "- Play deploy configured: \`${PLAY_DEPLOY_READY}\`"
+            echo "- Phone deploy: \`${PHONE_DEPLOY_RESULT:-skipped}\`"
+            echo "- Wear deploy: \`${WEAR_DEPLOY_RESULT:-skipped}\`"
+            echo "- Release tag: \`${RELEASE_TAG}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
   publish-release:
     runs-on: ubuntu-24.04
