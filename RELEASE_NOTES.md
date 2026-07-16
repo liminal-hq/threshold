@@ -4,6 +4,82 @@ This document tracks all releases of the Threshold application.
 
 ---
 
+## Version 0.2.0
+
+**Release Date:** July 15, 2026
+**Status:** Released
+
+> [!NOTE]
+> This release delivers a ground-up screen refresh with entrance and gesture animations, a predictive-back live screen peek on Android, and the move of native alarm scheduling fully off the webview and into Rust. It also lands automatic draft deployment to Google Play for both the phone and Wear apps.
+
+### ✨ New Features
+
+**Screen Refresh Redesign**
+
+- Reworked Home, Edit Alarm, and Settings screens with a consistent accent-rail layout and window management
+- Entrance and reflow animations throughout, respecting the OS animation-speed setting
+- Swipe-to-delete, pull-to-refresh, and drag gesture arbitration rebuilt to coexist correctly on the alarm list
+- Predictive-back gesture support on Android with a live screen peek during the back gesture
+
+**Native Scheduling Fully in Rust**
+
+- Native Android alarm scheduling is now driven entirely by Rust events; TypeScript is no longer in the scheduling path
+- Support for overnight windows and correct sampling inside an open alarm window
+- Typed `guest-js` bindings generated for theme-utils, os-prefs, app-management, and alarm-manager
+- `apps/threshold/src/types/alarm.ts` is now generated from Rust's models via `ts-rs`, keeping frontend and backend alarm types in lockstep
+- Removed the dead, unused `packages/core` scheduler now that scheduling behaviour lives in Rust
+
+**Release Automation**
+
+- Google Play draft deployment: tagged releases now push signed phone and Wear bundles straight to Play's internal tracks as drafts, ready for manual review and publish
+- Every GitHub Release now includes a `SHA256SUMS` file covering all published artefacts
+- Release TUI gained proper CLI flag handling (`--no-commit`, `--no-web-sync`) and signed, annotated tag creation for fully scripted releases
+
+### 🐛 Bug Fixes
+
+- Fixed a ghost notification left behind on alarm delete, and implemented ringing snooze correctly
+- Fixed repeating alarms not re-arming on dismiss
+- Fixed `AlarmService.subscribe` clobbering earlier subscribers
+- Fixed Home and Settings screens losing scroll on viewports taller than the content, and alarm-list swipes blocking vertical scroll
+- Fixed desktop toasts not rendering because the toast plugin wasn't registered on desktop
+- Replaced a blocking `alert()` with inline validation, and added a warning when a Window alarm's next trigger is imminent
+- Fixed the predictive back gesture and hardware back button getting stuck enabled on Home
+- Fixed wear sync status getting stuck, and legacy empty-array sync payloads no longer failing to clear alarms
+- Fixed a live `activeDays`/`triggerAt` data-loss bug in native alarm imports
+- Fixed `SET_ALARM` intent import gaps (label parsing, `EXTRA_DAYS`, stale imports), and isolated per-import errors so one bad import no longer aborts the whole batch
+- Capped event log export size and moved its file I/O off the IPC thread
+
+### 🛠️ Build and Release
+
+- Re-enabled `cargo fmt`, `clippy`, and `prettier` as CI gates after bringing the workspace into compliance
+- Added a TypeScript type-check step, gated in CI
+- Pinned toolchain versions across Rust, Android, and CI, and migrated CI and the devcontainer to the shared Liminal HQ image family
+- Added missing licence headers across the repo
+- Removed barrel files per `AGENTS.md`'s no-barrel-files rule
+
+### 📚 Documentation
+
+- Documented wear-sync's `guest-js` exemption
+- Documented the release build pipeline's Google Play deployment setup and the CLI/agent-friendly end-to-end release runbook
+
+### 📝 Technical Details
+
+**Major PRs Merged (selected):**
+
+- [#190](https://github.com/liminal-hq/threshold/pull/190) - Screen refresh redesign — home, edit, settings, and window management
+- [#244](https://github.com/liminal-hq/threshold/pull/244) - Android predictive-back gesture with a live screen peek
+- [#241](https://github.com/liminal-hq/threshold/pull/241)-[#243](https://github.com/liminal-hq/threshold/pull/243) - Drive native alarm scheduling from Rust events, cutting TS out of the scheduling path entirely
+- [#256](https://github.com/liminal-hq/threshold/pull/256) - Remove the dead `packages/core` scheduler
+- [#257](https://github.com/liminal-hq/threshold/pull/257) - Scaffold draft Google Play deployment and document the CLI release runbook
+
+**Commit/Contributor Summary (`0.1.9` → `0.2.0`):**
+
+- **Commits:** 221
+- **Merged PRs:** 47
+- **Contributors:** Scott Morris
+
+---
+
 ## Version 0.1.9
 
 **Release Date:** March 2, 2026

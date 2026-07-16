@@ -1,1 +1,1 @@
-Bug fixes and improvements.
+Alarm scheduling now runs natively for better reliability, and sync with your phone is more consistent. Fixed sync status getting stuck and a data-loss bug affecting active days on repeating alarms.
