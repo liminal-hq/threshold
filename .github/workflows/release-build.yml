@@ -624,13 +624,16 @@ jobs:
       # app. Same packageName as the phone step; deriveWearVersionCode's +1_000_000_000 offset
       # (tools/release-tui/src/lib/version.ts) is what keeps their version codes from colliding.
       #
-      # Track name is "wear:qa", not "internal" or "wear:internal" -- per Google's own Play
-      # Developer API docs (developers.google.com/android-publisher/tracks), form-factor track
-      # IDs are computed as "[prefix]:defaultTrackName", and the default track name for Internal
-      # Testing is "qa" (not "internal"), for form-factor tracks specifically. Wear OS's prefix is
-      # "wear". Unverified against this app's actual Play Console track list yet -- if this is
-      # wrong, the action's error message lists the real available track names, which is the
-      # fastest way to confirm/correct it.
+      # Track name is "wear:internal" -- confirmed by reading real, currently-running production
+      # workflows for this exact scenario (phone + Wear, same package, dedicated form-factor
+      # tracks): Home Assistant's official Android app (fastlane/Fastfile,
+      # github.com/home-assistant/android) deploys `track: 'wear:internal'` alongside `track:
+      # 'internal'` for phone in the same lane, and promotes wear:internal -> wear:beta ->
+      # production in lockstep with the phone tracks; joreilly/Confetti does the same. (An
+      # earlier version of this comment said "wear:qa" based on a doc fetch that turned out to be
+      # unreliable -- corrected after checking real-world usage instead.) Still not verified
+      # against this app's own Play Console track list -- if wrong, the action's error message
+      # lists the real available track names, which is the fastest way to confirm/correct it.
       - name: Deploy Wear release to Google Play (draft)
         if: ${{ needs.prepare-release.outputs.should_release == 'true' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
         uses: r0adkll/upload-google-play@v1
@@ -638,7 +641,7 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: ca.liminalhq.threshold
           releaseFiles: release-assets/android/threshold-wear-v*.aab
-          tracks: wear:qa
+          tracks: wear:internal
           status: draft
           whatsNewDirectory: distribution/whatsnew-wear
           mappingFile: ${{ steps.play_asset_paths.outputs.wear_mapping_file }}
