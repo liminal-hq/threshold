@@ -25,9 +25,7 @@
 			"csp": null,
 			"assetProtocol": {
 				"scope": {
-					"allow": [
-						"**"
-					]
+					"allow": ["**"]
 				}
 			}
 		}
@@ -50,15 +48,11 @@
 	"plugins": {
 		"deep-link": {
 			"desktop": {
-				"schemes": [
-					"threshold"
-				]
+				"schemes": ["threshold"]
 			},
 			"mobile": [
 				{
-					"scheme": [
-						"threshold"
-					],
+					"scheme": ["threshold"],
 					"appLink": false
 				}
 			]
