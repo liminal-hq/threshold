@@ -19,7 +19,7 @@ pub async fn pick_alarm_sound<R: Runtime>(
     app: AppHandle<R>,
     options: PickAlarmSoundOptions,
 ) -> Result<PickedAlarmSound> {
-    app.alarm_manager().pick_alarm_sound(options)
+    app.alarm_manager().pick_alarm_sound(options).await
 }
 
 #[command]

@@ -194,7 +194,18 @@ impl<R: Runtime> AlarmManager<R> {
         self.invoke_cancel(payload)
     }
 
-    pub fn pick_alarm_sound(
+    /// Opens Android's system ringtone/sound picker and waits for the user's choice.
+    ///
+    /// Unlike the other methods on this type, this is an open-ended wait -- the
+    /// picker dialog stays open until the user chooses something or backs out,
+    /// which can take anywhere from under a second to minutes depending on how
+    /// long they browse. `pick_alarm_sound` is called directly from an `async fn`
+    /// Tauri command (`commands::pick_alarm_sound`) that the frontend awaits, so
+    /// using the blocking `run_mobile_plugin` here would tie up a shared tokio
+    /// runtime worker thread for the entire duration the picker is open,
+    /// potentially stalling other concurrent IPC commands. `run_mobile_plugin_async`
+    /// awaits instead of blocking, same rationale as `wear_sync::request_watch_logs`.
+    pub async fn pick_alarm_sound(
         &self,
         #[cfg_attr(not(target_os = "android"), allow(unused_variables))]
         options: PickAlarmSoundOptions,
@@ -202,7 +213,8 @@ impl<R: Runtime> AlarmManager<R> {
         #[cfg(target_os = "android")]
         return self
             .handle
-            .run_mobile_plugin("pickAlarmSound", options)
+            .run_mobile_plugin_async("pickAlarmSound", options)
+            .await
             .map_err(Into::into);
 
         #[cfg(not(target_os = "android"))]
