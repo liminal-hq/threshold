@@ -55,6 +55,7 @@ object WearSyncCache {
             apply()
         }
         Log.d(TAG, "Cached alarm data at revision $revision (${alarmsJson.length} bytes, snooze=${snoozeLengthMinutes}m, is24h=$is24Hour, is24hKnown=$is24HourKnown)")
+        NativeEventLog.log(context, TAG, "Cached alarm data at revision $revision (${alarmsJson.length} bytes)")
     }
 
     /**
@@ -65,7 +66,10 @@ object WearSyncCache {
      */
     fun read(context: Context): Quintuple<String, Long, Int, Boolean, Boolean>? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val json = prefs.getString(KEY_ALARMS_JSON, null) ?: return null
+        val json = prefs.getString(KEY_ALARMS_JSON, null) ?: run {
+            NativeEventLog.log(context, TAG, "Cache read requested but empty")
+            return null
+        }
         val revision = prefs.getLong(KEY_REVISION, 0)
         val snoozeLength = prefs.getInt(KEY_SNOOZE_LENGTH, 10)
         val is24Hour = prefs.getBoolean(KEY_IS_24_HOUR, false)

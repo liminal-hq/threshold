@@ -6,6 +6,16 @@
 use std::{fs, path::PathBuf, time::SystemTime};
 
 use tauri::{AppHandle, Manager};
+use tauri_plugin_wear_sync::WearSyncExt;
+
+// Bounded wait for the watch's log response to land on disk before the export reads
+// the log directory -- the Data Layer round trip has no synchronous completion signal,
+// so this just gives it a fixed window rather than blocking indefinitely on an
+// unreachable/asleep watch. If it's too slow or unreachable, the export still proceeds
+// with whatever's already on disk. Android-only: no watch pairing is possible from
+// desktop at all, so there's nothing to wait for there.
+#[cfg(target_os = "android")]
+const WATCH_LOG_WAIT: std::time::Duration = std::time::Duration::from_secs(3);
 
 // Caps the assembled export at a reasonable size for a diagnostic dump sent to the
 // developer -- previously `usize::MAX`, which made the truncation logic below a no-op.
@@ -55,7 +65,16 @@ fn read_and_format_logs(
             Some(name) => name,
             None => continue,
         };
-        if !file_name.starts_with(&app_name) || !file_name.ends_with(".log") {
+        // scripts/build-android-dev.sh overrides productName to "Threshold Dev" for a
+        // side-by-side dev install, which changes app_name here but not the fixed
+        // "Threshold-*.log" filenames the native Kotlin loggers write (those aren't
+        // dynamically derived from productName). Falling back to just the first word
+        // of app_name keeps the dev-build override matching those files without
+        // weakening the filter to accept any unrelated ".log" file in this directory.
+        let app_name_first_word = app_name.split_whitespace().next().unwrap_or(&app_name);
+        let name_matches =
+            file_name.starts_with(&app_name) || file_name.starts_with(app_name_first_word);
+        if !name_matches || !file_name.ends_with(".log") {
             continue;
         }
         let modified = entry
@@ -178,6 +197,38 @@ pub async fn export_event_logs(app: AppHandle, destination: String) -> Result<St
     .map_err(|err| format!("Failed to spawn blocking task: {err}"))?
 }
 
+/// Asks the watch to send its own native event log over, then waits a bounded
+/// amount of time for the response to land on disk before returning -- so a
+/// caller doing `request_watch_logs` then `get_event_logs` gets the watch's
+/// content included when it's reachable, without blocking indefinitely when
+/// it isn't. See `plugins/wear-sync/android/.../WearMessageService.kt`'s
+/// `writeWatchLog` for where the response actually gets written.
+///
+/// Only actually waits when Kotlin's own `requestWatchLogs` reports a watch was
+/// reachable at all -- on desktop (no watch pairing possible) and on Android
+/// with no paired watch, that call resolves synchronously with `connected:
+/// false`, so there's nothing worth waiting for and this returns immediately
+/// instead of sleeping out the full window for no reason.
+#[tauri::command]
+pub async fn request_watch_logs(app: AppHandle) -> Result<(), String> {
+    let connected = match app.wear_sync().request_watch_logs().await {
+        Ok(connected) => connected,
+        Err(error) => {
+            log::warn!("event_logs: failed to request watch logs: {error}");
+            false
+        }
+    };
+
+    #[cfg(target_os = "android")]
+    if connected {
+        tokio::time::sleep(WATCH_LOG_WAIT).await;
+    }
+    #[cfg(not(target_os = "android"))]
+    let _ = connected;
+
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn get_event_logs(app: AppHandle) -> Result<String, String> {
     collect_event_logs(app).await
@@ -234,6 +285,43 @@ mod tests {
         assert!(result.contains("hello from threshold"));
         assert!(!result.contains("should not appear"));
         assert!(!result.contains("wrong extension"));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn read_and_format_logs_matches_native_log_files_under_a_dev_product_name_override() {
+        // scripts/build-android-dev.sh overrides productName to "Threshold Dev" for a
+        // side-by-side dev install. The native Kotlin loggers still write fixed
+        // "Threshold-*.log" filenames regardless of that override, so the match needs
+        // to fall back to the first word of app_name rather than requiring an exact
+        // prefix match against the full (possibly multi-word) product name.
+        let dir = std::env::temp_dir().join(format!(
+            "threshold-event-logs-test-devname-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+
+        std::fs::write(
+            dir.join("Threshold-alarm-manager.log"),
+            "native alarm event",
+        )
+        .unwrap();
+        std::fs::write(dir.join("unrelated.log"), "should not appear").unwrap();
+
+        let result = read_and_format_logs(
+            dir.clone(),
+            "Threshold Dev".to_string(),
+            "1.2.3".to_string(),
+        )
+        .unwrap();
+
+        assert!(result.contains("==== Threshold-alarm-manager.log ===="));
+        assert!(result.contains("native alarm event"));
+        assert!(!result.contains("should not appear"));
 
         std::fs::remove_dir_all(&dir).unwrap();
     }

@@ -11,6 +11,8 @@ import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Plugin
 import app.tauri.plugin.Invoke
 
+private const val TAG = "AppManagementPlugin"
+
 @TauriPlugin
 class AppManagementPlugin(private val activity: Activity): Plugin(activity) {
 
@@ -19,6 +21,7 @@ class AppManagementPlugin(private val activity: Activity): Plugin(activity) {
         // moveTaskToBack(true) minimizes the activity without killing it.
         // It effectively behaves like the Home button.
         val success = activity.moveTaskToBack(true)
+        NativeEventLog.log(activity, TAG, "minimizeApp called, moveTaskToBack result=$success")
         if (success) {
             invoke.resolve()
         } else {

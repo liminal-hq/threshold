@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import ca.liminalhq.threshold.wear.NativeEventLog
 import ca.liminalhq.threshold.wear.ThresholdWearApp
 import java.util.Calendar
 
@@ -40,6 +41,7 @@ class WearAlarmReceiver : BroadcastReceiver() {
         }
 
         Log.d(TAG, "Local alarm fired: id=$alarmId")
+        NativeEventLog.log(context, TAG, "Local (disconnected-fallback) alarm fired id=$alarmId")
 
         // Look up alarm details from the repository
         val app = context.applicationContext as? ThresholdWearApp

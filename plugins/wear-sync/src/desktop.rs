@@ -49,4 +49,9 @@ impl<R: Runtime> WearSync<R> {
         log::debug!("wear-sync: desktop stub — send_alarm_snooze (no-op)");
         Ok(())
     }
+
+    pub async fn request_watch_logs(&self) -> crate::Result<bool> {
+        log::debug!("wear-sync: desktop stub — request_watch_logs (no-op)");
+        Ok(false)
+    }
 }

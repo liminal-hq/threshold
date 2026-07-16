@@ -3,7 +3,7 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::models::{
     AlarmDismissRequest, AlarmRingRequest, AlarmSnoozeRequest, PublishRequest, SyncRequest,
@@ -22,6 +22,14 @@ use tauri::{
 #[serde(rename_all = "camelCase")]
 struct WatchMessageHandler {
     handler: Channel,
+}
+
+/// Response from Kotlin's `requestWatchLogs`, indicating whether a watch node
+/// was actually reachable to send the request to.
+#[cfg(target_os = "android")]
+#[derive(Deserialize)]
+struct RequestWatchLogsResponse {
+    connected: bool,
 }
 
 /// Initialise the mobile backend for the wear-sync plugin.
@@ -172,6 +180,41 @@ impl<R: Runtime> WearSync<R> {
         self.handle
             .run_mobile_plugin("sendAlarmSnooze", request)
             .map_err(Into::into)
+    }
+
+    /// Ask connected watch nodes to send their own native event log back, to be
+    /// merged into the phone's "Export event log" feature. Fire-and-forget --
+    /// returns once the request is sent, doesn't wait for the watch's reply
+    /// (which arrives later via a separate Data Layer message, handled entirely
+    /// on the Kotlin side with no further Rust involvement).
+    /// Returns whether a watch was actually reachable to send the request to
+    /// -- the caller uses this to decide whether it's worth waiting at all for
+    /// a reply, rather than blindly sleeping out a fixed window every time.
+    ///
+    /// Uses `run_mobile_plugin_async` rather than the synchronous
+    /// `run_mobile_plugin` other methods on this type use: those are all
+    /// fire-and-forget, invoked from `app.listen(...)` event handlers that are
+    /// themselves wrapped in `tauri::async_runtime::spawn(...)`, so blocking
+    /// whichever worker thread picks up that spawned task is low-impact. This
+    /// one is different -- it's called directly from an `async fn` Tauri
+    /// command (`event_logs::request_watch_logs`) that the frontend awaits, so
+    /// blocking a runtime worker thread here would stall other concurrent IPC
+    /// commands for as long as the Data Layer round trip takes.
+    pub async fn request_watch_logs(&self) -> crate::Result<bool> {
+        #[cfg(not(target_os = "android"))]
+        {
+            log::debug!("wear-sync: request_watch_logs no-op on non-Android mobile target");
+            Ok(false)
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            let response: RequestWatchLogsResponse = self
+                .handle
+                .run_mobile_plugin_async("requestWatchLogs", ())
+                .await?;
+            Ok(response.connected)
+        }
     }
 
     /// Mark the watch message pipeline as ready on Kotlin side.

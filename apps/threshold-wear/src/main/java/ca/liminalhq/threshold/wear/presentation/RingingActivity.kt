@@ -15,6 +15,7 @@ import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import ca.liminalhq.threshold.wear.NativeEventLog
 import ca.liminalhq.threshold.wear.ThresholdWearApp
 import ca.liminalhq.threshold.wear.presentation.theme.ThresholdWearTheme
 import ca.liminalhq.threshold.wear.service.WearRingingService
@@ -46,6 +47,7 @@ class RingingActivity : ComponentActivity() {
 
         if (intent?.action == ACTION_CLOSE_RINGING) {
             Log.d(TAG, "Received close action in onCreate")
+            NativeEventLog.log(applicationContext, TAG, "Received close action in onCreate")
             closeRingingTask()
             return
         }
@@ -68,6 +70,7 @@ class RingingActivity : ComponentActivity() {
         val is24HourSource = if (is24HourKnown) "phone-sync" else "watch-default"
 
         Log.d(TAG, "Ringing activity created for alarm $alarmId ($hour:$minute '$label', is24h=$is24Hour source=$is24HourSource watchDefault=$watchDefaultIs24Hour)")
+        NativeEventLog.log(applicationContext, TAG, "Ringing activity created for alarm id=$alarmId")
 
         val app = application as ThresholdWearApp
         val dataLayerClient = app.dataLayerClient
@@ -83,6 +86,7 @@ class RingingActivity : ComponentActivity() {
                     snoozeLengthMinutes = snoozeLength,
                     onStop = {
                         Log.d(TAG, "Stop pressed for alarm $alarmId")
+                        NativeEventLog.log(applicationContext, TAG, "Stop pressed for alarm id=$alarmId")
                         stopRingingService()
                         scope.launch {
                             dataLayerClient.sendDismissAlarm(alarmId)
@@ -91,6 +95,7 @@ class RingingActivity : ComponentActivity() {
                     },
                     onSnooze = {
                         Log.d(TAG, "Snooze pressed for alarm $alarmId (${snoozeLength}m)")
+                        NativeEventLog.log(applicationContext, TAG, "Snooze pressed for alarm id=$alarmId (${snoozeLength}m)")
                         stopRingingService()
                         scope.launch {
                             // Always schedule a local snooze alarm so the
@@ -116,6 +121,7 @@ class RingingActivity : ComponentActivity() {
 
         if (intent.action == ACTION_CLOSE_RINGING) {
             Log.d(TAG, "Received close action in onNewIntent")
+            NativeEventLog.log(applicationContext, TAG, "Received close action in onNewIntent")
             closeRingingTask()
         }
     }

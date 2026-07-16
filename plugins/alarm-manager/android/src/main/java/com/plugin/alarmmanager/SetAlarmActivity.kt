@@ -26,6 +26,8 @@ internal fun resolveActiveDays(requestedDays: List<Int>?, fallbackCalendarDay: I
     }
 }
 
+private const val TAG = "SetAlarmActivity"
+
 class SetAlarmActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +35,7 @@ class SetAlarmActivity : Activity() {
 
         val intent = intent
         if (intent.action == AlarmClock.ACTION_SET_ALARM) {
+            NativeEventLog.log(applicationContext, TAG, "Received SET_ALARM intent")
             handleSetAlarm(intent)
         }
 
@@ -42,7 +45,8 @@ class SetAlarmActivity : Activity() {
     private fun handleSetAlarm(intent: Intent) {
         // 1. Parse Extras
         if (!intent.hasExtra(AlarmClock.EXTRA_HOUR) || !intent.hasExtra(AlarmClock.EXTRA_MINUTES)) {
-            Log.e("SetAlarmActivity", "Missing HOUR or MINUTES extra")
+            Log.e(TAG, "Missing HOUR or MINUTES extra")
+            NativeEventLog.log(applicationContext, TAG, "SET_ALARM intent missing HOUR or MINUTES extra, ignored")
             return
         }
 
@@ -87,6 +91,11 @@ class SetAlarmActivity : Activity() {
             message,
             activeDays,
             triggerAt,
+        )
+        NativeEventLog.log(
+            applicationContext,
+            TAG,
+            "Imported alarm id=$id at $hour:$minutes, skipUi=$skipUi",
         )
 
         // 6. Launch App if not skipping UI

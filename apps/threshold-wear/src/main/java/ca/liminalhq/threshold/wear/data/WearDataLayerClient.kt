@@ -19,6 +19,7 @@ private const val PATH_SAVE_ALARM = "/threshold/save_alarm"
 private const val PATH_DELETE_ALARM = "/threshold/delete_alarm"
 private const val PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
 private const val PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
+private const val PATH_LOG_RESPONSE = "/threshold/log_response"
 
 /**
  * Client for sending messages from the watch to the phone via the Wear
@@ -83,6 +84,16 @@ class WearDataLayerClient(context: Context) {
             put("snoozeLengthMinutes", snoozeLengthMinutes)
         }
         sendToPhone(PATH_ALARM_SNOOZE, json.toString().toByteArray())
+    }
+
+    /**
+     * Send the watch's own native event log content back to the phone, in response
+     * to a `/threshold/log_request` message -- merged into the phone's "Export event
+     * log" feature on arrival. Plain text, not JSON, since it's just the log file's
+     * own content verbatim.
+     */
+    suspend fun sendLogResponse(logContent: String) {
+        sendToPhone(PATH_LOG_RESPONSE, logContent.toByteArray())
     }
 
     /**

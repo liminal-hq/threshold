@@ -166,6 +166,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
                 put("actualFiredAt", actualFiredAt)
             })
             prefs.edit().putString(KEY_PENDING_ALARM_EVENTS, queue.toString()).apply()
+            NativeEventLog.log(context, TAG, "Queued fired event id=$alarmId (queue depth=${queue.length()})")
         }
 
         @Synchronized
@@ -176,6 +177,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
                 put("id", alarmId)
             })
             prefs.edit().putString(KEY_PENDING_SNOOZE_EVENTS, queue.toString()).apply()
+            NativeEventLog.log(context, TAG, "Queued snooze event id=$alarmId (queue depth=${queue.length()})")
         }
 
         @Synchronized
@@ -186,6 +188,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
                 put("id", alarmId)
             })
             prefs.edit().putString(KEY_PENDING_DISMISS_EVENTS, queue.toString()).apply()
+            NativeEventLog.log(context, TAG, "Queued dismiss event id=$alarmId (queue depth=${queue.length()})")
         }
 
         @Synchronized
@@ -209,6 +212,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
                 put("triggerAt", triggerAt)
             })
             prefs.edit().putString(KEY_PENDING_IMPORT_EVENTS, queue.toString()).apply()
+            NativeEventLog.log(context, TAG, "Queued import event id=$id (queue depth=${queue.length()})")
         }
     }
 
@@ -479,6 +483,11 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         prefs.edit().putString(KEY_PENDING_ALARM_EVENTS, remaining.toString()).apply()
         Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued native alarm fired event(s)")
+        NativeEventLog.log(
+            activity,
+            TAG,
+            "Drained fired events: replayed ${queue.length() - remaining.length()}, remaining ${remaining.length()}",
+        )
     }
 
     @Synchronized
@@ -509,6 +518,11 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         prefs.edit().putString(KEY_PENDING_SNOOZE_EVENTS, remaining.toString()).apply()
         Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued snooze requested event(s)")
+        NativeEventLog.log(
+            activity,
+            TAG,
+            "Drained snooze events: replayed ${queue.length() - remaining.length()}, remaining ${remaining.length()}",
+        )
     }
 
     @Synchronized
@@ -539,6 +553,11 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         prefs.edit().putString(KEY_PENDING_DISMISS_EVENTS, remaining.toString()).apply()
         Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued dismiss requested event(s)")
+        NativeEventLog.log(
+            activity,
+            TAG,
+            "Drained dismiss events: replayed ${queue.length() - remaining.length()}, remaining ${remaining.length()}",
+        )
     }
 
     @Synchronized
@@ -574,5 +593,10 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         prefs.edit().putString(KEY_PENDING_IMPORT_EVENTS, remaining.toString()).apply()
         Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued import requested event(s)")
+        NativeEventLog.log(
+            activity,
+            TAG,
+            "Drained import events: replayed ${queue.length() - remaining.length()}, remaining ${remaining.length()}",
+        )
     }
 }

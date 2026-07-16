@@ -8,6 +8,7 @@ package ca.liminalhq.threshold.wear.service
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import ca.liminalhq.threshold.wear.NativeEventLog
 import ca.liminalhq.threshold.wear.ThresholdWearApp
 import ca.liminalhq.threshold.wear.data.SyncStatus
 import ca.liminalhq.threshold.wear.data.WatchAlarm
@@ -17,6 +18,11 @@ import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -26,6 +32,7 @@ private const val DATA_PATH_ALARMS = "/threshold/alarms"
 private const val PATH_ALARM_RING = "/threshold/alarm_ring"
 private const val PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
 private const val PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
+private const val PATH_LOG_REQUEST = "/threshold/log_request"
 
 /**
  * Receives data changes and messages from the phone via the Wear Data Layer.
@@ -38,6 +45,17 @@ private const val PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
  * watch UI reflects the latest alarm state.
  */
 class DataLayerListenerService : WearableListenerService() {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Matches WearSyncService's own cleanup -- without this, handleLogRequest's
+        // in-flight coroutine (and the SupervisorJob backing it) outlives this service
+        // instance with nothing left to cancel it if the system tears the service down
+        // mid-request.
+        scope.cancel()
+    }
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         val app = application as? ThresholdWearApp ?: run {
@@ -99,12 +117,35 @@ class DataLayerListenerService : WearableListenerService() {
     override fun onMessageReceived(messageEvent: MessageEvent) {
         val path = messageEvent.path
         Log.d(TAG, "Message received: $path")
+        NativeEventLog.log(applicationContext, TAG, "Message received path=$path")
 
         when (path) {
             PATH_ALARM_RING -> handleAlarmRing(messageEvent)
             PATH_ALARM_DISMISS -> handleAlarmDismiss(messageEvent)
             PATH_ALARM_SNOOZE -> handleAlarmSnooze(messageEvent)
+            PATH_LOG_REQUEST -> handleLogRequest()
             else -> Log.d(TAG, "Unhandled message path: $path")
+        }
+    }
+
+    /**
+     * Send this watch's own native event log back to the phone, for the phone's
+     * "Export event log" feature to merge in. No Rust/Tauri involved on this side
+     * at all -- just reading a local file and sending it back over the Data Layer.
+     */
+    private fun handleLogRequest() {
+        val app = application as? ThresholdWearApp ?: run {
+            Log.e(TAG, "Application is not ThresholdWearApp — cannot respond to log request")
+            return
+        }
+        scope.launch {
+            try {
+                val content = NativeEventLog.read(applicationContext)
+                app.dataLayerClient.sendLogResponse(content)
+                Log.d(TAG, "Sent watch log (${content.length} chars) to phone")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send watch log to phone", e)
+            }
         }
     }
 
@@ -121,8 +162,14 @@ class DataLayerListenerService : WearableListenerService() {
             // Deduplication: skip if this alarm is already ringing
             if (WearRingingService.ringingAlarmId == alarmId) {
                 Log.d(TAG, "Alarm $alarmId already ringing — ignoring duplicate ring message")
+                NativeEventLog.log(
+                    applicationContext,
+                    TAG,
+                    "Ring message for alarm id=$alarmId dropped -- already ringing this alarm",
+                )
                 return
             }
+            NativeEventLog.log(applicationContext, TAG, "Ring message for alarm id=$alarmId accepted, starting WearRingingService")
             val label = json.optString("label", "")
             val hour = json.optInt("hour", 0)
             val minute = json.optInt("minute", 0)
@@ -197,6 +244,11 @@ class DataLayerListenerService : WearableListenerService() {
     private fun stopRingingOnWatch(action: String, alarmId: Int) {
         if (WearRingingService.ringingAlarmId == -1) {
             Log.d(TAG, "Ignoring $action for alarm $alarmId because no alarm is currently ringing")
+            NativeEventLog.log(
+                applicationContext,
+                TAG,
+                "$action for alarm id=$alarmId dropped -- nothing is currently ringing",
+            )
             return
         }
 
@@ -205,8 +257,14 @@ class DataLayerListenerService : WearableListenerService() {
                 TAG,
                 "Ignoring $action for alarm $alarmId while alarm ${WearRingingService.ringingAlarmId} is ringing",
             )
+            NativeEventLog.log(
+                applicationContext,
+                TAG,
+                "$action for alarm id=$alarmId dropped -- alarm id=${WearRingingService.ringingAlarmId} is ringing instead",
+            )
             return
         }
+        NativeEventLog.log(applicationContext, TAG, "$action accepted for alarm id=$alarmId")
 
         val serviceIntent = Intent(this, WearRingingService::class.java).apply {
             this.action = action
