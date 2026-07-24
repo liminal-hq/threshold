@@ -5,10 +5,10 @@ webview (React/MUI) — launchers render widgets via RemoteViews, a fixed whitel
 native views — so each mockup carries a numbered "RemoteViews build sheet" mapping
 every visual element to the native view and drawable that implements it.
 
-| Mockup | Issue | Contents |
-| --- | --- | --- |
+| Mockup                         | Issue                                                      | Contents                                       |
+| ------------------------------ | ---------------------------------------------------------- | ---------------------------------------------- |
 | `widget-next-alarm-mockup.svg` | [#156](https://github.com/liminal-hq/threshold/issues/156) | 4×2 hero, 2×1 narrow, light theme, empty state |
-| `widget-history-mockup.svg` | [#279](https://github.com/liminal-hq/threshold/issues/279) | 2×2 streak, 4×1 week strip, empty state |
+| `widget-history-mockup.svg`    | [#279](https://github.com/liminal-hq/threshold/issues/279) | 2×2 streak, 4×1 week strip, empty state        |
 
 Visual language follows the screen-refresh-2026 v4 mockups
 (`docs/ui/redesigns/screen-refresh-2026/mockups/v4/`): dark navy cards, the
