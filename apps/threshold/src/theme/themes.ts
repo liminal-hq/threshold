@@ -34,16 +34,14 @@ function androidHexToCssHex(hex: string): string {
 	return hex;
 }
 
-// Helper to convert Hex or HSL string to HSL string
-// Returns "hsl(h, s%, l%)"
-function colourToHsl(colour: string): string {
-	if (colour.startsWith('hsl')) return colour;
-
+// Parses a hex (#rgb, #rrggbb, #rrggbbaa), rgb(), or hsl() colour string into 0-255 RGB
+// channels. Shared by colourToHsl and the WCAG contrast helpers below so there's one parser
+// for every colour format this file accepts, rather than two copies drifting apart.
+function parseColourToRgb(colour: string): { r: number; g: number; b: number } {
 	let r = 0,
 		g = 0,
 		b = 0;
 
-	// Handle Hex
 	if (colour.startsWith('#')) {
 		let hex = colour.replace('#', '');
 
@@ -73,11 +71,50 @@ function colourToHsl(colour: string): string {
 			g = parseInt(parts[1]);
 			b = parseInt(parts[2]);
 		}
+	} else if (colour.startsWith('hsl')) {
+		const parts = colour.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+		if (parts) {
+			({ r, g, b } = hslToRgb(parseInt(parts[1]), parseInt(parts[2]), parseInt(parts[3])));
+		}
 	}
 
-	r /= 255;
-	g /= 255;
-	b /= 255;
+	return { r, g, b };
+}
+
+// Converts HSL (h in degrees, s/l as 0-100 percentages) to 0-255 RGB channels.
+function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+	const sFraction = s / 100;
+	const lFraction = l / 100;
+	const c = (1 - Math.abs(2 * lFraction - 1)) * sFraction;
+	const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+	const m = lFraction - c / 2;
+
+	let rPrime = 0,
+		gPrime = 0,
+		bPrime = 0;
+	if (h < 60) [rPrime, gPrime, bPrime] = [c, x, 0];
+	else if (h < 120) [rPrime, gPrime, bPrime] = [x, c, 0];
+	else if (h < 180) [rPrime, gPrime, bPrime] = [0, c, x];
+	else if (h < 240) [rPrime, gPrime, bPrime] = [0, x, c];
+	else if (h < 300) [rPrime, gPrime, bPrime] = [x, 0, c];
+	else [rPrime, gPrime, bPrime] = [c, 0, x];
+
+	return {
+		r: Math.round((rPrime + m) * 255),
+		g: Math.round((gPrime + m) * 255),
+		b: Math.round((bPrime + m) * 255),
+	};
+}
+
+// Helper to convert Hex or HSL string to HSL string
+// Returns "hsl(h, s%, l%)"
+function colourToHsl(colour: string): string {
+	if (colour.startsWith('hsl')) return colour;
+
+	const { r: r255, g: g255, b: b255 } = parseColourToRgb(colour);
+	const r = r255 / 255;
+	const g = g255 / 255;
+	const b = b255 / 255;
 
 	const max = Math.max(r, g, b),
 		min = Math.min(r, g, b);
@@ -131,6 +168,63 @@ function getShade(hsl: string, amount: number): string {
 	l = Math.max(l - amount, 0);
 
 	return `hsl(${h}, ${s}%, ${l}%)`;
+}
+
+// WCAG 2.x relative luminance -- https://www.w3.org/TR/WCAG21/#dfn-relative-luminance.
+// Accepts any format parseColourToRgb understands (hex, rgb(), hsl()).
+function relativeLuminance(colour: string): number {
+	const { r, g, b } = parseColourToRgb(colour);
+	const channel = (c: number) => {
+		const s = c / 255;
+		return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+	};
+	return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+// WCAG 2.x contrast ratio between two colours (1 = no contrast, 21 = maximum, e.g. black on
+// white). Order of the two arguments doesn't matter -- the darker/lighter pair is resolved
+// internally per the spec formula.
+export function getContrastRatio(foreground: string, background: string): number {
+	const l1 = relativeLuminance(foreground);
+	const l2 = relativeLuminance(background);
+	const lighter = Math.max(l1, l2);
+	const darker = Math.min(l1, l2);
+	return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Nudges `foreground`'s lightness (via getTint/getShade) until it clears `minRatio` against
+// `background`, defaulting to WCAG AA's 4.5:1 for normal text. Direction is chosen from the
+// background's own measured luminance (lighten against a dark background, darken against a
+// light one) rather than trusting a caller-supplied dark/light flag, so it stays correct even
+// if that flag and the actual rendered colour ever disagree. Lightness only has 101 integer
+// steps (0-100), and tinting/shading far enough always reaches pure white/black eventually --
+// which always beats any real background short of white-on-white or black-on-black -- so the
+// unreachable fallback below is a defensive backstop, not an expected outcome.
+export function ensureContrastAA(foreground: string, background: string, minRatio = 4.5): string {
+	if (getContrastRatio(foreground, background) >= minRatio) return foreground;
+
+	const baseHsl = colourToHsl(foreground);
+	const backgroundIsLight = relativeLuminance(background) > 0.5;
+
+	for (let step = 1; step <= 100; step++) {
+		const candidate = backgroundIsLight ? getShade(baseHsl, step) : getTint(baseHsl, step);
+		if (getContrastRatio(candidate, background) >= minRatio) return candidate;
+	}
+
+	return foreground;
+}
+
+// Picks whichever of white/black contrasts better against `background` (mirroring how MUI's
+// own getContrastText works for contained buttons/fills), nudging further only in the
+// vanishingly unlikely case neither clears `minRatio` outright.
+export function pickContrastText(background: string, minRatio = 4.5): string {
+	const best =
+		getContrastRatio('#ffffff', background) >= getContrastRatio('#000000', background)
+			? '#ffffff'
+			: '#000000';
+	return getContrastRatio(best, background) >= minRatio
+		? best
+		: ensureContrastAA(best, background, minRatio);
 }
 
 export const deepNightLight: ThemeDefinition = {
@@ -247,10 +341,16 @@ const canadianCottageWinterDark: ThemeDefinition = {
 const georgianBayPlungeLight: ThemeDefinition = {
 	id: 'georgian-bay-plunge',
 	variables: {
-		'--app-colour-primary': 'hsl(190, 50%, 75%)',
-		'--app-colour-primary-contrast': 'hsl(210, 15%, 20%)',
-		'--app-colour-primary-shade': 'hsl(190, 50%, 65%)',
-		'--app-colour-primary-tint': 'hsl(190, 50%, 82%)',
+		// Darkened from the original hsl(190, 50%, 75%) -- that light a cyan only cleared
+		// 1.6:1 against this theme's white card background (WCAG AA needs 4.5:1), the exact
+		// class of bug reported in issue #290, just found here by this fix's own regression
+		// test rather than a user screenshot. Same hue/saturation, corrected lightness; shade/
+		// tint and contrastText recomputed to match (a primary this much darker now needs a
+		// light contrastText, not the original dark one).
+		'--app-colour-primary': 'hsl(190, 50%, 37%)',
+		'--app-colour-primary-contrast': '#ffffff',
+		'--app-colour-primary-shade': 'hsl(190, 50%, 27%)',
+		'--app-colour-primary-tint': 'hsl(190, 50%, 47%)',
 
 		'--app-colour-secondary': 'hsl(190, 50%, 35%)',
 		'--app-colour-secondary-contrast': '#ffffff',
@@ -263,7 +363,7 @@ const georgianBayPlungeLight: ThemeDefinition = {
 		'--app-border-colour': 'rgba(0, 0, 0, 0.12)',
 	},
 	muiPalette: {
-		primary: { main: 'hsl(190, 50%, 75%)', contrastText: 'hsl(210, 15%, 20%)' },
+		primary: { main: 'hsl(190, 50%, 37%)', contrastText: '#ffffff' },
 		secondary: { main: 'hsl(190, 50%, 35%)', contrastText: '#ffffff' },
 		background: { default: 'hsl(210, 15%, 96%)', paper: '#ffffff' },
 		text: { primary: 'hsl(210, 15%, 20%)' },
@@ -299,10 +399,13 @@ const georgianBayPlungeDark: ThemeDefinition = {
 export const boringLight: ThemeDefinition = {
 	id: 'boring-light',
 	variables: {
-		'--app-colour-primary': 'hsl(210, 100%, 50%)',
+		// hsl(210, 100%, 50%) only cleared 3.8:1 against this theme's white card background
+		// (WCAG AA needs 4.5:1) -- a small lightness nudge, same hue/saturation. #ffffff still
+		// clears the ratio against the corrected value, so its contrastText is unchanged.
+		'--app-colour-primary': 'hsl(210, 100%, 45%)',
 		'--app-colour-primary-contrast': '#ffffff',
-		'--app-colour-primary-shade': 'hsl(210, 100%, 40%)',
-		'--app-colour-primary-tint': 'hsl(210, 100%, 60%)',
+		'--app-colour-primary-shade': 'hsl(210, 100%, 35%)',
+		'--app-colour-primary-tint': 'hsl(210, 100%, 55%)',
 
 		'--app-colour-secondary': 'hsl(0, 0%, 50%)',
 		'--app-colour-secondary-contrast': '#ffffff',
@@ -315,7 +418,7 @@ export const boringLight: ThemeDefinition = {
 		'--app-border-colour': 'rgba(0, 0, 0, 0.12)',
 	},
 	muiPalette: {
-		primary: { main: 'hsl(210, 100%, 50%)' },
+		primary: { main: 'hsl(210, 100%, 45%)' },
 		secondary: { main: 'hsl(0, 0%, 50%)', contrastText: '#ffffff' },
 		background: { default: '#ffffff', paper: '#ffffff' },
 		text: { primary: '#000000' },
@@ -332,8 +435,12 @@ export const boringDark: ThemeDefinition = {
 		'--app-colour-step-100': 'hsl(0, 0%, 18%)',
 		'--app-colour-step-200': 'hsl(0, 0%, 22%)',
 
-		'--app-colour-primary': 'hsl(210, 100%, 50%)',
-		'--app-colour-primary-contrast': '#ffffff',
+		// hsl(210, 100%, 50%) only cleared 3.8:1 against this theme's card background (WCAG AA
+		// needs 4.5:1). Lightening it to fix that (dark backgrounds need a lighter foreground)
+		// tips its own contrastText from white to black -- #ffffff only clears 3.2:1 against
+		// the corrected, lighter value, #000000 clears 6.6:1.
+		'--app-colour-primary': 'hsl(210, 100%, 57%)',
+		'--app-colour-primary-contrast': '#000000',
 
 		'--app-colour-secondary': 'hsl(0, 0%, 50%)',
 		'--app-colour-secondary-contrast': 'hsl(0, 0%, 10%)',
@@ -341,7 +448,7 @@ export const boringDark: ThemeDefinition = {
 		'--app-colour-secondary-tint': 'hsl(0, 0%, 60%)',
 	},
 	muiPalette: {
-		primary: { main: 'hsl(210, 100%, 50%)' },
+		primary: { main: 'hsl(210, 100%, 57%)', contrastText: '#000000' },
 		secondary: { main: 'hsl(0, 0%, 50%)', contrastText: 'hsl(0, 0%, 10%)' },
 		background: { default: 'hsl(0, 0%, 12%)', paper: 'hsl(0, 0%, 16%)' },
 		text: { primary: 'hsl(0, 0%, 90%)' },
@@ -375,23 +482,57 @@ export function generateSystemTheme(
 		getColour(palettes.system_accent1, '600') || getColour(palettes.system_accent1, '500');
 
 	// If system primary is missing, fall back to base
-	const primary = primaryHex ? colourToHsl(primaryHex) : base.variables['--app-colour-primary'];
+	const primaryRaw = primaryHex ? colourToHsl(primaryHex) : base.variables['--app-colour-primary'];
 
 	const secondaryHex =
 		getColour(palettes.system_accent3, '600') || getColour(palettes.system_accent3, '500');
 
 	// If system secondary is missing, fall back to base
-	const secondary = secondaryHex
+	const secondaryRaw = secondaryHex
 		? colourToHsl(secondaryHex)
 		: base.variables['--app-colour-secondary'];
 
-	// Calculate contrasts for Primary
-	const primaryContrast = '#ffffff';
-	const secondaryContrast = isDark
-		? getColour(palettes.system_neutral1, '900') || '#000000'
-		: '#ffffff';
+	// Backgrounds first -- primary/secondary get validated against these below, so they need to
+	// be resolved before that contrast check can happen.
+	const backgroundOverrides: Record<string, string> = {};
+	if (isDark) {
+		const bg = getColour(palettes.system_neutral1, '900');
+		if (bg) {
+			backgroundOverrides['--app-background-colour'] = bg;
+			backgroundOverrides['--app-card-background'] =
+				getColour(palettes.system_neutral1, '800') || '#1e1e1e';
+			backgroundOverrides['--app-text-colour'] =
+				getColour(palettes.system_neutral1, '100') || '#ffffff';
+		}
+	} else {
+		const bg = getColour(palettes.system_neutral1, '50');
+		if (bg) {
+			backgroundOverrides['--app-background-colour'] = bg; // Very light
+			backgroundOverrides['--app-card-background'] =
+				getColour(palettes.system_neutral1, '10') || '#ffffff'; // White-ish
+			backgroundOverrides['--app-text-colour'] =
+				getColour(palettes.system_neutral1, '900') || '#000000';
+		}
+	}
+
+	const paperBackground =
+		backgroundOverrides['--app-card-background'] || base.muiPalette.background.paper;
+
+	// Wallpaper-extracted colours have no guarantee of being readable as text against whatever
+	// they end up rendered on -- unlike this file's hand-authored theme colours, which were
+	// tuned by eye, there's no human in the loop here to notice a bad wallpaper pairing. Nudge
+	// both towards the actual dialog/card surface (paperBackground, now pinned to the theme's
+	// real declared value rather than MUI's auto-lightened one -- see the MuiPaper fix in
+	// ThemeContext.tsx) so a plain-text Button using primary/secondary as its colour is always
+	// legible, then derive contrastText from *that* corrected colour rather than assuming white
+	// (see issue #290).
+	const primary = ensureContrastAA(primaryRaw, paperBackground);
+	const secondary = ensureContrastAA(secondaryRaw, paperBackground);
+	const primaryContrast = pickContrastText(primary);
+	const secondaryContrast = pickContrastText(secondary);
 
 	const overrides: Record<string, string> = {
+		...backgroundOverrides,
 		'--app-colour-primary': primary,
 		'--app-colour-primary-contrast': primaryContrast,
 		// Calculate tints/shades for system theme
@@ -404,33 +545,16 @@ export function generateSystemTheme(
 		'--app-colour-secondary-shade': getShade(secondary, 10),
 	};
 
-	// Optional: Full Monet Backgrounds
-	if (isDark) {
-		const bg = getColour(palettes.system_neutral1, '900');
-		if (bg) {
-			overrides['--app-background-colour'] = bg;
-			overrides['--app-card-background'] = getColour(palettes.system_neutral1, '800') || '#1e1e1e';
-			overrides['--app-text-colour'] = getColour(palettes.system_neutral1, '100') || '#ffffff';
-		}
-	} else {
-		const bg = getColour(palettes.system_neutral1, '50');
-		if (bg) {
-			overrides['--app-background-colour'] = bg; // Very light
-			overrides['--app-card-background'] = getColour(palettes.system_neutral1, '10') || '#ffffff'; // White-ish
-			overrides['--app-text-colour'] = getColour(palettes.system_neutral1, '900') || '#000000';
-		}
-	}
-
 	return {
 		id: 'system',
 		variables: { ...base.variables, ...overrides },
 		muiPalette: {
 			...base.muiPalette,
-			primary: { main: primary },
+			primary: { main: primary, contrastText: primaryContrast },
 			secondary: { main: secondary, contrastText: secondaryContrast },
 			background: {
 				default: overrides['--app-background-colour'] || base.muiPalette.background.default,
-				paper: overrides['--app-card-background'] || base.muiPalette.background.paper,
+				paper: paperBackground,
 			},
 			text: {
 				primary: overrides['--app-text-colour'] || base.muiPalette.text.primary,
