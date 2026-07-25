@@ -647,6 +647,12 @@ jobs:
     env:
       PLAY_DEPLOY_READY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
+      # Needed for whatsNewDirectory below (distribution/whatsnew, distribution/whatsnew-wear) --
+      # this job otherwise only downloads build artefacts, so it had no repo source at all.
+      # No submodules needed; distribution/ isn't part of vendor/tauri-plugins-workspace.
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Download Android artefacts
         uses: actions/download-artifact@v8
         with:
