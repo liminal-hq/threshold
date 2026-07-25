@@ -102,6 +102,24 @@ impl<R: Runtime> AlarmManager<R> {
         Ok(())
     }
 
+    /// Not an Android concept; nothing to gate.
+    pub fn check_exact_alarm_permission(&self) -> crate::Result<bool> {
+        Ok(true)
+    }
+
+    pub fn open_exact_alarm_settings(&self) -> crate::Result<()> {
+        Ok(())
+    }
+
+    /// Not an Android concept; nothing to gate.
+    pub fn check_battery_optimization_exemption(&self) -> crate::Result<bool> {
+        Ok(true)
+    }
+
+    pub fn open_battery_optimization_settings(&self) -> crate::Result<()> {
+        Ok(())
+    }
+
     /// Desktop ringing already navigates the frontend directly via the `alarm-ring` event;
     /// there's no separate native ringing state to query.
     pub fn get_currently_ringing_alarm(&self) -> crate::Result<Option<i32>> {

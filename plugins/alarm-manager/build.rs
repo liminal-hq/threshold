@@ -12,6 +12,10 @@ const COMMANDS: &[&str] = &[
     "stop_ringing",
     "check_full_screen_intent_permission",
     "open_full_screen_intent_settings",
+    "check_exact_alarm_permission",
+    "open_exact_alarm_settings",
+    "check_battery_optimization_exemption",
+    "open_battery_optimization_settings",
     "get_currently_ringing_alarm",
 ];
 
@@ -42,6 +46,11 @@ fn inject_android_permissions() {
         r#"<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />"#,
         // Legacy alarm permission (often required by older Android versions/vendors)
         r#"<uses-permission android:name="com.android.alarm.permission.SET_ALARM" />"#,
+        // Lets openBatteryOptimizationSettings prompt for an exemption -- required to declare
+        // this normal (install-time-granted) permission before ACTION_REQUEST_IGNORE_BATTERY_
+        // OPTIMIZATIONS can be used; querying isIgnoringBatteryOptimizations() itself needs no
+        // permission.
+        r#"<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />"#,
     ];
 
     tauri_plugin::mobile::update_android_manifest(

@@ -48,6 +48,32 @@ export async function openFullScreenIntentSettings(): Promise<void> {
 	await invoke('plugin:alarm-manager|open_full_screen_intent_settings');
 }
 
+/** Whether Android will schedule this app's alarms exactly rather than degrading to a window. */
+export async function checkExactAlarmPermission(): Promise<boolean> {
+	const result = await invoke<{ granted: boolean }>(
+		'plugin:alarm-manager|check_exact_alarm_permission',
+	);
+	return result.granted;
+}
+
+/** Opens the OS settings screen for the exact-alarm-scheduling special permission (Android 12+). */
+export async function openExactAlarmSettings(): Promise<void> {
+	await invoke('plugin:alarm-manager|open_exact_alarm_settings');
+}
+
+/** Whether this app is exempted from Doze/App Standby battery optimization. */
+export async function checkBatteryOptimizationExemption(): Promise<boolean> {
+	const result = await invoke<{ granted: boolean }>(
+		'plugin:alarm-manager|check_battery_optimization_exemption',
+	);
+	return result.granted;
+}
+
+/** Opens the OS settings screen to request a battery-optimization exemption. */
+export async function openBatteryOptimizationSettings(): Promise<void> {
+	await invoke('plugin:alarm-manager|open_battery_optimization_settings');
+}
+
 /**
  * The alarm ID currently ringing natively, if any -- a fallback for detecting an active alarm
  * outside the normal full-screen-intent deep-link launch path.

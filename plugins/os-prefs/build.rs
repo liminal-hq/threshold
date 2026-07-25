@@ -3,7 +3,11 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-const COMMANDS: &[&str] = &["get_time_format", "get_animator_duration_scale"];
+const COMMANDS: &[&str] = &[
+    "get_time_format",
+    "get_animator_duration_scale",
+    "open_notification_settings",
+];
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)

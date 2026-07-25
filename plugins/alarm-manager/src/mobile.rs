@@ -238,7 +238,7 @@ impl<R: Runtime> AlarmManager<R> {
         #[cfg(target_os = "android")]
         return self
             .handle
-            .run_mobile_plugin::<FullScreenIntentPermission>("checkFullScreenIntentPermission", ())
+            .run_mobile_plugin::<PermissionStatus>("checkFullScreenIntentPermission", ())
             .map(|r| r.granted)
             .map_err(Into::into);
 
@@ -252,6 +252,58 @@ impl<R: Runtime> AlarmManager<R> {
         return self
             .handle
             .run_mobile_plugin("openFullScreenIntentSettings", ())
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
+    }
+
+    /// Whether Android will schedule this app's alarms exactly rather than silently degrading
+    /// to an inexact window. Always `true` on desktop/pre-API-31.
+    pub fn check_exact_alarm_permission(&self) -> crate::Result<bool> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
+            .run_mobile_plugin::<PermissionStatus>("checkExactAlarmPermission", ())
+            .map(|r| r.granted)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
+    }
+
+    /// Opens the OS settings screen for the exact-alarm-scheduling special permission.
+    pub fn open_exact_alarm_settings(&self) -> crate::Result<()> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
+            .run_mobile_plugin("openExactAlarmSettings", ())
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
+    }
+
+    /// Whether this app is exempted from Doze/App Standby battery optimization. Always `true`
+    /// on desktop, where the concept doesn't apply.
+    pub fn check_battery_optimization_exemption(&self) -> crate::Result<bool> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
+            .run_mobile_plugin::<PermissionStatus>("checkBatteryOptimizationExemption", ())
+            .map(|r| r.granted)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
+    }
+
+    /// Opens the OS settings screen for the battery-optimization exemption request.
+    pub fn open_battery_optimization_settings(&self) -> crate::Result<()> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
+            .run_mobile_plugin("openBatteryOptimizationSettings", ())
             .map_err(Into::into);
 
         #[cfg(not(target_os = "android"))]

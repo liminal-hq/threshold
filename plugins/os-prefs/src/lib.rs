@@ -42,7 +42,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("os-prefs")
         .invoke_handler(tauri::generate_handler![
             commands::get_time_format,
-            commands::get_animator_duration_scale
+            commands::get_animator_duration_scale,
+            commands::open_notification_settings
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

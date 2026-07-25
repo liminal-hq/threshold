@@ -49,6 +49,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::stop_ringing,
             commands::check_full_screen_intent_permission,
             commands::open_full_screen_intent_settings,
+            commands::check_exact_alarm_permission,
+            commands::open_exact_alarm_settings,
+            commands::check_battery_optimization_exemption,
+            commands::open_battery_optimization_settings,
             commands::get_currently_ringing_alarm
         ])
         .setup(|app, api| {
@@ -123,6 +127,10 @@ mod acl_tests {
         "stop_ringing",
         "check_full_screen_intent_permission",
         "open_full_screen_intent_settings",
+        "check_exact_alarm_permission",
+        "open_exact_alarm_settings",
+        "check_battery_optimization_exemption",
+        "open_battery_optimization_settings",
         "get_currently_ringing_alarm",
     ];
 

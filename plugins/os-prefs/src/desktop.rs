@@ -29,4 +29,9 @@ impl<R: Runtime> OsPrefs<R> {
         // No equivalent desktop setting wired up -- always full speed.
         Ok(AnimatorDurationScaleResponse { scale: 1.0 })
     }
+
+    /// Not an Android concept; nothing to open.
+    pub fn open_notification_settings(&self) -> crate::Result<()> {
+        Ok(())
+    }
 }

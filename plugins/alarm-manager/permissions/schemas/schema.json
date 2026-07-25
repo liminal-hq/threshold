@@ -307,6 +307,30 @@
           "markdownDescription": "Denies the cancel command without any pre-configured scope."
         },
         {
+          "description": "Enables the check_battery_optimization_exemption command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-check-battery-optimization-exemption",
+          "markdownDescription": "Enables the check_battery_optimization_exemption command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the check_battery_optimization_exemption command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-check-battery-optimization-exemption",
+          "markdownDescription": "Denies the check_battery_optimization_exemption command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the check_exact_alarm_permission command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-check-exact-alarm-permission",
+          "markdownDescription": "Enables the check_exact_alarm_permission command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the check_exact_alarm_permission command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-check-exact-alarm-permission",
+          "markdownDescription": "Denies the check_exact_alarm_permission command without any pre-configured scope."
+        },
+        {
           "description": "Enables the check_full_screen_intent_permission command without any pre-configured scope.",
           "type": "string",
           "const": "allow-check-full-screen-intent-permission",
@@ -329,6 +353,30 @@
           "type": "string",
           "const": "deny-get-currently-ringing-alarm",
           "markdownDescription": "Denies the get_currently_ringing_alarm command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_battery_optimization_settings command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-battery-optimization-settings",
+          "markdownDescription": "Enables the open_battery_optimization_settings command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_battery_optimization_settings command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-battery-optimization-settings",
+          "markdownDescription": "Denies the open_battery_optimization_settings command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_exact_alarm_settings command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-exact-alarm-settings",
+          "markdownDescription": "Enables the open_exact_alarm_settings command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_exact_alarm_settings command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-exact-alarm-settings",
+          "markdownDescription": "Denies the open_exact_alarm_settings command without any pre-configured scope."
         },
         {
           "description": "Enables the open_full_screen_intent_settings command without any pre-configured scope.",
@@ -367,10 +415,10 @@
           "markdownDescription": "Denies the stop_ringing command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-cancel`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`\n- `allow-check-full-screen-intent-permission`\n- `allow-open-full-screen-intent-settings`\n- `allow-get-currently-ringing-alarm`",
+          "description": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-cancel`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`\n- `allow-check-full-screen-intent-permission`\n- `allow-open-full-screen-intent-settings`\n- `allow-check-exact-alarm-permission`\n- `allow-open-exact-alarm-settings`\n- `allow-check-battery-optimization-exemption`\n- `allow-open-battery-optimization-settings`\n- `allow-get-currently-ringing-alarm`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-cancel`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`\n- `allow-check-full-screen-intent-permission`\n- `allow-open-full-screen-intent-settings`\n- `allow-get-currently-ringing-alarm`"
+          "markdownDescription": "Default permissions for the alarm-manager plugin\n#### This default permission set includes:\n\n- `allow-cancel`\n- `allow-pick-alarm-sound`\n- `allow-stop-ringing`\n- `allow-check-full-screen-intent-permission`\n- `allow-open-full-screen-intent-settings`\n- `allow-check-exact-alarm-permission`\n- `allow-open-exact-alarm-settings`\n- `allow-check-battery-optimization-exemption`\n- `allow-open-battery-optimization-settings`\n- `allow-get-currently-ringing-alarm`"
         }
       ]
     }

@@ -6,6 +6,7 @@
 package ca.liminalhq.threshold.osprefs
 
 import android.app.Activity
+import android.content.Intent
 import android.util.Log
 import android.text.format.DateFormat
 import android.provider.Settings
@@ -45,5 +46,19 @@ class OsPrefsPlugin(private val activity: Activity) : Plugin(activity) {
         val ret = JSObject()
         ret.put("scale", scale)
         invoke.resolve(ret)
+    }
+
+    // Generic OS settings jump, not alarm-specific -- POST_NOTIFICATIONS governs every
+    // notification the app posts, not just alarm ringing, so it lives here rather than in
+    // the alarm-manager plugin. Current grant status is queried directly from the frontend via
+    // @tauri-apps/plugin-notification's isPermissionGranted(); this only covers the recovery
+    // path once a user has denied it, since requesting again doesn't reshow the OS dialog.
+    @Command
+    fun openNotificationSettings(invoke: Invoke) {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
+        }
+        activity.startActivity(intent)
+        invoke.resolve()
     }
 }

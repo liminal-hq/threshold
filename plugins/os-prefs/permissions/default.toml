@@ -3,4 +3,5 @@ description = "Default permissions for the os-prefs plugin"
 permissions = [
     "allow-get-time-format",
     "allow-get-animator-duration-scale",
+    "allow-open-notification-settings",
 ]

@@ -30,14 +30,40 @@ pub async fn stop_ringing<R: Runtime>(app: AppHandle<R>) -> Result<()> {
 #[command]
 pub async fn check_full_screen_intent_permission<R: Runtime>(
     app: AppHandle<R>,
-) -> Result<FullScreenIntentPermission> {
+) -> Result<PermissionStatus> {
     let granted = app.alarm_manager().check_full_screen_intent_permission()?;
-    Ok(FullScreenIntentPermission { granted })
+    Ok(PermissionStatus { granted })
 }
 
 #[command]
 pub async fn open_full_screen_intent_settings<R: Runtime>(app: AppHandle<R>) -> Result<()> {
     app.alarm_manager().open_full_screen_intent_settings()
+}
+
+#[command]
+pub async fn check_exact_alarm_permission<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<PermissionStatus> {
+    let granted = app.alarm_manager().check_exact_alarm_permission()?;
+    Ok(PermissionStatus { granted })
+}
+
+#[command]
+pub async fn open_exact_alarm_settings<R: Runtime>(app: AppHandle<R>) -> Result<()> {
+    app.alarm_manager().open_exact_alarm_settings()
+}
+
+#[command]
+pub async fn check_battery_optimization_exemption<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<PermissionStatus> {
+    let granted = app.alarm_manager().check_battery_optimization_exemption()?;
+    Ok(PermissionStatus { granted })
+}
+
+#[command]
+pub async fn open_battery_optimization_settings<R: Runtime>(app: AppHandle<R>) -> Result<()> {
+    app.alarm_manager().open_battery_optimization_settings()
 }
 
 #[command]

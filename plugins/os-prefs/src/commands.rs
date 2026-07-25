@@ -20,3 +20,8 @@ pub(crate) async fn get_animator_duration_scale<R: Runtime>(
 ) -> Result<AnimatorDurationScaleResponse> {
     app.os_prefs().get_animator_duration_scale()
 }
+
+#[command]
+pub(crate) async fn open_notification_settings<R: Runtime>(app: AppHandle<R>) -> Result<()> {
+    app.os_prefs().open_notification_settings()
+}
