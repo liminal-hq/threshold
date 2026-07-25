@@ -24,6 +24,8 @@ import {
 	DialogTitle,
 	DialogContent,
 	CircularProgress,
+	Alert,
+	Button,
 } from '@mui/material';
 import { MobileToolbar } from '../components/MobileToolbar';
 import { ArrowBack as ArrowBackIcon, FileDownload as FileDownloadIcon } from '@mui/icons-material';
@@ -44,6 +46,32 @@ const NAV_ITEMS: { key: SettingsSection; label: string }[] = [
 	{ key: 'developer', label: 'Developer' },
 ];
 
+// The Android permissions/OS states that can silently degrade alarm reliability with no error
+// surfaced anywhere -- see issue #281 (full-screen intent) and #282's Developer settings
+// diagnostic. Ownership follows the plugin that already declares/drives each one: the first
+// three are alarm-manager's (it already owns the ringing pipeline and declares their manifest
+// permissions), while notifications is a generic OS concern that lives in os-prefs instead.
+type PermissionKey = 'fullScreenIntent' | 'exactAlarm' | 'batteryOptimization' | 'notifications';
+
+const PERMISSION_INFO: Record<PermissionKey, { label: string; description: string }> = {
+	fullScreenIntent: {
+		label: 'Full-screen intent',
+		description: 'Lets the ringing screen take over the lock screen instead of just a banner',
+	},
+	exactAlarm: {
+		label: 'Exact alarm scheduling',
+		description: 'Alarms fire on time instead of drifting into an inexact window',
+	},
+	batteryOptimization: {
+		label: 'Battery optimization exemption',
+		description: 'Keeps Doze/App Standby from throttling the ringing pipeline',
+	},
+	notifications: {
+		label: 'Notifications',
+		description: 'Required for the ringing and upcoming-alarm notifications to post at all',
+	},
+};
+
 const Settings: React.FC = () => {
 	const navigate = useNavigate();
 	const { theme, setTheme, forceDark, setForceDark, useMaterialYou, setUseMaterialYou } =
@@ -58,11 +86,97 @@ const Settings: React.FC = () => {
 	const [snoozeLength, setSnoozeLength] = useState<number>(SettingsService.getSnoozeLength());
 	const [snoozeDialogOpen, setSnoozeDialogOpen] = useState(false);
 	const [isExportingLogs, setIsExportingLogs] = useState(false);
+	const [permissionStatus, setPermissionStatus] = useState<Record<PermissionKey, boolean | null>>({
+		fullScreenIntent: null,
+		exactAlarm: null,
+		batteryOptimization: null,
+		notifications: null,
+	});
 
 	useEffect(() => {
 		setIsMobile(PlatformUtils.isMobile());
 		setIsAndroid(PlatformUtils.getPlatform() === 'android');
 	}, []);
+
+	// Re-checked on every window focus regain (not just on mount) so both the Alarm Settings
+	// banner and the Developer settings diagnostic clear themselves after the user flips a
+	// toggle in system Settings and switches back, without needing to leave and re-enter this
+	// screen.
+	useEffect(() => {
+		if (PlatformUtils.getPlatform() !== 'android') return;
+
+		let unlisten: (() => void) | undefined;
+
+		const checkPermissions = async () => {
+			try {
+				const alarmManager = await import('tauri-plugin-alarm-manager-api');
+				const [fullScreenIntent, exactAlarm, batteryOptimization] = await Promise.all([
+					alarmManager.checkFullScreenIntentPermission(),
+					alarmManager.checkExactAlarmPermission(),
+					alarmManager.checkBatteryOptimizationExemption(),
+				]);
+				setPermissionStatus((prev) => ({
+					...prev,
+					fullScreenIntent,
+					exactAlarm,
+					batteryOptimization,
+				}));
+			} catch (e) {
+				console.error('Failed to check alarm-manager permissions:', e);
+			}
+
+			try {
+				const { isPermissionGranted } = await import('@tauri-apps/plugin-notification');
+				const notifications = await isPermissionGranted();
+				setPermissionStatus((prev) => ({ ...prev, notifications }));
+			} catch (e) {
+				console.error('Failed to check notification permission:', e);
+			}
+		};
+
+		checkPermissions();
+		import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+			getCurrentWindow()
+				.onFocusChanged(({ payload: focused }) => {
+					if (focused) checkPermissions();
+				})
+				.then((fn) => {
+					unlisten = fn;
+				});
+		});
+
+		return () => unlisten?.();
+	}, []);
+
+	const openPermissionSettings = async (key: PermissionKey) => {
+		try {
+			switch (key) {
+				case 'fullScreenIntent': {
+					const { openFullScreenIntentSettings } = await import('tauri-plugin-alarm-manager-api');
+					await openFullScreenIntentSettings();
+					break;
+				}
+				case 'exactAlarm': {
+					const { openExactAlarmSettings } = await import('tauri-plugin-alarm-manager-api');
+					await openExactAlarmSettings();
+					break;
+				}
+				case 'batteryOptimization': {
+					const { openBatteryOptimizationSettings } =
+						await import('tauri-plugin-alarm-manager-api');
+					await openBatteryOptimizationSettings();
+					break;
+				}
+				case 'notifications': {
+					const { openNotificationSettings } = await import('tauri-plugin-os-prefs-api');
+					await openNotificationSettings();
+					break;
+				}
+			}
+		} catch (e) {
+			console.error(`Failed to open settings for ${key}:`, e);
+		}
+	};
 
 	const handleTimeFormatChange = (enabled: boolean) => {
 		setIs24h(enabled);
@@ -151,6 +265,27 @@ const Settings: React.FC = () => {
 				) : undefined
 			}
 		>
+			{isAndroid && permissionStatus.fullScreenIntent === false && (
+				<ListItem sx={{ px }}>
+					<Alert
+						severity="warning"
+						sx={{ width: '100%' }}
+						action={
+							<Button
+								color="inherit"
+								size="small"
+								onClick={() => openPermissionSettings('fullScreenIntent')}
+							>
+								Enable
+							</Button>
+						}
+					>
+						The ringing screen won't appear over the lock screen until "Full screen intent
+						notifications" is enabled for Threshold.
+					</Alert>
+				</ListItem>
+			)}
+
 			<ListItem sx={{ px }}>
 				<FormControl fullWidth>
 					<InputLabel id="silence-after-label">Silence After</InputLabel>
@@ -210,6 +345,33 @@ const Settings: React.FC = () => {
 				) : undefined
 			}
 		>
+			{isAndroid && (
+				<>
+					<ListSubheader sx={{ bgcolor: 'transparent' }}>Permissions</ListSubheader>
+					{(Object.keys(PERMISSION_INFO) as PermissionKey[]).map((key) => {
+						const granted = permissionStatus[key];
+						const info = PERMISSION_INFO[key];
+						return (
+							<ListItem key={key} sx={{ px }}>
+								<ListItemText
+									primary={info.label}
+									secondary={`${
+										granted === null ? 'Checking…' : granted ? 'Granted' : 'Not granted'
+									} — ${info.description}`}
+								/>
+								{granted === false && (
+									<Button size="small" onClick={() => openPermissionSettings(key)}>
+										Fix
+									</Button>
+								)}
+							</ListItem>
+						);
+					})}
+				</>
+			)}
+
+			<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Testing</ListSubheader>
+
 			<ListItem sx={{ px }}>
 				<ListItemText
 					primary="Test Alarm Ring"

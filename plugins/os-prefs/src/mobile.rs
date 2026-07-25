@@ -68,4 +68,20 @@ impl<R: Runtime> OsPrefs<R> {
             Ok(AnimatorDurationScaleResponse { scale: 1.0 })
         }
     }
+
+    /// Opens the OS notification settings screen for this app.
+    pub fn open_notification_settings(&self) -> crate::Result<()> {
+        #[cfg(target_os = "android")]
+        {
+            self.handle
+                .run_mobile_plugin("openNotificationSettings", ())
+                .map_err(Into::into)
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            // Stub implementation for iOS -- no equivalent settings deep link wired up yet.
+            Ok(())
+        }
+    }
 }

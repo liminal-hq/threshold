@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-check-battery-optimization-exemption"
+description = "Enables the check_battery_optimization_exemption command without any pre-configured scope."
+commands.allow = ["check_battery_optimization_exemption"]
+
+[[permission]]
+identifier = "deny-check-battery-optimization-exemption"
+description = "Denies the check_battery_optimization_exemption command without any pre-configured scope."
+commands.deny = ["check_battery_optimization_exemption"]

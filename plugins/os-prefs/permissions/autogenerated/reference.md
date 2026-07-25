@@ -6,6 +6,7 @@ Default permissions for the os-prefs plugin
 
 - `allow-get-time-format`
 - `allow-get-animator-duration-scale`
+- `allow-open-notification-settings`
 
 ## Permission Table
 
@@ -64,6 +65,32 @@ Enables the get_time_format command without any pre-configured scope.
 <td>
 
 Denies the get_time_format command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`os-prefs:allow-open-notification-settings`
+
+</td>
+<td>
+
+Enables the open_notification_settings command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`os-prefs:deny-open-notification-settings`
+
+</td>
+<td>
+
+Denies the open_notification_settings command without any pre-configured scope.
 
 </td>
 </tr>

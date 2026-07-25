@@ -85,6 +85,21 @@ pub struct NativeDismissRequestedPayload {
     pub id: i32,
 }
 
+/// Shared response shape for the plugin's various silently-degrading-permission checks
+/// (full-screen intent, exact alarm scheduling, battery optimization exemption) -- they're
+/// structurally identical, so one type covers all three rather than one per permission.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PermissionStatus {
+    pub granted: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrentlyRingingAlarm {
+    pub id: Option<i32>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

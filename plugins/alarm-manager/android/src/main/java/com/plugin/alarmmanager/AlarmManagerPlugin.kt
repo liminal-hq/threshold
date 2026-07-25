@@ -14,6 +14,7 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.webkit.WebView
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
@@ -301,6 +302,99 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             activity.setTurnScreenOn(false)
         }
         invoke.resolve()
+    }
+
+    // Android 14+ (API 34) made USE_FULL_SCREEN_INTENT a user-revocable special permission
+    // (Settings > Apps > Threshold > Special app access > "Full screen intent notifications").
+    // When it's off, canUseFullScreenIntent() returns false and the OS silently downgrades the
+    // ringing notification's full-screen intent to an ordinary heads-up banner instead of
+    // launching the ringing Activity -- no error, no callback. Below API 34 the permission is
+    // granted unconditionally by declaring it in the manifest, so there's nothing to check.
+    @Command
+    fun checkFullScreenIntentPermission(invoke: Invoke) {
+        val granted = if (Build.VERSION.SDK_INT >= 34) {
+            val notificationManager =
+                activity.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            notificationManager.canUseFullScreenIntent()
+        } else {
+            true
+        }
+        val ret = JSObject()
+        ret.put("granted", granted)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun openFullScreenIntentSettings(invoke: Invoke) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                data = Uri.parse("package:${activity.packageName}")
+            }
+            activity.startActivity(intent)
+        }
+        invoke.resolve()
+    }
+
+    // Android 12+ (API 31) made scheduling an exact alarm ("clock/alarm" apps) a user-revocable
+    // permission too -- if revoked, AlarmManager.setAlarmClock() silently degrades to an inexact
+    // window (the alarm can fire minutes late) instead of throwing. Below API 31 exact alarms
+    // were unconditionally allowed, so there's nothing to check.
+    @Command
+    fun checkExactAlarmPermission(invoke: Invoke) {
+        val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+        val ret = JSObject()
+        ret.put("granted", granted)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun openExactAlarmSettings(invoke: Invoke) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                data = Uri.parse("package:${activity.packageName}")
+            }
+            activity.startActivity(intent)
+        }
+        invoke.resolve()
+    }
+
+    // Doze/App Standby can defer or throttle the alarm's native wake/ring path if the app isn't
+    // exempted from battery optimization, again with nothing surfaced to the user when it
+    // happens. Available on every OS version this app supports (minSdk 26), unlike the two
+    // checks above.
+    @Command
+    fun checkBatteryOptimizationExemption(invoke: Invoke) {
+        val powerManager = activity.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val ret = JSObject()
+        ret.put("granted", powerManager.isIgnoringBatteryOptimizations(activity.packageName))
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun openBatteryOptimizationSettings(invoke: Invoke) {
+        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = Uri.parse("package:${activity.packageName}")
+        }
+        activity.startActivity(intent)
+        invoke.resolve()
+    }
+
+    // Ringing-screen navigation is otherwise driven entirely by the notification's full-screen
+    // intent (see DeepLinkService.ts) -- if that launch is ever missed (permission denied, OS
+    // quirk, or the app is simply reopened from the home-screen icon while an alarm is still
+    // ringing), there is no other signal telling the frontend an alarm is active. This exposes
+    // AlarmRingingService's own in-memory state so the frontend can route there as a fallback.
+    @Command
+    fun getCurrentlyRingingAlarm(invoke: Invoke) {
+        val ret = JSObject()
+        val id = AlarmRingingService.currentlyRingingAlarmId
+        ret.put("id", if (id > 0) id else null)
+        invoke.resolve(ret)
     }
 
     @Command

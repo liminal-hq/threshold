@@ -21,3 +21,8 @@ export async function getTimeFormat(): Promise<TimeFormatResponse> {
 export async function getAnimatorDurationScale(): Promise<AnimatorDurationScaleResponse> {
 	return await invoke<AnimatorDurationScaleResponse>('plugin:os-prefs|get_animator_duration_scale');
 }
+
+/** Opens the OS notification settings screen for this app. */
+export async function openNotificationSettings(): Promise<void> {
+	await invoke('plugin:os-prefs|open_notification_settings');
+}

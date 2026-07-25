@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-check-exact-alarm-permission"
+description = "Enables the check_exact_alarm_permission command without any pre-configured scope."
+commands.allow = ["check_exact_alarm_permission"]
+
+[[permission]]
+identifier = "deny-check-exact-alarm-permission"
+description = "Denies the check_exact_alarm_permission command without any pre-configured scope."
+commands.deny = ["check_exact_alarm_permission"]

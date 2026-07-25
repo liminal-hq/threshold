@@ -145,6 +145,21 @@ const App: React.FC = () => {
 			});
 		});
 
+		// Re-check for an active ringing alarm whenever the window regains focus (e.g. the user
+		// switches back to the app), not just at cold start -- a missed full-screen-intent launch
+		// (see DeepLinkService.checkForActiveRingingAlarm) can otherwise strand the user on Home
+		// with no way back to the ringing screen short of tapping the original notification.
+		if (os === 'android') {
+			win.onFocusChanged(({ payload: focused }) => {
+				if (!focused) return;
+				import('./services/DeepLinkService').then(({ checkForActiveRingingAlarm }) => {
+					checkForActiveRingingAlarm().catch((e) => {
+						console.error('Failed to check for active ringing alarm on focus:', e);
+					});
+				});
+			});
+		}
+
 		// Handle Back Button on Android
 		// TODO: When upgrading to Tauri 2.9.0+, switch to official @tauri-apps/api/app:
 		// const { onBackButtonPress } = await import('@tauri-apps/api/app');

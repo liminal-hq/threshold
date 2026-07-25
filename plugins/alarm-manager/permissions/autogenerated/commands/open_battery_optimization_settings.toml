@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-open-battery-optimization-settings"
+description = "Enables the open_battery_optimization_settings command without any pre-configured scope."
+commands.allow = ["open_battery_optimization_settings"]
+
+[[permission]]
+identifier = "deny-open-battery-optimization-settings"
+description = "Denies the open_battery_optimization_settings command without any pre-configured scope."
+commands.deny = ["open_battery_optimization_settings"]

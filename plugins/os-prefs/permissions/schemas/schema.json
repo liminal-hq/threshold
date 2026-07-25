@@ -319,10 +319,22 @@
           "markdownDescription": "Denies the get_time_format command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the os-prefs plugin\n#### This default permission set includes:\n\n- `allow-get-time-format`\n- `allow-get-animator-duration-scale`",
+          "description": "Enables the open_notification_settings command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-notification-settings",
+          "markdownDescription": "Enables the open_notification_settings command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_notification_settings command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-notification-settings",
+          "markdownDescription": "Denies the open_notification_settings command without any pre-configured scope."
+        },
+        {
+          "description": "Default permissions for the os-prefs plugin\n#### This default permission set includes:\n\n- `allow-get-time-format`\n- `allow-get-animator-duration-scale`\n- `allow-open-notification-settings`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the os-prefs plugin\n#### This default permission set includes:\n\n- `allow-get-time-format`\n- `allow-get-animator-duration-scale`"
+          "markdownDescription": "Default permissions for the os-prefs plugin\n#### This default permission set includes:\n\n- `allow-get-time-format`\n- `allow-get-animator-duration-scale`\n- `allow-open-notification-settings`"
         }
       ]
     }

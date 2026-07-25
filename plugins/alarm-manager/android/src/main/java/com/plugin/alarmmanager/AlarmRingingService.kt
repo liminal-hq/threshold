@@ -37,6 +37,13 @@ class AlarmRingingService : Service() {
         const val ACTION_SNOOZE = "com.threshold.ACTION_SNOOZE"
         const val NOTIFICATION_ID = 999
         private const val TAG = "AlarmRingingService"
+
+        // Read by AlarmManagerPlugin.getCurrentlyRingingAlarm() so the frontend can detect an
+        // active alarm on a plain app launch/resume, not just via the full-screen-intent deep
+        // link. -1 means nothing is currently ringing.
+        @Volatile
+        var currentlyRingingAlarmId: Int = -1
+            private set
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -79,6 +86,7 @@ class AlarmRingingService : Service() {
 
         val soundUriStr = intent.getStringExtra("ALARM_SOUND_URI")
         currentAlarmId = intent.getIntExtra("ALARM_ID", -1)
+        currentlyRingingAlarmId = currentAlarmId
 
         Log.d(TAG, "Starting service for alarm $currentAlarmId with sound $soundUriStr")
         NativeEventLog.log(applicationContext, TAG, "Ringing service starting for alarm id=$currentAlarmId")
@@ -94,6 +102,10 @@ class AlarmRingingService : Service() {
         super.onDestroy()
         Log.d(TAG, "Service destroying")
         NativeEventLog.log(applicationContext, TAG, "Ringing service destroying for alarm id=$currentAlarmId")
+
+        if (currentlyRingingAlarmId == currentAlarmId) {
+            currentlyRingingAlarmId = -1
+        }
 
         stopAudio()
         stopVibration()
