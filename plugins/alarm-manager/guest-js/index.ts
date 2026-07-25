@@ -34,3 +34,27 @@ export async function pickAlarmSound(options: PickAlarmSoundOptions): Promise<Pi
 export async function stopRinging(): Promise<void> {
 	await invoke('plugin:alarm-manager|stop_ringing');
 }
+
+/** Whether Android will actually honour the ringing notification's full-screen intent. */
+export async function checkFullScreenIntentPermission(): Promise<boolean> {
+	const result = await invoke<{ granted: boolean }>(
+		'plugin:alarm-manager|check_full_screen_intent_permission',
+	);
+	return result.granted;
+}
+
+/** Opens the OS settings screen for the full-screen-intent special permission (Android 14+). */
+export async function openFullScreenIntentSettings(): Promise<void> {
+	await invoke('plugin:alarm-manager|open_full_screen_intent_settings');
+}
+
+/**
+ * The alarm ID currently ringing natively, if any -- a fallback for detecting an active alarm
+ * outside the normal full-screen-intent deep-link launch path.
+ */
+export async function getCurrentlyRingingAlarm(): Promise<number | null> {
+	const result = await invoke<{ id: number | null }>(
+		'plugin:alarm-manager|get_currently_ringing_alarm',
+	);
+	return result.id;
+}

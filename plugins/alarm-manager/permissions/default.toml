@@ -4,4 +4,7 @@ permissions = [
     "allow-cancel",
     "allow-pick-alarm-sound",
     "allow-stop-ringing",
+    "allow-check-full-screen-intent-permission",
+    "allow-open-full-screen-intent-settings",
+    "allow-get-currently-ringing-alarm",
 ]

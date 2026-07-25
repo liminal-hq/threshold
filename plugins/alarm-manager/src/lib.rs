@@ -46,7 +46,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![
             commands::cancel,
             commands::pick_alarm_sound,
-            commands::stop_ringing
+            commands::stop_ringing,
+            commands::check_full_screen_intent_permission,
+            commands::open_full_screen_intent_settings,
+            commands::get_currently_ringing_alarm
         ])
         .setup(|app, api| {
             #[cfg(mobile)]
@@ -114,7 +117,14 @@ mod acl_tests {
     // Every command here MUST have a matching `allow-*` permission in
     // `permissions/default.toml`, or the ACL silently denies it at runtime (the
     // exact bug fixed in Threshold issue #195).
-    const WEBVIEW_COMMANDS: &[&str] = &["cancel", "pick_alarm_sound", "stop_ringing"];
+    const WEBVIEW_COMMANDS: &[&str] = &[
+        "cancel",
+        "pick_alarm_sound",
+        "stop_ringing",
+        "check_full_screen_intent_permission",
+        "open_full_screen_intent_settings",
+        "get_currently_ringing_alarm",
+    ];
 
     const DEFAULT_TOML: &str = include_str!("../permissions/default.toml");
 

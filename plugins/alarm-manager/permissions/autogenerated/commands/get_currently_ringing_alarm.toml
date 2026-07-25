@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-get-currently-ringing-alarm"
+description = "Enables the get_currently_ringing_alarm command without any pre-configured scope."
+commands.allow = ["get_currently_ringing_alarm"]
+
+[[permission]]
+identifier = "deny-get-currently-ringing-alarm"
+description = "Denies the get_currently_ringing_alarm command without any pre-configured scope."
+commands.deny = ["get_currently_ringing_alarm"]

@@ -52,6 +52,36 @@ export async function initDeepLinks(router: typeof routerType) {
 	} catch (e) {
 		console.error('Failed to register deep link listener:', e);
 	}
+
+	// Fallback for when the ringing notification's full-screen intent never fires (e.g. the
+	// USE_FULL_SCREEN_INTENT special permission is off on Android 14+) or the app is simply
+	// reopened from the home-screen icon while an alarm is still ringing -- neither case
+	// delivers a deep link, so there'd otherwise be no way back to the ringing screen short of
+	// tapping the notification itself. Harmless no-op if a deep link already navigated here.
+	await checkForActiveRingingAlarm();
+}
+
+/**
+ * Routes to the ringing screen if a native alarm is currently ringing and we're not already
+ * there. Called once at startup and again on every window focus regain (see App.tsx), since a
+ * missed full-screen-intent launch can be discovered either at cold start or on resume.
+ */
+export async function checkForActiveRingingAlarm() {
+	if (!routerInstance) return;
+
+	try {
+		const { getCurrentlyRingingAlarm } = await import('tauri-plugin-alarm-manager-api');
+		const id = await getCurrentlyRingingAlarm();
+		if (id == null) return;
+
+		const target = `/ringing/${id}`;
+		if (routerInstance.state.location.pathname === target) return;
+
+		console.log('[DeepLink] Routing to active ringing alarm as a fallback:', target);
+		routerInstance.navigate({ to: target as any });
+	} catch (e) {
+		console.error('[DeepLink] Failed to check for an active ringing alarm:', e);
+	}
 }
 
 /**

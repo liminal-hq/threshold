@@ -92,4 +92,19 @@ impl<R: Runtime> AlarmManager<R> {
         println!("Desktop: Stop ringing request received");
         Ok(())
     }
+
+    /// Not an Android concept; nothing to gate.
+    pub fn check_full_screen_intent_permission(&self) -> crate::Result<bool> {
+        Ok(true)
+    }
+
+    pub fn open_full_screen_intent_settings(&self) -> crate::Result<()> {
+        Ok(())
+    }
+
+    /// Desktop ringing already navigates the frontend directly via the `alarm-ring` event;
+    /// there's no separate native ringing state to query.
+    pub fn get_currently_ringing_alarm(&self) -> crate::Result<Option<i32>> {
+        Ok(None)
+    }
 }

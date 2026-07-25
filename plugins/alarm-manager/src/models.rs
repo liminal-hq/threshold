@@ -85,6 +85,18 @@ pub struct NativeDismissRequestedPayload {
     pub id: i32,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FullScreenIntentPermission {
+    pub granted: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrentlyRingingAlarm {
+    pub id: Option<i32>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

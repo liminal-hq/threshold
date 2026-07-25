@@ -14,6 +14,7 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.webkit.WebView
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
@@ -301,6 +302,50 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             activity.setTurnScreenOn(false)
         }
         invoke.resolve()
+    }
+
+    // Android 14+ (API 34) made USE_FULL_SCREEN_INTENT a user-revocable special permission
+    // (Settings > Apps > Threshold > Special app access > "Full screen intent notifications").
+    // When it's off, canUseFullScreenIntent() returns false and the OS silently downgrades the
+    // ringing notification's full-screen intent to an ordinary heads-up banner instead of
+    // launching the ringing Activity -- no error, no callback. Below API 34 the permission is
+    // granted unconditionally by declaring it in the manifest, so there's nothing to check.
+    @Command
+    fun checkFullScreenIntentPermission(invoke: Invoke) {
+        val granted = if (Build.VERSION.SDK_INT >= 34) {
+            val notificationManager =
+                activity.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            notificationManager.canUseFullScreenIntent()
+        } else {
+            true
+        }
+        val ret = JSObject()
+        ret.put("granted", granted)
+        invoke.resolve(ret)
+    }
+
+    @Command
+    fun openFullScreenIntentSettings(invoke: Invoke) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                data = Uri.parse("package:${activity.packageName}")
+            }
+            activity.startActivity(intent)
+        }
+        invoke.resolve()
+    }
+
+    // Ringing-screen navigation is otherwise driven entirely by the notification's full-screen
+    // intent (see DeepLinkService.ts) -- if that launch is ever missed (permission denied, OS
+    // quirk, or the app is simply reopened from the home-screen icon while an alarm is still
+    // ringing), there is no other signal telling the frontend an alarm is active. This exposes
+    // AlarmRingingService's own in-memory state so the frontend can route there as a fallback.
+    @Command
+    fun getCurrentlyRingingAlarm(invoke: Invoke) {
+        val ret = JSObject()
+        val id = AlarmRingingService.currentlyRingingAlarmId
+        ret.put("id", if (id > 0) id else null)
+        invoke.resolve(ret)
     }
 
     @Command

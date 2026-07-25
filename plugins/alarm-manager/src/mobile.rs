@@ -232,6 +232,46 @@ impl<R: Runtime> AlarmManager<R> {
         Err(not_implemented_on_ios())
     }
 
+    /// Whether Android will actually honour the ringing notification's full-screen intent.
+    /// Always `true` on desktop/pre-API-34, where the concept doesn't apply.
+    pub fn check_full_screen_intent_permission(&self) -> crate::Result<bool> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
+            .run_mobile_plugin::<FullScreenIntentPermission>("checkFullScreenIntentPermission", ())
+            .map(|r| r.granted)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
+    }
+
+    /// Opens the OS settings screen for the full-screen-intent special permission.
+    pub fn open_full_screen_intent_settings(&self) -> crate::Result<()> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
+            .run_mobile_plugin("openFullScreenIntentSettings", ())
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
+    }
+
+    /// The alarm ID `AlarmRingingService` is currently ringing for, if any -- a fallback for
+    /// the frontend to detect an active alarm outside the normal deep-link launch path.
+    pub fn get_currently_ringing_alarm(&self) -> crate::Result<Option<i32>> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
+            .run_mobile_plugin::<CurrentlyRingingAlarm>("getCurrentlyRingingAlarm", ())
+            .map(|r| r.id)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
+    }
+
     pub fn mark_alarm_pipeline_ready(&self) -> crate::Result<()> {
         #[cfg(not(target_os = "android"))]
         {

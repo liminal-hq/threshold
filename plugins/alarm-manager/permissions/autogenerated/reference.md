@@ -7,6 +7,9 @@ Default permissions for the alarm-manager plugin
 - `allow-cancel`
 - `allow-pick-alarm-sound`
 - `allow-stop-ringing`
+- `allow-check-full-screen-intent-permission`
+- `allow-open-full-screen-intent-settings`
+- `allow-get-currently-ringing-alarm`
 
 ## Permission Table
 
@@ -39,6 +42,84 @@ Enables the cancel command without any pre-configured scope.
 <td>
 
 Denies the cancel command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:allow-check-full-screen-intent-permission`
+
+</td>
+<td>
+
+Enables the check_full_screen_intent_permission command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:deny-check-full-screen-intent-permission`
+
+</td>
+<td>
+
+Denies the check_full_screen_intent_permission command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:allow-get-currently-ringing-alarm`
+
+</td>
+<td>
+
+Enables the get_currently_ringing_alarm command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:deny-get-currently-ringing-alarm`
+
+</td>
+<td>
+
+Denies the get_currently_ringing_alarm command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:allow-open-full-screen-intent-settings`
+
+</td>
+<td>
+
+Enables the open_full_screen_intent_settings command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:deny-open-full-screen-intent-settings`
+
+</td>
+<td>
+
+Denies the open_full_screen_intent_settings command without any pre-configured scope.
 
 </td>
 </tr>

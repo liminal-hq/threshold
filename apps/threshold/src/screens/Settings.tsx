@@ -24,6 +24,8 @@ import {
 	DialogTitle,
 	DialogContent,
 	CircularProgress,
+	Alert,
+	Button,
 } from '@mui/material';
 import { MobileToolbar } from '../components/MobileToolbar';
 import { ArrowBack as ArrowBackIcon, FileDownload as FileDownloadIcon } from '@mui/icons-material';
@@ -58,10 +60,42 @@ const Settings: React.FC = () => {
 	const [snoozeLength, setSnoozeLength] = useState<number>(SettingsService.getSnoozeLength());
 	const [snoozeDialogOpen, setSnoozeDialogOpen] = useState(false);
 	const [isExportingLogs, setIsExportingLogs] = useState(false);
+	const [fullScreenIntentGranted, setFullScreenIntentGranted] = useState<boolean | null>(null);
 
 	useEffect(() => {
 		setIsMobile(PlatformUtils.isMobile());
 		setIsAndroid(PlatformUtils.getPlatform() === 'android');
+	}, []);
+
+	// Re-checked on every window focus regain (not just on mount) so the banner clears itself
+	// after the user flips the toggle in system Settings and switches back, without needing to
+	// leave and re-enter this screen.
+	useEffect(() => {
+		if (PlatformUtils.getPlatform() !== 'android') return;
+
+		let unlisten: (() => void) | undefined;
+
+		const checkPermission = async () => {
+			try {
+				const { checkFullScreenIntentPermission } = await import('tauri-plugin-alarm-manager-api');
+				setFullScreenIntentGranted(await checkFullScreenIntentPermission());
+			} catch (e) {
+				console.error('Failed to check full-screen intent permission:', e);
+			}
+		};
+
+		checkPermission();
+		import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+			getCurrentWindow()
+				.onFocusChanged(({ payload: focused }) => {
+					if (focused) checkPermission();
+				})
+				.then((fn) => {
+					unlisten = fn;
+				});
+		});
+
+		return () => unlisten?.();
 	}, []);
 
 	const handleTimeFormatChange = (enabled: boolean) => {
@@ -151,6 +185,35 @@ const Settings: React.FC = () => {
 				) : undefined
 			}
 		>
+			{isAndroid && fullScreenIntentGranted === false && (
+				<ListItem sx={{ px }}>
+					<Alert
+						severity="warning"
+						sx={{ width: '100%' }}
+						action={
+							<Button
+								color="inherit"
+								size="small"
+								onClick={async () => {
+									try {
+										const { openFullScreenIntentSettings } =
+											await import('tauri-plugin-alarm-manager-api');
+										await openFullScreenIntentSettings();
+									} catch (e) {
+										console.error('Failed to open full-screen intent settings:', e);
+									}
+								}}
+							>
+								Enable
+							</Button>
+						}
+					>
+						The ringing screen won't appear over the lock screen until "Full screen intent
+						notifications" is enabled for Threshold.
+					</Alert>
+				</ListItem>
+			)}
+
 			<ListItem sx={{ px }}>
 				<FormControl fullWidth>
 					<InputLabel id="silence-after-label">Silence After</InputLabel>
