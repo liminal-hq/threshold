@@ -2,6 +2,14 @@ name: Test
 
 on:
   pull_request:
+  # Also run on push to main solely to warm test-rust/test-kotlin-*'s caches under main's own
+  # branch scope -- GitHub Actions caches only fall back current branch -> base branch -> default
+  # branch, and with no push-to-main trigger at all, no cache ever existed at that fallback tier.
+  # Every brand-new PR branch's first run was a guaranteed full cold compile forever, not just
+  # until some cache warmed up. The lint/typecheck/report jobs below stay pull_request-only via
+  # their own `if:` since they don't populate any cache and add nothing by re-running on merge.
+  push:
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -10,6 +18,7 @@ concurrency:
 jobs:
   test-js:
     runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -56,6 +65,7 @@ jobs:
 
   lint-mermaid:
     runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -79,6 +89,7 @@ jobs:
 
   check-license-headers:
     runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -323,7 +334,7 @@ jobs:
 
   report:
     runs-on: ubuntu-24.04
-    if: always()
+    if: always() && github.event_name == 'pull_request'
     needs:
       [
         test-js,
