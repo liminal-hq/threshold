@@ -1,6 +1,2 @@
-🔔 What's New
-• Alarm scheduling now runs fully natively for better reliability
-
-🐛 Fixes
-• Fixed sync status getting stuck
-• Fixed a data-loss bug affecting active days on repeating alarms
+🔧 Behind the Scenes
+• Improved on-device diagnostics to help track down sync and ringing issues faster

@@ -4,6 +4,52 @@ This document tracks all releases of the Threshold application.
 
 ---
 
+## Version 0.3.0
+
+**Release Date:** July 25, 2026
+**Status:** Released
+
+> [!NOTE]
+> This release fixes a bug where Android could silently disable the ringing screen's lock-screen takeover, adds a fallback so the ringing screen is always reachable even when that happens, and gives Settings > Developer a diagnostic panel for the handful of Android permissions that can silently degrade alarm reliability.
+
+### ✨ New Features
+
+**Alarm Permission Diagnostics**
+
+- Settings > Developer now shows live status for the four Android permissions/OS states that can silently degrade alarm reliability -- full-screen intent, exact-alarm scheduling, battery-optimization exemption, and notifications -- each with a "Fix" button that deep-links straight to the relevant OS settings screen
+
+### 🐛 Bug Fixes
+
+- Fixed the ringing screen not appearing over the lock screen when Android's full-screen-intent special permission is off (Android 14+), with a warning banner in Settings prompting the user to re-enable it
+- Added a fallback so the ringing screen is reachable even if the automatic full-screen launch is missed for any reason -- reopening the app manually, or switching back to it, now still routes to an active alarm
+- Fixed `minimizeApp` blocking on writing its native event log line
+- Fixed `pick_alarm_sound`'s open-ended picker wait tying up a shared runtime thread instead of awaiting asynchronously
+- Native event logs are now bridged into the existing log export feature (phone and Wear), so on-device failures are diagnosable from one export
+
+### 🛠️ Build and Release
+
+- Split Google Play deployment out of the `build-android` CI job
+- Fixed `release-build.yml` being schema-invalid due to secrets referenced in a step `if:`
+
+### 📚 Documentation
+
+- Added home screen widget SVG mockups for next-alarm and history widgets (design reference, no shipped code)
+
+### 📝 Technical Details
+
+**Major PRs Merged:**
+
+- [#282](https://github.com/liminal-hq/threshold/pull/282) - Detect the full-screen-intent permission and add a ringing-screen fallback, plus a Developer settings permissions diagnostic
+- [#266](https://github.com/liminal-hq/threshold/pull/266) - Bridge native event logs into the existing export feature
+
+**Commit/Contributor Summary (`0.2.0` → `0.3.0`):**
+
+- **Commits:** 23
+- **Merged PRs:** 7
+- **Contributors:** Scott Morris
+
+---
+
 ## Version 0.2.0
 
 **Release Date:** July 15, 2026
