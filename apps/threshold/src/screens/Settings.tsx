@@ -370,6 +370,8 @@ const Settings: React.FC = () => {
 				</>
 			)}
 
+			<ListSubheader sx={{ bgcolor: 'transparent', mt: 2 }}>Testing</ListSubheader>
+
 			<ListItem sx={{ px }}>
 				<ListItemText
 					primary="Test Alarm Ring"
