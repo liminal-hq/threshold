@@ -101,6 +101,7 @@ jobs:
 
   test-rust:
     runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -159,6 +160,7 @@ jobs:
 
   test-kotlin-wear:
     runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     permissions:
       contents: read
       packages: read
@@ -194,6 +196,7 @@ jobs:
 
   test-kotlin-plugins:
     runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     permissions:
       contents: read
       packages: read
