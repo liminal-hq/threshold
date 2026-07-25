@@ -1,9 +1,7 @@
-🔔 What's New
-• Refreshed Home, Edit Alarm, and Settings screens with smoother animations
-• Predictive-back gesture support with a live screen peek
-• Alarm scheduling now runs fully natively for better reliability
-
 🐛 Fixes
-• Fixed a ghost notification left behind on alarm delete
-• Fixed scrolling getting stuck on some screens
-• Fixed sync issues with the Wear companion app
+• Fixed the ringing screen sometimes not appearing over the lock screen, with a Settings prompt to fix the underlying permission
+• Reopening the app while an alarm rings now always reaches the ringing screen
+• Fixed a couple of native alarm-sound and event-log bugs
+
+🔧 Developer Settings
+• Added a diagnostics panel showing the status of Android permissions that affect alarm reliability
