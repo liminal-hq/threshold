@@ -34,16 +34,14 @@ function androidHexToCssHex(hex: string): string {
 	return hex;
 }
 
-// Helper to convert Hex or HSL string to HSL string
-// Returns "hsl(h, s%, l%)"
-function colourToHsl(colour: string): string {
-	if (colour.startsWith('hsl')) return colour;
-
+// Parses a hex (#rgb, #rrggbb, #rrggbbaa), rgb(), or hsl() colour string into 0-255 RGB
+// channels. Shared by colourToHsl and the WCAG contrast helpers below so there's one parser
+// for every colour format this file accepts, rather than two copies drifting apart.
+function parseColourToRgb(colour: string): { r: number; g: number; b: number } {
 	let r = 0,
 		g = 0,
 		b = 0;
 
-	// Handle Hex
 	if (colour.startsWith('#')) {
 		let hex = colour.replace('#', '');
 
@@ -73,11 +71,50 @@ function colourToHsl(colour: string): string {
 			g = parseInt(parts[1]);
 			b = parseInt(parts[2]);
 		}
+	} else if (colour.startsWith('hsl')) {
+		const parts = colour.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+		if (parts) {
+			({ r, g, b } = hslToRgb(parseInt(parts[1]), parseInt(parts[2]), parseInt(parts[3])));
+		}
 	}
 
-	r /= 255;
-	g /= 255;
-	b /= 255;
+	return { r, g, b };
+}
+
+// Converts HSL (h in degrees, s/l as 0-100 percentages) to 0-255 RGB channels.
+function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+	const sFraction = s / 100;
+	const lFraction = l / 100;
+	const c = (1 - Math.abs(2 * lFraction - 1)) * sFraction;
+	const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+	const m = lFraction - c / 2;
+
+	let rPrime = 0,
+		gPrime = 0,
+		bPrime = 0;
+	if (h < 60) [rPrime, gPrime, bPrime] = [c, x, 0];
+	else if (h < 120) [rPrime, gPrime, bPrime] = [x, c, 0];
+	else if (h < 180) [rPrime, gPrime, bPrime] = [0, c, x];
+	else if (h < 240) [rPrime, gPrime, bPrime] = [0, x, c];
+	else if (h < 300) [rPrime, gPrime, bPrime] = [x, 0, c];
+	else [rPrime, gPrime, bPrime] = [c, 0, x];
+
+	return {
+		r: Math.round((rPrime + m) * 255),
+		g: Math.round((gPrime + m) * 255),
+		b: Math.round((bPrime + m) * 255),
+	};
+}
+
+// Helper to convert Hex or HSL string to HSL string
+// Returns "hsl(h, s%, l%)"
+function colourToHsl(colour: string): string {
+	if (colour.startsWith('hsl')) return colour;
+
+	const { r: r255, g: g255, b: b255 } = parseColourToRgb(colour);
+	const r = r255 / 255;
+	const g = g255 / 255;
+	const b = b255 / 255;
 
 	const max = Math.max(r, g, b),
 		min = Math.min(r, g, b);
@@ -131,6 +168,62 @@ function getShade(hsl: string, amount: number): string {
 	l = Math.max(l - amount, 0);
 
 	return `hsl(${h}, ${s}%, ${l}%)`;
+}
+
+// WCAG 2.x relative luminance -- https://www.w3.org/TR/WCAG21/#dfn-relative-luminance.
+// Accepts any format parseColourToRgb understands (hex, rgb(), hsl()).
+function relativeLuminance(colour: string): number {
+	const { r, g, b } = parseColourToRgb(colour);
+	const channel = (c: number) => {
+		const s = c / 255;
+		return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+	};
+	return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+// WCAG 2.x contrast ratio between two colours (1 = no contrast, 21 = maximum, e.g. black on
+// white). Order of the two arguments doesn't matter -- the darker/lighter pair is resolved
+// internally per the spec formula.
+export function getContrastRatio(foreground: string, background: string): number {
+	const l1 = relativeLuminance(foreground);
+	const l2 = relativeLuminance(background);
+	const lighter = Math.max(l1, l2);
+	const darker = Math.min(l1, l2);
+	return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Nudges `foreground`'s lightness (via getTint/getShade) until it clears `minRatio` against
+// `background`, defaulting to WCAG AA's 4.5:1 for normal text. Direction is chosen from the
+// background's own measured luminance (lighten against a dark background, darken against a
+// light one) rather than trusting a caller-supplied dark/light flag, so it stays correct even
+// if that flag and the actual rendered colour ever disagree. Lightness only has 101 integer
+// steps (0-100), and tinting/shading far enough always reaches pure white/black eventually --
+// which always beats any real background short of white-on-white or black-on-black -- so the
+// unreachable fallback below is a defensive backstop, not an expected outcome.
+export function ensureContrastAA(foreground: string, background: string, minRatio = 4.5): string {
+	if (getContrastRatio(foreground, background) >= minRatio) return foreground;
+
+	const baseHsl = colourToHsl(foreground);
+	const backgroundIsLight = relativeLuminance(background) > 0.5;
+
+	for (let step = 1; step <= 100; step++) {
+		const candidate = backgroundIsLight ? getShade(baseHsl, step) : getTint(baseHsl, step);
+		if (getContrastRatio(candidate, background) >= minRatio) return candidate;
+	}
+
+	return foreground;
+}
+
+// Picks whichever of white/black contrasts better against `background` (mirroring how MUI's
+// own getContrastText works for contained buttons/fills), nudging further only in the
+// vanishingly unlikely case neither clears `minRatio` outright.
+export function pickContrastText(background: string, minRatio = 4.5): string {
+	const best = getContrastRatio('#ffffff', background) >= getContrastRatio('#000000', background)
+		? '#ffffff'
+		: '#000000';
+	return getContrastRatio(best, background) >= minRatio
+		? best
+		: ensureContrastAA(best, background, minRatio);
 }
 
 export const deepNightLight: ThemeDefinition = {
