@@ -218,9 +218,10 @@ export function ensureContrastAA(foreground: string, background: string, minRati
 // own getContrastText works for contained buttons/fills), nudging further only in the
 // vanishingly unlikely case neither clears `minRatio` outright.
 export function pickContrastText(background: string, minRatio = 4.5): string {
-	const best = getContrastRatio('#ffffff', background) >= getContrastRatio('#000000', background)
-		? '#ffffff'
-		: '#000000';
+	const best =
+		getContrastRatio('#ffffff', background) >= getContrastRatio('#000000', background)
+			? '#ffffff'
+			: '#000000';
 	return getContrastRatio(best, background) >= minRatio
 		? best
 		: ensureContrastAA(best, background, minRatio);
@@ -340,10 +341,16 @@ const canadianCottageWinterDark: ThemeDefinition = {
 const georgianBayPlungeLight: ThemeDefinition = {
 	id: 'georgian-bay-plunge',
 	variables: {
-		'--app-colour-primary': 'hsl(190, 50%, 75%)',
-		'--app-colour-primary-contrast': 'hsl(210, 15%, 20%)',
-		'--app-colour-primary-shade': 'hsl(190, 50%, 65%)',
-		'--app-colour-primary-tint': 'hsl(190, 50%, 82%)',
+		// Darkened from the original hsl(190, 50%, 75%) -- that light a cyan only cleared
+		// 1.6:1 against this theme's white card background (WCAG AA needs 4.5:1), the exact
+		// class of bug reported in issue #290, just found here by this fix's own regression
+		// test rather than a user screenshot. Same hue/saturation, corrected lightness; shade/
+		// tint and contrastText recomputed to match (a primary this much darker now needs a
+		// light contrastText, not the original dark one).
+		'--app-colour-primary': 'hsl(190, 50%, 37%)',
+		'--app-colour-primary-contrast': '#ffffff',
+		'--app-colour-primary-shade': 'hsl(190, 50%, 27%)',
+		'--app-colour-primary-tint': 'hsl(190, 50%, 47%)',
 
 		'--app-colour-secondary': 'hsl(190, 50%, 35%)',
 		'--app-colour-secondary-contrast': '#ffffff',
@@ -356,7 +363,7 @@ const georgianBayPlungeLight: ThemeDefinition = {
 		'--app-border-colour': 'rgba(0, 0, 0, 0.12)',
 	},
 	muiPalette: {
-		primary: { main: 'hsl(190, 50%, 75%)', contrastText: 'hsl(210, 15%, 20%)' },
+		primary: { main: 'hsl(190, 50%, 37%)', contrastText: '#ffffff' },
 		secondary: { main: 'hsl(190, 50%, 35%)', contrastText: '#ffffff' },
 		background: { default: 'hsl(210, 15%, 96%)', paper: '#ffffff' },
 		text: { primary: 'hsl(210, 15%, 20%)' },
@@ -392,10 +399,13 @@ const georgianBayPlungeDark: ThemeDefinition = {
 export const boringLight: ThemeDefinition = {
 	id: 'boring-light',
 	variables: {
-		'--app-colour-primary': 'hsl(210, 100%, 50%)',
+		// hsl(210, 100%, 50%) only cleared 3.8:1 against this theme's white card background
+		// (WCAG AA needs 4.5:1) -- a small lightness nudge, same hue/saturation. #ffffff still
+		// clears the ratio against the corrected value, so its contrastText is unchanged.
+		'--app-colour-primary': 'hsl(210, 100%, 45%)',
 		'--app-colour-primary-contrast': '#ffffff',
-		'--app-colour-primary-shade': 'hsl(210, 100%, 40%)',
-		'--app-colour-primary-tint': 'hsl(210, 100%, 60%)',
+		'--app-colour-primary-shade': 'hsl(210, 100%, 35%)',
+		'--app-colour-primary-tint': 'hsl(210, 100%, 55%)',
 
 		'--app-colour-secondary': 'hsl(0, 0%, 50%)',
 		'--app-colour-secondary-contrast': '#ffffff',
@@ -408,7 +418,7 @@ export const boringLight: ThemeDefinition = {
 		'--app-border-colour': 'rgba(0, 0, 0, 0.12)',
 	},
 	muiPalette: {
-		primary: { main: 'hsl(210, 100%, 50%)' },
+		primary: { main: 'hsl(210, 100%, 45%)' },
 		secondary: { main: 'hsl(0, 0%, 50%)', contrastText: '#ffffff' },
 		background: { default: '#ffffff', paper: '#ffffff' },
 		text: { primary: '#000000' },
@@ -425,8 +435,12 @@ export const boringDark: ThemeDefinition = {
 		'--app-colour-step-100': 'hsl(0, 0%, 18%)',
 		'--app-colour-step-200': 'hsl(0, 0%, 22%)',
 
-		'--app-colour-primary': 'hsl(210, 100%, 50%)',
-		'--app-colour-primary-contrast': '#ffffff',
+		// hsl(210, 100%, 50%) only cleared 3.8:1 against this theme's card background (WCAG AA
+		// needs 4.5:1). Lightening it to fix that (dark backgrounds need a lighter foreground)
+		// tips its own contrastText from white to black -- #ffffff only clears 3.2:1 against
+		// the corrected, lighter value, #000000 clears 6.6:1.
+		'--app-colour-primary': 'hsl(210, 100%, 57%)',
+		'--app-colour-primary-contrast': '#000000',
 
 		'--app-colour-secondary': 'hsl(0, 0%, 50%)',
 		'--app-colour-secondary-contrast': 'hsl(0, 0%, 10%)',
@@ -434,7 +448,7 @@ export const boringDark: ThemeDefinition = {
 		'--app-colour-secondary-tint': 'hsl(0, 0%, 60%)',
 	},
 	muiPalette: {
-		primary: { main: 'hsl(210, 100%, 50%)' },
+		primary: { main: 'hsl(210, 100%, 57%)', contrastText: '#000000' },
 		secondary: { main: 'hsl(0, 0%, 50%)', contrastText: 'hsl(0, 0%, 10%)' },
 		background: { default: 'hsl(0, 0%, 12%)', paper: 'hsl(0, 0%, 16%)' },
 		text: { primary: 'hsl(0, 0%, 90%)' },
@@ -468,23 +482,57 @@ export function generateSystemTheme(
 		getColour(palettes.system_accent1, '600') || getColour(palettes.system_accent1, '500');
 
 	// If system primary is missing, fall back to base
-	const primary = primaryHex ? colourToHsl(primaryHex) : base.variables['--app-colour-primary'];
+	const primaryRaw = primaryHex ? colourToHsl(primaryHex) : base.variables['--app-colour-primary'];
 
 	const secondaryHex =
 		getColour(palettes.system_accent3, '600') || getColour(palettes.system_accent3, '500');
 
 	// If system secondary is missing, fall back to base
-	const secondary = secondaryHex
+	const secondaryRaw = secondaryHex
 		? colourToHsl(secondaryHex)
 		: base.variables['--app-colour-secondary'];
 
-	// Calculate contrasts for Primary
-	const primaryContrast = '#ffffff';
-	const secondaryContrast = isDark
-		? getColour(palettes.system_neutral1, '900') || '#000000'
-		: '#ffffff';
+	// Backgrounds first -- primary/secondary get validated against these below, so they need to
+	// be resolved before that contrast check can happen.
+	const backgroundOverrides: Record<string, string> = {};
+	if (isDark) {
+		const bg = getColour(palettes.system_neutral1, '900');
+		if (bg) {
+			backgroundOverrides['--app-background-colour'] = bg;
+			backgroundOverrides['--app-card-background'] =
+				getColour(palettes.system_neutral1, '800') || '#1e1e1e';
+			backgroundOverrides['--app-text-colour'] =
+				getColour(palettes.system_neutral1, '100') || '#ffffff';
+		}
+	} else {
+		const bg = getColour(palettes.system_neutral1, '50');
+		if (bg) {
+			backgroundOverrides['--app-background-colour'] = bg; // Very light
+			backgroundOverrides['--app-card-background'] =
+				getColour(palettes.system_neutral1, '10') || '#ffffff'; // White-ish
+			backgroundOverrides['--app-text-colour'] =
+				getColour(palettes.system_neutral1, '900') || '#000000';
+		}
+	}
+
+	const paperBackground =
+		backgroundOverrides['--app-card-background'] || base.muiPalette.background.paper;
+
+	// Wallpaper-extracted colours have no guarantee of being readable as text against whatever
+	// they end up rendered on -- unlike this file's hand-authored theme colours, which were
+	// tuned by eye, there's no human in the loop here to notice a bad wallpaper pairing. Nudge
+	// both towards the actual dialog/card surface (paperBackground, now pinned to the theme's
+	// real declared value rather than MUI's auto-lightened one -- see the MuiPaper fix in
+	// ThemeContext.tsx) so a plain-text Button using primary/secondary as its colour is always
+	// legible, then derive contrastText from *that* corrected colour rather than assuming white
+	// (see issue #290).
+	const primary = ensureContrastAA(primaryRaw, paperBackground);
+	const secondary = ensureContrastAA(secondaryRaw, paperBackground);
+	const primaryContrast = pickContrastText(primary);
+	const secondaryContrast = pickContrastText(secondary);
 
 	const overrides: Record<string, string> = {
+		...backgroundOverrides,
 		'--app-colour-primary': primary,
 		'--app-colour-primary-contrast': primaryContrast,
 		// Calculate tints/shades for system theme
@@ -497,33 +545,16 @@ export function generateSystemTheme(
 		'--app-colour-secondary-shade': getShade(secondary, 10),
 	};
 
-	// Optional: Full Monet Backgrounds
-	if (isDark) {
-		const bg = getColour(palettes.system_neutral1, '900');
-		if (bg) {
-			overrides['--app-background-colour'] = bg;
-			overrides['--app-card-background'] = getColour(palettes.system_neutral1, '800') || '#1e1e1e';
-			overrides['--app-text-colour'] = getColour(palettes.system_neutral1, '100') || '#ffffff';
-		}
-	} else {
-		const bg = getColour(palettes.system_neutral1, '50');
-		if (bg) {
-			overrides['--app-background-colour'] = bg; // Very light
-			overrides['--app-card-background'] = getColour(palettes.system_neutral1, '10') || '#ffffff'; // White-ish
-			overrides['--app-text-colour'] = getColour(palettes.system_neutral1, '900') || '#000000';
-		}
-	}
-
 	return {
 		id: 'system',
 		variables: { ...base.variables, ...overrides },
 		muiPalette: {
 			...base.muiPalette,
-			primary: { main: primary },
+			primary: { main: primary, contrastText: primaryContrast },
 			secondary: { main: secondary, contrastText: secondaryContrast },
 			background: {
 				default: overrides['--app-background-colour'] || base.muiPalette.background.default,
-				paper: overrides['--app-card-background'] || base.muiPalette.background.paper,
+				paper: paperBackground,
 			},
 			text: {
 				primary: overrides['--app-text-colour'] || base.muiPalette.text.primary,

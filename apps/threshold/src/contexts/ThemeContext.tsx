@@ -148,7 +148,18 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 				...activeThemeDef.muiPalette,
 			},
 			components: {
-				MuiCard: {
+				// MUI's dark-mode palette applies an automatic elevation overlay to every Paper-
+				// based surface -- a white-gradient backgroundImage, scaled by elevation -- which
+				// lightens it well beyond the theme's declared background.paper/background.default.
+				// This used to be scoped to just MuiCard, but Card is only one of many Paper-based
+				// surfaces (Dialog, Popover, Menu, MUI X's picker dialogs all render through the
+				// same mechanism, at a *higher* elevation than Card's default). Scoping this to
+				// Paper itself is what makes background.paper actually mean what the theme
+				// declares everywhere, not just on cards -- see issue #290, where an unpinned
+				// Dialog surface silently broke a contrast pairing that was only ever validated
+				// against the theme's nominal (not actually-rendered) background colour. Card
+				// renders as a Paper internally, so this covers it too without a separate override.
+				MuiPaper: {
 					styleOverrides: {
 						root: {
 							backgroundImage: 'none',
