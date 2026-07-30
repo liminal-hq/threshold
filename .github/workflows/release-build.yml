@@ -571,10 +571,18 @@ jobs:
           if [ -n "${symbols_dir:-}" ] && [ -d "$symbols_dir" ]; then
             sample_lib=$(find "$symbols_dir" -name "libthreshold.so" | head -n1 || true)
             if [ -n "${sample_lib:-}" ] && file "$sample_lib" | grep -q "not stripped"; then
+              symbols_zip="$GITHUB_WORKSPACE/release-assets/android/threshold-phone-native-debug-symbols-v${phone_version_name}-${phone_version_code}.zip"
               (
                 cd "$symbols_dir"
-                zip -r -q "$GITHUB_WORKSPACE/release-assets/android/threshold-phone-native-debug-symbols-v${phone_version_name}-${phone_version_code}.zip" arm64-v8a/ armeabi-v7a/ x86/ x86_64/ || true
-              )
+                if command -v zip >/dev/null 2>&1; then
+                  zip -r -q "$symbols_zip" arm64-v8a/ armeabi-v7a/ x86/ x86_64/
+                else
+                  # `zip` isn't installed in the tauri-ci-mobile image; `jar` (bundled with the
+                  # JDK Gradle already requires) writes a standard PKZIP archive and is a drop-in
+                  # replacement -- Play's deobfuscation upload just needs a real zip file.
+                  jar cf "$symbols_zip" arm64-v8a/ armeabi-v7a/ x86/ x86_64/
+                fi
+              ) || echo "::warning::Could not archive native debug symbols; continuing without them" >&2
             fi
           fi
 
