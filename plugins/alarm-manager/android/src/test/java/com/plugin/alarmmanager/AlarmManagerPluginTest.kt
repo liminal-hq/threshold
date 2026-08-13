@@ -286,6 +286,66 @@ class AlarmManagerPluginTest {
         assertEquals(0, dispatchCalls)
     }
 
+    // --- enrichPayloadForDispatch (issue #255 Phase 3A) -----------------------------------------
+
+    @Test
+    fun `enriches a fired-event payload with the envelope's own eventId and handledNatively`() {
+        val queue = DurableEventQueue(store, EVENT_LOG_KEY)
+        val basePayload = JSONObject().apply {
+            put("id", 7)
+            put("actualFiredAt", 1_755_100_800_000L)
+        }
+        val eventId = queue.enqueue(TOPIC_FIRED, basePayload.toString(), handledNatively = setOf("watch-ring"))
+
+        val dispatchedPayloads = mutableListOf<String>()
+        drainAndDispatch(queue) { _, payload -> dispatchedPayloads.add(payload); true }
+
+        val enriched = JSONObject(dispatchedPayloads.single())
+        assertEquals(7, enriched.getInt("id"))
+        assertEquals(1_755_100_800_000L, enriched.getLong("actualFiredAt"))
+        assertEquals(eventId, enriched.getString("eventId"))
+        val handledNatively = enriched.getJSONArray("handledNatively")
+        assertEquals(1, handledNatively.length())
+        assertEquals("watch-ring", handledNatively.getString(0))
+    }
+
+    @Test
+    fun `a fired event with no bus tags dispatches with an empty handledNatively array`() {
+        val queue = DurableEventQueue(store, EVENT_LOG_KEY)
+        queue.enqueue(TOPIC_FIRED, JSONObject().put("id", 1).toString())
+
+        val dispatchedPayloads = mutableListOf<String>()
+        drainAndDispatch(queue) { _, payload -> dispatchedPayloads.add(payload); true }
+
+        val enriched = JSONObject(dispatchedPayloads.single())
+        assertEquals(0, enriched.getJSONArray("handledNatively").length())
+    }
+
+    @Test
+    fun `non-fired topics are dispatched with their payload unchanged`() {
+        val queue = DurableEventQueue(store, EVENT_LOG_KEY)
+        val snoozePayload = JSONObject().put("id", 3).toString()
+        queue.enqueue(TOPIC_SNOOZE, snoozePayload)
+
+        val dispatchedPayloads = mutableListOf<String>()
+        drainAndDispatch(queue) { _, payload -> dispatchedPayloads.add(payload); true }
+
+        assertEquals(snoozePayload, dispatchedPayloads.single())
+    }
+
+    @Test
+    fun `enrichPayloadForDispatch falls back to the unmodified payload if it isn't valid JSON`() {
+        val malformed = DurableEventQueue.Envelope(
+            topic = TOPIC_FIRED,
+            payload = "not json",
+            eventId = "some-id",
+            publishedAt = 0L,
+            handledNatively = emptySet(),
+        )
+
+        assertEquals("not json", enrichPayloadForDispatch(malformed))
+    }
+
     // --- fixtures ------------------------------------------------------------------------------
 
     private fun legacyFired(id: Int, actualFiredAt: Long): JSONObject =

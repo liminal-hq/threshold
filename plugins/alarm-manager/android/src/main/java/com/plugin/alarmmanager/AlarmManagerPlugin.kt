@@ -185,12 +185,40 @@ internal fun drainAndDispatch(queue: DurableEventQueue, dispatch: (topic: String
 
     val handledEventIds = mutableSetOf<String>()
     for (envelope in drained) {
-        if (dispatch(envelope.topic, envelope.payload)) {
+        if (dispatch(envelope.topic, enrichPayloadForDispatch(envelope))) {
             handledEventIds.add(envelope.eventId)
         }
     }
     if (handledEventIds.isNotEmpty()) queue.commit(handledEventIds)
     return handledEventIds.size
+}
+
+/**
+ * Returns [envelope]'s payload as-is, except for [TOPIC_FIRED] where it's enriched with
+ * `eventId`/`handledNatively` before dispatch -- per
+ * docs/architecture/255-phase3-payload-contract.md, these are the two fields Rust's
+ * `NativeAlarmFiredPayload` needs to carry the tags `AlarmReceiver.kt`'s `publishAlarmFiredToBus`
+ * collected (e.g. `"watch-ring"`) and the envelope's own stable ID through to the
+ * `alarm-manager:native-fired` Tauri event, whether this is the immediate post-enqueue drain or
+ * a later retry of the same queued entry. Only [TOPIC_FIRED] gains these fields -- the contract
+ * only specifies them for the fired event, and the other three topics' Rust payload structs
+ * don't declare them.
+ *
+ * [envelope.payload][DurableEventQueue.Envelope.payload] is always caller-constructed JSON (see
+ * [notifyAlarmFired]), so re-parsing it here should never fail in practice -- the `catch` exists
+ * only to fail safe (dispatch the entry unenriched rather than drop it) if it somehow does.
+ */
+internal fun enrichPayloadForDispatch(envelope: DurableEventQueue.Envelope): String {
+    if (envelope.topic != TOPIC_FIRED) return envelope.payload
+    return try {
+        JSONObject(envelope.payload).apply {
+            put("eventId", envelope.eventId)
+            put("handledNatively", JSONArray(envelope.handledNatively.toList()))
+        }.toString()
+    } catch (e: Exception) {
+        Log.w(TAG, "Failed to enrich fired-event payload for eventId ${envelope.eventId}, dispatching unenriched", e)
+        envelope.payload
+    }
 }
 
 private fun keyValueStore(context: Context): KeyValueStore = SharedPreferencesKeyValueStore(context, CALLBACK_PREFS)
@@ -252,13 +280,18 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             private set
 
         @Synchronized
-        fun notifyAlarmFired(context: Context, alarmId: Int, actualFiredAt: Long = System.currentTimeMillis()) {
+        fun notifyAlarmFired(
+            context: Context,
+            alarmId: Int,
+            actualFiredAt: Long = System.currentTimeMillis(),
+            handledNatively: Set<String> = emptySet(),
+        ) {
             if (alarmId <= 0) return
             val payload = JSONObject().apply {
                 put("id", alarmId)
                 put("actualFiredAt", actualFiredAt)
             }
-            enqueueAndDrain(context, TOPIC_FIRED, payload)
+            enqueueAndDrain(context, TOPIC_FIRED, payload, handledNatively)
         }
 
         @Synchronized
@@ -299,8 +332,13 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         // Every event flows through the log -- there is no separate "dispatch immediately" path any more. When the pipeline is already up and the right channel is registered, drainQueuedEvents() below delivers this same entry within the same call, so the net effect (and latency) matches the old immediate-dispatch path; when it isn't, the entry simply stays in the log until markAlarmPipelineReady() (or a later event of any topic) drains it. See drainAndDispatch()'s KDoc for the two deliberate, forward-referenced (issue #255) consequences of always draining the whole backlog.
         @Synchronized
-        private fun enqueueAndDrain(context: Context, topic: String, payload: JSONObject) {
-            val eventId = eventQueue(context).enqueue(topic, payload.toString())
+        private fun enqueueAndDrain(
+            context: Context,
+            topic: String,
+            payload: JSONObject,
+            handledNatively: Set<String> = emptySet(),
+        ) {
+            val eventId = eventQueue(context).enqueue(topic, payload.toString(), handledNatively)
             NativeEventLog.log(context, TAG, "Enqueued '$topic' event $eventId: $payload")
             instance?.drainQueuedEvents()
         }

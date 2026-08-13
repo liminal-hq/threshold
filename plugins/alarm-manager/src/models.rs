@@ -71,6 +71,18 @@ pub struct RingEventPayload {
 pub struct NativeAlarmFiredPayload {
     pub id: i32,
     pub actual_fired_at: i64,
+    /// The `DurableEventQueue` envelope's UUID for this event, stable across the immediate
+    /// Channel send and a later retry of the same queued entry (see
+    /// `AlarmManagerPlugin.enrichPayloadForDispatch` on the Kotlin side). `#[serde(default)]`
+    /// so this deserializes cleanly from a payload queued before this field existed.
+    #[serde(default)]
+    pub event_id: Option<String>,
+    /// Side-effect tags `NativeEventBus.publish()`'s listeners reported handling this event
+    /// with before Rust ever saw it (e.g. `"watch-ring"`). `#[serde(default)]` for the same
+    /// pre-upgrade-payload reason as `event_id`. See
+    /// docs/architecture/255-phase3-payload-contract.md for the frozen shape.
+    #[serde(default)]
+    pub handled_natively: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -125,5 +137,46 @@ mod tests {
 
         assert_eq!(imported.active_days, vec![1, 3, 5]);
         assert_eq!(imported.trigger_at, 1783656000000);
+    }
+
+    #[test]
+    fn native_alarm_fired_payload_deserializes_old_two_field_shape_with_serde_defaults() {
+        // Issue #255 Phase 3A added event_id/handled_natively to this struct. A payload sitting
+        // in a device's DurableEventQueue from before the update ships (or emitted by a desktop
+        // build, which never sets them) still carries only the original two fields -- this must
+        // keep deserializing rather than erroring, with the new fields defaulting to
+        // None/empty per docs/architecture/255-phase3-payload-contract.md.
+        let json = r#"{"id": 42, "actualFiredAt": 1755100800000}"#;
+
+        let payload: NativeAlarmFiredPayload =
+            serde_json::from_str(json).expect("should deserialize old-shape payload");
+
+        assert_eq!(payload.id, 42);
+        assert_eq!(payload.actual_fired_at, 1755100800000);
+        assert_eq!(payload.event_id, None);
+        assert!(payload.handled_natively.is_empty());
+    }
+
+    #[test]
+    fn native_alarm_fired_payload_deserializes_new_shape_with_event_id_and_handled_natively() {
+        // Mirrors the exact JSON AlarmManagerPlugin.kt's enrichPayloadForDispatch now sends for
+        // the fired-event Channel/queue payload -- see the frozen contract doc's example.
+        let json = r#"{
+            "id": 123,
+            "actualFiredAt": 1755100800000,
+            "eventId": "b3f1c2a4-0000-0000-0000-000000000000",
+            "handledNatively": ["watch-ring"]
+        }"#;
+
+        let payload: NativeAlarmFiredPayload =
+            serde_json::from_str(json).expect("should deserialize new-shape payload");
+
+        assert_eq!(payload.id, 123);
+        assert_eq!(payload.actual_fired_at, 1755100800000);
+        assert_eq!(
+            payload.event_id,
+            Some("b3f1c2a4-0000-0000-0000-000000000000".to_string())
+        );
+        assert_eq!(payload.handled_natively, vec!["watch-ring".to_string()]);
     }
 }
