@@ -1,14 +1,16 @@
 # Issue #255 Phase 0: ContentProvider Registration-Ordering Spike — Test Protocol
 
-**Status:** Throwaway spike, not production code. Read this alongside `plugins/wear-sync/android/src/main/java/ca/liminalhq/threshold/wearsync/BusInitProvider.kt`, which has the full rationale in its KDoc.
+**Status:** Throwaway spike, not production code. Read this alongside `plugins/wear-sync/android/src/debug/java/ca/liminalhq/threshold/wearsync/BusInitProvider.kt`, which has the full rationale in its KDoc.
 
 ## What this spike is trying to prove
 
 Issue #255 plans a shared native event bus where every subscribing plugin registers its listeners from a manifest-declared `ContentProvider`, on the theory that `ContentProvider.onCreate()` is guaranteed by the platform to run before any `Activity`/`Service`/`BroadcastReceiver` callback in the app, even on a genuinely cold, multi-plugin process start. That guarantee is the load-bearing assumption for the whole later design: if it doesn't hold in practice on real devices, listeners could register too late to catch an `AlarmReceiver.onReceive()` that fires immediately on cold start (the exact failure mode this bus exists to prevent). This phase adds one throwaway `ContentProvider` (`BusInitProvider`, in wear-sync) plus one extra log line in `AlarmReceiver.onReceive()`, both writing timestamped entries through the existing `NativeEventLog` mechanism, so the ordering can be checked directly against a real device's log export. Nothing here is meant to survive past Phase 0 — no production code depends on `BusInitProvider` today.
 
+`BusInitProvider` and its manifest `<provider>` entry live entirely under `src/debug/` in the wear-sync plugin (both `src/debug/java/.../BusInitProvider.kt` and `src/debug/AndroidManifest.xml`), not `src/main/`. That's deliberate: it does synchronous file I/O and (on API 26-27) private-API reflection on every cold start, which has no business shipping in a release build, so it is structurally excluded from a release variant rather than merely gated behind a runtime `BuildConfig.DEBUG` check. **You must build the `debug` variant for every test below** — a `release` build won't contain `BusInitProvider` at all, so there's nothing to test.
+
 ## Before you start
 
-- Build a debug APK with these changes and install it on a real device (an emulator can behave differently for cold-start process death/broadcast delivery timing, so a real device is strongly preferred for the ordering checks below).
+- Build a **debug** APK with these changes and install it on a real device (an emulator can behave differently for cold-start process death/broadcast delivery timing, so a real device is strongly preferred for the ordering checks below).
 - You'll need the device's package name (`ca.liminalhq.threshold` unless overridden) and either `adb shell run-as` or a rooted/debuggable-build file pull to retrieve `NativeEventLog`'s output, or simpler: use the app's own "Export event log" feature if there's a UI entry point for it, since that already merges every `Threshold*.log` file (`Threshold-wear-sync.log` and `Threshold-alarm-manager.log` in this case) it finds in `app_log_dir()`.
 - Each `NativeEventLog` line is timestamped to millisecond precision (`yyyy-MM-dd HH:mm:ss.SSS`), so ordering comparisons don't depend on log line order — read the actual timestamps.
 
@@ -51,11 +53,13 @@ This checks the ordering when the process is alive-but-backgrounded rather than 
 
 The later phases of #255 depend on `ContentProvider.onCreate()` running on the main thread without becoming a startup bottleneck. `BusInitProvider` has a debug-only, build-time-gated stall for exactly this check — see `maybeStallForSpikeThreadingCheck()` in `BusInitProvider.kt` and the `busSpikeStallMs` Gradle property in `plugins/wear-sync/android/build.gradle.kts`.
 
+**Do not exceed 2000ms.** `AlarmReceiver.onReceive()` calls `startForegroundService()` in this same cold-start chain, and Android gives that call roughly a 5-second window before throwing `ForegroundServiceDidNotStartInTimeException` (or ANRing outright). A stall anywhere near that window doesn't produce useful evidence about the threading contract — it produces a crash that looks like a failure of the whole `ContentProvider` approach rather than what it actually is (an artificially injected delay far past anything a real `onCreate()` should ever take). `maybeStallForSpikeThreadingCheck()` clamps the value to 2000ms in code as a safety net regardless of what's requested, but treat that as a backstop, not a target — request at most 2000ms in the first place, and start lower (e.g. 500-1000ms) if you just want to confirm the mechanism works before pushing toward the cap.
+
 1. Build a debug APK with the stall enabled, e.g.:
    ```
-   ./gradlew assembleDebug -PbusSpikeStallMs=3000
+   ./gradlew assembleDebug -PbusSpikeStallMs=1000
    ```
-   (run from wherever this plugin is normally built for the app — this flag only has an effect on debug builds; it's a no-op if the app is built without passing it, and it's structurally impossible to enable on a release build since the check is gated on `BuildConfig.DEBUG`.)
+   (run from wherever this plugin is normally built for the app — this flag only has an effect on debug builds; it's a no-op if the app is built without passing it, and it's structurally impossible to enable on a release build since `BusInitProvider` itself doesn't exist outside `src/debug/`.)
 2. Install the resulting APK and repeat Test 1 (alarm-fire cold start).
 3. With StrictMode enabled (Developer Options → confirm "Strict Mode enabled" is on, or add a temporary `StrictMode.setThreadPolicy`/`setVmPolicy` call if the app doesn't already enable it in debug builds), watch logcat for any StrictMode violation around the alarm-fire window.
 4. Time the gap between the alarm's scheduled fire time and audible/visible ringing start (stopwatch against the device clock is fine for a rough spike check — this doesn't need to be precise). **Pass condition:** no measurable added delay to `AlarmRingingService`'s audio start beyond the deliberately-injected `busSpikeStallMs` itself, and no StrictMode violations attributable to `BusInitProvider`.

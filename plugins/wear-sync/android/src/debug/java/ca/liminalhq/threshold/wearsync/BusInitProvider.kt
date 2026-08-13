@@ -16,6 +16,13 @@ import android.util.Log
 
 private const val TAG = "BusInitProvider"
 
+// Safety cap for maybeStallForSpikeThreadingCheck() below -- AlarmReceiver.onReceive() calls
+// startForegroundService() in this same cold-start chain, and Android gives that call roughly
+// a 5s window before throwing ForegroundServiceDidNotStartInTimeException / ANRing. A stall
+// anywhere near that window isn't "more evidence", it's a different failure mode, so it's
+// clamped in code rather than trusting the Gradle property alone.
+private const val MAX_SPIKE_STALL_MS = 2000
+
 /**
  * Throwaway spike for issue #255 Phase 0.
  *
@@ -42,7 +49,13 @@ class BusInitProvider : ContentProvider() {
             return true
         }
 
-        Log.d(TAG, "BusInitProvider.onCreate() fired")
+        // Deliberately independent of the NativeEventLog call below: NativeEventLog swallows
+        // its own write failures (see its own try/catch), and Test 2 (BOOT_COMPLETED) in the
+        // protocol doc is exactly the scenario where credential-encrypted storage may not be
+        // accessible yet under Direct Boot. This plain logcat line is a second signal that
+        // survives even if that file write silently fails, so "no NativeEventLog evidence"
+        // doesn't get misread as "ordering violated".
+        Log.i(TAG, "BusInitProvider.onCreate() fired")
         NativeEventLog.log(ctx, TAG, "BusInitProvider.onCreate() fired")
 
         verifySingleProcessInvariant(ctx)
@@ -108,6 +121,12 @@ class BusInitProvider : ContentProvider() {
         } catch (e: ReflectiveOperationException) {
             Log.w(TAG, "Reflection fallback for process name failed on API ${Build.VERSION.SDK_INT}", e)
             null
+        } catch (e: SecurityException) {
+            // Some OEM/enterprise builds harden reflection access on API 26-27 and throw
+            // SecurityException instead of a ReflectiveOperationException -- catch it too so
+            // this degrades to "can't verify" instead of crashing onCreate() outright.
+            Log.w(TAG, "Reflection fallback for process name blocked by SecurityException on API ${Build.VERSION.SDK_INT}", e)
+            null
         }
     }
 
@@ -117,21 +136,30 @@ class BusInitProvider : ContentProvider() {
      * `BuildConfig.BUS_SPIKE_STALL_MS` in build.gradle.kts) -- normal debug builds are
      * unaffected. Lets a human tester simulate a slow/blocking `onCreate()` during cold
      * start, to confirm on a real device that it doesn't measurably delay
-     * AlarmRingingService's audio start and doesn't trip StrictMode. Delete this method
-     * (and the Gradle property) once Phase 0 wraps up.
+     * AlarmRingingService's audio start and doesn't trip StrictMode. Clamped to
+     * [MAX_SPIKE_STALL_MS] regardless of what's requested, since AlarmReceiver.onReceive()'s
+     * startForegroundService() call is in this same cold-start chain and a stall long enough
+     * to matter there stops being a threading-contract check and starts being a
+     * ForegroundServiceDidNotStartInTimeException. Delete this method (and the Gradle
+     * property) once Phase 0 wraps up.
      */
     private fun maybeStallForSpikeThreadingCheck(context: Context) {
         if (!BuildConfig.DEBUG || BuildConfig.BUS_SPIKE_STALL_MS <= 0) {
             return
         }
 
-        Log.w(TAG, "Spike instrumentation: stalling onCreate() for ${BuildConfig.BUS_SPIKE_STALL_MS}ms (#255 Phase 0)")
+        val stallMs = BuildConfig.BUS_SPIKE_STALL_MS.coerceAtMost(MAX_SPIKE_STALL_MS)
+        if (stallMs < BuildConfig.BUS_SPIKE_STALL_MS) {
+            Log.w(TAG, "Requested stall ${BuildConfig.BUS_SPIKE_STALL_MS}ms clamped to ${stallMs}ms (#255 Phase 0 safety cap)")
+        }
+
+        Log.w(TAG, "Spike instrumentation: stalling onCreate() for ${stallMs}ms (#255 Phase 0)")
         NativeEventLog.log(
             context,
             TAG,
-            "Spike stall: sleeping ${BuildConfig.BUS_SPIKE_STALL_MS}ms in onCreate() (#255 Phase 0)",
+            "Spike stall: sleeping ${stallMs}ms in onCreate() (#255 Phase 0)",
         )
-        Thread.sleep(BuildConfig.BUS_SPIKE_STALL_MS.toLong())
+        Thread.sleep(stallMs.toLong())
     }
 
     // Everything below is a deliberate no-op -- this is not a real content provider, it

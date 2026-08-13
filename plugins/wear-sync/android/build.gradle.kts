@@ -14,13 +14,14 @@ android {
         // ContentProvider#onCreate() during cold start, to confirm it doesn't measurably
         // delay AlarmRingingService's audio start or trip StrictMode. Defaults to 0 (no
         // stall) so ordinary builds are unaffected; override with e.g.
-        // `./gradlew assembleDebug -PbusSpikeStallMs=3000`. Only ever read in debug builds
-        // (see BusInitProvider.kt). Delete this whole mechanism once Phase 0 wraps up.
-        buildConfigField(
-            "int",
-            "BUS_SPIKE_STALL_MS",
-            (project.findProperty("busSpikeStallMs") as? String ?: "0"),
-        )
+        // `./gradlew assembleDebug -PbusSpikeStallMs=1500` (clamped to 2000ms in
+        // BusInitProvider.kt regardless of what's passed here). Only ever read in debug
+        // builds (see BusInitProvider.kt, which is itself debug-only via src/debug). Delete
+        // this whole mechanism once Phase 0 wraps up.
+        val busSpikeStallMs = (project.findProperty("busSpikeStallMs") as? String)
+            ?.takeIf { it.isNotBlank() }
+            ?: "0"
+        buildConfigField("int", "BUS_SPIKE_STALL_MS", busSpikeStallMs)
     }
 
     buildTypes {
