@@ -27,5 +27,16 @@
             android:name=".WearSyncService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Spike-only (issue #255 Phase 0): exists purely to prove that a manifest-declared
+             ContentProvider's onCreate() runs before AlarmReceiver.onReceive() on a cold
+             process start, before the later phases of the shared native event bus design
+             depend on that ordering. See docs/spikes/255-contentprovider-spike-protocol.md
+             and BusInitProvider.kt. Not a real content provider: exported="false" and it
+             has no callers. -->
+        <provider
+            android:name=".BusInitProvider"
+            android:authorities="${applicationId}.wearsync-bus-spike-init"
+            android:exported="false" />
     </application>
 </manifest>

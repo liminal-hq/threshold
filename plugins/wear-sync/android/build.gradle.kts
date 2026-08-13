@@ -9,6 +9,18 @@ android {
 
     defaultConfig {
         minSdk = 26
+
+        // Spike-only (issue #255 Phase 0): lets a human tester simulate a slow/blocking
+        // ContentProvider#onCreate() during cold start, to confirm it doesn't measurably
+        // delay AlarmRingingService's audio start or trip StrictMode. Defaults to 0 (no
+        // stall) so ordinary builds are unaffected; override with e.g.
+        // `./gradlew assembleDebug -PbusSpikeStallMs=3000`. Only ever read in debug builds
+        // (see BusInitProvider.kt). Delete this whole mechanism once Phase 0 wraps up.
+        buildConfigField(
+            "int",
+            "BUS_SPIKE_STALL_MS",
+            (project.findProperty("busSpikeStallMs") as? String ?: "0"),
+        )
     }
 
     buildTypes {
@@ -23,6 +35,9 @@ android {
     }
     kotlinOptions {
         jvmTarget = "1.8"
+    }
+    buildFeatures {
+        buildConfig = true
     }
 }
 

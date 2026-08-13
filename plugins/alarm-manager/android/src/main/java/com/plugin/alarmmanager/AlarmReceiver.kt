@@ -13,6 +13,13 @@ import android.util.Log
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Spike-only instrumentation for issue #255 Phase 0 (ContentProvider
+        // registration-ordering spike) -- logged first thing so a human tester can compare
+        // this timestamp against BusInitProvider.onCreate()'s in a real device's exported
+        // NativeEventLog output. See docs/spikes/255-contentprovider-spike-protocol.md.
+        // Remove once Phase 0 concludes.
+        NativeEventLog.log(context, "AlarmReceiver", "#255 Phase 0 spike: onReceive() fired")
+
         Log.d("AlarmReceiver", "========== ALARM RECEIVER START ==========")
         Log.d("AlarmReceiver", "Alarm Received! Action: ${intent.action}")
         val alarmId = intent.getIntExtra("ALARM_ID", -1)
