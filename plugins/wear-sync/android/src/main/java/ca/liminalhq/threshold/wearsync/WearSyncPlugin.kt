@@ -15,6 +15,7 @@ import app.tauri.plugin.Channel
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
+import ca.liminalhq.threshold.nativebus.SharedPreferencesKeyValueStore
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.CoroutineScope
@@ -84,6 +85,9 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     private val dataClient by lazy { Wearable.getDataClient(activity) }
     private val messageClient by lazy { Wearable.getMessageClient(activity) }
     private val nodeClient by lazy { Wearable.getNodeClient(activity) }
+    private val watchQueue by lazy {
+        WearSyncEventQueue(SharedPreferencesKeyValueStore(activity, WearSyncEventQueue.PREFS_NAME))
+    }
     private var watchMessageChannel: Channel? = null
     @Volatile
     private var watchPipelineReady: Boolean = false
@@ -371,41 +375,39 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     /**
      * Called by [WearMessageService] when a message arrives from the watch.
      *
-     * Sends the message to Rust via the [Channel] registered by
-     * [set_watch_message_handler]. The Rust side receives the data directly
-     * through JNI without involving the WebView.
+     * Always enqueues onto [watchQueue] first, then immediately drains if the pipeline
+     * is ready -- "immediate dispatch" is just "enqueue, then drain right away" rather
+     * than a separate code path, so there is exactly one way a message ever reaches
+     * Rust: through [drainQueuedMessages]. Sends the message to Rust via the [Channel]
+     * registered by [set_watch_message_handler]; the Rust side receives the data
+     * directly through JNI without involving the WebView.
      */
     fun onWatchMessage(path: String, data: String) {
-        if (!watchPipelineReady) {
-            WearSyncQueue.enqueue(activity, path, data)
-            Log.i(TAG, "Watch pipeline not ready, queued message: path=$path")
-            return
-        }
-
-        val event = JSObject()
-        event.put("path", path)
-        event.put("data", data)
-
-        val channel = watchMessageChannel
-        if (channel != null) {
-            channel.send(event)
-            Log.d(TAG, "Sent watch message to Rust channel: path=$path")
+        watchQueue.enqueue(path, data)
+        if (watchPipelineReady) {
+            drainQueuedMessages()
         } else {
-            WearSyncQueue.enqueue(activity, path, data)
-            Log.w(TAG, "Watch message channel not registered, queued message: path=$path")
+            Log.i(TAG, "Watch pipeline not ready, queued message: path=$path")
         }
     }
 
     private fun drainQueuedMessages() {
-        if (!watchPipelineReady || watchMessageChannel == null) {
+        if (!watchPipelineReady) return
+        val channel = watchMessageChannel
+        if (channel == null) {
+            Log.w(TAG, "Watch pipeline ready but channel not registered yet, message(s) remain queued")
             return
         }
 
-        val queued = WearSyncQueue.drainAll(activity)
+        val queued = watchQueue.drainAll()
         if (queued.isNotEmpty()) {
             Log.i(TAG, "Replaying ${queued.size} queued message(s)")
             for ((path, data) in queued) {
-                onWatchMessage(path, data)
+                val event = JSObject()
+                event.put("path", path)
+                event.put("data", data)
+                channel.send(event)
+                Log.d(TAG, "Sent watch message to Rust channel: path=$path")
             }
         }
     }

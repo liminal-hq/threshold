@@ -8,6 +8,7 @@ package ca.liminalhq.threshold.wearsync
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import ca.liminalhq.threshold.nativebus.SharedPreferencesKeyValueStore
 import java.io.File
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.MessageEvent
@@ -173,7 +174,7 @@ class WearMessageService : WearableListenerService() {
     private fun handleOfflineWrite(path: String, data: String) {
         Log.i(TAG, "Watch write received offline ($path), starting WearSyncService")
         NativeEventLog.log(applicationContext, TAG, "Offline write received path=$path, starting WearSyncService")
-        WearSyncQueue.enqueue(this, path, data)
+        WearSyncEventQueue(SharedPreferencesKeyValueStore(this, WearSyncEventQueue.PREFS_NAME)).enqueue(path, data)
 
         val serviceIntent = Intent(this, WearSyncService::class.java).apply {
             putExtra(WearSyncService.EXTRA_PATH, path)
