@@ -41,7 +41,8 @@
 		"tauri-plugin-os-prefs-api": "workspace:*",
 		"tauri-plugin-predictive-back-api": "workspace:*",
 		"tauri-plugin-theme-utils-api": "workspace:*",
-		"tauri-plugin-toast-api": "workspace:*"
+		"tauri-plugin-toast-api": "workspace:*",
+		"tauri-plugin-wear-sync-api": "workspace:*"
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "^2",

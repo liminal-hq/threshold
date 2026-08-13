@@ -6,8 +6,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::models::{
-    AlarmDismissRequest, AlarmRingRequest, AlarmSnoozeRequest, PublishRequest, SyncRequest,
-    WatchMessage,
+    AlarmDismissRequest, AlarmRingRequest, AlarmSnoozeRequest, NativeFanOutEnabledResponse,
+    PublishRequest, SetNativeFanOutEnabledRequest, SyncRequest, WatchMessage,
 };
 #[cfg(target_os = "android")]
 use tauri::plugin::PluginHandle;
@@ -231,6 +231,41 @@ impl<R: Runtime> WearSync<R> {
         #[cfg(target_os = "android")]
         self.handle
             .run_mobile_plugin("markWatchPipelineReady", ())
+            .map_err(Into::into)
+    }
+
+    /// Enable or disable the native fired→watch-ring fan-out developer toggle
+    /// ([NativeFiredListener] on the Kotlin side, issue #255 Phase 3B).
+    pub fn set_native_fan_out_enabled(&self, enabled: bool) -> crate::Result<()> {
+        #[cfg(not(target_os = "android"))]
+        {
+            let _ = enabled;
+            log::debug!("wear-sync: set_native_fan_out_enabled no-op on non-Android mobile target");
+            return Ok(());
+        }
+
+        #[cfg(target_os = "android")]
+        self.handle
+            .run_mobile_plugin(
+                "setNativeFanOutEnabled",
+                SetNativeFanOutEnabledRequest { enabled },
+            )
+            .map_err(Into::into)
+    }
+
+    /// Reads the current value of the native fan-out developer toggle. Defaults to `true`
+    /// (enabled) on Android when nothing has been persisted yet; always reports `true` on
+    /// non-Android mobile targets, since there's no native fan-out to disable there.
+    pub fn get_native_fan_out_enabled(&self) -> crate::Result<NativeFanOutEnabledResponse> {
+        #[cfg(not(target_os = "android"))]
+        {
+            log::debug!("wear-sync: get_native_fan_out_enabled no-op on non-Android mobile target");
+            return Ok(NativeFanOutEnabledResponse { enabled: true });
+        }
+
+        #[cfg(target_os = "android")]
+        self.handle
+            .run_mobile_plugin("getNativeFanOutEnabled", ())
             .map_err(Into::into)
     }
 }

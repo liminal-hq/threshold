@@ -11,6 +11,8 @@ const COMMANDS: &[&str] = &[
     "send_alarm_snooze",
     "set_watch_message_handler",
     "mark_watch_pipeline_ready",
+    "get_native_fan_out_enabled",
+    "set_native_fan_out_enabled",
 ];
 
 fn main() {

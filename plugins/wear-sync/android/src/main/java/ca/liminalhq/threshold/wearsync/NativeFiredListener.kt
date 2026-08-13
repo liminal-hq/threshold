@@ -1,0 +1,192 @@
+// In-process listener that rings the watch the instant an alarm fires, before Rust boots
+//
+// (c) Copyright 2026 Liminal HQ, Scott Morris
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+package ca.liminalhq.threshold.wearsync
+
+import android.content.Context
+import android.util.Log
+import ca.liminalhq.threshold.nativebus.NativeEventBus
+import com.google.android.gms.wearable.Wearable
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import org.json.JSONObject
+
+private const val TAG = "NativeFiredListener"
+
+// Mirrors alarm-manager's own `internal const val TOPIC_FIRED` (AlarmManagerPlugin.kt) --
+// duplicated rather than shared because the two plugins are separate Gradle modules and
+// this string is frozen by docs/architecture/255-phase3-payload-contract.md, not by a
+// shared Kotlin symbol.
+internal const val TOPIC_FIRED = "alarm-manager:native-fired"
+
+// Exact string per the #255 Phase 3 payload contract -- also referenced by the Rust-side
+// staleness/tag gate in lib.rs's `alarm:fired` listener once Phase 3C's `handled_natively`
+// field lands on the app's `AlarmFired` struct.
+internal const val TAG_WATCH_RING = "watch-ring"
+
+// Per the #255 Phase 3 payload contract: a fired event older than this is treated as a
+// stale replay (e.g. a durable-queue entry drained long after the alarm actually rang) and
+// must not ring the watch again.
+internal const val STALENESS_WINDOW_MS = 90_000L
+
+/**
+ * Registers with [NativeEventBus] for alarm-manager's `alarm-manager:native-fired` topic and
+ * rings the watch directly via Play Services, entirely natively, the moment an alarm fires
+ * cold -- no dependency on Rust or the WebView having booted. This is what actually closes
+ * issue #254 (the watch staying silent for ~20s on a cold fire while the phone is in active
+ * use): [WearRingInitProvider]'s `onCreate()` guarantees this listener is registered before
+ * `AlarmReceiver.onReceive()` can run, even on a cold multi-plugin process start.
+ *
+ * Builds the ring payload entirely from [WearSyncCache] (the last-published alarm snapshot
+ * plus snooze/time-format prefs) -- no Rust involvement needed. See [NativeEventBus]'s KDoc
+ * for the threading contract this object's [handle] function must honour: it does only
+ * cheap, synchronous work inline (parse, staleness check, toggle check) and hands the actual
+ * network I/O off to [scope], returning [TAG_WATCH_RING] once that work is *initiated*, not
+ * once it's confirmed delivered -- at-least-once semantics, per the contract doc's decision:
+ * stamping the tag after confirmation would risk a crash mid-send leaving the watch silent
+ * with no fallback, which is the exact failure this whole design exists to prevent.
+ */
+object NativeFiredListener {
+
+    // A dedicated scope, not WearSyncPlugin's -- this listener can run (and does run, by
+    // design) before any WearSyncPlugin instance exists.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Registers this listener with [NativeEventBus]. Called once from [WearRingInitProvider.onCreate]. */
+    fun register(context: Context) {
+        val appContext = context.applicationContext
+        NativeEventBus.subscribe(TOPIC_FIRED) { payload -> handle(appContext, payload) }
+        Log.d(TAG, "Registered native fired listener for topic '$TOPIC_FIRED'")
+    }
+
+    /**
+     * The [NativeEventBus] listener callback itself. `internal` (not `private`) so tests can
+     * drive it directly against a fake/instrumented [Context] without going through
+     * [register]/[NativeEventBus].
+     */
+    internal fun handle(context: Context, payload: String): String? {
+        val fired = parseFiredPayload(payload)
+        if (fired == null) {
+            Log.w(TAG, "Ignoring malformed '$TOPIC_FIRED' payload")
+            return null
+        }
+
+        if (!NativeFanOutPrefs.isNativeFanOutEnabled(context)) {
+            Log.d(TAG, "Native watch fan-out disabled by developer toggle, skipping id=${fired.id}")
+            return null
+        }
+
+        if (isStale(fired.actualFiredAt, System.currentTimeMillis())) {
+            Log.w(TAG, "Ignoring stale fired event for id=${fired.id}, actualFiredAt=${fired.actualFiredAt}")
+            return null
+        }
+
+        scope.launch {
+            try {
+                ringWatch(context, fired.id)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to ring watch natively for id=${fired.id}", e)
+            }
+        }
+        return TAG_WATCH_RING
+    }
+
+    private suspend fun ringWatch(context: Context, alarmId: Int) {
+        val cached = WearSyncCache.read(context)
+        if (cached == null) {
+            Log.w(TAG, "No cached alarm data available, cannot ring watch natively for id=$alarmId")
+            return
+        }
+        val (alarmsJson, _, snoozeLengthMinutes, is24Hour, is24HourKnown) = cached
+        val label = resolveAlarmLabel(alarmsJson, alarmId)
+
+        val payload = buildAlarmRingPayload(
+            alarmId = alarmId,
+            label = label,
+            hour = null,
+            minute = null,
+            snoozeLengthMinutes = snoozeLengthMinutes,
+            is24Hour = is24Hour,
+            is24HourKnown = is24HourKnown,
+        )
+
+        val nodeClient = Wearable.getNodeClient(context)
+        val messageClient = Wearable.getMessageClient(context)
+        val nodes = nodeClient.connectedNodes.await()
+        if (nodes.isEmpty()) {
+            Log.d(TAG, "No connected watch nodes — skipping native ring for id=$alarmId")
+            return
+        }
+
+        for (node in nodes) {
+            messageClient.sendMessage(node.id, MSG_PATH_ALARM_RING, payload).await()
+            Log.d(TAG, "Sent native alarm ring to watch: ${node.displayName} for id=$alarmId")
+        }
+        NativeEventLog.log(context, TAG, "Sent native watch ring for id=$alarmId to ${nodes.size} node(s)")
+    }
+}
+
+/** One `alarm-manager:native-fired` payload's fields this listener cares about. */
+internal data class FiredPayload(val id: Int, val actualFiredAt: Long)
+
+/**
+ * Parses the `{id, actualFiredAt, ...}` JSON payload alarm-manager publishes to
+ * [NativeEventBus] (see docs/architecture/255-phase3-payload-contract.md). Tolerates and
+ * ignores the payload's `eventId`/`handledNatively` fields -- this listener has no use for
+ * either. Returns `null` for anything malformed or missing a usable `id`/`actualFiredAt`
+ * rather than throwing, so a corrupt payload is silently skipped (logged by the caller)
+ * instead of crashing [NativeEventBus.publish]'s caller.
+ */
+internal fun parseFiredPayload(payload: String): FiredPayload? {
+    return try {
+        val json = JSONObject(payload)
+        val id = json.optInt("id", -1)
+        if (id <= 0) return null
+        val actualFiredAt = json.optLong("actualFiredAt", -1L)
+        if (actualFiredAt <= 0L) return null
+        FiredPayload(id, actualFiredAt)
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * Whether a fired event timestamped [actualFiredAt] is too old, relative to [now], to still
+ * ring the watch -- per the #255 Phase 3 payload contract's [STALENESS_WINDOW_MS] window. A
+ * pure function of two timestamps so it's unit-testable without any Android framework class.
+ */
+internal fun isStale(actualFiredAt: Long, now: Long, windowMs: Long = STALENESS_WINDOW_MS): Boolean {
+    return now - actualFiredAt > windowMs
+}
+
+/**
+ * Looks up alarm [alarmId]'s label inside [alarmsJson] -- the cached `SyncResponse` FullSync
+ * envelope JSON written by [WearSyncCache.write] (`{"type":"FullSync","currentRevision":…,
+ * "allAlarms":[{"id":…,"label":…},…]}`, see wear-sync's Rust `sync_protocol::SyncResponse`).
+ * Returns `""` (matching `AlarmRingRequest.label`'s own default) if the envelope is
+ * malformed, isn't a `FullSync`, or has no alarm with a matching id -- a missing label
+ * shouldn't stop the watch from ringing.
+ *
+ * A pure function of the raw cached JSON string, not [WearSyncCache] itself, so it's
+ * unit-testable without an Android [Context].
+ */
+internal fun resolveAlarmLabel(alarmsJson: String, alarmId: Int): String {
+    return try {
+        val root = JSONObject(alarmsJson)
+        val allAlarms = root.optJSONArray("allAlarms") ?: return ""
+        for (i in 0 until allAlarms.length()) {
+            val alarm = allAlarms.optJSONObject(i) ?: continue
+            if (alarm.optInt("id", -1) == alarmId) {
+                return alarm.optString("label", "")
+            }
+        }
+        ""
+    } catch (e: Exception) {
+        ""
+    }
+}

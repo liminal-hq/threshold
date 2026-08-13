@@ -6,6 +6,8 @@ Default permissions for the wear-sync plugin
 
 - `allow-set-watch-message-handler`
 - `allow-mark-watch-pipeline-ready`
+- `allow-get-native-fan-out-enabled`
+- `allow-set-native-fan-out-enabled`
 
 ## Permission Table
 
@@ -15,6 +17,32 @@ Default permissions for the wear-sync plugin
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`wear-sync:allow-get-native-fan-out-enabled`
+
+</td>
+<td>
+
+Enables the get_native_fan_out_enabled command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-get-native-fan-out-enabled`
+
+</td>
+<td>
+
+Denies the get_native_fan_out_enabled command without any pre-configured scope.
+
+</td>
+</tr>
 
 <tr>
 <td>
@@ -168,6 +196,32 @@ Enables the send_alarm_snooze command without any pre-configured scope.
 <td>
 
 Denies the send_alarm_snooze command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:allow-set-native-fan-out-enabled`
+
+</td>
+<td>
+
+Enables the set_native_fan_out_enabled command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wear-sync:deny-set-native-fan-out-enabled`
+
+</td>
+<td>
+
+Denies the set_native_fan_out_enabled command without any pre-configured scope.
 
 </td>
 </tr>

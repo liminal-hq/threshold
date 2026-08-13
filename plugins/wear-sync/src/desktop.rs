@@ -4,7 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::models::{
-    AlarmDismissRequest, AlarmRingRequest, AlarmSnoozeRequest, PublishRequest, SyncRequest,
+    AlarmDismissRequest, AlarmRingRequest, AlarmSnoozeRequest, NativeFanOutEnabledResponse,
+    PublishRequest, SyncRequest,
 };
 use tauri::{plugin::PluginApi, AppHandle, Runtime};
 
@@ -53,5 +54,21 @@ impl<R: Runtime> WearSync<R> {
     pub async fn request_watch_logs(&self) -> crate::Result<bool> {
         log::debug!("wear-sync: desktop stub — request_watch_logs (no-op)");
         Ok(false)
+    }
+
+    /// Desktop has no native (in-process, pre-Rust-boot) fan-out concept at all -- there's
+    /// no cold-start gap to close in the first place, since the whole app is one process
+    /// with no separate native plugin layer. Accepts and silently discards the toggle so
+    /// the command still exists (and no-ops sensibly) on desktop rather than erroring.
+    pub fn set_native_fan_out_enabled(&self, enabled: bool) -> crate::Result<()> {
+        let _ = enabled;
+        log::debug!("wear-sync: desktop stub — set_native_fan_out_enabled (no-op)");
+        Ok(())
+    }
+
+    /// Always reports enabled on desktop -- see [Self::set_native_fan_out_enabled].
+    pub fn get_native_fan_out_enabled(&self) -> crate::Result<NativeFanOutEnabledResponse> {
+        log::debug!("wear-sync: desktop stub — get_native_fan_out_enabled (no-op)");
+        Ok(NativeFanOutEnabledResponse { enabled: true })
     }
 }

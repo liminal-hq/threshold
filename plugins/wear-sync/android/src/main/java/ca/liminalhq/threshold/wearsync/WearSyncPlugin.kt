@@ -27,11 +27,49 @@ import org.json.JSONObject
 private const val TAG = "WearSyncPlugin"
 private const val DATA_PATH_ALARMS = "/threshold/alarms"
 private const val MSG_PATH_SYNC_REQUEST = "/threshold/sync_request"
-private const val MSG_PATH_ALARM_RING = "/threshold/alarm_ring"
+// internal (not private) -- shared with NativeFiredListener, which sends the same
+// alarm_ring message from outside this Activity-bound plugin instance.
+internal const val MSG_PATH_ALARM_RING = "/threshold/alarm_ring"
 private const val MSG_PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
 private const val MSG_PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
 private const val MSG_PATH_LOG_REQUEST = "/threshold/log_request"
 private const val EXTRA_HEADLESS_BOOT = "wear_sync_headless_boot"
+
+/**
+ * Builds the JSON alarm-ring message payload sent to the watch over `MessageClient` at
+ * [MSG_PATH_ALARM_RING]. Shared by [WearSyncPlugin.sendAlarmRing] (the Rust-invoked path,
+ * used once Rust/WebView has booted) and [NativeFiredListener] (the in-process native path,
+ * issue #255 Phase 3B) so the wire format is defined in exactly one place.
+ *
+ * `hour`/`minute` of `null` means "use the device's current time" -- both callers already
+ * pass `null` today (Rust never supplies an explicit time; the native path has no reason to
+ * either), but the parameter is kept so a future caller with a real scheduled time can still
+ * use this helper.
+ */
+internal fun buildAlarmRingPayload(
+    alarmId: Int,
+    label: String,
+    hour: Int?,
+    minute: Int?,
+    snoozeLengthMinutes: Int,
+    is24Hour: Boolean,
+    is24HourKnown: Boolean,
+): ByteArray {
+    val cal = java.util.Calendar.getInstance()
+    val resolvedHour = hour ?: cal.get(java.util.Calendar.HOUR_OF_DAY)
+    val resolvedMinute = minute ?: cal.get(java.util.Calendar.MINUTE)
+
+    val json = JSONObject().apply {
+        put("alarmId", alarmId)
+        put("label", label)
+        put("hour", resolvedHour)
+        put("minute", resolvedMinute)
+        put("snoozeLengthMinutes", snoozeLengthMinutes)
+        put("is24Hour", is24Hour)
+        put("is24HourKnown", is24HourKnown)
+    }
+    return json.toString().toByteArray()
+}
 
 @InvokeArg
 class PublishRequest {
@@ -75,6 +113,11 @@ class AlarmSnoozeRequest {
 @InvokeArg
 class WatchMessageHandlerArgs {
     lateinit var handler: Channel
+}
+
+@InvokeArg
+class SetNativeFanOutEnabledArgs {
+    var enabled: Boolean = true
 }
 
 @TauriPlugin
@@ -178,6 +221,11 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
      * Called from the Rust side when an alarm fires. The watch receives
      * this message via its [DataLayerListenerService] and starts its
      * own [WearRingingService] to show the ringing UI and vibrate.
+     *
+     * Known gap (issue #255): this resolves successfully without ever sending a message
+     * when no watch node is currently connected -- that's a distinct, out-of-scope gap
+     * (watch not paired/connected) from the one Phase 3B's native fan-out
+     * ([NativeFiredListener]) closes (Rust/WebView not booted yet).
      */
     @Command
     fun sendAlarmRing(invoke: Invoke) {
@@ -191,21 +239,15 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     return@launch
                 }
 
-                // Use current device time if Rust didn't provide explicit hour/minute
-                val cal = java.util.Calendar.getInstance()
-                val hour = args.hour ?: cal.get(java.util.Calendar.HOUR_OF_DAY)
-                val minute = args.minute ?: cal.get(java.util.Calendar.MINUTE)
-
-                val json = JSONObject().apply {
-                    put("alarmId", args.alarmId)
-                    put("label", args.label)
-                    put("hour", hour)
-                    put("minute", minute)
-                    put("snoozeLengthMinutes", args.snoozeLengthMinutes)
-                    put("is24Hour", args.is24Hour)
-                    put("is24HourKnown", args.is24HourKnown)
-                }
-                val payload = json.toString().toByteArray()
+                val payload = buildAlarmRingPayload(
+                    alarmId = args.alarmId,
+                    label = args.label,
+                    hour = args.hour,
+                    minute = args.minute,
+                    snoozeLengthMinutes = args.snoozeLengthMinutes,
+                    is24Hour = args.is24Hour,
+                    is24HourKnown = args.is24HourKnown,
+                )
 
                 for (node in nodes) {
                     messageClient.sendMessage(node.id, MSG_PATH_ALARM_RING, payload).await()
@@ -357,6 +399,28 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     /**
+     * Developer toggle (issue #255 Phase 3B): enable or disable [NativeFiredListener]'s
+     * in-process fired→watch-ring fan-out, so a tester can exercise the Rust
+     * `alarm:fired` → `send_alarm_ring` path in isolation. Persisted via
+     * [NativeFanOutPrefs] so it survives process death (the whole point of the native path
+     * is that it can run before this plugin instance even exists).
+     */
+    @Command
+    fun setNativeFanOutEnabled(invoke: Invoke) {
+        val args = invoke.parseArgs(SetNativeFanOutEnabledArgs::class.java)
+        NativeFanOutPrefs.setNativeFanOutEnabled(activity, args.enabled)
+        Log.d(TAG, "Native watch fan-out enabled=${args.enabled}")
+        invoke.resolve()
+    }
+
+    /** Reads the current value of the [setNativeFanOutEnabled] toggle. Defaults to `true`. */
+    @Command
+    fun getNativeFanOutEnabled(invoke: Invoke) {
+        val enabled = NativeFanOutPrefs.isNativeFanOutEnabled(activity)
+        invoke.resolve(JSObject().apply { put("enabled", enabled) })
+    }
+
+    /**
      * Move the host activity to the back of the task stack.
      *
      * Called by [WearSyncService] after cold-booting the Tauri runtime so
@@ -407,6 +471,10 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                 val event = JSObject()
                 event.put("path", message.path)
                 event.put("data", message.data)
+                // Stamped in so a same-process dedup pass on the Rust side (issue #255 Phase
+                // 3C) has something to key watch-originated dismiss/snooze messages on, same
+                // as the fired path's eventId -- see WatchMessage::event_id on the Rust side.
+                event.put("eventId", message.eventId)
                 channel.send(event)
                 delivered.add(message.eventId)
                 Log.d(TAG, "Sent watch message to Rust channel: path=${message.path}")

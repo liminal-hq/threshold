@@ -27,5 +27,14 @@
             android:name=".WearSyncService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Issue #255 Phase 3B: guarantees NativeFiredListener is registered before
+             AlarmReceiver.onReceive() can run, even on a cold multi-plugin process start.
+             See WearRingInitProvider's KDoc. Not a real content provider: exported="false"
+             and it has no callers. -->
+        <provider
+            android:name=".WearRingInitProvider"
+            android:authorities="${applicationId}.wearsync-ring-init"
+            android:exported="false" />
     </application>
 </manifest>

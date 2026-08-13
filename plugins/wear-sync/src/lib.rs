@@ -11,6 +11,7 @@ use tauri::{
 };
 
 mod batch_collector;
+mod commands;
 #[allow(dead_code)]
 mod conflict_detector;
 #[cfg(desktop)]
@@ -41,6 +42,48 @@ use publisher::{ChannelPublisher, PublishCommand, WearSyncPublisher};
 
 const BATCH_DEBOUNCE_MS: u64 = 500;
 
+// Per docs/architecture/255-phase3-payload-contract.md's shared constants.
+const WATCH_RING_TAG: &str = "watch-ring";
+const STALENESS_WINDOW_MS: i64 = 90_000;
+
+/// Milliseconds since the Unix epoch, right now. A tiny wrapper so the staleness check
+/// below doesn't need a `chrono` dependency this crate doesn't otherwise have.
+fn now_ms() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
+
+/// Whether a fired event timestamped `actual_fired_at` is too old, relative to `now_ms`, to
+/// still be worth ringing the watch for -- per the #255 Phase 3 payload contract's
+/// [STALENESS_WINDOW_MS] window. Mirrors `NativeFiredListener.isStale` on the Kotlin side;
+/// the two checks are applied independently (see [should_skip_native_watch_ring]'s doc).
+fn is_stale(actual_fired_at: i64, now_ms: i64) -> bool {
+    now_ms.saturating_sub(actual_fired_at) > STALENESS_WINDOW_MS
+}
+
+/// Whether this `alarm:fired` listener should skip calling `send_alarm_ring` for the given
+/// event -- per issue #255 Phase 3's Unified design (decision 6). True when either:
+/// - `handled_natively` already contains [WATCH_RING_TAG], meaning wear-sync's own Kotlin
+///   `NativeFiredListener` already rang the watch in-process before Rust ever saw this
+///   event, so ringing again here would double-ring it; or
+/// - the event itself is stale (see [is_stale]) -- a durable-queue entry drained long after
+///   the alarm actually rang must not ring the watch at all, regardless of who would have
+///   handled it. This half of the check, on its own, is what retroactively fixes the
+///   shipped "2:30 AM ghost ring" bug, even for events queued before this change ships.
+///
+/// A pure function of the three fields it needs (not the whole `AlarmFired` event) so it's
+/// unit-testable without constructing a full event or touching Tauri at all.
+fn should_skip_native_watch_ring(
+    handled_natively: &[String],
+    actual_fired_at: i64,
+    now_ms: i64,
+) -> bool {
+    handled_natively.iter().any(|tag| tag == WATCH_RING_TAG) || is_stale(actual_fired_at, now_ms)
+}
+
 /// Extension trait for accessing the wear-sync APIs from any Tauri manager.
 pub trait WearSyncExt<R: Runtime> {
     fn wear_sync(&self) -> &WearSync<R>;
@@ -55,6 +98,10 @@ impl<R: Runtime, T: Manager<R>> WearSyncExt<R> for T {
 /// Initialises the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("wear-sync")
+        .invoke_handler(tauri::generate_handler![
+            commands::get_native_fan_out_enabled,
+            commands::set_native_fan_out_enabled,
+        ])
         .setup(|app, api| {
             // Initialise platform backend
             #[cfg(mobile)]
@@ -119,6 +166,24 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             app.listen("alarm:fired", move |event| {
                 match serde_json::from_str::<AlarmFired>(event.payload()) {
                     Ok(fired) => {
+                        // Issue #255 Phase 3B gate: skip this path entirely when the native
+                        // (in-process, pre-Rust-boot) listener already rang the watch for
+                        // this exact event, or when the event is too old to be worth ringing
+                        // for at all -- see should_skip_native_watch_ring's doc.
+                        if should_skip_native_watch_ring(
+                            &fired.handled_natively,
+                            fired.actual_fired_at,
+                            now_ms(),
+                        ) {
+                            log::info!(
+                                "wear-sync: skipping send_alarm_ring for id={} (handled_natively={:?}, actual_fired_at={})",
+                                fired.id,
+                                fired.handled_natively,
+                                fired.actual_fired_at
+                            );
+                            return;
+                        }
+
                         let app = ring_app.clone();
                         tauri::async_runtime::spawn(async move {
                             let wear_sync = app.state::<WearSync<R>>();
@@ -393,7 +458,11 @@ fn handle_watch_message<R: Runtime>(app: &AppHandle<R>, msg: WatchMessage) {
             }
         },
         "/threshold/alarm_dismiss" => match serde_json::from_str::<WatchDismissAlarm>(&msg.data) {
-            Ok(dismiss_cmd) => {
+            Ok(mut dismiss_cmd) => {
+                // event_id isn't part of the watch's own JSON payload -- it's the queue
+                // envelope's id, threaded in here from WatchMessage so a same-process dedup
+                // pass (issue #255 Phase 3C) has something to key on for this topic too.
+                dismiss_cmd.event_id = msg.event_id.clone();
                 log::info!("wear-sync: watch dismiss alarm {}", dismiss_cmd.alarm_id);
                 if let Err(error) = app.emit("wear:alarm:dismiss", &dismiss_cmd) {
                     log::error!("wear-sync: failed to emit wear:alarm:dismiss event: {error}");
@@ -404,7 +473,9 @@ fn handle_watch_message<R: Runtime>(app: &AppHandle<R>, msg: WatchMessage) {
             }
         },
         "/threshold/alarm_snooze" => match serde_json::from_str::<WatchSnoozeAlarm>(&msg.data) {
-            Ok(snooze_cmd) => {
+            Ok(mut snooze_cmd) => {
+                // See the alarm_dismiss arm above -- same reasoning for threading event_id in.
+                snooze_cmd.event_id = msg.event_id.clone();
                 log::info!(
                     "wear-sync: watch snooze alarm {} for {} min",
                     snooze_cmd.alarm_id,
@@ -456,6 +527,64 @@ mod tests {
     use crate::models::SyncReason;
     use crate::publisher::WearSyncPublisher;
     use std::sync::{Arc, Mutex};
+
+    // ── should_skip_native_watch_ring / is_stale (issue #255 Phase 3B gate) ─────────────
+
+    #[test]
+    fn skips_when_handled_natively_contains_the_watch_ring_tag() {
+        let handled = vec!["watch-ring".to_string()];
+        assert!(should_skip_native_watch_ring(&handled, 1_000, 1_000));
+    }
+
+    #[test]
+    fn skips_when_handled_natively_contains_the_watch_ring_tag_alongside_others() {
+        let handled = vec!["something-else".to_string(), "watch-ring".to_string()];
+        assert!(should_skip_native_watch_ring(&handled, 1_000, 1_000));
+    }
+
+    #[test]
+    fn does_not_skip_when_handled_natively_is_empty_and_event_is_fresh() {
+        let handled: Vec<String> = vec![];
+        assert!(!should_skip_native_watch_ring(&handled, 1_000, 1_000));
+    }
+
+    #[test]
+    fn does_not_skip_for_an_unrelated_tag_and_a_fresh_event() {
+        let handled = vec!["something-else".to_string()];
+        assert!(!should_skip_native_watch_ring(&handled, 1_000, 1_000));
+    }
+
+    #[test]
+    fn skips_a_stale_event_even_with_no_native_tag() {
+        let handled: Vec<String> = vec![];
+        // Fired at t=0, "now" is well past the 90s staleness window.
+        assert!(should_skip_native_watch_ring(
+            &handled,
+            0,
+            STALENESS_WINDOW_MS + 1
+        ));
+    }
+
+    #[test]
+    fn is_stale_is_false_exactly_at_the_window_boundary() {
+        assert!(!is_stale(0, STALENESS_WINDOW_MS));
+    }
+
+    #[test]
+    fn is_stale_is_true_one_millisecond_past_the_window() {
+        assert!(is_stale(0, STALENESS_WINDOW_MS + 1));
+    }
+
+    #[test]
+    fn is_stale_is_false_for_an_event_fired_in_the_past_within_the_window() {
+        assert!(!is_stale(1_000, 1_000 + STALENESS_WINDOW_MS - 1));
+    }
+
+    #[test]
+    fn is_stale_does_not_panic_on_a_future_actual_fired_at() {
+        // Clock skew edge case: actual_fired_at slightly ahead of "now" must not underflow.
+        assert!(!is_stale(2_000, 1_000));
+    }
 
     #[derive(Clone, Debug)]
     #[allow(dead_code)]
