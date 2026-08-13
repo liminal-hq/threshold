@@ -5028,6 +5028,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-native-bus"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "tauri-plugin-notification"
 version = "2.3.3"
 source = "git+https://github.com/ScottMorris/tauri-plugins-workspace.git?branch=notification-actions-fix#45004aa01a3b6752221142b42d8f1a48a7f65bc0"
@@ -5383,6 +5393,7 @@ dependencies = [
  "tauri-plugin-fs",
  "tauri-plugin-log",
  "tauri-plugin-mcp-bridge",
+ "tauri-plugin-native-bus",
  "tauri-plugin-notification",
  "tauri-plugin-opener",
  "tauri-plugin-os",

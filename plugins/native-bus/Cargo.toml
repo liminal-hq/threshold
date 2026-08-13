@@ -1,0 +1,18 @@
+[package]
+name = "tauri-plugin-native-bus"
+version = "0.1.0"
+authors = ["Threshold"]
+edition = "2021"
+links = "tauri-plugin-native-bus"
+description = "Shared substrate carrying the Android NativeEventBus/DurableEventQueue Kotlin sources for Threshold's native plugins"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+tauri = { version = "2.0.0", features = [] }
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[build-dependencies]
+tauri-plugin = { version = "2.0.0", features = ["build"] }

@@ -8,6 +8,7 @@ members = [
     "plugins/theme-utils",
     "plugins/os-prefs",
     "plugins/toast",
+    "plugins/native-bus",
 ]
 exclude = ["vendor/tauri-plugins-workspace"]
 resolver = "2"
