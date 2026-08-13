@@ -11,11 +11,12 @@ use tauri::{plugin::PluginApi, AppHandle, Runtime};
 /// stub exists only to keep the mobile/desktop split symmetrical with every other
 /// plugin in this codebase.
 pub fn init<R: Runtime, C: DeserializeOwned>(
-    app: &AppHandle<R>,
+    _app: &AppHandle<R>,
     _api: PluginApi<R, C>,
-) -> crate::Result<NativeBus<R>> {
-    Ok(NativeBus(app.clone()))
+) -> crate::Result<NativeBus> {
+    Ok(NativeBus)
 }
 
-/// Marker state for the native-bus plugin on desktop.
-pub struct NativeBus<R: Runtime>(#[allow(dead_code)] AppHandle<R>);
+/// Marker state for the native-bus plugin on desktop. Carries no data -- see
+/// `mobile::NativeBus` for why this isn't generic over `Runtime` either.
+pub struct NativeBus;

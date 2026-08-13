@@ -244,15 +244,8 @@ jobs:
             exit 1
           fi
 
-          # $2 (optional) is extra literal settings.gradle.kts lines appended after the
-          # tauri-android include -- used below to pre-wire alarm-manager/wear-sync's
-          # isolated CI builds with a `:tauri-plugin-native-bus` project include before
-          # either plugin actually depends on it in build.gradle.kts (a later phase adds
-          # that Gradle project dependency; without this pre-wiring, that phase's
-          # per-plugin CI build would fail to resolve the project reference).
           write_kts_settings() {
             local plugin_dir="$1"
-            local extra_includes="${2:-}"
             cat > "${plugin_dir}/settings.gradle.kts" <<EOF
           pluginManagement {
             repositories {
@@ -280,7 +273,6 @@ jobs:
 
           include(":tauri-android")
           project(":tauri-android").projectDir = file("${TAURI_ANDROID_PATH}")
-          ${extra_includes}
           EOF
           }
 
@@ -320,16 +312,20 @@ jobs:
           EOF
           }
 
-          NATIVE_BUS_ANDROID_PATH="$(pwd)/plugins/native-bus/android"
-          NATIVE_BUS_PROJECT_INCLUDE_KTS="
-          include(\":tauri-plugin-native-bus\")
-          project(\":tauri-plugin-native-bus\").projectDir = file(\"${NATIVE_BUS_ANDROID_PATH}\")"
-
-          write_kts_settings "plugins/alarm-manager/android" "${NATIVE_BUS_PROJECT_INCLUDE_KTS}"
+          # alarm-manager and wear-sync don't depend on native-bus yet, so their settings
+          # deliberately don't include `:tauri-plugin-native-bus` -- the unqualified
+          # `testDebugUnitTest` selector used below runs a task in every project in the
+          # build graph that has it, so including it in more than one plugin's settings
+          # would run native-bus's own tests redundantly on every one of those runs, and
+          # (since this step runs under errexit) could misattribute a native-bus test
+          # failure to whichever plugin's line happened to trigger it first. A later phase
+          # of issue #255 adds both the real Gradle project dependency and this
+          # settings-synthesis line together, at the point they're actually needed.
+          write_kts_settings "plugins/alarm-manager/android"
           write_kts_settings "plugins/theme-utils/android"
           write_kts_settings "plugins/os-prefs/android"
           write_kts_settings "plugins/predictive-back/android"
-          write_kts_settings "plugins/wear-sync/android" "${NATIVE_BUS_PROJECT_INCLUDE_KTS}"
+          write_kts_settings "plugins/wear-sync/android"
           write_kts_settings "plugins/native-bus/android"
           write_groovy_settings "plugins/app-management/android"
           write_groovy_settings "plugins/toast/android"

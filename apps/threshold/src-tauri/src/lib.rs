@@ -146,7 +146,8 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_app_management::init())
-        .plugin(tauri_plugin_toast::init());
+        .plugin(tauri_plugin_toast::init())
+        .plugin(tauri_plugin_native_bus::init());
 
     builder
         .setup(|app| {

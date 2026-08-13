@@ -22,15 +22,30 @@ use desktop::NativeBus;
 #[cfg(mobile)]
 use mobile::NativeBus;
 
-/// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the
-/// native-bus plugin state.
-pub trait NativeBusExt<R: Runtime> {
-    fn native_bus(&self) -> &NativeBus<R>;
+/// Extensions to [`tauri::App`] and [`tauri::AppHandle`] to access the native-bus plugin
+/// state.
+///
+/// `NativeBus` itself is not generic over `Runtime`, unlike every other plugin's state in
+/// this codebase: those hold a `PluginHandle<R>` (or similar per-runtime data) that a
+/// registered Kotlin `@TauriPlugin` component needs, and `NativeBus` registers no such
+/// component and carries no data at all. This trait is still implemented per concrete
+/// manager type (rather than as a single blanket `impl<R: Runtime, T: Manager<R>>`, the
+/// way every other plugin's extension trait in this codebase does it) because a blanket
+/// impl needs its own `Runtime` parameter to appear in the trait itself to satisfy
+/// coherence -- which a *non-generic* trait like this one can't provide.
+pub trait NativeBusExt {
+    fn native_bus(&self) -> &NativeBus;
 }
 
-impl<R: Runtime, T: Manager<R>> NativeBusExt<R> for T {
-    fn native_bus(&self) -> &NativeBus<R> {
-        self.state::<NativeBus<R>>().inner()
+impl<R: Runtime> NativeBusExt for tauri::App<R> {
+    fn native_bus(&self) -> &NativeBus {
+        self.state::<NativeBus>().inner()
+    }
+}
+
+impl<R: Runtime> NativeBusExt for tauri::AppHandle<R> {
+    fn native_bus(&self) -> &NativeBus {
+        self.state::<NativeBus>().inner()
     }
 }
 
