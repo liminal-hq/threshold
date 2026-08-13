@@ -78,7 +78,24 @@ fn configure_linux_env() {
     );
 }
 
+mod event_dedup;
 mod event_logs;
+
+use event_dedup::EventDedup;
+
+/// Looks up the shared `EventDedup` state and checks `event_id` against it -- the
+/// shared last-N dedup used by every native event listener below. Missing state
+/// (shouldn't happen once `run()`'s `setup` has completed) is treated as "not a
+/// duplicate" so a listener degrades gracefully rather than silently dropping events.
+fn is_duplicate_native_event<R: tauri::Runtime>(
+    handle: &tauri::AppHandle<R>,
+    event_id: Option<&str>,
+) -> bool {
+    handle
+        .try_state::<EventDedup>()
+        .map(|dedup| dedup.is_duplicate(event_id))
+        .unwrap_or(false)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -207,6 +224,10 @@ pub fn run() {
             }).ok();
 
             app.manage(coordinator);
+
+            // Shared last-N eventId dedup for the six native event listeners below --
+            // see `EventDedup`'s docs for the crash-window redelivery it guards against.
+            app.manage(EventDedup::new());
 
             #[cfg(mobile)]
             app.manage(ImportLock(tokio::sync::Mutex::new(())));
@@ -397,11 +418,20 @@ pub fn run() {
             app.handle().listen("wear:alarm:dismiss", move |event| {
                 #[derive(serde::Deserialize)]
                 #[serde(rename_all = "camelCase")]
-                struct WatchDismiss { alarm_id: i32 }
+                struct WatchDismiss {
+                    alarm_id: i32,
+                    #[serde(default)]
+                    event_id: Option<String>,
+                }
 
                 if let Ok(cmd) = serde_json::from_str::<WatchDismiss>(event.payload()) {
                     let handle = dismiss_handle.clone();
                     tauri::async_runtime::spawn(async move {
+                        if is_duplicate_native_event(&handle, cmd.event_id.as_deref()) {
+                            log::info!("watch: skipping redelivered dismiss for alarm {}", cmd.alarm_id);
+                            return;
+                        }
+
                         // Stop the phone's ringing service first
                         #[cfg(mobile)]
                         if let Err(e) = handle.alarm_manager().stop_ringing() {
@@ -423,11 +453,21 @@ pub fn run() {
             app.handle().listen("wear:alarm:snooze", move |event| {
                 #[derive(serde::Deserialize)]
                 #[serde(rename_all = "camelCase")]
-                struct WatchSnooze { alarm_id: i32, snooze_length_minutes: i64 }
+                struct WatchSnooze {
+                    alarm_id: i32,
+                    snooze_length_minutes: i64,
+                    #[serde(default)]
+                    event_id: Option<String>,
+                }
 
                 if let Ok(cmd) = serde_json::from_str::<WatchSnooze>(event.payload()) {
                     let handle = snooze_handle.clone();
                     tauri::async_runtime::spawn(async move {
+                        if is_duplicate_native_event(&handle, cmd.event_id.as_deref()) {
+                            log::info!("watch: skipping redelivered snooze for alarm {}", cmd.alarm_id);
+                            return;
+                        }
+
                         // Stop the phone's ringing service first
                         #[cfg(mobile)]
                         if let Err(e) = handle.alarm_manager().stop_ringing() {
@@ -457,14 +497,35 @@ pub fn run() {
                 struct NativeAlarmFired {
                     id: i32,
                     actual_fired_at: i64,
+                    // Both fields land here once alarm-manager's `NativeAlarmFiredPayload`
+                    // (Phase 3A, a sibling branch) gains them per issue #255's Phase 3
+                    // payload contract. `#[serde(default)]` keeps this listener working
+                    // against today's shorter payload in the meantime.
+                    #[serde(default)]
+                    event_id: Option<String>,
+                    #[serde(default)]
+                    handled_natively: Vec<String>,
                 }
 
                 if let Ok(payload) = serde_json::from_str::<NativeAlarmFired>(event.payload()) {
                     let handle = native_alarm_handle.clone();
                     tauri::async_runtime::spawn(async move {
+                        if is_duplicate_native_event(&handle, payload.event_id.as_deref()) {
+                            log::info!(
+                                "alarm-manager: skipping redelivered native fired for alarm {}",
+                                payload.id
+                            );
+                            return;
+                        }
+
                         if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
                             if let Err(error) = coord
-                                .report_alarm_fired(&handle, payload.id, payload.actual_fired_at)
+                                .report_alarm_fired(
+                                    &handle,
+                                    payload.id,
+                                    payload.actual_fired_at,
+                                    payload.handled_natively,
+                                )
                                 .await
                             {
                                 log::error!(
@@ -484,13 +545,27 @@ pub fn run() {
             let native_dismiss_handle = app.handle().clone();
             app.handle().listen("alarm-manager:dismiss-requested", move |event| {
                 #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
                 struct NativeDismissRequested {
                     id: i32,
+                    // Not yet stamped by alarm-manager for this topic as of Stage 2 --
+                    // `#[serde(default)]` so an absent value bypasses dedup entirely
+                    // rather than being treated as a duplicate of anything.
+                    #[serde(default)]
+                    event_id: Option<String>,
                 }
 
                 if let Ok(payload) = serde_json::from_str::<NativeDismissRequested>(event.payload()) {
                     let handle = native_dismiss_handle.clone();
                     tauri::async_runtime::spawn(async move {
+                        if is_duplicate_native_event(&handle, payload.event_id.as_deref()) {
+                            log::info!(
+                                "alarm-manager: skipping redelivered dismiss-requested for alarm {}",
+                                payload.id
+                            );
+                            return;
+                        }
+
                         if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
                             if let Err(error) = coord.dismiss_alarm(&handle, payload.id).await {
                                 log::error!(
@@ -510,13 +585,27 @@ pub fn run() {
             let native_snooze_handle = app.handle().clone();
             app.handle().listen("alarm-manager:snooze-requested", move |event| {
                 #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
                 struct NativeSnoozeRequested {
                     id: i32,
+                    // Not yet stamped by alarm-manager for this topic as of Stage 2 --
+                    // `#[serde(default)]` so an absent value bypasses dedup entirely
+                    // rather than being treated as a duplicate of anything.
+                    #[serde(default)]
+                    event_id: Option<String>,
                 }
 
                 if let Ok(payload) = serde_json::from_str::<NativeSnoozeRequested>(event.payload()) {
                     let handle = native_snooze_handle.clone();
                     tauri::async_runtime::spawn(async move {
+                        if is_duplicate_native_event(&handle, payload.event_id.as_deref()) {
+                            log::info!(
+                                "alarm-manager: skipping redelivered snooze-requested for alarm {}",
+                                payload.id
+                            );
+                            return;
+                        }
+
                         let minutes = handle
                             .try_state::<SnoozeLengthState>()
                             .map(|s| s.load(std::sync::atomic::Ordering::Relaxed))
@@ -560,11 +649,24 @@ pub fn run() {
                     label: String,
                     active_days: Vec<i32>,
                     trigger_at: i64,
+                    // Not yet stamped by alarm-manager for this topic as of Stage 2 --
+                    // `#[serde(default)]` so an absent value bypasses dedup entirely
+                    // rather than being treated as a duplicate of anything.
+                    #[serde(default)]
+                    event_id: Option<String>,
                 }
 
                 if let Ok(payload) = serde_json::from_str::<ImportRequested>(event.payload()) {
                     let handle = import_handle.clone();
                     tauri::async_runtime::spawn(async move {
+                        if is_duplicate_native_event(&handle, payload.event_id.as_deref()) {
+                            log::info!(
+                                "alarm-manager: skipping redelivered import-requested for native alarm {}",
+                                payload.id
+                            );
+                            return;
+                        }
+
                         // Always tear down the temporary native alarm SetAlarmActivity
                         // created -- safe even if it already fired, and needs to happen
                         // regardless of whether this import turns into a real Threshold
