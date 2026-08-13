@@ -83,18 +83,32 @@ mod event_logs;
 
 use event_dedup::EventDedup;
 
-/// Looks up the shared `EventDedup` state and checks `event_id` against it -- the
-/// shared last-N dedup used by every native event listener below. Missing state
-/// (shouldn't happen once `run()`'s `setup` has completed) is treated as "not a
-/// duplicate" so a listener degrades gracefully rather than silently dropping events.
-fn is_duplicate_native_event<R: tauri::Runtime>(
+/// Checks the incoming event's `event_id` against the shared `EventDedup` state (see its
+/// docs for exactly what redelivery scenario this catches -- and the known limitation it
+/// doesn't) and logs a one-line skip notice when it's a duplicate. Shared by all six
+/// native event listeners in `run()`'s `setup` below, which otherwise differ only in the
+/// `source`/`topic` labels and the alarm `id` used in that log line -- each call site
+/// collapses to `if skip_duplicate_native_event(&handle, event_id, "watch", "dismiss", id) { return; }`.
+///
+/// Missing `EventDedup` state (shouldn't happen once `setup` has completed) is treated as
+/// "not a duplicate" so a listener degrades gracefully rather than silently dropping
+/// events.
+fn skip_duplicate_native_event<R: tauri::Runtime>(
     handle: &tauri::AppHandle<R>,
     event_id: Option<&str>,
+    source: &str,
+    topic: &str,
+    id: i32,
 ) -> bool {
-    handle
+    let is_duplicate = handle
         .try_state::<EventDedup>()
         .map(|dedup| dedup.is_duplicate(event_id))
-        .unwrap_or(false)
+        .unwrap_or(false);
+
+    if is_duplicate {
+        log::info!("{source}: skipping redelivered {topic} for alarm {id}");
+    }
+    is_duplicate
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -427,8 +441,7 @@ pub fn run() {
                 if let Ok(cmd) = serde_json::from_str::<WatchDismiss>(event.payload()) {
                     let handle = dismiss_handle.clone();
                     tauri::async_runtime::spawn(async move {
-                        if is_duplicate_native_event(&handle, cmd.event_id.as_deref()) {
-                            log::info!("watch: skipping redelivered dismiss for alarm {}", cmd.alarm_id);
+                        if skip_duplicate_native_event(&handle, cmd.event_id.as_deref(), "watch", "dismiss", cmd.alarm_id) {
                             return;
                         }
 
@@ -463,8 +476,7 @@ pub fn run() {
                 if let Ok(cmd) = serde_json::from_str::<WatchSnooze>(event.payload()) {
                     let handle = snooze_handle.clone();
                     tauri::async_runtime::spawn(async move {
-                        if is_duplicate_native_event(&handle, cmd.event_id.as_deref()) {
-                            log::info!("watch: skipping redelivered snooze for alarm {}", cmd.alarm_id);
+                        if skip_duplicate_native_event(&handle, cmd.event_id.as_deref(), "watch", "snooze", cmd.alarm_id) {
                             return;
                         }
 
@@ -510,11 +522,7 @@ pub fn run() {
                 if let Ok(payload) = serde_json::from_str::<NativeAlarmFired>(event.payload()) {
                     let handle = native_alarm_handle.clone();
                     tauri::async_runtime::spawn(async move {
-                        if is_duplicate_native_event(&handle, payload.event_id.as_deref()) {
-                            log::info!(
-                                "alarm-manager: skipping redelivered native fired for alarm {}",
-                                payload.id
-                            );
+                        if skip_duplicate_native_event(&handle, payload.event_id.as_deref(), "alarm-manager", "native fired", payload.id) {
                             return;
                         }
 
@@ -558,11 +566,7 @@ pub fn run() {
                 if let Ok(payload) = serde_json::from_str::<NativeDismissRequested>(event.payload()) {
                     let handle = native_dismiss_handle.clone();
                     tauri::async_runtime::spawn(async move {
-                        if is_duplicate_native_event(&handle, payload.event_id.as_deref()) {
-                            log::info!(
-                                "alarm-manager: skipping redelivered dismiss-requested for alarm {}",
-                                payload.id
-                            );
+                        if skip_duplicate_native_event(&handle, payload.event_id.as_deref(), "alarm-manager", "dismiss-requested", payload.id) {
                             return;
                         }
 
@@ -598,11 +602,7 @@ pub fn run() {
                 if let Ok(payload) = serde_json::from_str::<NativeSnoozeRequested>(event.payload()) {
                     let handle = native_snooze_handle.clone();
                     tauri::async_runtime::spawn(async move {
-                        if is_duplicate_native_event(&handle, payload.event_id.as_deref()) {
-                            log::info!(
-                                "alarm-manager: skipping redelivered snooze-requested for alarm {}",
-                                payload.id
-                            );
+                        if skip_duplicate_native_event(&handle, payload.event_id.as_deref(), "alarm-manager", "snooze-requested", payload.id) {
                             return;
                         }
 
@@ -659,11 +659,7 @@ pub fn run() {
                 if let Ok(payload) = serde_json::from_str::<ImportRequested>(event.payload()) {
                     let handle = import_handle.clone();
                     tauri::async_runtime::spawn(async move {
-                        if is_duplicate_native_event(&handle, payload.event_id.as_deref()) {
-                            log::info!(
-                                "alarm-manager: skipping redelivered import-requested for native alarm {}",
-                                payload.id
-                            );
+                        if skip_duplicate_native_event(&handle, payload.event_id.as_deref(), "alarm-manager", "import-requested", payload.id) {
                             return;
                         }
 

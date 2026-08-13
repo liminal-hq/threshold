@@ -6,9 +6,9 @@
 use std::collections::VecDeque;
 use std::sync::Mutex;
 
-/// Capacity of the recent-eventId ring buffer -- sized comfortably above the number of
-/// events that could plausibly be redelivered from a single crash-window replay (see
-/// `EventDedup`'s own docs for the failure mode this guards against).
+/// Capacity of the recent-eventId ring buffer -- comfortably above the number of events
+/// that could plausibly repeat within one running process's lifetime (see `EventDedup`'s
+/// own docs for exactly what that covers, and what it doesn't).
 const CAPACITY: usize = 32;
 
 /// A small, shared, last-N `eventId` dedup buffer for the six native event listeners
@@ -16,15 +16,30 @@ const CAPACITY: usize = 32;
 /// `alarm-manager:native-fired`, `alarm-manager:dismiss-requested`,
 /// `alarm-manager:snooze-requested`, `alarm-manager:import-requested`).
 ///
-/// Stage 2's `DurableEventQueue` drain (see `drainAndDispatch` in
+/// **What this catches:** redelivery of the same `eventId` to the *same running process*
+/// -- e.g. two overlapping drain calls racing each other, or any other in-process path
+/// that could hand the same envelope to a listener twice before either drops it as
+/// stale. Without this, a redelivered event re-runs whatever UI/toast paths listen for
+/// these Tauri events app-wide (e.g. a second dismiss/snooze toast for the same action),
+/// and for `wear:alarm:snooze` specifically, a second run recomputes
+/// `snoozed_until = now + minutes` and silently re-anchors the alarm to a later time --
+/// not just a cosmetic double toast.
+///
+/// **What this does NOT catch (known limitation, tracked under issue #255 for a
+/// follow-up):** the buffer lives only in memory, created empty on every launch via
+/// `app.manage()`. Stage 2's `DurableEventQueue` drain (see `drainAndDispatch` in
 /// `plugins/alarm-manager/android/.../AlarmManagerPlugin.kt`, not part of this crate)
-/// commits successfully-delivered entries only *after* Channel delivery succeeds -- a
+/// commits a successfully-delivered entry only *after* Channel delivery succeeds -- a
 /// deliberate design decision, already reviewed -- so a crash in the narrow window
-/// between a successful delivery and the trailing commit can redeliver the same event
-/// on the next drain. The `"watch-ring"` tag in `AlarmFired::handled_natively` already
-/// prevents a double watch *ring* for the fired case specifically, but without this
-/// buffer a redelivered event would still re-run whatever UI/toast paths listen for
-/// these Tauri events app-wide (e.g. a second dismiss/snooze toast for the same action).
+/// between that successful delivery and the trailing commit can redeliver the same
+/// event on the *next launch*. But that crash necessarily takes down the very process
+/// holding this buffer, so the redelivered event lands in a brand-new, empty
+/// `EventDedup` that has never seen its `eventId` -- structurally unable to catch its
+/// own crash-and-restart case. The `"watch-ring"` tag in `AlarmFired::handled_natively`
+/// is what actually prevents a double watch *ring* across a restart; closing the
+/// broader gap would mean persisting dedup state (e.g. a small SQLite table via this
+/// app's existing `tauri-plugin-sql` migrations, the way `AlarmCoordinator` already owns
+/// durable state) rather than an in-memory buffer -- deliberately not built here.
 ///
 /// Events with no `eventId` (payloads predating this change, or any source that doesn't
 /// carry one yet) always report as "not a duplicate" -- there is nothing to key a dedup
