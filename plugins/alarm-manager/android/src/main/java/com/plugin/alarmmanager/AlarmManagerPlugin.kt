@@ -171,38 +171,40 @@ private fun migrateLegacyArray(
 }
 
 /**
- * Drains every entry in [queue] (across every topic, in chronological [DurableEventQueue.Envelope.publishedAt] order) and hands each one to [dispatch], which attempts delivery for the given topic/payload and returns whether it succeeded. Only successfully-dispatched entries are committed (removed) from [queue] -- anything [dispatch] returns `false` for stays queued for a later retry, mirroring the pre-migration per-type drain/replay behaviour. Returns the number of entries actually dispatched.
+ * Drains every entry in [queue] (across every topic, in chronological [DurableEventQueue.Envelope.publishedAt] order) and hands each one to [dispatch], which attempts delivery for the given topic/payload and returns whether it succeeded. Each successfully-dispatched entry is committed (removed) from [queue] **immediately**, one at a time, rather than accumulated into a batch and committed once after the whole loop finishes -- see below for why. Anything [dispatch] returns `false` for stays queued for a later retry, mirroring the pre-migration per-type drain/replay behaviour. Returns the number of entries actually dispatched.
  *
  * A standalone function (not a method) so it's unit-testable against a real [DurableEventQueue]/in-memory [KeyValueStore] pair, with a fake [dispatch], and no Android framework (Context, Channel) involved at all -- mirrors [migrateLegacyQueues] above.
  *
  * Two consequences of this design are intentional, not oversights, per issue #255's Unified design (decision 7: every event flows through the log; drain-now replaces the old two-path split; total order is preserved by draining everything, across all four topics, in chronological order on every call):
- * - A process kill mid-drain -- after some [dispatch] calls have already succeeded but before the trailing [DurableEventQueue.commit] runs -- can redeliver already-delivered entries (possibly for a different topic than whichever call triggered this drain) on the next launch. Issue #255's Phase 3C adds Rust-side last-N eventId dedup specifically to absorb this.
+ * - A process kill mid-drain -- after [dispatch] has returned `true` for some entry but before that entry's own [DurableEventQueue.commit] call runs -- can still redeliver *that one* entry on the next launch. Committing per-item (rather than batching every commit until the loop finishes) narrows this window from "every entry dispatched so far in this drain" down to "at most the single entry in flight at the moment of the crash" -- per Phase 3C's review, the in-memory `EventDedup` buffer Rust maintains for exactly this case is itself wiped by the same crash, so it cannot help across a restart; shrinking the window on this side is the most effective mitigation available without persisted cross-restart dedup state (tracked separately, not solved here).
  * - [enqueueAndDrain] below drains the *entire* cross-topic backlog synchronously on every single event, not just the topic that was just enqueued -- if a large backlog has built up, this could run long enough to threaten `AlarmReceiver.onReceive()`'s ANR budget. Issue #255's Phase 3A closes this by wrapping `onReceive()` in `goAsync()`.
  */
 internal fun drainAndDispatch(queue: DurableEventQueue, dispatch: (topic: String, payload: String) -> Boolean): Int {
     val drained = queue.drainAll(pipelineReady = true)
     if (drained.isEmpty()) return 0
 
-    val handledEventIds = mutableSetOf<String>()
+    var handledCount = 0
     for (envelope in drained) {
         if (dispatch(envelope.topic, enrichPayloadForDispatch(envelope))) {
-            handledEventIds.add(envelope.eventId)
+            queue.commit(setOf(envelope.eventId))
+            handledCount++
         }
     }
-    if (handledEventIds.isNotEmpty()) queue.commit(handledEventIds)
-    return handledEventIds.size
+    return handledCount
 }
 
 /**
  * Returns [envelope]'s payload as-is, except for [TOPIC_FIRED] where it's enriched with
- * `eventId`/`handledNatively` before dispatch -- per
- * docs/architecture/255-phase3-payload-contract.md, these are the two fields Rust's
- * `NativeAlarmFiredPayload` needs to carry the tags `AlarmReceiver.kt`'s `publishAlarmFiredToBus`
- * collected (e.g. `"watch-ring"`) and the envelope's own stable ID through to the
- * `alarm-manager:native-fired` Tauri event, whether this is the immediate post-enqueue drain or
- * a later retry of the same queued entry. Only [TOPIC_FIRED] gains these fields -- the contract
- * only specifies them for the fired event, and the other three topics' Rust payload structs
- * don't declare them.
+ * `eventId` before dispatch -- per docs/architecture/255-phase3-payload-contract.md, this is the
+ * one field Rust's `NativeAlarmFiredPayload` needs that genuinely can't be known until
+ * [DurableEventQueue.enqueue] returns it, so it can't be baked into the payload upfront the way
+ * `handledNatively` is (see [notifyAlarmFired], which writes `handledNatively` directly into the
+ * payload it builds -- by the time [enrichPayloadForDispatch] runs, it's already sitting in
+ * [envelope]'s own payload JSON, so there's nothing left for this function to add for it).
+ * Carries the envelope's own stable ID through to the `alarm-manager:native-fired` Tauri event,
+ * whether this is the immediate post-enqueue drain or a later retry of the same queued entry.
+ * Only [TOPIC_FIRED] gains this field -- the contract only specifies it for the fired event, and
+ * the other three topics' Rust payload structs don't declare it.
  *
  * [envelope.payload][DurableEventQueue.Envelope.payload] is always caller-constructed JSON (see
  * [notifyAlarmFired]), so re-parsing it here should never fail in practice -- the `catch` exists
@@ -213,7 +215,6 @@ internal fun enrichPayloadForDispatch(envelope: DurableEventQueue.Envelope): Str
     return try {
         JSONObject(envelope.payload).apply {
             put("eventId", envelope.eventId)
-            put("handledNatively", JSONArray(envelope.handledNatively.toList()))
         }.toString()
     } catch (e: Exception) {
         Log.w(TAG, "Failed to enrich fired-event payload for eventId ${envelope.eventId}, dispatching unenriched", e)
@@ -279,17 +280,31 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         var instance: AlarmManagerPlugin? = null
             private set
 
+        /**
+         * @param firedPayload the shared `{id, actualFiredAt}` payload -- built exactly once by
+         *   the caller (see `AlarmReceiver.recordAndPublishFiredEvent`'s KDoc) and reused here
+         *   rather than re-derived from separate `id`/`actualFiredAt` args, so there's a single
+         *   source of truth for this shape (docs/architecture/255-phase3-payload-contract.md)
+         *   instead of two independent hand-built copies risking silent divergence. Not mutated
+         *   in place -- [handledNatively] is written into a fresh copy -- since the caller may
+         *   still reuse the original for the `NativeEventBus` publish, which must stay exactly
+         *   `{id, actualFiredAt}` per the bus's own contract.
+         * @param handledNatively written directly into the persisted/dispatched payload here
+         *   (rather than late-injected at drain time -- see [enrichPayloadForDispatch], which
+         *   only still needs to inject `eventId`) since it's already known as a plain parameter
+         *   at this point. Only `eventId` genuinely can't be known yet: it doesn't exist until
+         *   [DurableEventQueue.enqueue] (called via [enqueueAndDrain] below) returns it.
+         */
         @Synchronized
         fun notifyAlarmFired(
             context: Context,
             alarmId: Int,
-            actualFiredAt: Long = System.currentTimeMillis(),
+            firedPayload: JSONObject,
             handledNatively: Set<String> = emptySet(),
         ) {
             if (alarmId <= 0) return
-            val payload = JSONObject().apply {
-                put("id", alarmId)
-                put("actualFiredAt", actualFiredAt)
+            val payload = JSONObject(firedPayload.toString()).apply {
+                put("handledNatively", JSONArray(handledNatively.toList()))
             }
             enqueueAndDrain(context, TOPIC_FIRED, payload, handledNatively)
         }

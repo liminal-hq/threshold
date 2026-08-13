@@ -11,6 +11,7 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -286,16 +287,53 @@ class AlarmManagerPluginTest {
         assertEquals(0, dispatchCalls)
     }
 
+    @Test
+    fun `commits each envelope immediately after its own successful dispatch, not batched at the end`() {
+        // Per Phase 3C's review: Rust's in-memory EventDedup buffer is wiped by the same crash
+        // that would cause a redelivery, so it can't protect against a process kill between a
+        // successful Channel delivery and this queue's commit. Committing per-item (rather than
+        // accumulating every commit until the whole drain loop finishes) shrinks that window
+        // from "the rest of the batch" down to "at most the one entry in flight" -- simulated
+        // here by having the second dispatch throw ("crash") and checking that the first
+        // entry's commit had already landed before that happened.
+        val queue = DurableEventQueue(store, EVENT_LOG_KEY)
+        val firstId = queue.enqueue(TOPIC_FIRED, JSONObject().put("id", 1).toString())
+        val secondId = queue.enqueue(TOPIC_SNOOZE, JSONObject().put("id", 2).toString())
+
+        var dispatchCalls = 0
+        try {
+            drainAndDispatch(queue) { _, _ ->
+                dispatchCalls++
+                if (dispatchCalls == 1) true else throw RuntimeException("simulated crash mid-drain")
+            }
+            fail("expected the simulated crash to propagate out of drainAndDispatch")
+        } catch (e: RuntimeException) {
+            assertEquals("simulated crash mid-drain", e.message)
+        }
+
+        // The first envelope's commit already ran before the "crash" on the second, so only the
+        // second -- still in flight at the moment of the crash -- remains queued for retry.
+        val remaining = queue.drainAll(pipelineReady = true)
+        assertEquals(listOf(secondId), remaining.map { it.eventId })
+        assertTrue(remaining.none { it.eventId == firstId })
+    }
+
     // --- enrichPayloadForDispatch (issue #255 Phase 3A) -----------------------------------------
+    // handledNatively is written directly into the payload upfront by notifyAlarmFired (not
+    // late-injected here any more -- see enrichPayloadForDispatch's KDoc), so these tests build
+    // the envelope's payload the same way notifyAlarmFired does: with handledNatively already
+    // baked in. enrichPayloadForDispatch's only remaining job is stamping the envelope's own
+    // eventId on top, without disturbing whatever handledNatively is already sitting there.
 
     @Test
-    fun `enriches a fired-event payload with the envelope's own eventId and handledNatively`() {
+    fun `enriches a fired-event payload with the envelope's own eventId, leaving its pre-baked handledNatively untouched`() {
         val queue = DurableEventQueue(store, EVENT_LOG_KEY)
         val basePayload = JSONObject().apply {
             put("id", 7)
             put("actualFiredAt", 1_755_100_800_000L)
+            put("handledNatively", JSONArray(listOf("watch-ring")))
         }
-        val eventId = queue.enqueue(TOPIC_FIRED, basePayload.toString(), handledNatively = setOf("watch-ring"))
+        val eventId = queue.enqueue(TOPIC_FIRED, basePayload.toString())
 
         val dispatchedPayloads = mutableListOf<String>()
         drainAndDispatch(queue) { _, payload -> dispatchedPayloads.add(payload); true }
@@ -310,9 +348,13 @@ class AlarmManagerPluginTest {
     }
 
     @Test
-    fun `a fired event with no bus tags dispatches with an empty handledNatively array`() {
+    fun `a fired event whose payload already has an empty handledNatively array dispatches with it unchanged`() {
         val queue = DurableEventQueue(store, EVENT_LOG_KEY)
-        queue.enqueue(TOPIC_FIRED, JSONObject().put("id", 1).toString())
+        val basePayload = JSONObject().apply {
+            put("id", 1)
+            put("handledNatively", JSONArray())
+        }
+        queue.enqueue(TOPIC_FIRED, basePayload.toString())
 
         val dispatchedPayloads = mutableListOf<String>()
         drainAndDispatch(queue) { _, payload -> dispatchedPayloads.add(payload); true }
