@@ -281,11 +281,15 @@ impl AlarmCoordinator {
     /// - `app`: app handle for event emission.
     /// - `id`: alarm identifier.
     /// - `actual_fired_at`: wall-clock firing time in epoch milliseconds.
+    /// - `handled_natively`: side-effect tags a native listener already handled at publish
+    ///   time (e.g. `"watch-ring"`), per issue #255's Phase 3 payload contract. Always
+    ///   empty on desktop, which has no native bus.
     pub async fn report_alarm_fired<R: Runtime>(
         &self,
         app: &AppHandle<R>,
         id: i32,
         actual_fired_at: i64,
+        handled_natively: Vec<String>,
     ) -> Result<()> {
         use std::sync::atomic::Ordering;
 
@@ -316,6 +320,7 @@ impl AlarmCoordinator {
             snooze_length_minutes: snooze,
             is_24_hour,
             is_24_hour_known,
+            handled_natively,
         };
         app.emit("alarm:fired", &event)?;
 

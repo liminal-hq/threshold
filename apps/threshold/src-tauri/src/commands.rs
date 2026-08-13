@@ -141,6 +141,11 @@ pub async fn snooze_alarm<R: Runtime>(
 /// - `coordinator`: alarm coordinator state.
 /// - `id`: alarm identifier.
 /// - `actual_fired_at`: wall-clock firing time in epoch milliseconds.
+///
+/// This is the TS-invoked path (desktop's tokio-timer firing, or any frontend-driven
+/// report). Desktop has no native bus, so there are no `handledNatively` tags to pass
+/// through -- always an empty `Vec` here, matching `AlarmFired::handled_natively`'s
+/// `#[serde(default)]` fallback.
 pub async fn report_alarm_fired<R: Runtime>(
     app: AppHandle<R>,
     coordinator: State<'_, AlarmCoordinator>,
@@ -148,7 +153,7 @@ pub async fn report_alarm_fired<R: Runtime>(
     actual_fired_at: i64,
 ) -> Result<(), String> {
     coordinator
-        .report_alarm_fired(&app, id, actual_fired_at)
+        .report_alarm_fired(&app, id, actual_fired_at, Vec::new())
         .await
         .map_err(|e| e.to_string())
 }
@@ -199,6 +204,10 @@ pub async fn test_watch_ring<R: Runtime>(app: AppHandle<R>) -> Result<(), String
             .try_state::<TimeFormatKnownState>()
             .map(|s| s.load(Ordering::Relaxed))
             .unwrap_or(false),
+        // Deliberately empty: this command exists to exercise wear-sync's own
+        // `send_alarm_ring` path from the frontend, so it must not carry the
+        // `"watch-ring"` tag that would tell that listener to skip the ring.
+        handled_natively: Vec::new(),
     };
     app.emit("alarm:fired", &event).map_err(|e| e.to_string())
 }
