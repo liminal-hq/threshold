@@ -8,12 +8,10 @@ package ca.liminalhq.threshold.wearsync
 import android.content.Context
 import android.util.Log
 import ca.liminalhq.threshold.nativebus.NativeEventBus
-import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import org.json.JSONObject
 
 private const val TAG = "NativeFiredListener"
@@ -31,7 +29,9 @@ internal const val TAG_WATCH_RING = "watch-ring"
 
 // Per the #255 Phase 3 payload contract: a fired event older than this is treated as a
 // stale replay (e.g. a durable-queue entry drained long after the alarm actually rang) and
-// must not ring the watch again.
+// must not ring the watch again. Mirrored independently (no shared source of truth across
+// languages) by `STALENESS_WINDOW_MS`/`is_stale` in wear-sync's own `src/lib.rs` -- if you
+// tune this value, tune that one too.
 internal const val STALENESS_WINDOW_MS = 90_000L
 
 /**
@@ -50,6 +50,16 @@ internal const val STALENESS_WINDOW_MS = 90_000L
  * once it's confirmed delivered -- at-least-once semantics, per the contract doc's decision:
  * stamping the tag after confirmation would risk a crash mid-send leaving the watch silent
  * with no fallback, which is the exact failure this whole design exists to prevent.
+ *
+ * The toggle check specifically has to stay *synchronous* despite that contract, since
+ * [handle]'s return value (whether it claims [TAG_WATCH_RING]) has to reflect whether native
+ * fan-out is actually disabled -- deferring that decision into [scope] would mean returning
+ * the tag optimistically, which would make the Rust-side gate skip its own ring too and drop
+ * the ring entirely whenever the toggle is off. [NativeFanOutPrefs] resolves the tension by
+ * caching the toggle's value in memory, warmed once by [WearRingInitProvider.onCreate] before
+ * this listener is even registered -- see its KDoc -- so by the time [handle] can possibly
+ * run, the "synchronous" check is a plain volatile-field read, not a `SharedPreferences` disk
+ * hit.
  */
 object NativeFiredListener {
 
@@ -115,19 +125,7 @@ object NativeFiredListener {
             is24HourKnown = is24HourKnown,
         )
 
-        val nodeClient = Wearable.getNodeClient(context)
-        val messageClient = Wearable.getMessageClient(context)
-        val nodes = nodeClient.connectedNodes.await()
-        if (nodes.isEmpty()) {
-            Log.d(TAG, "No connected watch nodes — skipping native ring for id=$alarmId")
-            return
-        }
-
-        for (node in nodes) {
-            messageClient.sendMessage(node.id, MSG_PATH_ALARM_RING, payload).await()
-            Log.d(TAG, "Sent native alarm ring to watch: ${node.displayName} for id=$alarmId")
-        }
-        NativeEventLog.log(context, TAG, "Sent native watch ring for id=$alarmId to ${nodes.size} node(s)")
+        sendAlarmRingToConnectedNodes(context, payload, TAG)
     }
 }
 

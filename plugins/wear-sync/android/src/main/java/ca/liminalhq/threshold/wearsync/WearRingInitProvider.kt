@@ -39,8 +39,13 @@ class WearRingInitProvider : ContentProvider() {
             return true
         }
 
+        // Warm the fan-out toggle's in-memory cache *before* registering the listener that
+        // reads it -- see NativeFanOutPrefs' class KDoc for why this ordering is what lets
+        // NativeFiredListener.handle() honour NativeEventBus's non-blocking threading
+        // contract despite the toggle check needing to be resolved synchronously.
+        NativeFanOutPrefs.warm(ctx)
         NativeFiredListener.register(ctx)
-        Log.d(TAG, "WearRingInitProvider.onCreate() fired, native fired listener registered")
+        Log.d(TAG, "WearRingInitProvider.onCreate() fired, fan-out toggle warmed, listener registered")
 
         return true
     }

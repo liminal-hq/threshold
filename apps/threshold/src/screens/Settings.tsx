@@ -93,8 +93,11 @@ const Settings: React.FC = () => {
 		notifications: null,
 	});
 	// Developer toggle for wear-sync's native fired->watch-ring fan-out (issue #255 Phase
-	// 3B) -- defaults to enabled, matching NativeFanOutPrefs' own Kotlin-side default.
-	const [nativeFanOutEnabled, setNativeFanOutEnabledState] = useState<boolean>(true);
+	// 3B). Named and stored in the switch's own sense (disabled, not enabled) so the JSX
+	// below binds `checked` and `onChange` straight through with no inversion -- the
+	// negation lives only at the two points that cross the API boundary, where the
+	// underlying command is phrased as "enabled" instead.
+	const [disableNativeFanOut, setDisableNativeFanOut] = useState<boolean>(false);
 
 	useEffect(() => {
 		setIsMobile(PlatformUtils.isMobile());
@@ -108,18 +111,18 @@ const Settings: React.FC = () => {
 			try {
 				const { getNativeFanOutEnabled } = await import('tauri-plugin-wear-sync-api');
 				const { enabled } = await getNativeFanOutEnabled();
-				setNativeFanOutEnabledState(enabled);
+				setDisableNativeFanOut(!enabled);
 			} catch (e) {
 				console.error('Failed to read native watch fan-out toggle:', e);
 			}
 		})();
 	}, [isAndroid]);
 
-	const handleNativeFanOutChange = async (enabled: boolean) => {
-		setNativeFanOutEnabledState(enabled);
+	const handleDisableNativeFanOutChange = async (disabled: boolean) => {
+		setDisableNativeFanOut(disabled);
 		try {
 			const { setNativeFanOutEnabled } = await import('tauri-plugin-wear-sync-api');
-			await setNativeFanOutEnabled(enabled);
+			await setNativeFanOutEnabled(!disabled);
 		} catch (e) {
 			console.error('Failed to set native watch fan-out toggle:', e);
 		}
@@ -512,8 +515,8 @@ const Settings: React.FC = () => {
 					/>
 					<Switch
 						edge="end"
-						checked={!nativeFanOutEnabled}
-						onChange={(e) => handleNativeFanOutChange(!e.target.checked)}
+						checked={disableNativeFanOut}
+						onChange={(e) => handleDisableNativeFanOutChange(e.target.checked)}
 					/>
 				</ListItem>
 			)}

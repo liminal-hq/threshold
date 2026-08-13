@@ -6,6 +6,7 @@
 package ca.liminalhq.threshold.wearsync
 
 import android.app.Activity
+import android.content.Context
 import android.util.Log
 import android.webkit.WebView
 import app.tauri.annotation.Command
@@ -69,6 +70,35 @@ internal fun buildAlarmRingPayload(
         put("is24HourKnown", is24HourKnown)
     }
     return json.toString().toByteArray()
+}
+
+/**
+ * Sends [payload] to every currently connected watch node at [MSG_PATH_ALARM_RING], logging
+ * both to Logcat and [NativeEventLog] under [tag] (the caller's own tag, so diagnostics from
+ * the Rust-invoked path and the native path are still distinguishable). Shared by
+ * [WearSyncPlugin.sendAlarmRing] and [NativeFiredListener] alongside [buildAlarmRingPayload]
+ * so the two callers' "iterate connected nodes, send message" logic can't drift the way it
+ * already had (only one of them was logging to [NativeEventLog]).
+ *
+ * Returns the number of nodes the message was actually sent to (`0` if none connected --
+ * the existing "no watch paired" gap noted on [WearSyncPlugin.sendAlarmRing], not something
+ * either caller treats as an error).
+ */
+internal suspend fun sendAlarmRingToConnectedNodes(context: Context, payload: ByteArray, tag: String): Int {
+    val nodeClient = Wearable.getNodeClient(context)
+    val messageClient = Wearable.getMessageClient(context)
+    val nodes = nodeClient.connectedNodes.await()
+    if (nodes.isEmpty()) {
+        Log.d(tag, "No connected watch nodes — skipping ring notification")
+        return 0
+    }
+
+    for (node in nodes) {
+        messageClient.sendMessage(node.id, MSG_PATH_ALARM_RING, payload).await()
+        Log.d(tag, "Sent alarm ring to watch: ${node.displayName}")
+    }
+    NativeEventLog.log(context, tag, "Sent alarm ring to ${nodes.size} node(s)")
+    return nodes.size
 }
 
 @InvokeArg
@@ -232,13 +262,6 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
         val args = invoke.parseArgs(AlarmRingRequest::class.java)
         scope.launch {
             try {
-                val nodes = nodeClient.connectedNodes.await()
-                if (nodes.isEmpty()) {
-                    Log.d(TAG, "No connected watch nodes — skipping ring notification")
-                    invoke.resolve()
-                    return@launch
-                }
-
                 val payload = buildAlarmRingPayload(
                     alarmId = args.alarmId,
                     label = args.label,
@@ -248,11 +271,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     is24Hour = args.is24Hour,
                     is24HourKnown = args.is24HourKnown,
                 )
-
-                for (node in nodes) {
-                    messageClient.sendMessage(node.id, MSG_PATH_ALARM_RING, payload).await()
-                    Log.d(TAG, "Sent alarm ring to watch: ${node.displayName}")
-                }
+                sendAlarmRingToConnectedNodes(activity, payload, TAG)
                 invoke.resolve()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send alarm ring to watch", e)

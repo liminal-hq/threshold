@@ -42,7 +42,10 @@ use publisher::{ChannelPublisher, PublishCommand, WearSyncPublisher};
 
 const BATCH_DEBOUNCE_MS: u64 = 500;
 
-// Per docs/architecture/255-phase3-payload-contract.md's shared constants.
+// Per docs/architecture/255-phase3-payload-contract.md's shared constants. Mirrored
+// independently (no shared source of truth across languages) by `STALENESS_WINDOW_MS` in
+// wear-sync's own Kotlin `NativeFiredListener.kt` -- if you tune this value, tune that one
+// too.
 const WATCH_RING_TAG: &str = "watch-ring";
 const STALENESS_WINDOW_MS: i64 = 90_000;
 
@@ -326,6 +329,62 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             Ok(())
         })
         .build()
+}
+
+/// Mirrors `plugins/alarm-manager/src/lib.rs`'s own `acl_tests` module (added there after
+/// issue #195, a prior silent-ACL-denial bug): asserts every webview-invoked command has a
+/// matching `allow-*` permission in `permissions/default.toml`, so a command that's wired
+/// into `generate_handler!` but not the ACL doesn't silently no-op at runtime the way #195
+/// did. wear-sync had no webview commands at all before issue #255 Phase 3B added the
+/// native fan-out developer toggle; this module exists specifically so any *future* webview
+/// command added to this plugin gets the same automated check for free.
+#[cfg(test)]
+mod acl_tests {
+    // Mirrors the command list passed to `generate_handler!` in `init()` above -- kept as a
+    // separate literal because macro invocations aren't readable at test time. If you
+    // add/remove a webview command, update both lists.
+    const WEBVIEW_COMMANDS: &[&str] = &["get_native_fan_out_enabled", "set_native_fan_out_enabled"];
+
+    const DEFAULT_TOML: &str = include_str!("../permissions/default.toml");
+
+    #[test]
+    fn every_webview_command_has_a_default_permission() {
+        for command in WEBVIEW_COMMANDS {
+            let permission = format!("allow-{}", command.replace('_', "-"));
+            assert!(
+                DEFAULT_TOML.contains(&permission),
+                "command `{command}` is webview-invokable but `permissions/default.toml` \
+                 is missing `{permission}` — it will be silently ACL-denied at runtime"
+            );
+        }
+    }
+
+    #[test]
+    fn rust_internal_commands_are_not_webview_invokable() {
+        // These `build.rs` `COMMANDS` entries are only ever reached via `run_mobile_plugin`
+        // from Rust's own code (either this plugin's own setup/listener code, or the app
+        // crate calling through `WearSyncExt`), never from the webview -- they must not
+        // reappear in `generate_handler!`/`WEBVIEW_COMMANDS`. Per
+        // `docs/plugins/command-conventions.md`, listing a Rust-internal command in
+        // `COMMANDS` doesn't need an ACL permission (that list only feeds permission *stub
+        // generation*, not the ACL check itself), so this predates issue #255 Phase 3B and
+        // isn't something this PR needs to fix -- just not regress.
+        for internal in [
+            "publish_to_watch",
+            "request_sync_from_watch",
+            "send_alarm_ring",
+            "send_alarm_dismiss",
+            "send_alarm_snooze",
+            "set_watch_message_handler",
+            "mark_watch_pipeline_ready",
+        ] {
+            assert!(
+                !WEBVIEW_COMMANDS.contains(&internal),
+                "`{internal}` is Rust-internal (via run_mobile_plugin) and must not be \
+                 exposed as a webview command"
+            );
+        }
+    }
 }
 
 /// Spawn a background task that receives publish commands from the
