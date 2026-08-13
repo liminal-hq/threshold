@@ -15,7 +15,6 @@ import app.tauri.plugin.Channel
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
-import ca.liminalhq.threshold.nativebus.SharedPreferencesKeyValueStore
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.CoroutineScope
@@ -85,9 +84,11 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     private val dataClient by lazy { Wearable.getDataClient(activity) }
     private val messageClient by lazy { Wearable.getMessageClient(activity) }
     private val nodeClient by lazy { Wearable.getNodeClient(activity) }
-    private val watchQueue by lazy {
-        WearSyncEventQueue(SharedPreferencesKeyValueStore(activity, WearSyncEventQueue.PREFS_NAME))
-    }
+    // Must go through the process-wide singleton, not a fresh instance -- see
+    // WearSyncEventQueue.getInstance's KDoc for why a second, independently-constructed
+    // instance over the same SharedPreferences file provides no mutual exclusion against
+    // this one, or against WearMessageService's own offline-write enqueues.
+    private val watchQueue by lazy { WearSyncEventQueue.getInstance(activity) }
     private var watchMessageChannel: Channel? = null
     @Volatile
     private var watchPipelineReady: Boolean = false
@@ -391,6 +392,15 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
         }
     }
 
+    /**
+     * Peeks every queued message and delivers each one to Rust in turn, committing
+     * (removing) only the ones that were actually handed to the [Channel] successfully.
+     *
+     * Deliberately peek-then-commit-after-delivery rather than drain-then-deliver: if
+     * `channel.send()` throws partway through a batch (a stale Channel reference, a JNI
+     * failure, whatever), every message not yet delivered at that point must still be in
+     * the queue afterwards so it's retried on the next drain, not silently lost.
+     */
     private fun drainQueuedMessages() {
         if (!watchPipelineReady) return
         val channel = watchMessageChannel
@@ -399,16 +409,22 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
             return
         }
 
-        val queued = watchQueue.drainAll()
-        if (queued.isNotEmpty()) {
-            Log.i(TAG, "Replaying ${queued.size} queued message(s)")
-            for ((path, data) in queued) {
+        val pending = watchQueue.peekAll()
+        if (pending.isEmpty()) return
+
+        Log.i(TAG, "Replaying ${pending.size} queued message(s)")
+        val delivered = mutableSetOf<String>()
+        try {
+            for (message in pending) {
                 val event = JSObject()
-                event.put("path", path)
-                event.put("data", data)
+                event.put("path", message.path)
+                event.put("data", message.data)
                 channel.send(event)
-                Log.d(TAG, "Sent watch message to Rust channel: path=$path")
+                delivered.add(message.eventId)
+                Log.d(TAG, "Sent watch message to Rust channel: path=${message.path}")
             }
+        } finally {
+            watchQueue.commit(delivered)
         }
     }
 

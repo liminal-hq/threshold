@@ -1,4 +1,4 @@
-// Unit tests for WearSyncEventQueue -- migration off WearSyncQueue and the path/topic mapping
+// Unit tests for WearSyncEventQueue -- migration off WearSyncQueue, peek/commit, and path/topic mapping
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -17,9 +17,15 @@ import org.junit.Test
  * Plain JUnit 4 tests against an in-memory [InMemoryKeyValueStore] fake -- no
  * Robolectric/instrumentation needed. [DurableEventQueue]'s own drain/commit/corrupt-entry
  * behaviour is already covered by native-bus's own test suite, so these focus on what's
- * actually new here: migrating the old `WearSyncQueue` format, and the path<->topic /
- * data<->payload round-trip that replaces `WearSyncPlugin.onWatchMessage`'s old direct
- * `WearSyncQueue.enqueue`/`drainAll` calls.
+ * actually new here: migrating the old `WearSyncQueue` format, the peek-then-commit split
+ * that lets `WearSyncPlugin.drainQueuedMessages` retry only what it failed to deliver, and
+ * the path<->topic / data<->payload round-trip that replaces `WearSyncPlugin.onWatchMessage`'s
+ * old direct `WearSyncQueue.enqueue`/`drainAll` calls.
+ *
+ * `WearSyncEventQueue.getInstance` (the production singleton accessor) isn't exercised
+ * here since it needs a real `android.content.Context` -- these tests go through the
+ * public `WearSyncEventQueue(store)` constructor directly instead, same as the singleton
+ * does internally.
  */
 class WearSyncEventQueueTest {
 
@@ -33,44 +39,42 @@ class WearSyncEventQueueTest {
     }
 
     @Test
-    fun `enqueue then drain round-trips path as topic and data as payload`() {
+    fun `enqueue then deliver-all round-trips path as topic and data as payload`() {
         queue.enqueue("/threshold/save_alarm", "{\"alarmId\":1}")
 
-        val drained = queue.drainAll()
+        val drained = deliverAll(queue)
 
         assertEquals(listOf("/threshold/save_alarm" to "{\"alarmId\":1}"), drained)
     }
 
     @Test
-    fun `nothing is queued until enqueue is called -- draining an empty queue is a no-op`() {
-        val drained = queue.drainAll()
-
-        assertTrue(drained.isEmpty())
+    fun `nothing is queued until enqueue is called -- peeking an empty queue is a no-op`() {
+        assertTrue(queue.peekAll().isEmpty())
     }
 
     @Test
-    fun `a message enqueued while not ready stays queued until explicitly drained`() {
+    fun `a message enqueued while not ready stays queued until explicitly delivered`() {
         // Mirrors WearSyncPlugin.onWatchMessage's "not ready" branch: it enqueues and
         // does nothing else -- WearSyncEventQueue has no notion of "readiness" itself,
         // that gating lives in WearSyncPlugin, so from this class's perspective the
-        // message simply sits in the log until drainAll() is called.
+        // message simply sits in the log until peekAll()+commit() is called.
         queue.enqueue("/threshold/sync_request", "0")
 
-        // Not drained yet -- a second, independent queue instance over the same store
+        // Not delivered yet -- a second, independent queue instance over the same store
         // (mirroring a fresh WearSyncEventQueue construction at a later call site) sees
         // the same still-pending entry.
-        val stillPending = WearSyncEventQueue(store).drainAll()
+        val stillPending = deliverAll(WearSyncEventQueue(store))
 
         assertEquals(listOf("/threshold/sync_request" to "0"), stillPending)
     }
 
     @Test
-    fun `multiple messages across different paths drain in enqueue order`() {
+    fun `multiple messages across different paths peek in enqueue order`() {
         queue.enqueue("/threshold/save_alarm", "one")
         queue.enqueue("/threshold/delete_alarm", "two")
         queue.enqueue("/threshold/alarm_dismiss", "three")
 
-        val drained = queue.drainAll()
+        val drained = deliverAll(queue)
 
         assertEquals(
             listOf(
@@ -83,13 +87,53 @@ class WearSyncEventQueueTest {
     }
 
     @Test
-    fun `draining removes entries so a second drain sees nothing left`() {
+    fun `peekAll does not remove anything -- only commit does`() {
         queue.enqueue("/threshold/save_alarm", "one")
 
-        queue.drainAll()
-        val secondDrain = queue.drainAll()
+        val firstPeek = queue.peekAll()
+        val secondPeek = queue.peekAll()
 
-        assertTrue(secondDrain.isEmpty())
+        assertEquals(1, firstPeek.size)
+        assertEquals(1, secondPeek.size)
+        assertEquals(firstPeek.single().eventId, secondPeek.single().eventId)
+    }
+
+    @Test
+    fun `committing only the delivered subset leaves the rest queued for retry`() {
+        // Mirrors WearSyncPlugin.drainQueuedMessages: if delivery fails partway through a
+        // batch, only the entries actually handed off get committed -- everything else
+        // must still be there afterwards, ready to retry on the next drain.
+        queue.enqueue("/threshold/save_alarm", "delivered-ok")
+        queue.enqueue("/threshold/delete_alarm", "delivery-fails-here")
+        queue.enqueue("/threshold/alarm_dismiss", "never-attempted")
+
+        val pending = queue.peekAll()
+        queue.commit(setOf(pending[0].eventId)) // only the first message was "delivered"
+
+        val stillQueued = queue.peekAll()
+        assertEquals(
+            listOf("/threshold/delete_alarm" to "delivery-fails-here", "/threshold/alarm_dismiss" to "never-attempted"),
+            stillQueued.map { it.path to it.data },
+        )
+    }
+
+    @Test
+    fun `committing an empty set is a no-op`() {
+        queue.enqueue("/threshold/save_alarm", "one")
+
+        queue.commit(emptySet())
+
+        assertEquals(1, queue.peekAll().size)
+    }
+
+    @Test
+    fun `committing removes entries so a second peek sees nothing left`() {
+        queue.enqueue("/threshold/save_alarm", "one")
+
+        deliverAll(queue)
+        val secondPeek = queue.peekAll()
+
+        assertTrue(secondPeek.isEmpty())
     }
 
     @Test
@@ -99,7 +143,7 @@ class WearSyncEventQueueTest {
             legacyEntry(path = "/threshold/delete_alarm", data = "second", timestamp = 200L),
         )
 
-        val drained = queue.drainAll()
+        val drained = deliverAll(queue)
 
         assertEquals(
             listOf(
@@ -129,7 +173,7 @@ class WearSyncEventQueueTest {
             legacyEntry(path = "/threshold/delete_alarm", data = "legacy-second", timestamp = 2L),
         )
 
-        val drained = queue.drainAll()
+        val drained = deliverAll(queue)
 
         assertEquals(
             listOf(
@@ -149,7 +193,7 @@ class WearSyncEventQueueTest {
         legacyArray.put("not even a JSON object")
         store.set(WearSyncEventQueue.LEGACY_KEY_QUEUE, legacyArray.toString())
 
-        val drained = queue.drainAll()
+        val drained = deliverAll(queue)
 
         assertEquals(listOf("/threshold/save_alarm" to "good"), drained)
     }
@@ -158,10 +202,17 @@ class WearSyncEventQueueTest {
     fun `a corrupt legacy queue is discarded without crashing, and the key is still removed`() {
         store.set(WearSyncEventQueue.LEGACY_KEY_QUEUE, "{not json at all")
 
-        val drained = queue.drainAll()
+        val drained = deliverAll(queue)
 
         assertTrue(drained.isEmpty())
         assertNull(store.get(WearSyncEventQueue.LEGACY_KEY_QUEUE))
+    }
+
+    /** Mirrors WearSyncPlugin.drainQueuedMessages's happy path: peek, "deliver" everything, commit everything. */
+    private fun deliverAll(queue: WearSyncEventQueue): List<Pair<String, String>> {
+        val pending = queue.peekAll()
+        queue.commit(pending.map { it.eventId }.toSet())
+        return pending.map { it.path to it.data }
     }
 
     private fun legacyEntry(path: String, data: String, timestamp: Long): JSONObject =

@@ -5,9 +5,11 @@
 
 package ca.liminalhq.threshold.wearsync
 
+import android.content.Context
 import android.util.Log
 import ca.liminalhq.threshold.nativebus.DurableEventQueue
 import ca.liminalhq.threshold.nativebus.KeyValueStore
+import ca.liminalhq.threshold.nativebus.SharedPreferencesKeyValueStore
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -25,31 +27,46 @@ private const val TAG = "WearSyncEventQueue"
  * `/threshold/save_alarm`) becomes the [DurableEventQueue] topic; the raw message string
  * becomes its opaque payload.
  *
- * Both call sites construct their own instance against a [store] pointed at the same
- * SharedPreferences file/key rather than sharing one Kotlin object -- persistence is the
- * source of truth, not instance state, mirroring the old `WearSyncQueue`'s per-call
- * `context.getSharedPreferences(...)` construction.
+ * [context] is only used for [android.content.Context]-scoped diagnostics (mirroring
+ * [NativeEventLog]'s calls the old `WearSyncQueue` made) -- it's nullable so tests can
+ * construct this class against an in-memory [KeyValueStore] fake without any Android
+ * framework available.
  */
-class WearSyncEventQueue(private val store: KeyValueStore) {
+class WearSyncEventQueue(private val store: KeyValueStore, private val context: Context? = null) {
 
     private val delegate = DurableEventQueue(store, KEY_QUEUE)
+
+    /** One not-yet-committed queued message, as returned by [peekAll]. */
+    data class QueuedMessage(val eventId: String, val path: String, val data: String)
 
     /** Add a message to the queue. */
     fun enqueue(path: String, data: String) {
         migrateLegacyEntriesIfNeeded()
         delegate.enqueue(topic = path, payload = data)
         Log.d(TAG, "Enqueued message: path=$path")
+        logToFile("Enqueued message path=$path")
     }
 
-    /** Drain and remove every queued message, returning (path, data) pairs oldest first. */
-    fun drainAll(): List<Pair<String, String>> {
+    /**
+     * Returns every currently-queued message, oldest first, **without** removing anything
+     * from the log -- callers must call [commit] with the IDs of whichever entries they
+     * actually finished delivering. This peek-then-commit split (mirroring
+     * [DurableEventQueue.drainAll]/[DurableEventQueue.commit]'s own design) exists so a
+     * delivery failure partway through a batch (e.g. a stale Channel throwing) only drops
+     * the entries that failed to deliver -- not every entry that happened to be queued
+     * alongside them.
+     */
+    fun peekAll(): List<QueuedMessage> {
         migrateLegacyEntriesIfNeeded()
-        val envelopes = delegate.drainAll(pipelineReady = true)
-        if (envelopes.isEmpty()) return emptyList()
+        return delegate.drainAll(pipelineReady = true).map { QueuedMessage(it.eventId, it.topic, it.payload) }
+    }
 
-        delegate.commit(envelopes.map { it.eventId }.toSet())
-        Log.d(TAG, "Drained ${envelopes.size} queued message(s)")
-        return envelopes.map { it.topic to it.payload }
+    /** Removes only the given [eventIds] (as returned by [peekAll]) from the queue. */
+    fun commit(eventIds: Set<String>) {
+        if (eventIds.isEmpty()) return
+        delegate.commit(eventIds)
+        Log.d(TAG, "Drained ${eventIds.size} queued message(s)")
+        logToFile("Drained ${eventIds.size} queued message(s)")
     }
 
     /**
@@ -74,6 +91,7 @@ class WearSyncEventQueue(private val store: KeyValueStore) {
             JSONArray(legacyRaw)
         } catch (e: Exception) {
             Log.w(TAG, "Corrupt legacy queue JSON under '$LEGACY_KEY_QUEUE', discarding without migrating", e)
+            logToFile("Corrupt legacy queue JSON, discarding without migrating: ${e.message}")
             store.remove(LEGACY_KEY_QUEUE)
             return
         }
@@ -111,10 +129,16 @@ class WearSyncEventQueue(private val store: KeyValueStore) {
         store.set(KEY_QUEUE, migratedArray.toString())
         store.remove(LEGACY_KEY_QUEUE)
         Log.i(TAG, "Migrated $migrated legacy watch message(s) into the durable event queue")
+        logToFile("Migrated $migrated legacy watch message(s) into the durable event queue")
+    }
+
+    /** Mirrors the old `WearSyncQueue`'s [NativeEventLog] calls, so field-exported logs still see queue activity. */
+    private fun logToFile(message: String) {
+        context?.let { NativeEventLog.log(it, TAG, message) }
     }
 
     companion object {
-        /** Shared SharedPreferences file name both call sites point their [KeyValueStore] at. */
+        /** Shared SharedPreferences file name the production singleton points its [KeyValueStore] at. */
         const val PREFS_NAME = "ThresholdWearSyncQueue"
 
         private const val KEY_QUEUE = "durable_log"
@@ -131,5 +155,34 @@ class WearSyncEventQueue(private val store: KeyValueStore) {
         private const val KEY_EVENT_ID = "eventId"
         private const val KEY_PUBLISHED_AT = "publishedAt"
         private const val KEY_HANDLED_NATIVELY = "handledNatively"
+
+        @Volatile
+        private var instance: WearSyncEventQueue? = null
+
+        /**
+         * Returns the process-wide singleton pointed at the production SharedPreferences
+         * file, constructing it on first access.
+         *
+         * [WearSyncPlugin] and [WearMessageService] **must** both go through this rather
+         * than constructing their own `WearSyncEventQueue(SharedPreferencesKeyValueStore(...))`
+         * directly -- two independently-constructed instances pointed at the same
+         * underlying file provide *no* mutual exclusion between each other, since
+         * [DurableEventQueue]'s `@Synchronized` methods only lock their own instance's
+         * monitor. A watch message arriving through each of those two call sites at
+         * nearly the same moment, each against its own instance, could race: both read
+         * the same pre-write JSON array, each append their own entry, and the second
+         * write clobbers the first. Going through one shared instance closes that gap.
+         *
+         * Test code should keep constructing this class directly against an in-memory
+         * [KeyValueStore] fake instead of going through this accessor.
+         */
+        fun getInstance(context: Context): WearSyncEventQueue {
+            return instance ?: synchronized(this) {
+                instance ?: WearSyncEventQueue(
+                    SharedPreferencesKeyValueStore(context.applicationContext, PREFS_NAME),
+                    context.applicationContext,
+                ).also { instance = it }
+            }
+        }
     }
 }
