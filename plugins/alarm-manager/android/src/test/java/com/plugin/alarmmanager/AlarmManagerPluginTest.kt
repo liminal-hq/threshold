@@ -174,6 +174,74 @@ class AlarmManagerPluginTest {
         assertTrue(DurableEventQueue(store, EVENT_LOG_KEY).drainAll(pipelineReady = true).isEmpty())
     }
 
+    @Test
+    fun `treats legacy keys already drained back to an empty array as nothing to migrate`() {
+        // The pre-migration drain code always rewrote a queue back to "[]" after draining it
+        // rather than removing the key -- so on any real device that's ever used alarms, these
+        // keys exist but hold no real data. A plain non-null guard would never fast-path here.
+        store.set(LEGACY_KEY_PENDING_ALARM_EVENTS, "[]")
+        store.set(LEGACY_KEY_PENDING_SNOOZE_EVENTS, "[]")
+        store.set(LEGACY_KEY_PENDING_DISMISS_EVENTS, "[]")
+        store.set(LEGACY_KEY_PENDING_IMPORT_EVENTS, " [ ] ")
+
+        assertEquals(0, migrateLegacyQueues(store))
+        assertTrue(DurableEventQueue(store, EVENT_LOG_KEY).drainAll(pipelineReady = true).isEmpty())
+    }
+
+    @Test
+    fun `still migrates real entries when other legacy keys hold only an empty array`() {
+        store.set(LEGACY_KEY_PENDING_ALARM_EVENTS, "[]")
+        store.set(LEGACY_KEY_PENDING_SNOOZE_EVENTS, JSONArray().put(legacyIdOnly(id = 1)).toString())
+
+        val migratedCount = migrateLegacyQueues(store)
+
+        assertEquals(1, migratedCount)
+        val drained = DurableEventQueue(store, EVENT_LOG_KEY).drainAll(pipelineReady = true)
+        assertEquals(listOf(1), drained.map { JSONObject(it.payload).getInt("id") })
+    }
+
+    @Test
+    fun `migration applies the new log write and every legacy key removal as a single atomic batch`() {
+        val recording = RecordingKeyValueStore()
+        recording.seed(LEGACY_KEY_PENDING_SNOOZE_EVENTS, JSONArray().put(legacyIdOnly(id = 1)).toString())
+        recording.seed(LEGACY_KEY_PENDING_DISMISS_EVENTS, JSONArray().put(legacyIdOnly(id = 2)).toString())
+
+        val migratedCount = migrateLegacyQueues(recording)
+
+        assertEquals(2, migratedCount)
+        // No direct set()/remove() calls -- everything must go through the one atomic batch(),
+        // so a process kill can never observe the new log written but a legacy key still present.
+        assertEquals(0, recording.directWriteCalls)
+        assertEquals(1, recording.batchCalls.size)
+
+        val (sets, removes) = recording.batchCalls.single()
+        assertEquals(setOf(EVENT_LOG_KEY), sets.keys)
+        assertEquals(
+            setOf(
+                LEGACY_KEY_PENDING_ALARM_EVENTS,
+                LEGACY_KEY_PENDING_SNOOZE_EVENTS,
+                LEGACY_KEY_PENDING_DISMISS_EVENTS,
+                LEGACY_KEY_PENDING_IMPORT_EVENTS,
+            ),
+            removes,
+        )
+    }
+
+    @Test
+    fun `legacy keys holding only invalid entries are still removed via a single batch with nothing to write`() {
+        val recording = RecordingKeyValueStore()
+        recording.seed(LEGACY_KEY_PENDING_SNOOZE_EVENTS, JSONArray().put(legacyIdOnly(id = 0)).toString())
+
+        val migratedCount = migrateLegacyQueues(recording)
+
+        assertEquals(0, migratedCount)
+        assertEquals(0, recording.directWriteCalls)
+        assertEquals(1, recording.batchCalls.size)
+        val (sets, removes) = recording.batchCalls.single()
+        assertTrue(sets.isEmpty())
+        assertEquals(4, removes.size)
+    }
+
     // --- drainAndDispatch --------------------------------------------------------------------
 
     @Test

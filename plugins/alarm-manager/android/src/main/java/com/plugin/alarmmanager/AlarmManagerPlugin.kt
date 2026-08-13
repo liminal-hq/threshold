@@ -90,7 +90,13 @@ internal fun migrateLegacyQueues(store: KeyValueStore): Int {
         LEGACY_KEY_PENDING_DISMISS_EVENTS,
         LEGACY_KEY_PENDING_IMPORT_EVENTS,
     )
-    if (legacyKeys.none { store.get(it) != null }) return 0
+    // The pre-migration drain code these queues replace never removed a legacy key once
+    // drained -- it always rewrote the queue back to "[]" instead. So on essentially any
+    // device that's ever used alarms, all four legacy keys already exist by the time this
+    // runs; a plain non-null check would make this fast path never actually trigger. Parsing
+    // each one and checking for a genuinely non-empty array is what actually distinguishes
+    // "has real pending data" from "exists but was already drained to empty".
+    if (legacyKeys.none { hasPendingLegacyEntries(store.get(it)) }) return 0
 
     val envelopes = JSONArray()
     try {
@@ -138,11 +144,34 @@ internal fun migrateLegacyQueues(store: KeyValueStore): Int {
         payload to fallbackBase + index
     }
 
-    if (migratedCount > 0) {
-        store.set(EVENT_LOG_KEY, envelopes.toString())
-    }
-    legacyKeys.forEach { store.remove(it) }
+    // Written as one atomic batch rather than a separate set() + four remove() calls: if the
+    // process were killed between them, the next launch would see the new log already holding
+    // these entries but the legacy keys still present with their original data, re-trigger
+    // migration, and duplicate every entry in the log (each one reported to Rust twice --
+    // e.g. the same alarm fired/dismissed twice). Batching makes that intermediate state
+    // unobservable -- either both the log write and all four removals land, or neither does.
+    val sets = if (migratedCount > 0) mapOf(EVENT_LOG_KEY to envelopes.toString()) else emptyMap()
+    store.batch(sets = sets, removes = legacyKeys.toSet())
     return migratedCount
+}
+
+/**
+ * Whether [raw] (a legacy queue's raw stored value) holds at least one entry worth migrating.
+ * `null` (never set) and a parsed-empty array (`"[]"`, or equivalent with whitespace) both mean
+ * "nothing to migrate" -- the latter matters because the pre-migration drain code always
+ * rewrote a queue back to `"[]"` after draining it rather than removing the key, so a
+ * non-null check alone can't tell "never had anything" apart from "already drained". Malformed
+ * JSON is treated as "has something" so the real per-key parse in [migrateLegacyArray] (which
+ * already tolerates and logs corrupt JSON) is what handles it, rather than this fast-path guard
+ * silently skipping a corrupt-but-non-empty legacy queue.
+ */
+private fun hasPendingLegacyEntries(raw: String?): Boolean {
+    if (raw.isNullOrEmpty()) return false
+    return try {
+        JSONArray(raw).length() > 0
+    } catch (e: Exception) {
+        true
+    }
 }
 
 /**
@@ -199,6 +228,20 @@ private fun migrateLegacyArray(
  * A standalone function (not a method) so it's unit-testable against a real
  * [DurableEventQueue]/in-memory [KeyValueStore] pair, with a fake [dispatch], and no Android
  * framework (Context, Channel) involved at all -- mirrors [migrateLegacyQueues] above.
+ *
+ * Two consequences of this design are intentional, not oversights, per issue #255's Unified
+ * design (decision 7: every event flows through the log; drain-now replaces the old two-path
+ * split; total order is preserved by draining everything, across all four topics, in
+ * chronological order on every call):
+ * - A process kill mid-drain -- after some [dispatch] calls have already succeeded but before
+ *   the trailing [DurableEventQueue.commit] runs -- can redeliver already-delivered entries
+ *   (possibly for a different topic than whichever call triggered this drain) on the next
+ *   launch. Issue #255's Phase 3C adds Rust-side last-N eventId dedup specifically to absorb
+ *   this.
+ * - [enqueueAndDrain] below drains the *entire* cross-topic backlog synchronously on every
+ *   single event, not just the topic that was just enqueued -- if a large backlog has built up,
+ *   this could run long enough to threaten `AlarmReceiver.onReceive()`'s ANR budget. Issue
+ *   #255's Phase 3A closes this by wrapping `onReceive()` in `goAsync()`.
  */
 internal fun drainAndDispatch(queue: DurableEventQueue, dispatch: (topic: String, payload: String) -> Boolean): Int {
     val drained = queue.drainAll(pipelineReady = true)
@@ -323,7 +366,8 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         // drainQueuedEvents() below delivers this same entry within the same call, so the net
         // effect (and latency) matches the old immediate-dispatch path; when it isn't, the
         // entry simply stays in the log until markAlarmPipelineReady() (or a later event of
-        // any topic) drains it.
+        // any topic) drains it. See drainAndDispatch()'s KDoc for the two deliberate,
+        // forward-referenced (issue #255) consequences of always draining the whole backlog.
         @Synchronized
         private fun enqueueAndDrain(context: Context, topic: String, payload: JSONObject) {
             val eventId = eventQueue(context).enqueue(topic, payload.toString())

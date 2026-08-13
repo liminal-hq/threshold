@@ -21,6 +21,23 @@ interface KeyValueStore {
 
     /** Removes [key] entirely. A no-op if it was never set. */
     fun remove(key: String)
+
+    /**
+     * Applies every entry in [sets] and removes every key in [removes] as a single atomic
+     * unit, so a caller can never observe a state partway through -- e.g. a new value written
+     * but an old key it's meant to replace not yet removed, if the process dies in between.
+     * Callers that need that all-or-nothing guarantee (see [SharedPreferencesKeyValueStore]'s
+     * override) should use this instead of separate [set]/[remove] calls.
+     *
+     * The default implementation just applies them sequentially via [set]/[remove] -- fine for
+     * simple in-memory fakes with no concurrent reader that could observe a torn state, but not
+     * a real atomicity guarantee. Override this on any [KeyValueStore] backed by real
+     * persistence.
+     */
+    fun batch(sets: Map<String, String> = emptyMap(), removes: Set<String> = emptySet()) {
+        sets.forEach { (key, value) -> set(key, value) }
+        removes.forEach { remove(it) }
+    }
 }
 
 /**
@@ -41,5 +58,12 @@ class SharedPreferencesKeyValueStore(
 
     override fun remove(key: String) {
         prefs.edit().remove(key).apply()
+    }
+
+    override fun batch(sets: Map<String, String>, removes: Set<String>) {
+        val editor = prefs.edit()
+        sets.forEach { (key, value) -> editor.putString(key, value) }
+        removes.forEach { editor.remove(it) }
+        editor.apply()
     }
 }
