@@ -38,6 +38,15 @@ private const val WATCH_LOG_FILE_NAME = "Threshold-watch.log"
 // (Phase 4A, a sibling worktree) can subscribe using the same vocabulary the rest of this
 // codebase already uses for "a watch dismiss/snooze happened", and stop the phone's local
 // ringing service immediately without waiting for Rust to boot and drain the durable queue.
+//
+// Payload key note (issue #255 Phase 4B code review): the payload published on these two
+// topics is [data] verbatim -- the raw watch-originated message straight off the wire, in the
+// watch's own `WearDataLayerClient.sendDismissAlarm`/`sendSnoozeAlarm` shape, which keys the
+// alarm id as `"alarmId"` (that wire format predates issue #255 and isn't being changed here).
+// This is *not* the same convention as alarm-manager's own `alarm-manager:dismiss-requested`/
+// `snooze-requested` topics (Phase 4A, consumed by NativeStopListener in this same file's
+// sibling), whose new `{id}` payload keys the alarm id as `"id"`. Don't assume the two topic
+// pairs share a payload shape just because they're both native-bus dismiss/snooze signals.
 internal const val TOPIC_WEAR_ALARM_DISMISS = "wear:alarm:dismiss"
 internal const val TOPIC_WEAR_ALARM_SNOOZE = "wear:alarm:snooze"
 
@@ -237,6 +246,10 @@ class WearMessageService : WearableListenerService() {
  * No dedup tag is threaded back from [NativeEventBus.publish]'s return value here, unlike the
  * fired path's `handled_natively` -- per the #255 design's decision 4, a double-delivered
  * *stop* signal is benign, so there's nothing for a tag to gate.
+ *
+ * [data] is republished onto [busTopic] byte-for-byte, unparsed -- see [TOPIC_WEAR_ALARM_DISMISS]'s
+ * KDoc for the resulting payload's `"alarmId"` key, which a subscriber must not confuse with
+ * alarm-manager's own `"id"`-keyed topics.
  */
 internal fun enqueueOfflineWrite(queue: WearSyncEventQueue, path: String, data: String, busTopic: String?) {
     queue.enqueue(path, data)

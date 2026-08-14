@@ -9,8 +9,6 @@ import android.content.Context
 import android.util.Log
 import ca.liminalhq.threshold.nativebus.NativeEventBus
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -64,14 +62,13 @@ internal const val STALENESS_WINDOW_MS = 90_000L
 object NativeFiredListener {
 
     // A dedicated scope, not WearSyncPlugin's -- this listener can run (and does run, by
-    // design) before any WearSyncPlugin instance exists.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // design) before any WearSyncPlugin instance exists. See NativeListenerSupport's KDoc for
+    // why this and the registration below are factored out rather than hand-rolled here.
+    private val scope: CoroutineScope = NativeListenerSupport.ioScope()
 
     /** Registers this listener with [NativeEventBus]. Called once from [WearRingInitProvider.onCreate]. */
     fun register(context: Context) {
-        val appContext = context.applicationContext
-        NativeEventBus.subscribe(TOPIC_FIRED) { payload -> handle(appContext, payload) }
-        Log.d(TAG, "Registered native fired listener for topic '$TOPIC_FIRED'")
+        NativeListenerSupport.subscribe(context, TAG, TOPIC_FIRED, ::handle)
     }
 
     /**

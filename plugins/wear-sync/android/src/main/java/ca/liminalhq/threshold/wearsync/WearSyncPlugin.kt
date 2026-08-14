@@ -16,6 +16,8 @@ import app.tauri.plugin.Channel
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
+import com.google.android.gms.wearable.MessageClient
+import com.google.android.gms.wearable.NodeClient
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.CoroutineScope
@@ -88,6 +90,14 @@ internal fun buildAlarmRingPayload(
  * arbitrary [path] in Phase 4B so [NativeStopListener]'s dismiss/snooze sends reuse this same
  * loop instead of hand-rolling a third copy of it.
  *
+ * [nodeClient]/[messageClient] default to fresh `Wearable.get*Client(context)` instances --
+ * the right choice for [NativeFiredListener]/[NativeStopListener], which run before any
+ * [WearSyncPlugin] instance (and its cached clients) exists. [WearSyncPlugin]'s own callers
+ * pass its `by lazy` cached clients explicitly instead (issue #255 Phase 4B code review):
+ * dismiss/snooze/ring are commands invoked from the WebView on every alarm interaction, a hot
+ * enough path that constructing a fresh `NodeClient`/`MessageClient` per call -- rather than
+ * reusing the ones the plugin already holds for exactly this purpose -- is wasteful.
+ *
  * Returns the number of nodes the message was actually sent to (`0` if none connected --
  * the existing "no watch paired" gap noted on [WearSyncPlugin.sendAlarmRing], not something
  * any caller treats as an error).
@@ -98,9 +108,9 @@ internal suspend fun sendWatchMessageToConnectedNodes(
     payload: ByteArray,
     tag: String,
     logLabel: String,
+    nodeClient: NodeClient = Wearable.getNodeClient(context),
+    messageClient: MessageClient = Wearable.getMessageClient(context),
 ): Int {
-    val nodeClient = Wearable.getNodeClient(context)
-    val messageClient = Wearable.getMessageClient(context)
     val nodes = nodeClient.connectedNodes.await()
     if (nodes.isEmpty()) {
         Log.d(tag, "No connected watch nodes — skipping $logLabel notification")
@@ -165,7 +175,7 @@ class AlarmRingRequest {
     // wear-sync's models.rs).
     var hour: Int? = null
     var minute: Int? = null
-    var snoozeLengthMinutes: Int = 10
+    var snoozeLengthMinutes: Int = DEFAULT_SNOOZE_LENGTH_MINUTES
     var is24Hour: Boolean = false
     var is24HourKnown: Boolean = false
 }
@@ -178,7 +188,7 @@ class AlarmDismissRequest {
 @InvokeArg
 class AlarmSnoozeRequest {
     var alarmId: Int = -1
-    var snoozeLengthMinutes: Int = 10
+    var snoozeLengthMinutes: Int = DEFAULT_SNOOZE_LENGTH_MINUTES
 }
 
 @InvokeArg
@@ -312,7 +322,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     is24Hour = args.is24Hour,
                     is24HourKnown = args.is24HourKnown,
                 )
-                sendWatchMessageToConnectedNodes(activity, MSG_PATH_ALARM_RING, payload, TAG, "alarm ring")
+                sendWatchMessageToConnectedNodes(activity, MSG_PATH_ALARM_RING, payload, TAG, "alarm ring", nodeClient, messageClient)
                 invoke.resolve()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send alarm ring to watch", e)
@@ -333,7 +343,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
         scope.launch {
             try {
                 val payload = buildAlarmDismissPayload(args.alarmId)
-                sendWatchMessageToConnectedNodes(activity, MSG_PATH_ALARM_DISMISS, payload, TAG, "alarm dismiss")
+                sendWatchMessageToConnectedNodes(activity, MSG_PATH_ALARM_DISMISS, payload, TAG, "alarm dismiss", nodeClient, messageClient)
                 invoke.resolve()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send alarm dismiss to watch", e)
@@ -354,7 +364,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
         scope.launch {
             try {
                 val payload = buildAlarmSnoozePayload(args.alarmId, args.snoozeLengthMinutes)
-                sendWatchMessageToConnectedNodes(activity, MSG_PATH_ALARM_SNOOZE, payload, TAG, "alarm snooze")
+                sendWatchMessageToConnectedNodes(activity, MSG_PATH_ALARM_SNOOZE, payload, TAG, "alarm snooze", nodeClient, messageClient)
                 invoke.resolve()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send alarm snooze to watch", e)

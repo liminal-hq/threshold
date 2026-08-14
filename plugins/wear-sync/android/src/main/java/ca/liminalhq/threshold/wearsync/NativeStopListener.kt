@@ -9,8 +9,6 @@ import android.content.Context
 import android.util.Log
 import ca.liminalhq.threshold.nativebus.NativeEventBus
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -22,10 +20,6 @@ private const val TAG = "NativeStopListener"
 // two plugins are separate Gradle modules with no shared Kotlin symbol between them.
 internal const val TOPIC_DISMISS_REQUESTED = "alarm-manager:dismiss-requested"
 internal const val TOPIC_SNOOZE_REQUESTED = "alarm-manager:snooze-requested"
-
-// Fallback used only when no cached snooze length is available (see handleSnooze) -- matches
-// AlarmSnoozeRequest.snoozeLengthMinutes's own default in WearSyncPlugin.kt.
-private const val DEFAULT_SNOOZE_LENGTH_MINUTES = 10
 
 /**
  * Registers with [NativeEventBus] for alarm-manager's `alarm-manager:dismiss-requested` and
@@ -53,61 +47,69 @@ private const val DEFAULT_SNOOZE_LENGTH_MINUTES = 10
 object NativeStopListener {
 
     // A dedicated scope, not WearSyncPlugin's -- same reasoning as NativeFiredListener's: this
-    // listener can run (and does run, by design) before any WearSyncPlugin instance exists.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // listener can run (and does run, by design) before any WearSyncPlugin instance exists. See
+    // NativeListenerSupport's KDoc for why this and the registration below are factored out
+    // rather than hand-rolled here.
+    private val scope: CoroutineScope = NativeListenerSupport.ioScope()
 
     /** Registers this listener with [NativeEventBus]. Called once from [WearRingInitProvider.onCreate]. */
     fun register(context: Context) {
-        val appContext = context.applicationContext
-        NativeEventBus.subscribe(TOPIC_DISMISS_REQUESTED) { payload -> handleDismiss(appContext, payload) }
-        NativeEventBus.subscribe(TOPIC_SNOOZE_REQUESTED) { payload -> handleSnooze(appContext, payload) }
-        Log.d(
-            TAG,
-            "Registered native stop listener for topics '$TOPIC_DISMISS_REQUESTED', '$TOPIC_SNOOZE_REQUESTED'",
-        )
+        NativeListenerSupport.subscribe(context, TAG, TOPIC_DISMISS_REQUESTED, ::handleDismiss)
+        NativeListenerSupport.subscribe(context, TAG, TOPIC_SNOOZE_REQUESTED, ::handleSnooze)
     }
 
     /**
      * The [NativeEventBus] listener callback for [TOPIC_DISMISS_REQUESTED]. `internal` (not
-     * `private`) so tests can drive it directly, mirroring [NativeFiredListener.handle].
+     * `private`) so tests can drive it directly, mirroring [NativeFiredListener.handle]. Thin
+     * wrapper around [handleStop] -- see its KDoc for why dismiss/snooze share one
+     * parse/launch/send/catch shape here.
      */
-    internal fun handleDismiss(context: Context, payload: String): String? {
-        val alarmId = parseIdPayload(payload)
-        if (alarmId == null) {
-            Log.w(TAG, "Ignoring malformed '$TOPIC_DISMISS_REQUESTED' payload")
-            return null
+    internal fun handleDismiss(context: Context, payload: String): String? =
+        handleStop(context, payload, TOPIC_DISMISS_REQUESTED, MSG_PATH_ALARM_DISMISS, "alarm dismiss") { _, alarmId ->
+            buildAlarmDismissPayload(alarmId)
         }
-
-        scope.launch {
-            try {
-                val messagePayload = buildAlarmDismissPayload(alarmId)
-                sendWatchMessageToConnectedNodes(context, MSG_PATH_ALARM_DISMISS, messagePayload, TAG, "alarm dismiss")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to send dismiss to watch natively for id=$alarmId", e)
-            }
-        }
-        return null
-    }
 
     /**
      * The [NativeEventBus] listener callback for [TOPIC_SNOOZE_REQUESTED]. `internal` (not
-     * `private`) so tests can drive it directly, mirroring [NativeFiredListener.handle].
+     * `private`) so tests can drive it directly, mirroring [NativeFiredListener.handle]. Thin
+     * wrapper around [handleStop] -- see its KDoc for why dismiss/snooze share one
+     * parse/launch/send/catch shape here.
      */
-    internal fun handleSnooze(context: Context, payload: String): String? {
+    internal fun handleSnooze(context: Context, payload: String): String? =
+        handleStop(context, payload, TOPIC_SNOOZE_REQUESTED, MSG_PATH_ALARM_SNOOZE, "alarm snooze") { ctx, alarmId ->
+            val cached = WearSyncCache.read(ctx)
+            val snoozeLengthMinutes = cached?.third ?: DEFAULT_SNOOZE_LENGTH_MINUTES
+            buildAlarmSnoozePayload(alarmId, snoozeLengthMinutes)
+        }
+
+    /**
+     * The shape [handleDismiss] and [handleSnooze] were duplicating verbatim (issue #255 Phase
+     * 4B code review): parse [payload]'s `{id}`, log and bail on anything malformed, otherwise
+     * launch onto [scope] to build the wire payload (via [buildMessagePayload], the one part
+     * that actually differs between dismiss and snooze -- dismiss needs only the id, snooze
+     * also needs the cached snooze length) and send it at [msgPath] via
+     * [sendWatchMessageToConnectedNodes], logging any failure under [logLabel].
+     */
+    private fun handleStop(
+        context: Context,
+        payload: String,
+        topic: String,
+        msgPath: String,
+        logLabel: String,
+        buildMessagePayload: (Context, Int) -> ByteArray,
+    ): String? {
         val alarmId = parseIdPayload(payload)
         if (alarmId == null) {
-            Log.w(TAG, "Ignoring malformed '$TOPIC_SNOOZE_REQUESTED' payload")
+            Log.w(TAG, "Ignoring malformed '$topic' payload")
             return null
         }
 
         scope.launch {
             try {
-                val cached = WearSyncCache.read(context)
-                val snoozeLengthMinutes = cached?.third ?: DEFAULT_SNOOZE_LENGTH_MINUTES
-                val messagePayload = buildAlarmSnoozePayload(alarmId, snoozeLengthMinutes)
-                sendWatchMessageToConnectedNodes(context, MSG_PATH_ALARM_SNOOZE, messagePayload, TAG, "alarm snooze")
+                val messagePayload = buildMessagePayload(context, alarmId)
+                sendWatchMessageToConnectedNodes(context, msgPath, messagePayload, TAG, logLabel)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send snooze to watch natively for id=$alarmId", e)
+                Log.e(TAG, "Failed to send $logLabel to watch natively for id=$alarmId", e)
             }
         }
         return null
