@@ -162,24 +162,47 @@ impl AlarmCoordinator {
 
     /// Dismiss a ringing alarm and calculate the next occurrence.
     ///
+    /// Idempotent: `dismiss_alarm` for the same underlying user action can legitimately
+    /// arrive here twice in quick succession -- once via the direct TS `AlarmService.dismiss`
+    /// command, and once via the native `alarm-manager:dismiss-requested` round trip (see
+    /// `lib.rs`), with no shared `event_id` to dedup on (issue #255 Phase 4C). Only the
+    /// first call may recompute `next_trigger`; see `dismiss_should_advance` for why.
+    ///
     /// - `app`: app handle for event emission.
     /// - `id`: alarm identifier.
     pub async fn dismiss_alarm<R: Runtime>(&self, app: &AppHandle<R>, id: i32) -> Result<()> {
         let alarm = self.db.get_by_id(id).await?;
+        let now = chrono::Utc::now().timestamp_millis();
 
-        // Emit dismissed event
-        // Note: We need a revision for this event.
-        // Technically dismiss changes state (next_trigger), so save_alarm will generate a revision.
-        // But we want to emit 'dismissed' as a lifecycle event.
-        // However, save_alarm will emit 'updated' + 'scheduled'/'cancelled'.
+        if !dismiss_should_advance(alarm.next_trigger, now) {
+            // Idempotent replay: an earlier dismiss_alarm call already advanced
+            // next_trigger past the occurrence being dismissed (it's in the future).
+            // Recomputing again here would use that *already advanced* value as the new
+            // reference and silently skip a whole scheduled occurrence for a repeating
+            // alarm -- so this call does nothing to the DB and doesn't bump the revision.
+            //
+            // We still re-emit `alarm:dismissed` so every dismiss source gets the same
+            // confirmation (mirrors `alarm:snoozed`'s toast design -- see CLAUDE.md's
+            // note on why AlarmManagerService listens for it unconditionally). This is
+            // safe because every current `alarm:dismissed` consumer already tolerates a
+            // duplicate: Ringing.tsx guards `closeRingingWindow` behind `isClosingRef`,
+            // and wear-sync's mirror just re-sends an already-idempotent "stop ringing"
+            // message to the watch. Deliberately NOT re-running
+            // save/emit_alarm_updated/emit_scheduling_events/emit_batch_update here,
+            // though -- nothing changed in the DB, and doing so would make
+            // alarm-manager's `alarm:scheduled` listener needlessly re-arm the OS alarm.
+            let event = AlarmDismissed {
+                id,
+                fired_at: now,
+                dismissed_at: now,
+                next_trigger: alarm.next_trigger,
+                revision: alarm.revision,
+            };
+            app.emit("alarm:dismissed", &event)?;
+            return Ok(());
+        }
 
-        // Let's rely on save_alarm for the state change events.
-        // We can emit 'dismissed' here using the current revision or a new one?
-        // Ideally lifecycle events also have revisions.
-        // Let's grab the current revision for the dismissed event, as it relates to the *act* of dismissing.
-        // Or better, save_alarm will produce a new revision.
-
-        let dismissed_at = chrono::Utc::now().timestamp_millis();
+        let dismissed_at = now;
         let fired_at = dismissed_at; // Approximation if not tracking exact fire time
 
         // Recalculate next occurrence after the current scheduled trigger so
@@ -198,10 +221,7 @@ impl AlarmCoordinator {
         };
 
         let next_trigger = if input.enabled {
-            let reference_ms = alarm
-                .next_trigger
-                .unwrap_or_else(|| chrono::Utc::now().timestamp_millis())
-                + 1_000;
+            let reference_ms = alarm.next_trigger.unwrap_or(now) + 1_000;
             scheduler::calculate_next_trigger_after(&input, reference_ms)?
         } else {
             None
@@ -579,6 +599,28 @@ impl AlarmCoordinator {
     }
 }
 
+/// Whether `dismiss_alarm` should recompute and advance `next_trigger`, given the
+/// alarm's currently stored value and the current time. Pulled out of `dismiss_alarm`
+/// as a pure function (matching `classify_scheduling_transition` below) so the
+/// idempotency rule is directly unit-testable without a database or `AppHandle`.
+///
+/// Recompute only when the stored trigger is due/overdue (`<= now`) or unset -- that's
+/// the case where the alarm genuinely just fired (or was never scheduled) and hasn't
+/// been advanced past this occurrence yet. If it's already in the future, an earlier
+/// `dismiss_alarm` call for this same alarm already advanced it, and recomputing again
+/// from that already-advanced value would skip a whole scheduled occurrence.
+///
+/// Note this can't distinguish "just fired, never dismissed" from "already dismissed
+/// down to no remaining occurrences" when both leave `next_trigger` at `None` -- e.g. a
+/// non-repeating alarm (no active days) that has already been dismissed once. That's
+/// fine: recomputing again in that case reproduces the same `None` output regardless of
+/// how many times it runs, so it stays safe (if not a strict no-op) for that case. See
+/// `dismiss_alarm`'s own doc comment and its tests for the repeating-alarm case this
+/// guards against.
+fn dismiss_should_advance(next_trigger: Option<i64>, now: i64) -> bool {
+    next_trigger.is_none_or(|t| t <= now)
+}
+
 /// What, if anything, a mutation should do to an alarm's native schedule. Pulled out of
 /// `emit_scheduling_events` as a pure function so it's testable without an `AppHandle`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -743,5 +785,182 @@ mod scheduling_transition_tests {
             classify_scheduling_transition(None, &current),
             SchedulingTransition::NoOp
         );
+    }
+}
+
+#[cfg(test)]
+mod dismiss_idempotency_tests {
+    use super::*;
+
+    // -- Pure `dismiss_should_advance` coverage -----------------------------------------
+
+    #[test]
+    fn advances_when_the_stored_trigger_is_overdue() {
+        assert!(dismiss_should_advance(Some(1_000), 2_000));
+    }
+
+    #[test]
+    fn advances_when_the_stored_trigger_is_exactly_now() {
+        assert!(dismiss_should_advance(Some(2_000), 2_000));
+    }
+
+    #[test]
+    fn advances_when_there_is_no_stored_trigger() {
+        assert!(dismiss_should_advance(None, 2_000));
+    }
+
+    #[test]
+    fn does_not_advance_when_the_stored_trigger_is_already_in_the_future() {
+        assert!(!dismiss_should_advance(Some(3_000), 2_000));
+    }
+
+    // -- Coordinator-level coverage ---------------------------------------------------
+    //
+    // These exercise the real `dismiss_alarm` async method against an in-memory
+    // `AlarmDatabase` (see `AlarmDatabase::new_in_memory`, test-only) and a
+    // `tauri::test::mock_app()` `AppHandle` (needed because `dismiss_alarm` emits
+    // lifecycle events through it). Being inside `alarm::mod` itself, these tests can
+    // reach `coord.db` directly to set up fixtures no public API exposes (e.g. an alarm
+    // whose `next_trigger` is already overdue, simulating "just fired").
+
+    async fn test_coordinator() -> AlarmCoordinator {
+        let db = database::AlarmDatabase::new_in_memory()
+            .await
+            .expect("failed to create in-memory alarm database");
+        AlarmCoordinator::new(db)
+    }
+
+    fn repeating_alarm_input() -> AlarmInput {
+        AlarmInput {
+            active_days: vec![0, 1, 2, 3, 4, 5, 6], // every day, so it never runs out
+            ..AlarmInput::default()
+        }
+    }
+
+    fn one_shot_alarm_input() -> AlarmInput {
+        AlarmInput {
+            active_days: vec![], // no active day ever matches -- exhausts after firing once
+            ..AlarmInput::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn a_normal_single_dismiss_advances_next_trigger_and_bumps_revision() {
+        let coord = test_coordinator().await;
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+
+        let now = chrono::Utc::now().timestamp_millis();
+        let past_trigger = now - 60_000; // alarm "just fired" a minute ago
+
+        let input = repeating_alarm_input();
+        let rev1 = coord.db.next_revision().await.unwrap();
+        let alarm = coord
+            .db
+            .save(input.clone(), Some(past_trigger), rev1)
+            .await
+            .unwrap();
+
+        let expected_next = scheduler::calculate_next_trigger_after(
+            &AlarmInput {
+                id: Some(alarm.id),
+                ..input
+            },
+            past_trigger + 1_000,
+        )
+        .unwrap();
+        assert!(
+            expected_next.is_some(),
+            "a daily alarm always has a next occurrence"
+        );
+
+        coord.dismiss_alarm(handle, alarm.id).await.unwrap();
+
+        let after = coord.db.get_by_id(alarm.id).await.unwrap();
+        assert_eq!(after.next_trigger, expected_next);
+        assert!(after.revision > rev1);
+    }
+
+    #[tokio::test]
+    async fn double_dismiss_on_a_repeating_alarm_does_not_skip_an_occurrence() {
+        let coord = test_coordinator().await;
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+
+        let now = chrono::Utc::now().timestamp_millis();
+        let past_trigger = now - 60_000;
+
+        let input = repeating_alarm_input();
+        let rev1 = coord.db.next_revision().await.unwrap();
+        let alarm = coord
+            .db
+            .save(input.clone(), Some(past_trigger), rev1)
+            .await
+            .unwrap();
+
+        // First dismiss: the stored trigger is overdue, so this recomputes and advances
+        // it to the next occurrence -- exactly like a normal dismiss.
+        coord.dismiss_alarm(handle, alarm.id).await.unwrap();
+        let after_first = coord.db.get_by_id(alarm.id).await.unwrap();
+        assert!(after_first.next_trigger.unwrap() > now);
+
+        // What a second, buggy recompute would produce if it (wrongly) chained off the
+        // already-advanced trigger from the first call -- i.e. skipped an occurrence.
+        let would_be_skipped = scheduler::calculate_next_trigger_after(
+            &AlarmInput {
+                id: Some(alarm.id),
+                ..input
+            },
+            after_first.next_trigger.unwrap() + 1_000,
+        )
+        .unwrap();
+        assert_ne!(
+            after_first.next_trigger, would_be_skipped,
+            "test fixture sanity check: the skipped-ahead value must differ from the correct one"
+        );
+
+        // Second (duplicate) dismiss for the *same* underlying action -- the alarm's
+        // stored trigger is now in the future, so this must be a no-op replay: no further
+        // advance, no redundant revision bump.
+        coord.dismiss_alarm(handle, alarm.id).await.unwrap();
+        let after_second = coord.db.get_by_id(alarm.id).await.unwrap();
+
+        assert_eq!(after_second.next_trigger, after_first.next_trigger);
+        assert_ne!(after_second.next_trigger, would_be_skipped);
+        assert_eq!(after_second.revision, after_first.revision);
+    }
+
+    #[tokio::test]
+    async fn double_dismiss_on_a_one_shot_alarm_is_safe() {
+        let coord = test_coordinator().await;
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+
+        let now = chrono::Utc::now().timestamp_millis();
+        let past_trigger = now - 60_000;
+
+        let input = one_shot_alarm_input();
+        let rev1 = coord.db.next_revision().await.unwrap();
+        let alarm = coord
+            .db
+            .save(input, Some(past_trigger), rev1)
+            .await
+            .unwrap();
+        assert!(alarm.enabled);
+
+        coord.dismiss_alarm(handle, alarm.id).await.unwrap();
+        let after_first = coord.db.get_by_id(alarm.id).await.unwrap();
+        // A non-repeating alarm has no next occurrence -- `dismiss_alarm` never flips
+        // `enabled` itself, so it stays true with a cleared trigger.
+        assert_eq!(after_first.next_trigger, None);
+        assert!(after_first.enabled);
+
+        // Double-dismiss must not error, re-enable the alarm, or fabricate a schedule.
+        let result = coord.dismiss_alarm(handle, alarm.id).await;
+        assert!(result.is_ok());
+
+        let after_second = coord.db.get_by_id(alarm.id).await.unwrap();
+        assert_eq!(after_second.next_trigger, None);
+        assert!(after_second.enabled);
     }
 }

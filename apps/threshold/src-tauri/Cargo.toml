@@ -56,3 +56,6 @@ tauri-plugin-app-events = "0.2"
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ts-rs = "12"
+# "test" feature unlocks tauri::test::mock_app() for coordinator-level tests that need a
+# real AppHandle to call app.emit() through (see alarm/mod.rs's dismiss_alarm tests).
+tauri = { version = "2.10.2", features = ["test"] }
