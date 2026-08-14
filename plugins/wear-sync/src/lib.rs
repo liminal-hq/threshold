@@ -42,7 +42,7 @@ use publisher::{ChannelPublisher, PublishCommand, WearSyncPublisher};
 
 const BATCH_DEBOUNCE_MS: u64 = 500;
 
-// Per docs/architecture/255-phase3-payload-contract.md's shared constants. Mirrored
+// Per docs/architecture/event-architecture.md's Native Event Bus section for the shared constants. Mirrored
 // independently (no shared source of truth across languages) by `STALENESS_WINDOW_MS` in
 // wear-sync's own Kotlin `NativeFiredListener.kt` -- if you tune this value, tune that one
 // too.

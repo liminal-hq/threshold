@@ -14,7 +14,7 @@ private const val TAG = "NativeFiredListener"
 
 // Mirrors alarm-manager's own `internal const val TOPIC_FIRED` (AlarmManagerPlugin.kt) --
 // duplicated rather than shared because the two plugins are separate Gradle modules and
-// this string is frozen by docs/architecture/255-phase3-payload-contract.md, not by a
+// this string is frozen by docs/architecture/event-architecture.md's Native Event Bus section, not by a
 // shared Kotlin symbol.
 internal const val TOPIC_FIRED = "alarm-manager:native-fired"
 
@@ -129,7 +129,7 @@ internal data class FiredPayload(val id: Int, val actualFiredAt: Long)
 
 /**
  * Parses the `{id, actualFiredAt, ...}` JSON payload alarm-manager publishes to
- * [NativeEventBus] (see docs/architecture/255-phase3-payload-contract.md). Tolerates and
+ * [NativeEventBus] (see docs/architecture/event-architecture.md's Native Event Bus section). Tolerates and
  * ignores the payload's `eventId`/`handledNatively` fields -- this listener has no use for
  * either. Returns `null` for anything malformed or missing a usable `id`/`actualFiredAt`
  * rather than throwing, so a corrupt payload is silently skipped (logged by the caller)

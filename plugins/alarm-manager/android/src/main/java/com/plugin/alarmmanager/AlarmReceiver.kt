@@ -141,7 +141,7 @@ class AlarmReceiver : BroadcastReceiver() {
  * [AlarmUtils.isAlarmLive] result, a Context call done by the caller). See AlarmReceiverTest.
  *
  * Builds the shared `{id, actualFiredAt}` payload exactly once -- the one source of truth for
- * this shape (see docs/architecture/255-phase3-payload-contract.md) -- and hands it to [persist]
+ * this shape (see docs/architecture/event-architecture.md's Native Event Bus section) -- and hands it to [persist]
  * (the durable, Rust-facing side; [AlarmManagerPlugin.notifyAlarmFired] in production) *before*
  * publishing the same payload on [NativeEventBus]. Durable-persist-first matters because a
  * process death between the two steps then still leaves Rust with a record that the alarm fired
@@ -174,7 +174,7 @@ internal fun recordAndPublishFiredEvent(
  * Publishes [firedPayload] (the shared `{id, actualFiredAt}` shape -- see
  * [recordAndPublishFiredEvent]) on [NativeEventBus]'s [TOPIC_FIRED] topic and returns the tags
  * any in-process listeners (e.g. wear-sync's cold-process ring handler) reported handling it
- * with -- see docs/architecture/255-phase3-payload-contract.md.
+ * with -- see docs/architecture/event-architecture.md's Native Event Bus section.
  */
 internal fun publishAlarmFiredToBus(firedPayload: JSONObject): Set<String> =
     NativeEventBus.publish(TOPIC_FIRED, firedPayload.toString())

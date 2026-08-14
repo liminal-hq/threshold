@@ -80,7 +80,7 @@ pub struct NativeAlarmFiredPayload {
     /// Side-effect tags `NativeEventBus.publish()`'s listeners reported handling this event
     /// with before Rust ever saw it (e.g. `"watch-ring"`). `#[serde(default)]` for the same
     /// pre-upgrade-payload reason as `event_id`. See
-    /// docs/architecture/255-phase3-payload-contract.md for the frozen shape.
+    /// docs/architecture/event-architecture.md's Native Event Bus section for the frozen shape.
     #[serde(default)]
     pub handled_natively: Vec<String>,
 }
@@ -153,7 +153,7 @@ mod tests {
         // in a device's DurableEventQueue from before the update ships (or emitted by a desktop
         // build, which never sets them) still carries only the original two fields -- this must
         // keep deserializing rather than erroring, with the new fields defaulting to
-        // None/empty per docs/architecture/255-phase3-payload-contract.md.
+        // None/empty per docs/architecture/event-architecture.md's Native Event Bus section.
         let json = r#"{"id": 42, "actualFiredAt": 1755100800000}"#;
 
         let payload: NativeAlarmFiredPayload =

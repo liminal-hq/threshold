@@ -196,7 +196,7 @@ internal fun drainAndDispatch(queue: DurableEventQueue, dispatch: (topic: String
 
 /**
  * Returns [envelope]'s payload as-is, except for [TOPIC_FIRED] where it's enriched with
- * `eventId` before dispatch -- per docs/architecture/255-phase3-payload-contract.md, this is the
+ * `eventId` before dispatch -- per docs/architecture/event-architecture.md's Native Event Bus section, this is the
  * one field Rust's `NativeAlarmFiredPayload` needs that genuinely can't be known until
  * [DurableEventQueue.enqueue] returns it, so it can't be baked into the payload upfront the way
  * `handledNatively` is (see [notifyAlarmFired], which writes `handledNatively` directly into the
@@ -349,7 +349,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
          * @param firedPayload the shared `{id, actualFiredAt}` payload -- built exactly once by
          *   the caller (see `AlarmReceiver.recordAndPublishFiredEvent`'s KDoc) and reused here
          *   rather than re-derived from separate `id`/`actualFiredAt` args, so there's a single
-         *   source of truth for this shape (docs/architecture/255-phase3-payload-contract.md)
+         *   source of truth for this shape (docs/architecture/event-architecture.md's Native Event Bus section)
          *   instead of two independent hand-built copies risking silent divergence. Not mutated
          *   in place -- [handledNatively] is written into a fresh copy -- since the caller may
          *   still reuse the original for the `NativeEventBus` publish, which must stay exactly
