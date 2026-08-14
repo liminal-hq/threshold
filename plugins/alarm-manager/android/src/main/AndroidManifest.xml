@@ -29,5 +29,15 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- Issue #255 Phase 4A: guarantees WatchStopListener is registered before any other
+             component can run, so a watch-originated dismiss/snooze can stop AlarmRingingService
+             natively even before Rust boots. See WatchStopInitProvider's KDoc (mirrors
+             wear-sync's WearRingInitProvider from Phase 3B, for the opposite direction). Not a
+             real content provider: exported="false" and it has no callers. -->
+        <provider
+            android:name=".WatchStopInitProvider"
+            android:authorities="${applicationId}.alarmmanager-stop-init"
+            android:exported="false" />
     </application>
 </manifest>
