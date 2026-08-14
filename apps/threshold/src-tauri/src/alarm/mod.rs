@@ -15,6 +15,8 @@ pub use models::*;
 
 use database::AlarmDatabase;
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 /// Minimum gap between two `dismiss_alarm` calls for the *same* alarm id before the
@@ -27,24 +29,40 @@ use tauri::{AppHandle, Emitter, Manager, Runtime};
 /// legitimate "dismiss upcoming" notification action -- which fires up to roughly ten
 /// minutes *before* the alarm rings, see `AlarmManagerService.dismissNextOccurrence` in
 /// the TS layer -- and the alarm's original due time.
-const DISMISS_DEBOUNCE_WINDOW_MS: i64 = 5_000;
+///
+/// A time-window debounce checked against a monotonic clock is a deliberate,
+/// short-term tradeoff, not the final design: the more correct fix is a shared
+/// `event_id` threaded through *every* dismiss delivery path (today only the native
+/// listeners in `lib.rs` carry one, reused via `EventDedup` for exact-match rather than
+/// time-window dedup) -- but that requires changes to `Ringing.tsx` and
+/// `AlarmManagerPlugin.kt`, already implemented in PR #301 before this gap was found, so
+/// reopening that PR's scope wasn't worth it here. Tracked as a follow-up: issue #304.
+const DISMISS_DEBOUNCE_WINDOW: Duration = Duration::from_millis(5_000);
 
 /// Central coordinator for all alarm operations
 pub struct AlarmCoordinator {
     db: AlarmDatabase,
-    /// Per-alarm-id `dismiss_alarm` bookkeeping: last-dismissed wall-clock time (epoch
-    /// ms), used to debounce duplicate near-simultaneous calls for the same underlying
-    /// dismiss action (see `DISMISS_DEBOUNCE_WINDOW_MS` and `dismiss_alarm`'s own doc
-    /// comment). The mutex is held across `dismiss_alarm`'s entire read-decide-write
-    /// critical section, not just this map, so it also serializes concurrent calls
-    /// against each other -- coarse-grained across every alarm id rather than per-id,
-    /// mirroring `ImportLock`'s precedent in `lib.rs`: dismiss isn't a hot path, so
-    /// serializing unrelated alarms' dismisses against each other is an acceptable trade
-    /// for a simple, race-free critical section. In-memory only, like `EventDedup`: this
-    /// covers same-process double-delivery, not crash-and-restart redelivery (see
-    /// `EventDedup`'s own doc comment for why that's a separate, deliberately unclosed
-    /// gap).
-    dismiss_debounce: tokio::sync::Mutex<HashMap<i32, i64>>,
+    /// Per-alarm-id locks used by `dismiss_alarm` to serialize concurrent calls for the
+    /// *same* alarm and to hold that alarm's last-successful-dismiss time (`None` if
+    /// never dismissed this process), used to debounce duplicate near-simultaneous calls
+    /// for the same underlying dismiss action (see `DISMISS_DEBOUNCE_WINDOW` and
+    /// `dismiss_alarm`'s own doc comment).
+    ///
+    /// The outer `std::sync::Mutex` only ever guards a quick, synchronous
+    /// get-or-create-and-sweep on this map (see `dismiss_lock_for`) -- it's never held
+    /// across an `.await`. The real critical section is the *inner* per-id
+    /// `tokio::sync::Mutex`, held for that alarm's entire `dismiss_alarm` call, so
+    /// unrelated alarms' dismisses never block each other (unlike a single lock guarding
+    /// every id) and a concurrent call for the *same* id can't slip past the duplicate
+    /// check before the first one resolves.
+    ///
+    /// In-memory only, like `EventDedup`: this covers same-process double-delivery, not
+    /// crash-and-restart redelivery (see `EventDedup`'s own doc comment for why that's a
+    /// separate, deliberately unclosed gap). Bounded in size the same way: idle entries
+    /// (not currently locked) whose last dismiss has aged out of the debounce window are
+    /// opportunistically swept on every `dismiss_lock_for` call, so this doesn't grow
+    /// forever the way a plain "every id ever dismissed" map would.
+    dismiss_locks: std::sync::Mutex<HashMap<i32, Arc<tokio::sync::Mutex<Option<Instant>>>>>,
 }
 
 impl AlarmCoordinator {
@@ -54,8 +72,43 @@ impl AlarmCoordinator {
     pub fn new(db: AlarmDatabase) -> Self {
         Self {
             db,
-            dismiss_debounce: tokio::sync::Mutex::new(HashMap::new()),
+            dismiss_locks: std::sync::Mutex::new(HashMap::new()),
         }
+    }
+
+    /// Gets (creating if needed) the per-alarm-id lock `dismiss_alarm` uses to serialize
+    /// calls for `id` and hold its last-dismissed marker.
+    ///
+    /// While already holding the outer map lock, opportunistically evicts *other* idle
+    /// and expired entries -- `try_lock` fails immediately rather than blocking if an
+    /// entry is currently held by an in-flight `dismiss_alarm` call elsewhere, so a busy
+    /// entry is never evicted out from under it. `id`'s own entry is never evicted here.
+    fn dismiss_lock_for(&self, id: i32) -> Arc<tokio::sync::Mutex<Option<Instant>>> {
+        let mut locks = self
+            .dismiss_locks
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+
+        let now = Instant::now();
+        locks.retain(|&other_id, lock| {
+            if other_id == id {
+                return true;
+            }
+            match lock.try_lock() {
+                // Busy elsewhere -- never evict.
+                Err(_) => true,
+                // Idle: keep only if it has a recent-enough marker; a stale or never-set
+                // marker means nothing is relying on this exact lock object anymore.
+                Ok(last_dismissed_at) => last_dismissed_at.is_some_and(|last| {
+                    now.saturating_duration_since(last) < DISMISS_DEBOUNCE_WINDOW
+                }),
+            }
+        });
+
+        locks
+            .entry(id)
+            .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(None)))
+            .clone()
     }
 
     /// Get the phone's current revision number.
@@ -145,19 +198,7 @@ impl AlarmCoordinator {
         enabled: bool,
     ) -> Result<AlarmRecord> {
         let alarm = self.db.get_by_id(id).await?;
-
-        let input = AlarmInput {
-            id: Some(alarm.id),
-            label: alarm.label,
-            enabled,
-            mode: alarm.mode.clone(),
-            fixed_time: alarm.fixed_time,
-            window_start: alarm.window_start,
-            window_end: alarm.window_end,
-            active_days: alarm.active_days,
-            sound_uri: alarm.sound_uri,
-            sound_title: alarm.sound_title,
-        };
+        let input = AlarmInput::from_record(&alarm, enabled);
 
         self.save_alarm(app, input).await
     }
@@ -195,24 +236,23 @@ impl AlarmCoordinator {
     /// arrive here twice in quick succession -- once via the direct TS `AlarmService.dismiss`
     /// command, and once via the native `alarm-manager:dismiss-requested` round trip (see
     /// `lib.rs`), with no shared `event_id` to dedup on (issue #255 Phase 4C). A second
-    /// call for the same alarm within `DISMISS_DEBOUNCE_WINDOW_MS` is treated as a replay
-    /// of the first rather than a new request; see the constant's own doc comment for why
+    /// call for the same alarm within `DISMISS_DEBOUNCE_WINDOW` is treated as a replay of
+    /// the first rather than a new request; see the constant's own doc comment for why
     /// this is time-based rather than derived from `next_trigger`.
     ///
     /// - `app`: app handle for event emission.
     /// - `id`: alarm identifier.
     pub async fn dismiss_alarm<R: Runtime>(&self, app: &AppHandle<R>, id: i32) -> Result<()> {
-        let now = chrono::Utc::now().timestamp_millis();
+        // Held for this whole method: dismiss_alarm reads the alarm, decides whether to
+        // advance it, then writes -- without a lock spanning that whole sequence, two
+        // genuinely concurrent calls for the same id could both read pre-dismiss state
+        // and both pass the duplicate check before either commits, reproducing the
+        // double-advance bug this exists to prevent. Scoped to just this alarm's id (see
+        // `dismiss_lock_for`), so a dismiss of a *different* alarm never blocks on this.
+        let lock = self.dismiss_lock_for(id);
+        let mut last_dismissed_at = lock.lock().await;
 
-        // Held for this whole method, not just the map lookup below: dismiss_alarm reads
-        // the alarm, decides whether to advance it, then writes -- without a lock spanning
-        // that whole sequence, two genuinely concurrent calls for the same id could both
-        // read pre-dismiss state and both pass the duplicate check before either commits,
-        // reproducing the double-advance bug this exists to prevent. Coarse-grained across
-        // every alarm id rather than per-id -- see the field's own doc comment for why
-        // that's an acceptable simplification here.
-        let mut debounce = self.dismiss_debounce.lock().await;
-
+        let now = Instant::now();
         let alarm = self.db.get_by_id(id).await?;
 
         // Note on an earlier, reverted design: a heuristic based on "is next_trigger
@@ -226,11 +266,13 @@ impl AlarmCoordinator {
         // silently no-opped legitimate early dismisses, leaving the alarm to ring
         // anyway. Time elapsed since this alarm's *last dismissal*, not the shape of its
         // schedule, is the signal that actually distinguishes "duplicate" from "new".
-        let is_duplicate = is_duplicate_dismiss(debounce.get(&id).copied(), now);
+        let is_duplicate = is_duplicate_dismiss(*last_dismissed_at, now);
+
+        let wall_clock_now = chrono::Utc::now().timestamp_millis();
 
         if is_duplicate {
-            // Deliberately does nothing to the DB or revision -- see
-            // `DISMISS_DEBOUNCE_WINDOW_MS`'s doc comment for why this call is being
+            // Deliberately does nothing to the DB, the revision, or `last_dismissed_at`
+            // -- see `DISMISS_DEBOUNCE_WINDOW`'s doc comment for why this call is being
             // treated as a replay of the one that just ran.
             //
             // We still re-emit `alarm:dismissed` so every dismiss source gets the same
@@ -245,8 +287,8 @@ impl AlarmCoordinator {
             // alarm-manager's `alarm:scheduled` listener needlessly re-arm the OS alarm.
             let event = AlarmDismissed {
                 id,
-                fired_at: now,
-                dismissed_at: now,
+                fired_at: wall_clock_now,
+                dismissed_at: wall_clock_now,
                 next_trigger: alarm.next_trigger,
                 revision: alarm.revision,
             };
@@ -254,32 +296,15 @@ impl AlarmCoordinator {
             return Ok(());
         }
 
-        // Recorded before the rest of the (fallible) work below so a second call that
-        // arrives while this one is still in flight -- e.g. genuinely concurrent, not
-        // just close together -- sees it immediately once it acquires the lock above,
-        // rather than racing to insert its own entry first.
-        debounce.insert(id, now);
-
-        let dismissed_at = now;
+        let dismissed_at = wall_clock_now;
         let fired_at = dismissed_at; // Approximation if not tracking exact fire time
 
         // Recalculate next occurrence after the current scheduled trigger so
         // dismissing an upcoming alarm skips this occurrence.
-        let input = AlarmInput {
-            id: Some(alarm.id),
-            label: alarm.label.clone(),
-            enabled: alarm.enabled,
-            mode: alarm.mode.clone(),
-            fixed_time: alarm.fixed_time.clone(),
-            window_start: alarm.window_start.clone(),
-            window_end: alarm.window_end.clone(),
-            active_days: alarm.active_days.clone(),
-            sound_uri: alarm.sound_uri.clone(),
-            sound_title: alarm.sound_title.clone(),
-        };
+        let input = AlarmInput::from_record(&alarm, alarm.enabled);
 
         let next_trigger = if input.enabled {
-            let reference_ms = alarm.next_trigger.unwrap_or(now) + 1_000;
+            let reference_ms = alarm.next_trigger.unwrap_or(wall_clock_now) + 1_000;
             scheduler::calculate_next_trigger_after(&input, reference_ms)?
         } else {
             None
@@ -307,6 +332,14 @@ impl AlarmCoordinator {
             revision: new_alarm.revision,
         };
         app.emit("alarm:dismissed", &event)?;
+
+        // Marked only now, right before returning success -- everything above this
+        // point is fallible (`?`-propagated) and returns early on error without ever
+        // reaching this line. That's deliberate: a failed attempt must not poison the
+        // debounce window, or a legitimate retry within it would see a stale-but-present
+        // marker, get silently treated as a duplicate, and return `Ok(())` without ever
+        // actually dismissing anything.
+        *last_dismissed_at = Some(now);
 
         Ok(())
     }
@@ -664,11 +697,21 @@ impl AlarmCoordinator {
 /// unit-testable without a database, lock, or `AppHandle`.
 ///
 /// Deliberately time-based rather than derived from `next_trigger`: see
-/// `DISMISS_DEBOUNCE_WINDOW_MS`'s doc comment (and `dismiss_alarm`'s) for why a
+/// `DISMISS_DEBOUNCE_WINDOW`'s doc comment (and `dismiss_alarm`'s) for why a
 /// next_trigger-shape heuristic can't distinguish a duplicate replay from a legitimate
 /// early dismiss of a still-upcoming occurrence.
-fn is_duplicate_dismiss(last_dismissed_at: Option<i64>, now: i64) -> bool {
-    last_dismissed_at.is_some_and(|last| now.saturating_sub(last) < DISMISS_DEBOUNCE_WINDOW_MS)
+///
+/// Deliberately built on `Instant` (a monotonic clock), not `chrono::Utc::now()`: this
+/// debounce is purely an internal, in-memory, same-process mechanism with no need to
+/// relate to wall-clock time at all, so a monotonic clock sidesteps backward-jump bugs
+/// (NTP corrections, manual clock changes) entirely rather than special-casing them --
+/// `now.saturating_sub(last)` on wall-clock millis would otherwise go negative and look
+/// like a duplicate on *every* call until wall-clock time caught back up.
+/// `Instant::saturating_duration_since` degrades safely even in the (for a monotonic
+/// clock, essentially theoretical) case where `last` is somehow after `now`.
+fn is_duplicate_dismiss(last_dismissed_at: Option<Instant>, now: Instant) -> bool {
+    last_dismissed_at
+        .is_some_and(|last| now.saturating_duration_since(last) < DISMISS_DEBOUNCE_WINDOW)
 }
 
 /// What, if anything, a mutation should do to an alarm's native schedule. Pulled out of
@@ -846,31 +889,42 @@ mod dismiss_idempotency_tests {
 
     #[test]
     fn not_a_duplicate_when_never_dismissed_before() {
-        assert!(!is_duplicate_dismiss(None, 10_000));
+        assert!(!is_duplicate_dismiss(None, Instant::now()));
     }
 
     #[test]
     fn is_a_duplicate_within_the_debounce_window() {
-        assert!(is_duplicate_dismiss(
-            Some(10_000),
-            10_000 + DISMISS_DEBOUNCE_WINDOW_MS - 1
-        ));
+        let last = Instant::now();
+        let now = last + DISMISS_DEBOUNCE_WINDOW - Duration::from_millis(1);
+        assert!(is_duplicate_dismiss(Some(last), now));
     }
 
     #[test]
     fn is_not_a_duplicate_at_exactly_the_window_boundary() {
-        assert!(!is_duplicate_dismiss(
-            Some(10_000),
-            10_000 + DISMISS_DEBOUNCE_WINDOW_MS
-        ));
+        let last = Instant::now();
+        let now = last + DISMISS_DEBOUNCE_WINDOW;
+        assert!(!is_duplicate_dismiss(Some(last), now));
     }
 
     #[test]
     fn is_not_a_duplicate_well_outside_the_window() {
-        assert!(!is_duplicate_dismiss(
-            Some(10_000),
-            10_000 + DISMISS_DEBOUNCE_WINDOW_MS + 60_000
-        ));
+        let last = Instant::now();
+        let now = last + DISMISS_DEBOUNCE_WINDOW + Duration::from_secs(60);
+        assert!(!is_duplicate_dismiss(Some(last), now));
+    }
+
+    /// A backward *wall-clock* jump (NTP correction, manual clock change) can't affect
+    /// this debounce at all now that it's built on `Instant` -- there's no dedicated
+    /// regression test for that scenario because it's structurally moot, not because
+    /// it's unhandled. This test instead covers the one related edge `Instant` doesn't
+    /// rule out by construction: `saturating_duration_since` degrading safely if
+    /// `last_dismissed_at` is somehow after `now` (which "monotonic" makes practically
+    /// unreachable, but the function still shouldn't panic or misbehave if it happened).
+    #[test]
+    fn does_not_panic_if_the_recorded_instant_is_somehow_after_now() {
+        let now = Instant::now();
+        let later = now + Duration::from_secs(1);
+        assert!(is_duplicate_dismiss(Some(later), now));
     }
 
     // -- Coordinator-level coverage ---------------------------------------------------
@@ -879,9 +933,9 @@ mod dismiss_idempotency_tests {
     // `AlarmDatabase` (see `AlarmDatabase::new_in_memory`, test-only) and a
     // `tauri::test::mock_app()` `AppHandle` (needed because `dismiss_alarm` emits
     // lifecycle events through it). Being inside `alarm::mod` itself, these tests can
-    // reach `coord.db` and `coord.dismiss_debounce` directly to set up fixtures no
+    // reach `coord.db` and `coord.dismiss_lock_for` directly to set up fixtures no
     // public API exposes (e.g. an alarm whose `next_trigger` is already overdue, or a
-    // synthetic "last dismissed" timestamp from days ago, without actually sleeping).
+    // synthetic "last dismissed" instant from days ago, without actually sleeping).
 
     async fn test_coordinator() -> AlarmCoordinator {
         let db = database::AlarmDatabase::new_in_memory()
@@ -1092,8 +1146,10 @@ mod dismiss_idempotency_tests {
         // Simulate a genuinely separate, much earlier dismissal of this same alarm --
         // well outside the debounce window -- without actually sleeping in the test.
         {
-            let mut debounce = coord.dismiss_debounce.lock().await;
-            debounce.insert(alarm.id, now - DISMISS_DEBOUNCE_WINDOW_MS - 60_000);
+            let lock = coord.dismiss_lock_for(alarm.id);
+            let mut last_dismissed_at = lock.lock().await;
+            *last_dismissed_at =
+                Some(Instant::now() - DISMISS_DEBOUNCE_WINDOW - Duration::from_secs(60));
         }
 
         let expected_next = scheduler::calculate_next_trigger_after(
@@ -1113,6 +1169,101 @@ mod dismiss_idempotency_tests {
             "a dismissal outside the debounce window must process normally, not be treated as a duplicate"
         );
         assert!(after.revision > rev1);
+    }
+
+    /// Regression coverage for the debounce marker being recorded before (rather than
+    /// after) the fallible work in an earlier version of this fix: if `dismiss_alarm`
+    /// fails partway through, a retry within what would be the debounce window must get
+    /// a fresh attempt, not be silently swallowed as a duplicate no-op that returns
+    /// `Ok(())` without ever actually dismissing anything.
+    #[tokio::test]
+    async fn a_failed_dismiss_does_not_poison_the_debounce_window_for_a_retry() {
+        let coord = test_coordinator().await;
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+
+        let now = chrono::Utc::now().timestamp_millis();
+        let past_trigger = now - 60_000;
+
+        // A zero-length window makes `calculate_next_trigger_after` fail every time --
+        // standing in for any transient failure partway through dismiss_alarm's fallible
+        // section (recompute, DB write, event emission, ...).
+        let input = AlarmInput {
+            mode: AlarmMode::Window,
+            fixed_time: None,
+            window_start: Some("07:00".into()),
+            window_end: Some("07:00".into()),
+            ..AlarmInput::default()
+        };
+        let rev1 = coord.db.next_revision().await.unwrap();
+        let alarm = coord
+            .db
+            .save(input, Some(past_trigger), rev1)
+            .await
+            .unwrap();
+
+        let first = coord.dismiss_alarm(handle, alarm.id).await;
+        assert!(
+            first.is_err(),
+            "test fixture sanity check: a zero-length window must fail to compute"
+        );
+
+        // A retry, still well within what would be the debounce window (this test runs
+        // in microseconds), must get a fresh attempt and fail the same way -- not be
+        // silently treated as a duplicate replay of the failed first call.
+        let second = coord.dismiss_alarm(handle, alarm.id).await;
+        assert!(
+            second.is_err(),
+            "a retry after a failed dismiss must not be treated as a duplicate replay"
+        );
+
+        // Neither attempt silently wrote to the DB.
+        let after = coord.db.get_by_id(alarm.id).await.unwrap();
+        assert_eq!(after.revision, rev1);
+    }
+
+    /// Direct coverage of `dismiss_lock_for`'s opportunistic sweep: an idle entry whose
+    /// last dismiss has aged out of the debounce window is evicted, but a recent one and
+    /// a currently-locked ("busy") one are both kept regardless.
+    #[tokio::test]
+    async fn dismiss_lock_for_evicts_idle_expired_entries_but_keeps_recent_and_busy_ones() {
+        let coord = test_coordinator().await;
+
+        let stale_id = 1;
+        {
+            let lock = coord.dismiss_lock_for(stale_id);
+            let mut last_dismissed_at = lock.lock().await;
+            *last_dismissed_at =
+                Some(Instant::now() - DISMISS_DEBOUNCE_WINDOW - Duration::from_secs(60));
+        }
+
+        let recent_id = 2;
+        {
+            let lock = coord.dismiss_lock_for(recent_id);
+            let mut last_dismissed_at = lock.lock().await;
+            *last_dismissed_at = Some(Instant::now());
+        }
+
+        let busy_id = 3;
+        let busy_lock = coord.dismiss_lock_for(busy_id);
+        let _busy_guard = busy_lock.lock().await; // held for the rest of this test
+
+        // Requesting a lock for an unrelated fourth id triggers the sweep.
+        let _ = coord.dismiss_lock_for(4);
+
+        let locks = coord.dismiss_locks.lock().unwrap();
+        assert!(
+            !locks.contains_key(&stale_id),
+            "an idle, expired entry must be evicted"
+        );
+        assert!(
+            locks.contains_key(&recent_id),
+            "an idle, still-within-window entry must be kept"
+        );
+        assert!(
+            locks.contains_key(&busy_id),
+            "a currently-locked entry must never be evicted"
+        );
     }
 
     #[tokio::test]

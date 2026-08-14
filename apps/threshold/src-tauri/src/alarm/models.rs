@@ -80,6 +80,28 @@ impl Default for AlarmInput {
     }
 }
 
+impl AlarmInput {
+    /// Builds an `AlarmInput` from an existing `AlarmRecord`, carrying every field over
+    /// unchanged except `enabled`. Shared by `AlarmCoordinator::toggle_alarm` (which
+    /// flips `enabled`) and `dismiss_alarm` (which keeps the record's own value) so a
+    /// future field addition only needs updating in one place instead of being copied
+    /// field-by-field at each call site and silently missed in one of them.
+    pub fn from_record(record: &AlarmRecord, enabled: bool) -> Self {
+        Self {
+            id: Some(record.id),
+            label: record.label.clone(),
+            enabled,
+            mode: record.mode.clone(),
+            fixed_time: record.fixed_time.clone(),
+            window_start: record.window_start.clone(),
+            window_end: record.window_end.clone(),
+            active_days: record.active_days.clone(),
+            sound_uri: record.sound_uri.clone(),
+            sound_title: record.sound_title.clone(),
+        }
+    }
+}
+
 /// Generates `apps/threshold/src/types/alarm.ts` from the types above and
 /// keeps it honest: this test fails if the committed file has drifted from
 /// a fresh generation, so `AlarmRecord`/`AlarmInput` can't silently diverge
