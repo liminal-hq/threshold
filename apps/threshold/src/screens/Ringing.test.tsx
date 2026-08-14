@@ -175,7 +175,9 @@ describe('Ringing Screen Logic', () => {
 
 		// Assert
 		await waitFor(() => {
-			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+			// Threads the real alarm id through (issue #255 Phase 4A) so the native dismiss
+			// event carries one, closing the "in-app dismiss produces no native event" gap.
+			expect(alarmManagerService.stopRinging).toHaveBeenCalledWith(1);
 			expect(mockWindow.close).toHaveBeenCalled();
 		});
 		expect(mockWindow.minimize).not.toHaveBeenCalled();
@@ -194,7 +196,7 @@ describe('Ringing Screen Logic', () => {
 
 		// Assert
 		await waitFor(() => {
-			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+			expect(alarmManagerService.stopRinging).toHaveBeenCalledWith(1);
 			expect(appManagementService.minimizeApp).toHaveBeenCalled();
 		});
 		expect(mockWindow.close).not.toHaveBeenCalled();
@@ -223,7 +225,7 @@ describe('Ringing Screen Logic', () => {
 
 		// Assert
 		await waitFor(() => {
-			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+			expect(alarmManagerService.stopRinging).toHaveBeenCalledWith(SPECIAL_ALARM_IDS.TEST_ALARM);
 			expect(historySpy).toHaveBeenCalled();
 		});
 		expect(mockWindow.minimize).not.toHaveBeenCalled();

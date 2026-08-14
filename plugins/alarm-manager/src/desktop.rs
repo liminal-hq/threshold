@@ -93,6 +93,14 @@ impl<R: Runtime> AlarmManager<R> {
         Ok(())
     }
 
+    /// Desktop has no native `AlarmRingingService` to thread an id into -- the frontend closes
+    /// its own ringing window directly. Kept alongside [`stop_ringing`](Self::stop_ringing) so
+    /// `commands::stop_ringing` compiles identically on both platforms. See issue #255 Phase 4A.
+    pub fn stop_ringing_for(&self, alarm_id: i32) -> crate::Result<()> {
+        println!("Desktop: Stop ringing request received for alarm {alarm_id}");
+        Ok(())
+    }
+
     /// Not an Android concept; nothing to gate.
     pub fn check_full_screen_intent_permission(&self) -> crate::Result<bool> {
         Ok(true)

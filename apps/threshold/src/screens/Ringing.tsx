@@ -175,7 +175,10 @@ const Ringing: React.FC = () => {
 
 	const handleDismiss = useCallback(async () => {
 		console.log('[Ringing] Dismissing Alarm', alarmId);
-		await alarmManagerService.stopRinging();
+		// Thread the real alarm id through so the native dismiss event (and, in turn, the
+		// NativeEventBus fan-out that tells the watch to stop) carries it -- see
+		// AlarmManagerService.stopRinging's doc comment (issue #255 Phase 4A).
+		await alarmManagerService.stopRinging(alarmId);
 
 		// Notify backend to dismiss (reschedule)
 		try {

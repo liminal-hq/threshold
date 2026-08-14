@@ -301,6 +301,7 @@ export class AlarmManagerService {
 		const snoozedUntil = Date.now() + minutes * 60_000;
 		await alarmNotificationService.cancelUpcomingNotification(id);
 		await AlarmService.snooze(id, snoozedUntil);
+		// No alarmId here -- see stopRinging's doc comment for why.
 		await this.stopRinging();
 	}
 
@@ -384,10 +385,21 @@ export class AlarmManagerService {
 		}
 	}
 
-	async stopRinging() {
+	/**
+	 * @param alarmId the alarm being dismissed, when known -- threaded through to Kotlin so
+	 *   `AlarmManagerPlugin.notifyAlarmDismissed` produces a real dismiss event uniformly for
+	 *   every dismiss origin, not just the notification's own Dismiss action (issue #255 Phase
+	 *   4A). Deliberately **not** passed by `snoozeRinging()` below: `stopRinging` always sends
+	 *   Kotlin the same `ACTION_DISMISS` intent regardless of caller (it only silences
+	 *   `AlarmRingingService`, it doesn't distinguish dismiss vs. snooze), so threading an id
+	 *   through here for a snooze would misattribute it as a dismiss and, via Rust's
+	 *   `dismiss_alarm`, could clobber the snooze that was just requested. See
+	 *   `resolveStopRingingAlarmId`'s KDoc on the Kotlin side for the full reasoning.
+	 */
+	async stopRinging(alarmId?: number) {
 		try {
-			console.log('[AlarmManager] Stopping ringing...');
-			await stopRingingNative();
+			console.log('[AlarmManager] Stopping ringing...', alarmId ?? '(no id)');
+			await stopRingingNative(alarmId);
 		} catch (e) {
 			console.error('Failed to stop ringing', e);
 		}

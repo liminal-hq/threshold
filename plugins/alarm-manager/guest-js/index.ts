@@ -31,8 +31,17 @@ export async function pickAlarmSound(options: PickAlarmSoundOptions): Promise<Pi
 	return await invoke<PickedAlarmSound>('plugin:alarm-manager|pick_alarm_sound', { options });
 }
 
-export async function stopRinging(): Promise<void> {
-	await invoke('plugin:alarm-manager|stop_ringing');
+/**
+ * Stops the native ringing service (audio, vibration, notification). `alarmId`, when supplied,
+ * threads the real alarm id through to `AlarmRingingService`'s `ACTION_DISMISS` intent so
+ * `AlarmManagerPlugin.notifyAlarmDismissed` gets a usable id -- previously the in-app dismiss
+ * path here always omitted it, so it silently produced no native dismiss event at all (issue
+ * #255 Phase 4A). Callers that don't know which alarm they're stopping (the legacy ID-less JS
+ * notification-action fallback, and in-app snooze -- see `AlarmManagerService.stopRinging`'s
+ * own doc comment for why snooze deliberately doesn't pass one) omit it, unchanged.
+ */
+export async function stopRinging(alarmId?: number): Promise<void> {
+	await invoke('plugin:alarm-manager|stop_ringing', { alarmId: alarmId ?? null });
 }
 
 /** Whether Android will actually honour the ringing notification's full-screen intent. */

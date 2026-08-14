@@ -209,7 +209,7 @@ describe('AlarmManagerService', () => {
 		);
 	});
 
-	it('snoozes ringing alarm with now-anchored timestamp and stops ringing', async () => {
+	it('snoozes ringing alarm with now-anchored timestamp and stops ringing (no id -- see stopRinging doc comment)', async () => {
 		const service = new AlarmManagerService();
 		const before = Date.now();
 
@@ -220,7 +220,10 @@ describe('AlarmManagerService', () => {
 		expect(calledId).toBe(42);
 		expect(calledTimestamp).toBeGreaterThanOrEqual(before + 10 * 60_000);
 		expect(calledTimestamp).toBeLessThanOrEqual(after + 10 * 60_000);
-		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
+		// snoozeRinging deliberately does not thread alarmId through stopRinging -- stopRinging's
+		// single native command is shared with dismiss, so doing so would misattribute an in-app
+		// snooze as a dismiss (see AlarmManagerService.stopRinging's doc comment).
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing', { alarmId: null });
 	});
 
 	it('snoozes upcoming alarm with trigger-anchored timestamp without stopping ringing', async () => {
@@ -497,6 +500,22 @@ describe('AlarmManagerService', () => {
 	// listeners) and never reach TS, so there's nothing to unit-test here for that
 	// path — same as the pre-existing wear:alarm:dismiss/snooze listeners.
 
+	it('threads the real alarm id through stopRinging (issue #255 Phase 4A in-app dismiss fix)', async () => {
+		const service = new AlarmManagerService();
+
+		await service.stopRinging(17);
+
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing', { alarmId: 17 });
+	});
+
+	it('stopRinging with no id passes alarmId: null (legacy ID-less fallback only)', async () => {
+		const service = new AlarmManagerService();
+
+		await service.stopRinging();
+
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing', { alarmId: null });
+	});
+
 	it('stops ringing for the alarm_trigger snooze action (no alarm ID available)', async () => {
 		const service = new AlarmManagerService();
 		let actionCallback: ((notification: any) => Promise<void>) | null = null;
@@ -519,7 +538,7 @@ describe('AlarmManagerService', () => {
 		});
 
 		expect(AlarmService.snooze).not.toHaveBeenCalled();
-		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing', { alarmId: null });
 	});
 
 	it('stops ringing for the alarm_trigger dismiss action (no alarm ID available)', async () => {
@@ -544,7 +563,7 @@ describe('AlarmManagerService', () => {
 		});
 
 		expect(AlarmService.dismiss).not.toHaveBeenCalled();
-		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing', { alarmId: null });
 	});
 
 	it('seeds Rust snooze-length state from the persisted setting on init', async () => {

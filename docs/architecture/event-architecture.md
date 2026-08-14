@@ -650,6 +650,22 @@ handled directly in `lib.rs`), the watch (`wear:alarm:dismiss`, also handled dir
 in `lib.rs`), the upcoming-notification Dismiss action (TS-invoked), and the in-app
 Ringing screen's own Dismiss button (TS-invoked).
 
+> **Issue #255 Phase 4A note:** as of this phase, the in-app Ringing screen's Dismiss
+> button no longer maps to exactly one of the four sources above -- it now fires
+> _two_ of them together. `Ringing.tsx`'s `handleDismiss` threads the real alarm id
+> into `AlarmManagerService.stopRinging(alarmId)`, so the native `AlarmRingingService`
+> Dismiss action path (`alarm-manager:dismiss-requested`) now also carries a real id
+> and fires (closing a prior gap where in-app dismiss produced no native dismiss
+> event at all), in addition to the pre-existing direct `AlarmService.dismiss(id)`
+> TS-invoked call. This relies on `dismiss_alarm` being safe to call twice in a row
+> for the same alarm id; **that idempotency has not been verified against the
+> current implementation** (`dismiss_alarm` recomputes `next_trigger` relative to
+> whatever is _currently_ stored on the alarm, with no guard against being called a
+> second time after the first call already advanced it) -- see issue #255 Phase 4A's
+> handoff notes for the concrete non-idempotency concern this raises for repeating
+> alarms. In-app **snooze** deliberately does _not_ thread an id through
+> `stopRinging` for the same reason, so it isn't affected by this.
+
 **Payload:**
 
 ```rust
