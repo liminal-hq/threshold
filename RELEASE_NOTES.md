@@ -7,7 +7,7 @@ This document tracks all releases of the Threshold application.
 ## Unreleased
 
 > [!NOTE]
-> **Note for whoever writes the release notes for the version that ships this:** `alarm-manager`'s four legacy per-type native event queues (fired/snooze/dismiss/import) were migrated on first launch into the shared `native-bus` event log; the migration is one-way, so an app downgrade to a build predating this change would no longer see any events left behind in the new log format.
+> **Note for whoever writes the release notes for the version that ships this:** `alarm-manager`'s four legacy per-type native event queues (fired/snooze/dismiss/import) and wear-sync's own offline watch-message queue were both migrated on first launch onto the shared `plugins/native-bus` `DurableEventQueue`; the migration is one-way, so an app downgrade to a build predating this change would no longer see any events left behind in the new log format. The same release also fixes issue #254 (the watch staying silent for ~20s on a cold alarm fire) via a native, Rust-independent fired→watch-ring fan-out, and adds the symmetric native dismiss/snooze→stop signal in both directions (phone-cold and watch-cold) — see `docs/architecture/event-architecture.md`'s Native Event Bus section for the full mechanism.
 
 ---
 

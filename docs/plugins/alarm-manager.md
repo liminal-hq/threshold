@@ -138,13 +138,49 @@ The Rust core (`AlarmCoordinator`) is the single owner of scheduling. The plugin
   - Starts **MediaPlayer** with the `soundUri` (looping).
   - Starts **Vibration**.
 - **Notification Actions**:
-  - **Dismiss**: Sends intent to stop the service.
-  - **Snooze**: (Future) Stops service and schedules new alarm.
+  - **Dismiss**: Sends `ACTION_DISMISS`, which stops the service and durably notifies Rust
+    (`notifyAlarmDismissed`) via the native event bus — see Native Event Bus Integration
+    below.
+  - **Snooze**: Sends `ACTION_SNOOZE`, which stops the service and durably notifies Rust
+    (`notifySnoozeRequested`) the same way; Rust computes the new snoozed-until time from
+    `SnoozeLengthState` and reschedules.
 
 ### 3. Stop/Dismiss
 
 - User taps "Dismiss" on notification OR opens app and taps "Stop".
 - Service calls `stopSelf()`, releases WakeLock, abandons audio focus, stops player.
+
+## Native Event Bus Integration
+
+alarm-manager depends on the shared `plugins/native-bus` substrate (`tauri-plugin-native-bus`,
+`implementation(project(":tauri-plugin-native-bus"))` in `android/build.gradle.kts`) for two
+things: durable, guaranteed delivery of native events to Rust regardless of boot timing, and
+an instant, Rust-independent fan-out to wear-sync for time-sensitive side effects. Full
+detail — the topic table, the `handled_natively` tag mechanism and its documented
+durability-first limitation, and `EventDedup`'s scope — lives in
+[Event Architecture's Native Event Bus section](../architecture/event-architecture.md#native-event-bus-android-issue-255);
+this section is the alarm-manager-specific summary.
+
+- `AlarmReceiver` and `AlarmManagerPlugin` no longer hand-roll separate queues per event
+  type. All four native event kinds this plugin produces --
+  `alarm-manager:native-fired` (fired), `alarm-manager:snooze-requested`,
+  `alarm-manager:dismiss-requested`, and `alarm-manager:import-requested` (from Android's
+  `SET_ALARM` intent, see `SetAlarmActivity`) — are enqueued on one shared
+  `DurableEventQueue` instance (`eventQueue(context)`), keyed by topic rather than by a
+  separate queue class each. The plugin's four original hand-rolled queues were migrated
+  onto this one-time, one-way (see the Gotchas entry in the root `CLAUDE.md`).
+- Of those four, `native-fired`, `dismiss-requested`, and `snooze-requested` are _also_
+  published on `NativeEventBus` (`publishToBus`) so wear-sync's own listeners
+  (`NativeFiredListener`, `NativeStopListener`) can react before Rust has booted --
+  `import-requested` is durably queued only, since nothing needs an instant native reaction
+  to an alarm import.
+- `WatchStopInitProvider`, a `ContentProvider` whose `onCreate()` Android guarantees runs
+  before any other component, registers `WatchStopListener` — the phone-side half of
+  symmetric stop signals (issue #255 Phase 4A): when the watch dismisses/snoozes a ringing
+  alarm while the phone's own Rust hasn't booted yet, wear-sync publishes on
+  `NativeEventBus`'s `wear:alarm:dismiss`/`wear:alarm:snooze` topics (payload keyed
+  `"alarmId"`, not `"id"` — see the topic table linked above), and `WatchStopListener`
+  stops `AlarmRingingService` directly, with no dependency on Rust.
 
 ## Intent Extras
 
