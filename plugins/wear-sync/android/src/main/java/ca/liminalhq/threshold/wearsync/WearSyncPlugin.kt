@@ -31,8 +31,10 @@ private const val MSG_PATH_SYNC_REQUEST = "/threshold/sync_request"
 // internal (not private) -- shared with NativeFiredListener, which sends the same
 // alarm_ring message from outside this Activity-bound plugin instance.
 internal const val MSG_PATH_ALARM_RING = "/threshold/alarm_ring"
-private const val MSG_PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
-private const val MSG_PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
+// internal (not private) -- shared with NativeStopListener (issue #255 Phase 4B), which
+// sends the same dismiss/snooze messages from outside this Activity-bound plugin instance.
+internal const val MSG_PATH_ALARM_DISMISS = "/threshold/alarm_dismiss"
+internal const val MSG_PATH_ALARM_SNOOZE = "/threshold/alarm_snooze"
 private const val MSG_PATH_LOG_REQUEST = "/threshold/log_request"
 private const val EXTRA_HEADLESS_BOOT = "wear_sync_headless_boot"
 
@@ -73,32 +75,71 @@ internal fun buildAlarmRingPayload(
 }
 
 /**
- * Sends [payload] to every currently connected watch node at [MSG_PATH_ALARM_RING], logging
- * both to Logcat and [NativeEventLog] under [tag] (the caller's own tag, so diagnostics from
- * the Rust-invoked path and the native path are still distinguishable). Shared by
- * [WearSyncPlugin.sendAlarmRing] and [NativeFiredListener] alongside [buildAlarmRingPayload]
- * so the two callers' "iterate connected nodes, send message" logic can't drift the way it
- * already had (only one of them was logging to [NativeEventLog]).
+ * Sends [payload] to every currently connected watch node at [path], logging both to Logcat
+ * and [NativeEventLog] under [tag] (the caller's own tag, so diagnostics from the Rust-invoked
+ * path and each native path are still distinguishable) and [logLabel] (a short human-readable
+ * description of the message, e.g. `"alarm ring"`/`"alarm dismiss"`/`"alarm snooze"`, used only
+ * in those log lines).
+ *
+ * Originally specific to [MSG_PATH_ALARM_RING] (issue #255 Phase 3B, shared by
+ * [WearSyncPlugin.sendAlarmRing] and [NativeFiredListener] alongside [buildAlarmRingPayload] so
+ * the two callers' "iterate connected nodes, send message" logic couldn't drift the way it
+ * already had once -- only one of them was logging to [NativeEventLog]). Generalised to take an
+ * arbitrary [path] in Phase 4B so [NativeStopListener]'s dismiss/snooze sends reuse this same
+ * loop instead of hand-rolling a third copy of it.
  *
  * Returns the number of nodes the message was actually sent to (`0` if none connected --
  * the existing "no watch paired" gap noted on [WearSyncPlugin.sendAlarmRing], not something
- * either caller treats as an error).
+ * any caller treats as an error).
  */
-internal suspend fun sendAlarmRingToConnectedNodes(context: Context, payload: ByteArray, tag: String): Int {
+internal suspend fun sendWatchMessageToConnectedNodes(
+    context: Context,
+    path: String,
+    payload: ByteArray,
+    tag: String,
+    logLabel: String,
+): Int {
     val nodeClient = Wearable.getNodeClient(context)
     val messageClient = Wearable.getMessageClient(context)
     val nodes = nodeClient.connectedNodes.await()
     if (nodes.isEmpty()) {
-        Log.d(tag, "No connected watch nodes — skipping ring notification")
+        Log.d(tag, "No connected watch nodes — skipping $logLabel notification")
         return 0
     }
 
     for (node in nodes) {
-        messageClient.sendMessage(node.id, MSG_PATH_ALARM_RING, payload).await()
-        Log.d(tag, "Sent alarm ring to watch: ${node.displayName}")
+        messageClient.sendMessage(node.id, path, payload).await()
+        Log.d(tag, "Sent $logLabel to watch: ${node.displayName}")
     }
-    NativeEventLog.log(context, tag, "Sent alarm ring to ${nodes.size} node(s)")
+    NativeEventLog.log(context, tag, "Sent $logLabel to ${nodes.size} node(s)")
     return nodes.size
+}
+
+/**
+ * Builds the JSON alarm-dismiss message payload sent to the watch over `MessageClient` at
+ * [MSG_PATH_ALARM_DISMISS]. Shared by [WearSyncPlugin.sendAlarmDismiss] (the Rust-invoked path)
+ * and [NativeStopListener] (the in-process native path, issue #255 Phase 4B) so the wire format
+ * is defined in exactly one place, mirroring [buildAlarmRingPayload]'s existing precedent.
+ */
+internal fun buildAlarmDismissPayload(alarmId: Int): ByteArray {
+    val json = JSONObject().apply {
+        put("alarmId", alarmId)
+    }
+    return json.toString().toByteArray()
+}
+
+/**
+ * Builds the JSON alarm-snooze message payload sent to the watch over `MessageClient` at
+ * [MSG_PATH_ALARM_SNOOZE]. Shared by [WearSyncPlugin.sendAlarmSnooze] (the Rust-invoked path)
+ * and [NativeStopListener] (the in-process native path, issue #255 Phase 4B) so the wire format
+ * is defined in exactly one place, mirroring [buildAlarmRingPayload]'s existing precedent.
+ */
+internal fun buildAlarmSnoozePayload(alarmId: Int, snoozeLengthMinutes: Int): ByteArray {
+    val json = JSONObject().apply {
+        put("alarmId", alarmId)
+        put("snoozeLengthMinutes", snoozeLengthMinutes)
+    }
+    return json.toString().toByteArray()
 }
 
 @InvokeArg
@@ -271,7 +312,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
                     is24Hour = args.is24Hour,
                     is24HourKnown = args.is24HourKnown,
                 )
-                sendAlarmRingToConnectedNodes(activity, payload, TAG)
+                sendWatchMessageToConnectedNodes(activity, MSG_PATH_ALARM_RING, payload, TAG, "alarm ring")
                 invoke.resolve()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send alarm ring to watch", e)
@@ -291,22 +332,8 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
         val args = invoke.parseArgs(AlarmDismissRequest::class.java)
         scope.launch {
             try {
-                val nodes = nodeClient.connectedNodes.await()
-                if (nodes.isEmpty()) {
-                    Log.d(TAG, "No connected watch nodes — skipping dismiss notification")
-                    invoke.resolve()
-                    return@launch
-                }
-
-                val json = JSONObject().apply {
-                    put("alarmId", args.alarmId)
-                }
-                val payload = json.toString().toByteArray()
-
-                for (node in nodes) {
-                    messageClient.sendMessage(node.id, MSG_PATH_ALARM_DISMISS, payload).await()
-                    Log.d(TAG, "Sent alarm dismiss to watch: ${node.displayName}")
-                }
+                val payload = buildAlarmDismissPayload(args.alarmId)
+                sendWatchMessageToConnectedNodes(activity, MSG_PATH_ALARM_DISMISS, payload, TAG, "alarm dismiss")
                 invoke.resolve()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send alarm dismiss to watch", e)
@@ -326,23 +353,8 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
         val args = invoke.parseArgs(AlarmSnoozeRequest::class.java)
         scope.launch {
             try {
-                val nodes = nodeClient.connectedNodes.await()
-                if (nodes.isEmpty()) {
-                    Log.d(TAG, "No connected watch nodes — skipping snooze notification")
-                    invoke.resolve()
-                    return@launch
-                }
-
-                val json = JSONObject().apply {
-                    put("alarmId", args.alarmId)
-                    put("snoozeLengthMinutes", args.snoozeLengthMinutes)
-                }
-                val payload = json.toString().toByteArray()
-
-                for (node in nodes) {
-                    messageClient.sendMessage(node.id, MSG_PATH_ALARM_SNOOZE, payload).await()
-                    Log.d(TAG, "Sent alarm snooze to watch: ${node.displayName}")
-                }
+                val payload = buildAlarmSnoozePayload(args.alarmId, args.snoozeLengthMinutes)
+                sendWatchMessageToConnectedNodes(activity, MSG_PATH_ALARM_SNOOZE, payload, TAG, "alarm snooze")
                 invoke.resolve()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send alarm snooze to watch", e)

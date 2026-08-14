@@ -125,7 +125,7 @@ object NativeFiredListener {
             is24HourKnown = is24HourKnown,
         )
 
-        sendAlarmRingToConnectedNodes(context, payload, TAG)
+        sendWatchMessageToConnectedNodes(context, MSG_PATH_ALARM_RING, payload, TAG, "alarm ring")
     }
 }
 

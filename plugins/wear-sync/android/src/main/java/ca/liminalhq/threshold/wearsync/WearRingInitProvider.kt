@@ -1,4 +1,4 @@
-// ContentProvider that registers the native fired->watch-ring listener before anything else can run
+// ContentProvider that registers the native fired->watch-ring and stop->watch listeners before anything else can run
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -14,19 +14,22 @@ import android.util.Log
 private const val TAG = "WearRingInitProvider"
 
 /**
- * Guarantees [NativeFiredListener] is subscribed to [NativeEventBus] before anything else in
- * the app can run, including on a cold multi-plugin process start.
+ * Guarantees [NativeFiredListener] and [NativeStopListener] are subscribed to [NativeEventBus]
+ * before anything else in the app can run, including on a cold multi-plugin process start.
  * `ContentProvider.onCreate()` is documented to always run before any `Activity`/`Service`/
  * `BroadcastReceiver` callback -- this is the same Jetpack/WorkManager/Firebase early-init
  * trick, and the mechanism issue #255's Phase 0 spike
  * (`feat/255-p0-contentprovider-spike`, see its `BusInitProvider.kt`) proved out on a real
  * device ahead of this, the production implementation.
  *
- * Unlike that spike, this provider is not debug-gated: it ships in every build, since this
- * is the actual fix for issue #254 (the watch staying silent for ~20s when an alarm fires
- * cold while the phone is in active use, because the watch ring used to depend on Rust
- * booting first). `android:exported="false"` in the manifest -- this provider has no real
- * data to serve and no external caller.
+ * Unlike that spike, this provider is not debug-gated: it ships in every build. Registering
+ * [NativeFiredListener] is the actual fix for issue #254 (the watch staying silent for ~20s
+ * when an alarm fires cold while the phone is in active use, because the watch ring used to
+ * depend on Rust booting first). Registering [NativeStopListener] (issue #255 Phase 4B) is the
+ * symmetric fix for the phone-notification-cold direction of the same problem: a Dismiss/Snooze
+ * tapped on the phone's own alarm notification while Rust hasn't booted yet must still stop the
+ * watch immediately, not lag ~20s behind. `android:exported="false"` in the manifest -- this
+ * provider has no real data to serve and no external caller.
  */
 class WearRingInitProvider : ContentProvider() {
 
@@ -42,10 +45,13 @@ class WearRingInitProvider : ContentProvider() {
         // Warm the fan-out toggle's in-memory cache *before* registering the listener that
         // reads it -- see NativeFanOutPrefs' class KDoc for why this ordering is what lets
         // NativeFiredListener.handle() honour NativeEventBus's non-blocking threading
-        // contract despite the toggle check needing to be resolved synchronously.
+        // contract despite the toggle check needing to be resolved synchronously. No equivalent
+        // warm-up is needed for NativeStopListener -- it has no toggle to check synchronously,
+        // per its own KDoc.
         NativeFanOutPrefs.warm(ctx)
         NativeFiredListener.register(ctx)
-        Log.d(TAG, "WearRingInitProvider.onCreate() fired, fan-out toggle warmed, listener registered")
+        NativeStopListener.register(ctx)
+        Log.d(TAG, "WearRingInitProvider.onCreate() fired, fan-out toggle warmed, listeners registered")
 
         return true
     }
