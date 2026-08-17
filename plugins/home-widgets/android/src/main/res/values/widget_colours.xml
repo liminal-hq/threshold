@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_card_fill">#ffffff</color>
+    <color name="widget_card_stroke">#dfe5ee</color>
+    <color name="widget_rail_colour">#002244</color>
+    <color name="widget_eyebrow_colour">#e2703d</color>
+    <color name="widget_time_colour">#1a1a1a</color>
+    <color name="widget_label_colour">#5a6a80</color>
+    <color name="widget_rail_muted_colour">#aab4c2</color>
+    <color name="widget_empty_text_colour">#5a6a80</color>
+</resources>

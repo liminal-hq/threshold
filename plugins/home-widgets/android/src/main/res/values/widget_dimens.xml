@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pre-Android 12 fallback; the system-provided radius takes over via values-v31/. -->
+    <dimen name="widget_corner_radius">16dp</dimen>
+</resources>

@@ -365,6 +365,7 @@ jobs:
           write_kts_settings "plugins/predictive-back/android"
           write_kts_settings "plugins/wear-sync/android" "${NATIVE_BUS_INCLUDE}"
           write_kts_settings "plugins/native-bus/android"
+          write_kts_settings "plugins/home-widgets/android"
           write_groovy_settings "plugins/app-management/android"
           write_groovy_settings "plugins/toast/android"
 
@@ -376,6 +377,7 @@ jobs:
           ./apps/threshold-wear/gradlew -p plugins/wear-sync/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/toast/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/native-bus/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/home-widgets/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
 
       - name: Upload Kotlin Test Results
         uses: actions/upload-artifact@v7

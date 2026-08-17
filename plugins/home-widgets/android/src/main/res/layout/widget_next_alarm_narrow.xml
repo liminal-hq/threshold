@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Narrow 2x1 layout: rail + time only, no room for the eyebrow/label rows. NextAlarmWidget
+     targets these same view IDs from both layouts -- RemoteViews actions for an ID absent from
+     the current layout are silently skipped, so the shared binding code stays layout-agnostic. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/widget_background"
+    android:padding="12dp">
+
+    <ImageView
+        android:id="@+id/widget_rail"
+        android:layout_width="3dp"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_rail_shape"
+        android:contentDescription="@null" />
+
+    <TextView
+        android:id="@+id/widget_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:singleLine="true"
+        android:textColor="@color/widget_time_colour" />
+</LinearLayout>

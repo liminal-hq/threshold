@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_eyebrow">NEXT ALARM</string>
+    <string name="widget_empty_state">No alarm set</string>
+    <string name="widget_description">Shows Threshold\'s next alarm on your home screen.</string>
+</resources>

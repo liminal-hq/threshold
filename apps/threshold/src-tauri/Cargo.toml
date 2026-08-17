@@ -33,6 +33,7 @@ tauri-plugin-toast = { path = "../../../plugins/toast" }
 # project dependency; this direct Cargo dependency is what gets native-bus's `android/`
 # into the generated Android project graph in the first place.
 tauri-plugin-native-bus = { path = "../../../plugins/native-bus" }
+tauri-plugin-home-widgets = { path = "../../../plugins/home-widgets" }
 tauri-plugin-deep-link = { version = "2.0.0", features = [] }
 tauri-plugin-log = { version = "2.0.0", features = [] }
 tauri-plugin-notification = { git = "https://github.com/ScottMorris/tauri-plugins-workspace.git", branch = "notification-actions-fix" }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_card_fill_start">#2a364b</color>
+    <color name="widget_card_fill_end">#22304a</color>
+    <color name="widget_card_stroke">#3e5272</color>
+    <color name="widget_rail_colour">#4c8dff</color>
+    <color name="widget_eyebrow_colour">#ff8f5d</color>
+    <color name="widget_time_colour">#f5f8ff</color>
+    <color name="widget_label_colour">#a9bad1</color>
+    <color name="widget_rail_muted_colour">#3b4c66</color>
+    <color name="widget_empty_text_colour">#7f90a8</color>
+</resources>

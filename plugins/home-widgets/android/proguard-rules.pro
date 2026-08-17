@@ -1,0 +1,1 @@
+-keep class ca.liminalhq.threshold.homewidgets.** { *; }
