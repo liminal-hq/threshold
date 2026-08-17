@@ -63,6 +63,9 @@ pub struct AlarmCoordinator {
     /// opportunistically swept on every `dismiss_lock_for` call, so this doesn't grow
     /// forever the way a plain "every id ever dismissed" map would.
     dismiss_locks: std::sync::Mutex<HashMap<i32, Arc<tokio::sync::Mutex<Option<Instant>>>>>,
+    /// Last-emitted `alarm:next-changed` payload, kept for change-only emission. Outer `None`
+    /// means "never emitted", so the first computation always emits.
+    last_next_alarm: tokio::sync::Mutex<Option<AlarmNextChanged>>,
 }
 
 impl AlarmCoordinator {
@@ -73,6 +76,7 @@ impl AlarmCoordinator {
         Self {
             db,
             dismiss_locks: std::sync::Mutex::new(HashMap::new()),
+            last_next_alarm: tokio::sync::Mutex::new(None),
         }
     }
 
@@ -478,6 +482,38 @@ impl AlarmCoordinator {
         Ok(())
     }
 
+    /// Emit `alarm:next-changed` when the app-wide next alarm differs from the last emission.
+    ///
+    /// - `app`: app handle for event emission and state access.
+    pub async fn emit_next_changed_if_needed<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
+        use std::sync::atomic::Ordering;
+
+        let alarms = self.db.get_all().await?;
+        let alarm = compute_next_alarm(&alarms);
+
+        // `is_24_hour` is only meaningful once the frontend has told us -- gate on the
+        // known flag the same way the other widget-adjacent events do.
+        let is_24_hour = match (
+            app.try_state::<crate::TimeFormatKnownState>(),
+            app.try_state::<crate::TimeFormatState>(),
+        ) {
+            (Some(known), Some(state)) if known.load(Ordering::Relaxed) => {
+                Some(state.load(Ordering::Relaxed))
+            }
+            _ => None,
+        };
+
+        let event = AlarmNextChanged { alarm, is_24_hour };
+
+        let mut last = self.last_next_alarm.lock().await;
+        if last.as_ref() != Some(&event) {
+            app.emit("alarm:next-changed", &event)?;
+            *last = Some(event);
+        }
+
+        Ok(())
+    }
+
     // =========================================================================
     // Maintenance & Recovery
     // =========================================================================
@@ -513,6 +549,7 @@ impl AlarmCoordinator {
         }
 
         log::info!("✅ Heal-on-launch complete");
+        self.emit_next_changed_if_needed(app).await?;
         Ok(())
     }
 
@@ -680,6 +717,8 @@ impl AlarmCoordinator {
         updated_ids: Vec<i32>,
         revision: i64,
     ) -> Result<()> {
+        self.emit_next_changed_if_needed(app).await?;
+
         let event = AlarmsBatchUpdated {
             updated_ids,
             revision,
@@ -760,6 +799,22 @@ fn classify_scheduling_transition(
         }
         (false, false) => SchedulingTransition::NoOp,
     }
+}
+
+/// Picks the app-wide next alarm: the earliest trigger among enabled alarms, tie-broken by
+/// the lower id for determinism. No past-trigger filter -- a fired-but-undismissed alarm
+/// legitimately keeps a past trigger until dismissed or snoozed (see `heal_on_launch`), and
+/// it is still the "next" alarm as far as a widget is concerned.
+fn compute_next_alarm(alarms: &[AlarmRecord]) -> Option<NextAlarm> {
+    alarms
+        .iter()
+        .filter(|a| a.enabled && a.next_trigger.is_some())
+        .min_by_key(|a| (a.next_trigger.unwrap(), a.id))
+        .map(|a| NextAlarm {
+            id: a.id,
+            label: a.label.clone(),
+            trigger_at: a.next_trigger.unwrap(),
+        })
 }
 
 #[cfg(test)]
@@ -1299,5 +1354,74 @@ mod dismiss_idempotency_tests {
         let after_second = coord.db.get_by_id(alarm.id).await.unwrap();
         assert_eq!(after_second.next_trigger, None);
         assert!(after_second.enabled);
+    }
+}
+
+#[cfg(test)]
+mod next_alarm_tests {
+    use super::*;
+
+    fn alarm(id: i32, enabled: bool, next_trigger: Option<i64>) -> AlarmRecord {
+        AlarmRecord {
+            id,
+            label: None,
+            enabled,
+            mode: AlarmMode::Fixed,
+            fixed_time: Some("07:00".into()),
+            window_start: None,
+            window_end: None,
+            active_days: vec![0, 1, 2, 3, 4, 5, 6],
+            next_trigger,
+            sound_uri: None,
+            sound_title: None,
+            revision: 1,
+        }
+    }
+
+    #[test]
+    fn returns_none_for_an_empty_list() {
+        assert_eq!(compute_next_alarm(&[]), None);
+    }
+
+    #[test]
+    fn filters_out_disabled_alarms() {
+        let alarms = vec![alarm(1, false, Some(1_000))];
+
+        assert_eq!(compute_next_alarm(&alarms), None);
+    }
+
+    #[test]
+    fn filters_out_enabled_alarms_with_no_trigger() {
+        let alarms = vec![alarm(1, true, None)];
+
+        assert_eq!(compute_next_alarm(&alarms), None);
+    }
+
+    #[test]
+    fn picks_the_earliest_trigger() {
+        let alarms = vec![alarm(1, true, Some(2_000)), alarm(2, true, Some(1_000))];
+
+        assert_eq!(
+            compute_next_alarm(&alarms),
+            Some(NextAlarm {
+                id: 2,
+                label: None,
+                trigger_at: 1_000,
+            })
+        );
+    }
+
+    #[test]
+    fn ties_on_trigger_break_by_the_lower_id() {
+        let alarms = vec![alarm(5, true, Some(1_000)), alarm(2, true, Some(1_000))];
+
+        assert_eq!(
+            compute_next_alarm(&alarms),
+            Some(NextAlarm {
+                id: 2,
+                label: None,
+                trigger_at: 1_000,
+            })
+        );
     }
 }

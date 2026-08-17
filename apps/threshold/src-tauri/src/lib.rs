@@ -298,6 +298,9 @@ pub fn run() {
                         {
                             log::warn!("settings: failed to trigger wear sync after is24h change: {error}");
                         }
+                        if let Err(error) = coord.emit_next_changed_if_needed(&handle).await {
+                            log::warn!("settings: failed to refresh next-alarm widget after is24h change: {error}");
+                        }
                     }
                 });
             });

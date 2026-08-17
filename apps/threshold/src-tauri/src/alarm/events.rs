@@ -211,6 +211,27 @@ pub enum SyncReason {
     ForceSync,     // User requested
 }
 
+// =========================================================================
+// Widget Events
+// =========================================================================
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+/// The alarm with the earliest upcoming trigger among enabled alarms.
+pub struct NextAlarm {
+    pub id: i32,
+    pub label: Option<String>,
+    pub trigger_at: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+/// Emitted when the app-wide next alarm changes, for home-screen widgets.
+pub struct AlarmNextChanged {
+    pub alarm: Option<NextAlarm>,
+    pub is_24_hour: Option<bool>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
