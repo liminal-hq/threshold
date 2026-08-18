@@ -15,12 +15,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Plain JUnit 4 tests against [InMemoryKeyValueStore], covering the two pieces of logic this
- * plugin's migration to a shared [DurableEventQueue] added: [migrateLegacyQueues] (folding the
- * four legacy per-type queues into the unified log) and [drainAndDispatch] (draining that log
- * in arrival order and routing each entry to the right handler by topic). [DurableEventQueue]'s
- * own drain/commit/corruption-tolerance behaviour is already covered by
- * `plugins/native-bus`'s own test suite and isn't re-tested here.
+ * Plain JUnit 4 tests against [InMemoryKeyValueStore], covering the two pieces of logic this plugin's migration to a shared [DurableEventQueue] added: [migrateLegacyQueues] (folding the four legacy per-type queues into the unified log) and [drainAndDispatch] (draining that log in arrival order and routing each entry to the right handler by topic). [DurableEventQueue]'s own drain/commit/corruption-tolerance behaviour is already covered by `plugins/native-bus`'s own test suite and isn't re-tested here.
  */
 class AlarmManagerPluginTest {
 
@@ -94,8 +89,7 @@ class AlarmManagerPluginTest {
         migrateLegacyQueues(store)
 
         val drained = DurableEventQueue(store, EVENT_LOG_KEY).drainAll(pipelineReady = true)
-        // drainAll sorts by publishedAt, so id=2 (actualFiredAt=100) must come first even
-        // though it was appended second in the legacy array.
+        // drainAll sorts by publishedAt, so id=2 (actualFiredAt=100) must come first even though it was appended second in the legacy array.
         assertEquals(listOf(2, 1), drained.map { JSONObject(it.payload).getInt("id") })
     }
 
@@ -176,9 +170,7 @@ class AlarmManagerPluginTest {
 
     @Test
     fun `treats legacy keys already drained back to an empty array as nothing to migrate`() {
-        // The pre-migration drain code always rewrote a queue back to "[]" after draining it
-        // rather than removing the key -- so on any real device that's ever used alarms, these
-        // keys exist but hold no real data. A plain non-null guard would never fast-path here.
+        // The pre-migration drain code always rewrote a queue back to "[]" after draining it rather than removing the key -- so on any real device that's ever used alarms, these keys exist but hold no real data. A plain non-null guard would never fast-path here.
         store.set(LEGACY_KEY_PENDING_ALARM_EVENTS, "[]")
         store.set(LEGACY_KEY_PENDING_SNOOZE_EVENTS, "[]")
         store.set(LEGACY_KEY_PENDING_DISMISS_EVENTS, "[]")
@@ -209,8 +201,7 @@ class AlarmManagerPluginTest {
         val migratedCount = migrateLegacyQueues(recording)
 
         assertEquals(2, migratedCount)
-        // No direct set()/remove() calls -- everything must go through the one atomic batch(),
-        // so a process kill can never observe the new log written but a legacy key still present.
+        // No direct set()/remove() calls -- everything must go through the one atomic batch(), so a process kill can never observe the new log written but a legacy key still present.
         assertEquals(0, recording.directWriteCalls)
         assertEquals(1, recording.batchCalls.size)
 
@@ -315,9 +306,7 @@ class AlarmManagerPluginTest {
             put("triggerAt", triggerAt)
         }
 
-    // Mirrors DurableEventQueueTest's own writeRawEnvelopes/envelope helpers -- writing the raw
-    // schema directly is the only way to pin publishedAt deterministically, since
-    // DurableEventQueue.enqueue() always stamps it from the wall clock.
+    // Mirrors DurableEventQueueTest's own writeRawEnvelopes/envelope helpers -- writing the raw schema directly is the only way to pin publishedAt deterministically, since DurableEventQueue.enqueue() always stamps it from the wall clock.
     private fun envelope(topic: String, payload: String, eventId: String, publishedAt: Long): JSONObject =
         JSONObject().apply {
             put("v", DurableEventQueue.SCHEMA_VERSION)

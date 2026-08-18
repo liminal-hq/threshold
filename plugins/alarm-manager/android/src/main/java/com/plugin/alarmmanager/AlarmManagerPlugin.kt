@@ -36,52 +36,29 @@ import org.json.JSONObject
 private const val TAG = "AlarmManagerPlugin"
 private const val CALLBACK_PREFS = "AlarmManagerCallbacks"
 
-// Topics are the existing Tauri event names these four channels ultimately emit as (see
-// plugins/alarm-manager/src/mobile.rs) -- reusing them as DurableEventQueue topics means the
-// unified log's contents are self-describing without inventing a second naming scheme.
-// `internal` (not `private`) so this file's JUnit tests can reference the exact same strings
-// rather than duplicating them.
+// Topics are the existing Tauri event names these four channels ultimately emit as (see plugins/alarm-manager/src/mobile.rs) -- reusing them as DurableEventQueue topics means the unified log's contents are self-describing without inventing a second naming scheme. `internal` (not `private`) so this file's JUnit tests can reference the exact same strings rather than duplicating them.
 internal const val TOPIC_FIRED = "alarm-manager:native-fired"
 internal const val TOPIC_SNOOZE = "alarm-manager:snooze-requested"
 internal const val TOPIC_DISMISS = "alarm-manager:dismiss-requested"
 internal const val TOPIC_IMPORT = "alarm-manager:import-requested"
 
-// The single unified log, replacing the four legacy keys below. Same prefs file as the legacy
-// queues (CALLBACK_PREFS) -- only the key, and the fact there's now just one of them, changes.
+// The single unified log, replacing the four legacy keys below. Same prefs file as the legacy queues (CALLBACK_PREFS) -- only the key, and the fact there's now just one of them, changes.
 internal const val EVENT_LOG_KEY = "event_log"
 
-// Pre-migration queue keys. Only ever read by migrateLegacyQueues(), which removes them once
-// their contents have been folded into EVENT_LOG_KEY -- see that function for the one-time
-// migration this repo's release notes call out.
+// Pre-migration queue keys. Only ever read by migrateLegacyQueues(), which removes them once their contents have been folded into EVENT_LOG_KEY -- see that function for the one-time migration this repo's release notes call out.
 internal const val LEGACY_KEY_PENDING_ALARM_EVENTS = "pending_alarm_events"
 internal const val LEGACY_KEY_PENDING_SNOOZE_EVENTS = "pending_snooze_events"
 internal const val LEGACY_KEY_PENDING_DISMISS_EVENTS = "pending_dismiss_events"
 internal const val LEGACY_KEY_PENDING_IMPORT_EVENTS = "pending_import_events"
 
 /**
- * One-time migration off the four legacy per-type queues (pre-[DurableEventQueue]) onto the
- * unified event log under [EVENT_LOG_KEY] in [store]. Returns the number of entries migrated.
+ * One-time migration off the four legacy per-type queues (pre-[DurableEventQueue]) onto the unified event log under [EVENT_LOG_KEY] in [store]. Returns the number of entries migrated.
  *
- * Production devices have been observed carrying pending entries across multiple days, so
- * this folds any leftovers into the new log -- preserving each entry's own data -- rather than
- * silently dropping them. This is one-way: once the legacy keys are removed here, a downgrade
- * to a build that only knows the old queues would no longer see events left in the new log
- * (see RELEASE_NOTES.md).
+ * Production devices have been observed carrying pending entries across multiple days, so this folds any leftovers into the new log -- preserving each entry's own data -- rather than silently dropping them. This is one-way: once the legacy keys are removed here, a downgrade to a build that only knows the old queues would no longer see events left in the new log (see RELEASE_NOTES.md).
  *
- * [DurableEventQueue.enqueue] always stamps `publishedAt` from the wall clock, which isn't
- * what we want here -- migrated entries should drain in a sensible relative order (fired
- * events by their own `actualFiredAt`; the others, which never recorded a timestamp, by their
- * original per-queue array position) rather than all colliding on the single instant migration
- * happened to run. Since the public API has no seam for supplying an explicit `publishedAt`,
- * this writes envelopes directly into the log's JSON array using the same
- * "v"/"topic"/"payload"/"eventId"/"publishedAt"/"handledNatively" schema [DurableEventQueue]
- * itself reads (see its KDoc and `DurableEventQueueTest`'s `writeRawEnvelopes` helper for the
- * same technique) -- a deliberate, documented duplication of that private schema, acceptable
- * because it's exercised by this file's own migration tests.
+ * [DurableEventQueue.enqueue] always stamps `publishedAt` from the wall clock, which isn't what we want here -- migrated entries should drain in a sensible relative order (fired events by their own `actualFiredAt`; the others, which never recorded a timestamp, by their original per-queue array position) rather than all colliding on the single instant migration happened to run. Since the public API has no seam for supplying an explicit `publishedAt`, this writes envelopes directly into the log's JSON array using the same "v"/"topic"/"payload"/"eventId"/"publishedAt"/"handledNatively" schema [DurableEventQueue] itself reads (see its KDoc and `DurableEventQueueTest`'s `writeRawEnvelopes` helper for the same technique) -- a deliberate, documented duplication of that private schema, acceptable because it's exercised by this file's own migration tests.
  *
- * A standalone function operating purely against [KeyValueStore] (not SharedPreferences/
- * Context directly) so it's unit-testable against an in-memory fake -- mirrors
- * `resolveActiveDays` in `SetAlarmActivity.kt`.
+ * A standalone function operating purely against [KeyValueStore] (not SharedPreferences/Context directly) so it's unit-testable against an in-memory fake -- mirrors `resolveActiveDays` in `SetAlarmActivity.kt`.
  */
 internal fun migrateLegacyQueues(store: KeyValueStore): Int {
     val legacyKeys = listOf(
@@ -90,12 +67,7 @@ internal fun migrateLegacyQueues(store: KeyValueStore): Int {
         LEGACY_KEY_PENDING_DISMISS_EVENTS,
         LEGACY_KEY_PENDING_IMPORT_EVENTS,
     )
-    // The pre-migration drain code these queues replace never removed a legacy key once
-    // drained -- it always rewrote the queue back to "[]" instead. So on essentially any
-    // device that's ever used alarms, all four legacy keys already exist by the time this
-    // runs; a plain non-null check would make this fast path never actually trigger. Parsing
-    // each one and checking for a genuinely non-empty array is what actually distinguishes
-    // "has real pending data" from "exists but was already drained to empty".
+    // The pre-migration drain code these queues replace never removed a legacy key once drained -- it always rewrote the queue back to "[]" instead. So on essentially any device that's ever used alarms, all four legacy keys already exist by the time this runs; a plain non-null check would make this fast path never actually trigger. Parsing each one and checking for a genuinely non-empty array is what actually distinguishes "has real pending data" from "exists but was already drained to empty".
     if (legacyKeys.none { hasPendingLegacyEntries(store.get(it)) }) return 0
 
     val envelopes = JSONArray()
@@ -106,11 +78,7 @@ internal fun migrateLegacyQueues(store: KeyValueStore): Int {
         Log.w(TAG, "Existing event log under '$EVENT_LOG_KEY' was corrupt, discarding it before migration", e)
     }
 
-    // Fallback publishedAt for legacy entries that never recorded their own timestamp
-    // (snooze/dismiss/import): now, offset by each entry's index within its own legacy array.
-    // The entries in each legacy array are already in chronological (append) order, so the
-    // offset preserves that relative order without every migrated entry colliding on the
-    // exact same millisecond.
+    // Fallback publishedAt for legacy entries that never recorded their own timestamp (snooze/dismiss/import): now, offset by each entry's index within its own legacy array. The entries in each legacy array are already in chronological (append) order, so the offset preserves that relative order without every migrated entry colliding on the exact same millisecond.
     val fallbackBase = System.currentTimeMillis()
 
     var migratedCount = 0
@@ -144,26 +112,14 @@ internal fun migrateLegacyQueues(store: KeyValueStore): Int {
         payload to fallbackBase + index
     }
 
-    // Written as one atomic batch rather than a separate set() + four remove() calls: if the
-    // process were killed between them, the next launch would see the new log already holding
-    // these entries but the legacy keys still present with their original data, re-trigger
-    // migration, and duplicate every entry in the log (each one reported to Rust twice --
-    // e.g. the same alarm fired/dismissed twice). Batching makes that intermediate state
-    // unobservable -- either both the log write and all four removals land, or neither does.
+    // Written as one atomic batch rather than a separate set() + four remove() calls: if the process were killed between them, the next launch would see the new log already holding these entries but the legacy keys still present with their original data, re-trigger migration, and duplicate every entry in the log (each one reported to Rust twice -- e.g. the same alarm fired/dismissed twice). Batching makes that intermediate state unobservable -- either both the log write and all four removals land, or neither does.
     val sets = if (migratedCount > 0) mapOf(EVENT_LOG_KEY to envelopes.toString()) else emptyMap()
     store.batch(sets = sets, removes = legacyKeys.toSet())
     return migratedCount
 }
 
 /**
- * Whether [raw] (a legacy queue's raw stored value) holds at least one entry worth migrating.
- * `null` (never set) and a parsed-empty array (`"[]"`, or equivalent with whitespace) both mean
- * "nothing to migrate" -- the latter matters because the pre-migration drain code always
- * rewrote a queue back to `"[]"` after draining it rather than removing the key, so a
- * non-null check alone can't tell "never had anything" apart from "already drained". Malformed
- * JSON is treated as "has something" so the real per-key parse in [migrateLegacyArray] (which
- * already tolerates and logs corrupt JSON) is what handles it, rather than this fast-path guard
- * silently skipping a corrupt-but-non-empty legacy queue.
+ * Whether [raw] (a legacy queue's raw stored value) holds at least one entry worth migrating. `null` (never set) and a parsed-empty array (`"[]"`, or equivalent with whitespace) both mean "nothing to migrate" -- the latter matters because the pre-migration drain code always rewrote a queue back to `"[]"` after draining it rather than removing the key, so a non-null check alone can't tell "never had anything" apart from "already drained". Malformed JSON is treated as "has something" so the real per-key parse in [migrateLegacyArray] (which already tolerates and logs corrupt JSON) is what handles it, rather than this fast-path guard silently skipping a corrupt-but-non-empty legacy queue.
  */
 private fun hasPendingLegacyEntries(raw: String?): Boolean {
     if (raw.isNullOrEmpty()) return false
@@ -175,10 +131,7 @@ private fun hasPendingLegacyEntries(raw: String?): Boolean {
 }
 
 /**
- * Migrates one legacy queue array (under [legacyKey] in [store]) into [outEnvelopes],
- * skipping entries with no valid `id`. [toPayloadAndPublishedAt] receives each legacy item
- * plus its index within its own legacy array and returns the new-schema payload object and
- * the `publishedAt` to stamp it with. Returns the number of entries migrated.
+ * Migrates one legacy queue array (under [legacyKey] in [store]) into [outEnvelopes], skipping entries with no valid `id`. [toPayloadAndPublishedAt] receives each legacy item plus its index within its own legacy array and returns the new-schema payload object and the `publishedAt` to stamp it with. Returns the number of entries migrated.
  */
 private fun migrateLegacyArray(
     store: KeyValueStore,
@@ -218,30 +171,13 @@ private fun migrateLegacyArray(
 }
 
 /**
- * Drains every entry in [queue] (across every topic, in chronological
- * [DurableEventQueue.Envelope.publishedAt] order) and hands each one to [dispatch], which
- * attempts delivery for the given topic/payload and returns whether it succeeded. Only
- * successfully-dispatched entries are committed (removed) from [queue] -- anything [dispatch]
- * returns `false` for stays queued for a later retry, mirroring the pre-migration per-type
- * drain/replay behaviour. Returns the number of entries actually dispatched.
+ * Drains every entry in [queue] (across every topic, in chronological [DurableEventQueue.Envelope.publishedAt] order) and hands each one to [dispatch], which attempts delivery for the given topic/payload and returns whether it succeeded. Only successfully-dispatched entries are committed (removed) from [queue] -- anything [dispatch] returns `false` for stays queued for a later retry, mirroring the pre-migration per-type drain/replay behaviour. Returns the number of entries actually dispatched.
  *
- * A standalone function (not a method) so it's unit-testable against a real
- * [DurableEventQueue]/in-memory [KeyValueStore] pair, with a fake [dispatch], and no Android
- * framework (Context, Channel) involved at all -- mirrors [migrateLegacyQueues] above.
+ * A standalone function (not a method) so it's unit-testable against a real [DurableEventQueue]/in-memory [KeyValueStore] pair, with a fake [dispatch], and no Android framework (Context, Channel) involved at all -- mirrors [migrateLegacyQueues] above.
  *
- * Two consequences of this design are intentional, not oversights, per issue #255's Unified
- * design (decision 7: every event flows through the log; drain-now replaces the old two-path
- * split; total order is preserved by draining everything, across all four topics, in
- * chronological order on every call):
- * - A process kill mid-drain -- after some [dispatch] calls have already succeeded but before
- *   the trailing [DurableEventQueue.commit] runs -- can redeliver already-delivered entries
- *   (possibly for a different topic than whichever call triggered this drain) on the next
- *   launch. Issue #255's Phase 3C adds Rust-side last-N eventId dedup specifically to absorb
- *   this.
- * - [enqueueAndDrain] below drains the *entire* cross-topic backlog synchronously on every
- *   single event, not just the topic that was just enqueued -- if a large backlog has built up,
- *   this could run long enough to threaten `AlarmReceiver.onReceive()`'s ANR budget. Issue
- *   #255's Phase 3A closes this by wrapping `onReceive()` in `goAsync()`.
+ * Two consequences of this design are intentional, not oversights, per issue #255's Unified design (decision 7: every event flows through the log; drain-now replaces the old two-path split; total order is preserved by draining everything, across all four topics, in chronological order on every call):
+ * - A process kill mid-drain -- after some [dispatch] calls have already succeeded but before the trailing [DurableEventQueue.commit] runs -- can redeliver already-delivered entries (possibly for a different topic than whichever call triggered this drain) on the next launch. Issue #255's Phase 3C adds Rust-side last-N eventId dedup specifically to absorb this.
+ * - [enqueueAndDrain] below drains the *entire* cross-topic backlog synchronously on every single event, not just the topic that was just enqueued -- if a large backlog has built up, this could run long enough to threaten `AlarmReceiver.onReceive()`'s ANR budget. Issue #255's Phase 3A closes this by wrapping `onReceive()` in `goAsync()`.
  */
 internal fun drainAndDispatch(queue: DurableEventQueue, dispatch: (topic: String, payload: String) -> Boolean): Int {
     val drained = queue.drainAll(pipelineReady = true)
@@ -361,13 +297,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             enqueueAndDrain(context, TOPIC_IMPORT, payload)
         }
 
-        // Every event flows through the log -- there is no separate "dispatch immediately"
-        // path any more. When the pipeline is already up and the right channel is registered,
-        // drainQueuedEvents() below delivers this same entry within the same call, so the net
-        // effect (and latency) matches the old immediate-dispatch path; when it isn't, the
-        // entry simply stays in the log until markAlarmPipelineReady() (or a later event of
-        // any topic) drains it. See drainAndDispatch()'s KDoc for the two deliberate,
-        // forward-referenced (issue #255) consequences of always draining the whole backlog.
+        // Every event flows through the log -- there is no separate "dispatch immediately" path any more. When the pipeline is already up and the right channel is registered, drainQueuedEvents() below delivers this same entry within the same call, so the net effect (and latency) matches the old immediate-dispatch path; when it isn't, the entry simply stays in the log until markAlarmPipelineReady() (or a later event of any topic) drains it. See drainAndDispatch()'s KDoc for the two deliberate, forward-referenced (issue #255) consequences of always draining the whole backlog.
         @Synchronized
         private fun enqueueAndDrain(context: Context, topic: String, payload: JSONObject) {
             val eventId = eventQueue(context).enqueue(topic, payload.toString())
@@ -648,14 +578,9 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     }
 
     /**
-     * Drains every queued event (all topics, chronological arrival order) and dispatches each
-     * to the Channel matching its topic. A no-op while [alarmPipelineReady] is `false`.
+     * Drains every queued event (all topics, chronological arrival order) and dispatches each to the Channel matching its topic. A no-op while [alarmPipelineReady] is `false`.
      *
-     * This is the single delivery path to Rust: [notifyAlarmFired] and friends always enqueue
-     * first and then call this immediately, so when the pipeline is already up this runs in
-     * the very same call rather than as a separate "replay later" pass. The actual drain/topic
-     * -> outcome bookkeeping lives in [drainAndDispatch]; this just supplies the Android-side
-     * dispatch (Channel lookup + send).
+     * This is the single delivery path to Rust: [notifyAlarmFired] and friends always enqueue first and then call this immediately, so when the pipeline is already up this runs in the very same call rather than as a separate "replay later" pass. The actual drain/topic -> outcome bookkeeping lives in [drainAndDispatch]; this just supplies the Android-side dispatch (Channel lookup + send).
      */
     @Synchronized
     private fun drainQueuedEvents() {
