@@ -56,32 +56,19 @@
   <circle cx="4.21" cy="16.5" r="0.9" fill="#fbbf24" opacity="0.4"/>
 
   <!-- "Dev" ribbon banner, clipped to the icon's rounded-square silhouette. The lettering is
-       drawn as plain filled paths/rects rather than an SVG <text> element; <text> needs a
-       system font to be resolvable wherever this gets rasterized (confirmed: it silently
-       renders as nothing at all inside the tauri-dev-mobile container used for real dev
-       builds, even though it renders fine locally), while path/rect geometry always renders
-       identically everywhere. D is drawn as four wall segments (not a filled blob) so it has
-       a genuine open counter instead of reading as a solid shape; e/v sit at x-height on the
-       same baseline as D's cap-height. -->
+       Liberation Sans Bold's actual "Dev" glyph outlines, pre-converted to a plain filled
+       path (via `inkscape (actions=object-to-path)`) rather than left as an SVG <text>
+       element; <text> needs a system font to be resolvable wherever this gets rasterized,
+       and confirmed silently renders as nothing at all inside the tauri-dev-mobile container
+       used for real dev builds, even though it renders fine locally. Baking in the outlines
+       gets a real sans-serif look with no runtime font dependency. Regenerate by rendering
+       "Dev" at font-size 70 in Liberation Sans Bold and re-running the same inkscape command
+       if the wording/font ever needs to change. -->
   <g clip-path="url(#iconClip)">
     <g transform="translate(18.5 18.5) rotate(-45)">
       <rect x="-9" y="-2.1" width="18" height="4.2" fill="#ef4444"/>
-      <g transform="translate(-2.34 -1.5) scale(0.6)" fill="#ffffff">
-        <!-- D (cap height, y 0-5) -->
-        <rect x="0" y="0" width="0.9" height="5"/>
-        <rect x="0" y="0" width="2.4" height="0.9"/>
-        <rect x="0" y="4.1" width="2.4" height="0.9"/>
-        <rect x="1.75" y="0.9" width="0.65" height="3.2"/>
-        <!-- e (x-height, y 2-5) -->
-        <g transform="translate(2.9 0)">
-          <rect x="0" y="2" width="2.2" height="0.7"/>
-          <rect x="0" y="2" width="0.7" height="3"/>
-          <rect x="1.5" y="2" width="0.7" height="1.25"/>
-          <rect x="0" y="3.15" width="2.2" height="0.7"/>
-          <rect x="0" y="4.3" width="1.4" height="0.7"/>
-        </g>
-        <!-- v (x-height, y 2-5) -->
-        <path d="M5.6,2 L6.7,5 L7.8,2 L7.25,2 L6.7,3.75 L6.15,2 Z"/>
+      <g transform="translate(-4.0776 -2.8412) scale(0.061417)" fill="#ffffff">
+        <path d="m 47.612305,45.561523 q 0,7.451172 -2.939453,13.022461 -2.905274,5.53711 -8.271485,8.476563 Q 31.069336,70 24.165039,70 H 4.6826172 V 21.84082 H 22.114258 q 12.167969,0 18.833008,6.152344 6.665039,6.118164 6.665039,17.568359 z m -10.151368,0 q 0,-7.758789 -4.033203,-11.826171 -4.033203,-4.101563 -11.518554,-4.101563 h -7.143555 v 32.573242 h 8.544922 q 6.49414,0 10.322265,-4.477539 3.828125,-4.477539 3.828125,-12.167969 z m 33.120118,25.122071 q -8.339844,0 -12.817383,-4.921875 -4.477539,-4.956055 -4.477539,-14.423828 0,-9.160157 4.545898,-14.082032 4.545899,-4.921875 12.885742,-4.921875 7.963868,0 12.167969,5.297852 4.204102,5.263672 4.204102,15.449219 v 0.273437 H 63.369141 q 0,5.400391 1.982421,8.168945 2.016602,2.734375 5.708008,2.734375 5.092774,0 6.425782,-4.409179 l 9.057617,0.786133 Q 82.612305,70.683594 70.581055,70.683594 Z m 0,-32.299805 q -3.383789,0 -5.229493,2.358398 -1.811523,2.358399 -1.914062,6.59668 H 77.792969 Q 77.519531,42.861328 75.639648,40.639648 73.759766,38.383789 70.581055,38.383789 Z M 114.46777,70 H 102.9834 L 89.755859,33.017578 h 10.151368 l 6.459963,20.678711 q 0.51269,1.708984 2.42676,8.544922 0.34179,-1.401367 1.40136,-4.921875 1.05957,-3.520508 7.86133,-24.301758 h 10.04883 z"/>
       </g>
     </g>
   </g>
