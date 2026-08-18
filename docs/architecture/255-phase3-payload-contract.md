@@ -16,10 +16,10 @@ The existing `{id, actualFiredAt}` payload gains two fields:
 
 ```json
 {
-  "id": 123,
-  "actualFiredAt": 1755100800000,
-  "eventId": "b3f1c2a4-...",
-  "handledNatively": ["watch-ring"]
+	"id": 123,
+	"actualFiredAt": 1755100800000,
+	"eventId": "b3f1c2a4-...",
+	"handledNatively": ["watch-ring"]
 }
 ```
 
