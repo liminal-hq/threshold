@@ -173,10 +173,7 @@ class WearMessageService : WearableListenerService() {
     private fun handleOfflineWrite(path: String, data: String) {
         Log.i(TAG, "Watch write received offline ($path), starting WearSyncService")
         NativeEventLog.log(applicationContext, TAG, "Offline write received path=$path, starting WearSyncService")
-        // Must go through the shared singleton, not a fresh instance -- see
-        // WearSyncEventQueue.getInstance's KDoc for why a second, independently-constructed
-        // instance over the same SharedPreferences file provides no mutual exclusion
-        // against WearSyncPlugin's own enqueues.
+        // Must go through the shared singleton, not a fresh instance -- see WearSyncEventQueue.getInstance's KDoc for why a second, independently-constructed instance over the same SharedPreferences file provides no mutual exclusion against WearSyncPlugin's own enqueues.
         WearSyncEventQueue.getInstance(applicationContext).enqueue(path, data)
 
         val serviceIntent = Intent(this, WearSyncService::class.java).apply {

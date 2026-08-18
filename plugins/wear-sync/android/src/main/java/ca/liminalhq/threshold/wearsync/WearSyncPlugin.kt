@@ -84,10 +84,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     private val dataClient by lazy { Wearable.getDataClient(activity) }
     private val messageClient by lazy { Wearable.getMessageClient(activity) }
     private val nodeClient by lazy { Wearable.getNodeClient(activity) }
-    // Must go through the process-wide singleton, not a fresh instance -- see
-    // WearSyncEventQueue.getInstance's KDoc for why a second, independently-constructed
-    // instance over the same SharedPreferences file provides no mutual exclusion against
-    // this one, or against WearMessageService's own offline-write enqueues.
+    // Must go through the process-wide singleton, not a fresh instance -- see WearSyncEventQueue.getInstance's KDoc for why a second, independently-constructed instance over the same SharedPreferences file provides no mutual exclusion against this one, or against WearMessageService's own offline-write enqueues.
     private val watchQueue by lazy { WearSyncEventQueue.getInstance(activity) }
     private var watchMessageChannel: Channel? = null
     @Volatile
@@ -376,12 +373,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     /**
      * Called by [WearMessageService] when a message arrives from the watch.
      *
-     * Always enqueues onto [watchQueue] first, then immediately drains if the pipeline
-     * is ready -- "immediate dispatch" is just "enqueue, then drain right away" rather
-     * than a separate code path, so there is exactly one way a message ever reaches
-     * Rust: through [drainQueuedMessages]. Sends the message to Rust via the [Channel]
-     * registered by [set_watch_message_handler]; the Rust side receives the data
-     * directly through JNI without involving the WebView.
+     * Always enqueues onto [watchQueue] first, then immediately drains if the pipeline is ready -- "immediate dispatch" is just "enqueue, then drain right away" rather than a separate code path, so there is exactly one way a message ever reaches Rust: through [drainQueuedMessages]. Sends the message to Rust via the [Channel] registered by [set_watch_message_handler]; the Rust side receives the data directly through JNI without involving the WebView.
      */
     fun onWatchMessage(path: String, data: String) {
         watchQueue.enqueue(path, data)
@@ -393,13 +385,9 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     /**
-     * Peeks every queued message and delivers each one to Rust in turn, committing
-     * (removing) only the ones that were actually handed to the [Channel] successfully.
+     * Peeks every queued message and delivers each one to Rust in turn, committing (removing) only the ones that were actually handed to the [Channel] successfully.
      *
-     * Deliberately peek-then-commit-after-delivery rather than drain-then-deliver: if
-     * `channel.send()` throws partway through a batch (a stale Channel reference, a JNI
-     * failure, whatever), every message not yet delivered at that point must still be in
-     * the queue afterwards so it's retried on the next drain, not silently lost.
+     * Deliberately peek-then-commit-after-delivery rather than drain-then-deliver: if `channel.send()` throws partway through a batch (a stale Channel reference, a JNI failure, whatever), every message not yet delivered at that point must still be in the queue afterwards so it's retried on the next drain, not silently lost.
      */
     private fun drainQueuedMessages() {
         if (!watchPipelineReady) return

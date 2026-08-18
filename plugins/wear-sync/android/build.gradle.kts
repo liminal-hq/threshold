@@ -26,11 +26,7 @@ android {
     }
     testOptions {
         unitTests {
-            // WearSyncEventQueue calls android.util.Log on paths this module's own JUnit
-            // tests exercise (corrupt legacy queue JSON, malformed entries). Without this,
-            // those calls hit Android's unmocked stub jar and throw instead of being no-ops
-            // under plain JUnit (no Robolectric in this codebase's test-kotlin-plugins CI job)
-            // -- same fix native-bus's own build.gradle.kts already applies for the same reason.
+            // WearSyncEventQueue calls android.util.Log on paths this module's own JUnit tests exercise (corrupt legacy queue JSON, malformed entries). Without this, those calls hit Android's unmocked stub jar and throw instead of being no-ops under plain JUnit (no Robolectric in this codebase's test-kotlin-plugins CI job) -- same fix native-bus's own build.gradle.kts already applies for the same reason.
             isReturnDefaultValues = true
         }
     }
@@ -46,7 +42,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
 
     testImplementation("junit:junit:4.13.2")
-    // Real org.json, not Android's throw-on-call stub -- same fix already used by
-    // apps/threshold-wear's own JVM-only JSON parsing tests and native-bus's own tests.
+    // Real org.json, not Android's throw-on-call stub -- same fix already used by apps/threshold-wear's own JVM-only JSON parsing tests and native-bus's own tests.
     testImplementation("org.json:json:20231013")
 }
