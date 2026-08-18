@@ -150,14 +150,10 @@ object NextAlarmWidget {
         return if (isNightMode) theme.dark else theme.light
     }
 
-    // Applies one resolved palette to every colour-bearing view, unconditionally, on every render.
-    // This is what keeps a colour filter set on a previous render from ever going stale: the
-    // background image, rail, and all text colours are always reassigned from the palette that
-    // matches the CURRENT theme/night state, themed or not, rather than being left alone when a
-    // theme is absent -- RemoteViews would otherwise persist an earlier filter across the next
-    // renderWidget/refreshAll call.
+    // Applies one resolved palette to every colour-bearing view, unconditionally, on every render. This is what keeps a colour filter set on a previous render from ever going stale: the background layers, rail, and all text colours are always reassigned from the palette that matches the CURRENT theme/night state, themed or not, rather than being left alone when a theme is absent -- RemoteViews would otherwise persist an earlier filter across the next renderWidget/refreshAll call. The background is two stacked layers (stroke under a 1dp-inset fill) so the themed stroke survives tinting -- one filter over a single stroked shape would flatten both to the fill colour.
     private fun applyPalette(views: RemoteViews, palette: WidgetThemePalette, isEmptyState: Boolean) {
-        views.setInt(R.id.widget_background_image, "setColorFilter", palette.fill)
+        views.setInt(R.id.widget_background_stroke, "setColorFilter", palette.stroke)
+        views.setInt(R.id.widget_background_fill, "setColorFilter", palette.fill)
         views.setTextColor(R.id.widget_eyebrow, palette.eyebrow)
         views.setTextColor(R.id.widget_label, palette.label)
         if (isEmptyState) {

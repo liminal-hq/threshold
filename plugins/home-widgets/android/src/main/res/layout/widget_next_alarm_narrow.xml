@@ -9,20 +9,32 @@
     android:layout_height="match_parent">
 
     <ImageView
-        android:id="@+id/widget_background_image"
+        android:id="@+id/widget_background_stroke"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitXY"
-        android:src="@drawable/widget_background"
+        android:src="@drawable/widget_background_stroke"
         android:importantForAccessibility="no"
         android:contentDescription="@null" />
 
+    <ImageView
+        android:id="@+id/widget_background_fill"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="1dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_background_fill"
+        android:importantForAccessibility="no"
+        android:contentDescription="@null" />
+
+    <!-- 22sp time plus 4dp vertical padding is what lets this layout genuinely fit the declared 40dp one-row minimum resize height at fontScale 1.0. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="12dp">
+        android:paddingVertical="4dp"
+        android:paddingHorizontal="12dp">
 
         <ImageView
             android:id="@+id/widget_rail"
@@ -37,7 +49,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
-            android:textSize="28sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:singleLine="true"
             android:importantForAccessibility="no"

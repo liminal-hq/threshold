@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Border layer of the card background: a solid rounded rect that the fill layer sits on top of, inset by 1dp, leaving this colour visible as the stroke. Split into two layers so themed renders can tint fill and stroke independently (one filter over a stroked shape would flatten both to the fill colour). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_card_stroke" />
+    <corners android:radius="@dimen/widget_corner_radius" />
+</shape>

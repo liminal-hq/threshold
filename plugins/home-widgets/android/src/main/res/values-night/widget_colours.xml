@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Flat fallback fill for the un-themed render path (see NextAlarmWidget.fallbackPalette); the drawable itself still uses the fill_start/fill_end gradient pair below. -->
     <color name="widget_card_fill">#2a364b</color>
-    <color name="widget_card_fill_start">#2a364b</color>
-    <color name="widget_card_fill_end">#22304a</color>
     <color name="widget_card_stroke">#3e5272</color>
     <color name="widget_rail_colour">#4c8dff</color>
     <color name="widget_eyebrow_colour">#ff8f5d</color>

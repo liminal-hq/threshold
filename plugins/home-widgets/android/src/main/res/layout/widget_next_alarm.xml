@@ -10,11 +10,21 @@
     android:layout_height="match_parent">
 
     <ImageView
-        android:id="@+id/widget_background_image"
+        android:id="@+id/widget_background_stroke"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitXY"
-        android:src="@drawable/widget_background"
+        android:src="@drawable/widget_background_stroke"
+        android:importantForAccessibility="no"
+        android:contentDescription="@null" />
+
+    <ImageView
+        android:id="@+id/widget_background_fill"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="1dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_background_fill"
         android:importantForAccessibility="no"
         android:contentDescription="@null" />
 
