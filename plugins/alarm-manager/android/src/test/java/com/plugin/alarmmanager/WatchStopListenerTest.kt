@@ -14,20 +14,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Plain JUnit 4 tests -- no Robolectric/instrumentation. Covers the pure functions
- * [WatchStopListener] factors out ([parseWatchStopPayload], [shouldStopForWatchSignal]) plus
- * [WatchStopListener.register]'s topic subscriptions, mirroring the style of wear-sync's
- * `NativeFiredListenerTest` (the equivalent pure-helper coverage for the opposite direction).
- * [WatchStopListener.handle] itself calls `Context.stopService`/`AlarmRingingService`, which
- * need a real Android framework and aren't exercised here -- the matching decision it's built
- * from ([shouldStopForWatchSignal]) is what's actually worth covering without one.
+ * Plain JUnit 4 tests -- no Robolectric/instrumentation. Covers the pure functions [WatchStopListener] factors out ([parseWatchStopPayload], [shouldStopForWatchSignal]) plus [WatchStopListener.register]'s topic subscriptions, mirroring the style of wear-sync's `NativeFiredListenerTest` (the equivalent pure-helper coverage for the opposite direction). [WatchStopListener.handle] itself calls `Context.stopService`/`AlarmRingingService`, which need a real Android framework and aren't exercised here -- the matching decision it's built from ([shouldStopForWatchSignal]) is what's actually worth covering without one.
  */
 class WatchStopListenerTest {
 
     @After
     fun tearDown() {
-        // NativeEventBus is a process-wide singleton; without this, listeners registered by one
-        // test would still be live (and firing) during the next one.
+        // NativeEventBus is a process-wide singleton; without this, listeners registered by one test would still be live (and firing) during the next one.
         NativeEventBus.resetForTests()
     }
 
@@ -95,10 +88,5 @@ class WatchStopListenerTest {
         assertNull(shouldStopForWatchSignal("not even json", currentlyRingingAlarmId = 7))
     }
 
-    // WatchStopListener.register()/handle() themselves need a real android.content.Context
-    // (applicationContext, Context.stopService) and AlarmRingingService's real companion state
-    // -- not exercised by this plain-JUnit suite (no Robolectric/instrumentation in this
-    // codebase's test-kotlin-plugins CI job), same as wear-sync's NativeFiredListener.register()/
-    // handle() aren't in NativeFiredListenerTest. The pure decision logic both delegate to
-    // (shouldStopForWatchSignal here, parseFiredPayload/isStale there) is what's covered above.
+    // WatchStopListener.register()/handle() themselves need a real android.content.Context (applicationContext, Context.stopService) and AlarmRingingService's real companion state -- not exercised by this plain-JUnit suite (no Robolectric/instrumentation in this codebase's test-kotlin-plugins CI job), same as wear-sync's NativeFiredListener.register()/handle() aren't in NativeFiredListenerTest. The pure decision logic both delegate to (shouldStopForWatchSignal here, parseFiredPayload/isStale there) is what's covered above.
 }

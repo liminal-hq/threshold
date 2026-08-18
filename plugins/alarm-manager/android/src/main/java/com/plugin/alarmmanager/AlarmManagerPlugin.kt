@@ -224,41 +224,17 @@ internal fun enrichPayloadForDispatch(envelope: DurableEventQueue.Envelope): Str
 }
 
 /**
- * Publishes [payload] on [NativeEventBus]'s [topic] and returns the tags any in-process
- * listeners reported handling it with. Factored out of [notifyAlarmDismissed]/
- * [notifySnoozeRequested] (mirrors `AlarmReceiver.publishAlarmFiredToBus`) purely so it's
- * unit-testable without a real [Context] -- unlike [enqueueAndDrain], the durable side of the
- * same call, which needs SharedPreferences.
+ * Publishes [payload] on [NativeEventBus]'s [topic] and returns the tags any in-process listeners reported handling it with. Factored out of [notifyAlarmDismissed]/[notifySnoozeRequested] (mirrors `AlarmReceiver.publishAlarmFiredToBus`) purely so it's unit-testable without a real [Context] -- unlike [enqueueAndDrain], the durable side of the same call, which needs SharedPreferences.
  */
 internal fun publishToBus(topic: String, payload: JSONObject): Set<String> =
     NativeEventBus.publish(topic, payload.toString())
 
 /**
- * Resolves the alarm id [AlarmManagerPlugin.stopRinging] should stamp onto the `ACTION_DISMISS`
- * intent it sends [AlarmRingingService], from the id the frontend supplied explicitly (see
- * `StopRingingRequest`'s KDoc on the Rust side). Returns `null` (not stampable as an intent
- * extra) for a missing or non-positive id.
+ * Resolves the alarm id [AlarmManagerPlugin.stopRinging] should stamp onto the `ACTION_DISMISS` intent it sends [AlarmRingingService], from the id the frontend supplied explicitly (see `StopRingingRequest`'s KDoc on the Rust side). Returns `null` (not stampable as an intent extra) for a missing or non-positive id.
  *
- * Deliberately does **not** fall back to [AlarmRingingService.currentlyRingingAlarmId] when
- * [explicitAlarmId] is absent, even though that field exists and is read elsewhere
- * ([AlarmManagerPlugin.getCurrentlyRingingAlarm]). `stopRinging` is invoked for both the
- * dismiss ("Stop Alarm") and snooze flows (`AlarmManagerService.stopRinging()` /
- * `snoozeRinging()`, both of which end up here since this command's only job is silencing
- * `AlarmRingingService`, not distinguishing *why*) -- always via the same `ACTION_DISMISS`
- * intent, which `AlarmRingingService.onStartCommand` routes to
- * [AlarmManagerPlugin.notifyAlarmDismissed]. If this fell back to the currently-ringing id for
- * every id-less caller, an in-app **snooze** (which never threads its own id through, exactly
- * because of this) would spuriously produce a real `alarm-manager:dismiss-requested` event and
- * call Rust's `dismiss_alarm` right after the snooze's own `AlarmService.snooze()` write --
- * `dismiss_alarm` recomputes `next_trigger` relative to whatever is *currently* stored, so this
- * would silently clobber the snooze the user just requested. Only the explicit-id path (issue
- * #255 Phase 4A's in-app "Stop Alarm" button) is safe to wire uniformly; the id-less legacy JS
- * notification-action fallback (`onDismissRinging`/`onSnoozeRinging` in
- * `AlarmManagerService.init()`) stays exactly as inert as it is today.
+ * Deliberately does **not** fall back to [AlarmRingingService.currentlyRingingAlarmId] when [explicitAlarmId] is absent, even though that field exists and is read elsewhere ([AlarmManagerPlugin.getCurrentlyRingingAlarm]). `stopRinging` is invoked for both the dismiss ("Stop Alarm") and snooze flows (`AlarmManagerService.stopRinging()` / `snoozeRinging()`, both of which end up here since this command's only job is silencing `AlarmRingingService`, not distinguishing *why*) -- always via the same `ACTION_DISMISS` intent, which `AlarmRingingService.onStartCommand` routes to [AlarmManagerPlugin.notifyAlarmDismissed]. If this fell back to the currently-ringing id for every id-less caller, an in-app **snooze** (which never threads its own id through, exactly because of this) would spuriously produce a real `alarm-manager:dismiss-requested` event and call Rust's `dismiss_alarm` right after the snooze's own `AlarmService.snooze()` write -- `dismiss_alarm` recomputes `next_trigger` relative to whatever is *currently* stored, so this would silently clobber the snooze the user just requested. Only the explicit-id path (issue #255 Phase 4A's in-app "Stop Alarm" button) is safe to wire uniformly; the id-less legacy JS notification-action fallback (`onDismissRinging`/`onSnoozeRinging` in `AlarmManagerService.init()`) stays exactly as inert as it is today.
  *
- * A pure function (not reading the companion `@Volatile var` itself) so it's unit-testable
- * without an Android framework -- mirrors [AlarmReceiver]'s `recordAndPublishFiredEvent` taking
- * `isLive` as a parameter rather than resolving it inline.
+ * A pure function (not reading the companion `@Volatile var` itself) so it's unit-testable without an Android framework -- mirrors [AlarmReceiver]'s `recordAndPublishFiredEvent` taking `isLive` as a parameter rather than resolving it inline.
  */
 internal fun resolveStopRingingAlarmId(explicitAlarmId: Int?): Int? {
     return explicitAlarmId?.takeIf { it > 0 }
@@ -351,11 +327,7 @@ class ImportEventHandlerArgs {
 
 @InvokeArg
 class StopRingingArgs {
-    // Null (the default, and what a caller that omits the key entirely gets) means "no
-    // explicit id supplied" -- resolveStopRingingAlarmId() leaves the ACTION_DISMISS intent's
-    // ALARM_ID extra unset in that case (see its KDoc for why this deliberately does not fall
-    // back to AlarmRingingService.currentlyRingingAlarmId). See StopRingingRequest's KDoc on
-    // the Rust side for why the key is omitted rather than sent as JSON null.
+    // Null (the default, and what a caller that omits the key entirely gets) means "no explicit id supplied" -- resolveStopRingingAlarmId() leaves the ACTION_DISMISS intent's ALARM_ID extra unset in that case (see its KDoc for why this deliberately does not fall back to AlarmRingingService.currentlyRingingAlarmId). See StopRingingRequest's KDoc on the Rust side for why the key is omitted rather than sent as JSON null.
     var alarmId: Int? = null
 }
 
@@ -403,34 +375,19 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         }
 
         /**
-         * @param alarmId the real alarm id, from the `ACTION_SNOOZE` intent's `ALARM_ID` extra
-         *   -- as of issue #255 Phase 4A this always comes from the notification's own Snooze
-         *   action (the one existing caller of `ACTION_SNOOZE`); in-app snooze does not (and
-         *   deliberately does not) route through this, since `stopRinging`'s single command is
-         *   shared with dismiss and would misattribute an in-app snooze as a dismiss -- see
-         *   `resolveStopRingingAlarmId`'s KDoc. A non-positive id is dropped by the guard below.
+         * @param alarmId the real alarm id, from the `ACTION_SNOOZE` intent's `ALARM_ID` extra -- as of issue #255 Phase 4A this always comes from the notification's own Snooze action (the one existing caller of `ACTION_SNOOZE`); in-app snooze does not (and deliberately does not) route through this, since `stopRinging`'s single command is shared with dismiss and would misattribute an in-app snooze as a dismiss -- see `resolveStopRingingAlarmId`'s KDoc. A non-positive id is dropped by the guard below.
          */
         @Synchronized
         fun notifySnoozeRequested(context: Context, alarmId: Int) {
             if (alarmId <= 0) return
             val payload = JSONObject().apply { put("id", alarmId) }
             enqueueAndDrain(context, TOPIC_SNOOZE, payload)
-            // Fast native fan-out (issue #255 Phase 4A/Part 2.1) -- lets wear-sync's own
-            // listener (a sibling worktree) tell the watch to stop instantly, without waiting
-            // for Rust to boot. Durable-persist-first, same ordering/reasoning as
-            // AlarmReceiver.recordAndPublishFiredEvent for the fired path.
+            // Fast native fan-out (issue #255 Phase 4A/Part 2.1) -- lets wear-sync's own listener (a sibling worktree) tell the watch to stop instantly, without waiting for Rust to boot. Durable-persist-first, same ordering/reasoning as AlarmReceiver.recordAndPublishFiredEvent for the fired path.
             publishToBus(TOPIC_SNOOZE, payload)
         }
 
         /**
-         * @param alarmId the real alarm id, now produced by every dismiss origin that reaches
-         *   `AlarmRingingService`'s `ACTION_DISMISS` handler -- the notification's own Dismiss
-         *   action (always had one) and, since issue #255 Phase 4A closed the in-app dismiss
-         *   gap, the in-app "Stop Alarm" button too (`resolveStopRingingAlarmId`). There is no
-         *   longer an origin-based special case here: a non-positive id (still possible if
-         *   genuinely nothing is/was ringing, e.g. the legacy ID-less JS notification-action
-         *   fallback) is simply dropped by the guard below, uniformly, regardless of where the
-         *   call came from.
+         * @param alarmId the real alarm id, now produced by every dismiss origin that reaches `AlarmRingingService`'s `ACTION_DISMISS` handler -- the notification's own Dismiss action (always had one) and, since issue #255 Phase 4A closed the in-app dismiss gap, the in-app "Stop Alarm" button too (`resolveStopRingingAlarmId`). There is no longer an origin-based special case here: a non-positive id (still possible if genuinely nothing is/was ringing, e.g. the legacy ID-less JS notification-action fallback) is simply dropped by the guard below, uniformly, regardless of where the call came from.
          */
         @Synchronized
         fun notifyAlarmDismissed(context: Context, alarmId: Int) {
@@ -556,10 +513,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     @Command
     fun stopRinging(invoke: Invoke) {
         val args = invoke.parseArgs(StopRingingArgs::class.java)
-        // Issue #255 Phase 4A: stamp the id the frontend supplied explicitly (e.g. the in-app
-        // "Stop Alarm" button, which now threads its alarm id all the way through -- see
-        // resolveStopRingingAlarmId's KDoc for why this deliberately does NOT fall back to
-        // AlarmRingingService.currentlyRingingAlarmId for id-less callers).
+        // Issue #255 Phase 4A: stamp the id the frontend supplied explicitly (e.g. the in-app "Stop Alarm" button, which now threads its alarm id all the way through -- see resolveStopRingingAlarmId's KDoc for why this deliberately does NOT fall back to AlarmRingingService.currentlyRingingAlarmId for id-less callers).
         val alarmId = resolveStopRingingAlarmId(args.alarmId)
         Log.d(TAG, "Stopping ringing service via Intent for alarm $alarmId")
         val intent = Intent(activity, AlarmRingingService::class.java).apply {

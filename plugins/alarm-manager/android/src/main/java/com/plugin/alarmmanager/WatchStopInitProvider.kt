@@ -14,25 +14,16 @@ import android.util.Log
 private const val TAG = "WatchStopInitProvider"
 
 /**
- * Guarantees [WatchStopListener] is subscribed to `NativeEventBus` before anything else in the
- * app can run, including on a cold multi-plugin process start. `ContentProvider.onCreate()` is
- * documented to always run before any `Activity`/`Service`/`BroadcastReceiver` callback -- the
- * same early-init mechanism wear-sync's `WearRingInitProvider` established in issue #255 Phase
- * 3B for the opposite (fired->watch) direction; this is that pattern applied to the
- * watch->phone stop direction (Phase 4A).
+ * Guarantees [WatchStopListener] is subscribed to `NativeEventBus` before anything else in the app can run, including on a cold multi-plugin process start. `ContentProvider.onCreate()` is documented to always run before any `Activity`/`Service`/`BroadcastReceiver` callback -- the same early-init mechanism wear-sync's `WearRingInitProvider` established in issue #255 Phase 3B for the opposite (fired->watch) direction; this is that pattern applied to the watch->phone stop direction (Phase 4A).
  *
- * Not debug-gated: it ships in every build, since a watch-originated dismiss/snooze needs to
- * silence the phone's ringing regardless of whether the phone's Tauri runtime has booted yet.
- * `android:exported="false"` in the manifest -- this provider has no real data to serve and no
- * external caller.
+ * Not debug-gated: it ships in every build, since a watch-originated dismiss/snooze needs to silence the phone's ringing regardless of whether the phone's Tauri runtime has booted yet. `android:exported="false"` in the manifest -- this provider has no real data to serve and no external caller.
  */
 class WatchStopInitProvider : ContentProvider() {
 
     override fun onCreate(): Boolean {
         val ctx = context
         if (ctx == null) {
-            // ContentProvider.onCreate() is documented to always have an attached Context by
-            // the time it runs; this is defensive only, not an expected path.
+            // ContentProvider.onCreate() is documented to always have an attached Context by the time it runs; this is defensive only, not an expected path.
             Log.e(TAG, "onCreate() called with no attached Context")
             return true
         }
@@ -43,8 +34,7 @@ class WatchStopInitProvider : ContentProvider() {
         return true
     }
 
-    // Everything below is a deliberate no-op -- this is not a real content provider, it
-    // exists purely for the onCreate() timing guarantee above.
+    // Everything below is a deliberate no-op -- this is not a real content provider, it exists purely for the onCreate() timing guarantee above.
 
     override fun query(
         uri: Uri,

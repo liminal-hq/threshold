@@ -112,18 +112,7 @@ pub struct CurrentlyRingingAlarm {
     pub id: Option<i32>,
 }
 
-/// Request payload for Kotlin's `stopRinging` command. `alarm_id`, when known, threads the
-/// real alarm id through to `AlarmRingingService`'s `ACTION_DISMISS` intent so
-/// `AlarmManagerPlugin.notifyAlarmDismissed` gets a usable id for every dismiss origin --
-/// previously only the notification's own Dismiss action carried one, so in-app dismiss
-/// silently produced no native event at all (issue #255 Phase 4A). `None` for callers that
-/// don't know which alarm they're stopping: the legacy ID-less JS notification-action
-/// fallback, and in-app snooze (`stop_ringing`'s single command is shared between dismiss and
-/// snooze, so threading an id through for a snooze would misattribute it as a dismiss -- see
-/// `resolveStopRingingAlarmId`'s KDoc on the Kotlin side for the full reasoning). Omitted (not
-/// sent as JSON `null`) when absent, same reasoning as `PickAlarmSoundOptions` above: Kotlin's
-/// `StopRingingArgs` arg class expects the key to be missing for "no explicit id", not
-/// present-but-null.
+/// Request payload for Kotlin's `stopRinging` command. `alarm_id`, when known, threads the real alarm id through to `AlarmRingingService`'s `ACTION_DISMISS` intent so `AlarmManagerPlugin.notifyAlarmDismissed` gets a usable id for every dismiss origin -- previously only the notification's own Dismiss action carried one, so in-app dismiss silently produced no native event at all (issue #255 Phase 4A). `None` for callers that don't know which alarm they're stopping: the legacy ID-less JS notification-action fallback, and in-app snooze (`stop_ringing`'s single command is shared between dismiss and snooze, so threading an id through for a snooze would misattribute it as a dismiss -- see `resolveStopRingingAlarmId`'s KDoc on the Kotlin side for the full reasoning). Omitted (not sent as JSON `null`) when absent, same reasoning as `PickAlarmSoundOptions` above: Kotlin's `StopRingingArgs` arg class expects the key to be missing for "no explicit id", not present-but-null.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StopRingingRequest {

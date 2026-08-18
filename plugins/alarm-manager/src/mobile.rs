@@ -225,16 +225,7 @@ impl<R: Runtime> AlarmManager<R> {
         self.stop_ringing_request(StopRingingRequest { alarm_id: None })
     }
 
-    /// Same as [`stop_ringing`](Self::stop_ringing), but threads a specific alarm id through
-    /// to Kotlin's `AlarmRingingService.ACTION_DISMISS` intent -- used by the `stop_ringing`
-    /// Tauri command (invoked from the frontend, which knows which alarm it's ringing screen
-    /// is for) so every dismiss/snooze origin funnels a real id into
-    /// `AlarmManagerPlugin.notifyAlarmDismissed`/`notifySnoozeRequested`, not just the
-    /// notification's own Dismiss/Snooze action. See issue #255 Phase 4A. A separate method
-    /// (rather than an `Option<i32>` parameter on `stop_ringing` itself) because `stop_ringing`
-    /// is also called, with no id, from `apps/threshold/src-tauri/src/lib.rs`'s
-    /// `wear:alarm:dismiss`/`wear:alarm:snooze` listeners -- that call site is out of scope for
-    /// this change, so `stop_ringing`'s existing zero-argument signature stays exactly as-is.
+    /// Same as [`stop_ringing`](Self::stop_ringing), but threads a specific alarm id through to Kotlin's `AlarmRingingService.ACTION_DISMISS` intent -- used by the `stop_ringing` Tauri command (invoked from the frontend, which knows which alarm it's ringing screen is for) so every dismiss/snooze origin funnels a real id into `AlarmManagerPlugin.notifyAlarmDismissed`/`notifySnoozeRequested`, not just the notification's own Dismiss/Snooze action. See issue #255 Phase 4A. A separate method (rather than an `Option<i32>` parameter on `stop_ringing` itself) because `stop_ringing` is also called, with no id, from `apps/threshold/src-tauri/src/lib.rs`'s `wear:alarm:dismiss`/`wear:alarm:snooze` listeners -- that call site is out of scope for this change, so `stop_ringing`'s existing zero-argument signature stays exactly as-is.
     pub fn stop_ringing_for(&self, alarm_id: i32) -> crate::Result<()> {
         self.stop_ringing_request(StopRingingRequest {
             alarm_id: Some(alarm_id),

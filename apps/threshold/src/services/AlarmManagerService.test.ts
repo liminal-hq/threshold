@@ -220,9 +220,7 @@ describe('AlarmManagerService', () => {
 		expect(calledId).toBe(42);
 		expect(calledTimestamp).toBeGreaterThanOrEqual(before + 10 * 60_000);
 		expect(calledTimestamp).toBeLessThanOrEqual(after + 10 * 60_000);
-		// snoozeRinging deliberately does not thread alarmId through stopRinging -- stopRinging's
-		// single native command is shared with dismiss, so doing so would misattribute an in-app
-		// snooze as a dismiss (see AlarmManagerService.stopRinging's doc comment).
+		// snoozeRinging deliberately does not thread alarmId through stopRinging -- stopRinging's single native command is shared with dismiss, so doing so would misattribute an in-app snooze as a dismiss (see AlarmManagerService.stopRinging's doc comment).
 		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing', { alarmId: null });
 	});
 

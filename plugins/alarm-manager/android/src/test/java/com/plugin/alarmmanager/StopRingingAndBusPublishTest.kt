@@ -14,19 +14,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Plain JUnit 4 tests against [resolveStopRingingAlarmId] and [publishToBus], the seams
- * factored out specifically to cover issue #255 Phase 4A: the in-app dismiss id-threading fix
- * (every dismiss origin now produces a real id) and its consequence, publishing
- * `alarm-manager:dismiss-requested`/`snooze-requested` uniformly onto [NativeEventBus] for
- * every origin rather than only the notification action. Mirrors the style of
- * `AlarmReceiverTest` (which covers the equivalent seams for the fired path).
+ * Plain JUnit 4 tests against [resolveStopRingingAlarmId] and [publishToBus], the seams factored out specifically to cover issue #255 Phase 4A: the in-app dismiss id-threading fix (every dismiss origin now produces a real id) and its consequence, publishing `alarm-manager:dismiss-requested`/`snooze-requested` uniformly onto [NativeEventBus] for every origin rather than only the notification action. Mirrors the style of `AlarmReceiverTest` (which covers the equivalent seams for the fired path).
  */
 class StopRingingAndBusPublishTest {
 
     @After
     fun tearDown() {
-        // NativeEventBus is a process-wide singleton; without this, listeners registered by one
-        // test would still be live (and firing) during the next one.
+        // NativeEventBus is a process-wide singleton; without this, listeners registered by one test would still be live (and firing) during the next one.
         NativeEventBus.resetForTests()
     }
 
@@ -39,9 +33,7 @@ class StopRingingAndBusPublishTest {
 
     @Test
     fun `returns null when no explicit id is supplied`() {
-        // The legacy ID-less JS notification-action fallback, and in-app snooze (which
-        // deliberately never threads an id through stopRinging -- see the KDoc on
-        // resolveStopRingingAlarmId for why).
+        // The legacy ID-less JS notification-action fallback, and in-app snooze (which deliberately never threads an id through stopRinging -- see the KDoc on resolveStopRingingAlarmId for why).
         assertNull(resolveStopRingingAlarmId(null))
     }
 

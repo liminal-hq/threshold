@@ -24,9 +24,7 @@ pub async fn pick_alarm_sound<R: Runtime>(
 
 #[command]
 pub async fn stop_ringing<R: Runtime>(app: AppHandle<R>, alarm_id: Option<i32>) -> Result<()> {
-    // `alarm_id` lets the in-app "Stop Alarm" button thread a real id through -- see
-    // StopRingingRequest's KDoc. `None` preserves the old, ID-less behaviour for callers that
-    // don't (or, for in-app snooze, deliberately don't) know which alarm they're stopping.
+    // `alarm_id` lets the in-app "Stop Alarm" button thread a real id through -- see StopRingingRequest's KDoc. `None` preserves the old, ID-less behaviour for callers that don't (or, for in-app snooze, deliberately don't) know which alarm they're stopping.
     match alarm_id {
         Some(id) => app.alarm_manager().stop_ringing_for(id),
         None => app.alarm_manager().stop_ringing(),
