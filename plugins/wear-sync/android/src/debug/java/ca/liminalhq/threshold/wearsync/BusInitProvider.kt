@@ -26,17 +26,9 @@ private const val MAX_SPIKE_STALL_MS = 2000
 /**
  * Throwaway spike for issue #255 Phase 0.
  *
- * `ContentProvider.onCreate()` is documented to run before any `Activity`/`Service`/
- * `BroadcastReceiver` callback in the app, even on a genuinely cold multi-plugin process
- * start (this is the Jetpack/WorkManager/Firebase pattern for guaranteed early init). The
- * later phases of #255 want a shared native event bus where every plugin registers its
- * listeners this way, so subscribers exist before `AlarmReceiver.onReceive()` can fire.
- * This provider exists solely to prove that assumption against a real device before any
- * production code depends on it -- it is not, and must not become, a real content provider.
+ * `ContentProvider.onCreate()` is documented to run before any `Activity`/`Service`/`BroadcastReceiver` callback in the app, even on a genuinely cold multi-plugin process start (this is the Jetpack/WorkManager/Firebase pattern for guaranteed early init). The later phases of #255 want a shared native event bus where every plugin registers its listeners this way, so subscribers exist before `AlarmReceiver.onReceive()` can fire. This provider exists solely to prove that assumption against a real device before any production code depends on it -- it is not, and must not become, a real content provider.
  *
- * See `docs/spikes/255-contentprovider-spike-protocol.md` for how to validate this on a
- * device, and `AlarmReceiver.onReceive()` in plugins/alarm-manager for the matching
- * instrumentation line this provider's timestamp needs to be compared against.
+ * See `docs/spikes/255-contentprovider-spike-protocol.md` for how to validate this on a device, and `AlarmReceiver.onReceive()` in plugins/alarm-manager for the matching instrumentation line this provider's timestamp needs to be compared against.
  */
 class BusInitProvider : ContentProvider() {
 
@@ -65,12 +57,7 @@ class BusInitProvider : ContentProvider() {
     }
 
     /**
-     * The event bus design #255 is de-risking assumes the whole app -- every plugin
-     * included -- runs in a single OS process, since the planned in-memory hub can't cross a
-     * process boundary. Verify that here, at the earliest guaranteed callback in the app's
-     * lifecycle, so a future regression (e.g. someone adding `android:process` to a
-     * manifest entry) is caught loudly in debug builds rather than silently breaking event
-     * delivery in production.
+     * The event bus design #255 is de-risking assumes the whole app -- every plugin included -- runs in a single OS process, since the planned in-memory hub can't cross a process boundary. Verify that here, at the earliest guaranteed callback in the app's lifecycle, so a future regression (e.g. someone adding `android:process` to a manifest entry) is caught loudly in debug builds rather than silently breaking event delivery in production.
      */
     private fun verifySingleProcessInvariant(context: Context) {
         val processName = currentProcessName()
@@ -103,10 +90,7 @@ class BusInitProvider : ContentProvider() {
     }
 
     /**
-     * API 28+ exposes [Application.getProcessName] directly. Below that -- down to this
-     * app's minSdk 26 -- there's no public API, so fall back to the hidden
-     * `ActivityThread.currentProcessName()` static method via reflection, the same trick
-     * AndroidX-adjacent early-init code uses for this exact gap.
+     * API 28+ exposes [Application.getProcessName] directly. Below that -- down to this app's minSdk 26 -- there's no public API, so fall back to the hidden `ActivityThread.currentProcessName()` static method via reflection, the same trick AndroidX-adjacent early-init code uses for this exact gap.
      */
     @Suppress("PrivateApi", "DiscouragedPrivateApi")
     private fun currentProcessName(): String? {
@@ -131,17 +115,7 @@ class BusInitProvider : ContentProvider() {
     }
 
     /**
-     * Spike-only (#255 Phase 0). Never runs outside debug builds, and never runs unless
-     * explicitly enabled at build time via the `busSpikeStallMs` Gradle property (see
-     * `BuildConfig.BUS_SPIKE_STALL_MS` in build.gradle.kts) -- normal debug builds are
-     * unaffected. Lets a human tester simulate a slow/blocking `onCreate()` during cold
-     * start, to confirm on a real device that it doesn't measurably delay
-     * AlarmRingingService's audio start and doesn't trip StrictMode. Clamped to
-     * [MAX_SPIKE_STALL_MS] regardless of what's requested, since AlarmReceiver.onReceive()'s
-     * startForegroundService() call is in this same cold-start chain and a stall long enough
-     * to matter there stops being a threading-contract check and starts being a
-     * ForegroundServiceDidNotStartInTimeException. Delete this method (and the Gradle
-     * property) once Phase 0 wraps up.
+     * Spike-only (#255 Phase 0). Never runs outside debug builds, and never runs unless explicitly enabled at build time via the `busSpikeStallMs` Gradle property (see `BuildConfig.BUS_SPIKE_STALL_MS` in build.gradle.kts) -- normal debug builds are unaffected. Lets a human tester simulate a slow/blocking `onCreate()` during cold start, to confirm on a real device that it doesn't measurably delay AlarmRingingService's audio start and doesn't trip StrictMode. Clamped to [MAX_SPIKE_STALL_MS] regardless of what's requested, since AlarmReceiver.onReceive()'s startForegroundService() call is in this same cold-start chain and a stall long enough to matter there stops being a threading-contract check and starts being a ForegroundServiceDidNotStartInTimeException. Delete this method (and the Gradle property) once Phase 0 wraps up.
      */
     private fun maybeStallForSpikeThreadingCheck(context: Context) {
         if (!BuildConfig.DEBUG || BuildConfig.BUS_SPIKE_STALL_MS <= 0) {
