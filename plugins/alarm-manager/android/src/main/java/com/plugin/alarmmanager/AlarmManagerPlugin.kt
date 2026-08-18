@@ -224,7 +224,48 @@ internal fun enrichPayloadForDispatch(envelope: DurableEventQueue.Envelope): Str
 
 private fun keyValueStore(context: Context): KeyValueStore = SharedPreferencesKeyValueStore(context, CALLBACK_PREFS)
 
-private fun eventQueue(context: Context): DurableEventQueue = DurableEventQueue(keyValueStore(context), EVENT_LOG_KEY)
+// Process-wide singleton -- mirrors WearSyncEventQueue.getInstance()'s pattern (see its KDoc)
+// for the same reason: DurableEventQueue's own @Synchronized enqueue/drainAll/commit methods
+// only lock their own instance's monitor, so two independently-constructed instances pointed
+// at the same underlying SharedPreferences key -- as this function used to build fresh on
+// every call, once via notifyAlarmFired/enqueueAndDrain's companion-object call path (reached
+// from AlarmReceiver's background-executor worker thread) and separately via
+// drainQueuedEvents' instance call path (reached from the main thread, e.g.
+// markAlarmPipelineReady) -- provide *no* mutual exclusion against each other. A background
+// enqueue racing a main-thread drain could each read the same pre-write JSON array and then
+// clobber each other's write, including resurrecting an entry the other side had just
+// committed as delivered. Routing every caller through one shared instance makes every
+// enqueue/drainAll/commit call atomic relative to every other, regardless of which thread or
+// which of this plugin's two top-level @Synchronized scopes (Companion vs. instance) it came
+// through.
+@Volatile
+private var sharedEventQueue: DurableEventQueue? = null
+private val eventQueueInitLock = Any()
+
+/**
+ * Returns the process-wide shared [DurableEventQueue] backed by [store], constructing it on
+ * first access (double-checked locking, mirroring wear-sync's `WearSyncEventQueue.getInstance`
+ * shape). [eventQueue] below is the production entry point, supplying the real
+ * Context-backed [SharedPreferencesKeyValueStore]; this Context-free overload exists purely
+ * so tests can exercise the actual singleton-holder logic -- and the concurrency guarantee it
+ * provides -- against an in-memory [KeyValueStore] fake, without needing a real
+ * `android.content.Context` (this module's JUnit tests run on the plain host JVM, no
+ * Robolectric/instrumentation available; see [AlarmManagerPluginTest]).
+ */
+internal fun sharedEventQueueFor(store: KeyValueStore): DurableEventQueue {
+    sharedEventQueue?.let { return it }
+    return synchronized(eventQueueInitLock) {
+        sharedEventQueue ?: DurableEventQueue(store, EVENT_LOG_KEY).also { sharedEventQueue = it }
+    }
+}
+
+/** Test-only: clears the cached singleton so each test starts from a clean slate. */
+internal fun resetSharedEventQueueForTests() {
+    sharedEventQueue = null
+}
+
+private fun eventQueue(context: Context): DurableEventQueue =
+    sharedEventQueueFor(keyValueStore(context.applicationContext))
 
 @InvokeArg
 class ScheduleRequest {

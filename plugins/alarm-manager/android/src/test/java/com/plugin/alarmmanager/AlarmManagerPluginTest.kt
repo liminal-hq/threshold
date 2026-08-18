@@ -8,8 +8,10 @@ package com.plugin.alarmmanager
 import ca.liminalhq.threshold.nativebus.DurableEventQueue
 import org.json.JSONArray
 import org.json.JSONObject
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -17,6 +19,8 @@ import org.junit.Test
 
 /**
  * Plain JUnit 4 tests against [InMemoryKeyValueStore], covering the two pieces of logic this plugin's migration to a shared [DurableEventQueue] added: [migrateLegacyQueues] (folding the four legacy per-type queues into the unified log) and [drainAndDispatch] (draining that log in arrival order and routing each entry to the right handler by topic). [DurableEventQueue]'s own drain/commit/corruption-tolerance behaviour is already covered by `plugins/native-bus`'s own test suite and isn't re-tested here.
+ *
+ * Also covers [sharedEventQueueFor] -- the process-wide singleton holder [eventQueue] delegates to, added to fix a PR #298 review finding: `eventQueue(context)` used to construct a brand new [DurableEventQueue] on every call, so two callers (e.g. `AlarmReceiver`'s background executor enqueuing a fired event, and `markAlarmPipelineReady`'s main-thread drain) got their own, entirely independent instances pointed at the same underlying storage -- [DurableEventQueue]'s own `@Synchronized` methods only lock their own instance's monitor, so that provided no mutual exclusion between them at all.
  */
 class AlarmManagerPluginTest {
 
@@ -25,6 +29,15 @@ class AlarmManagerPluginTest {
     @Before
     fun setUp() {
         store = InMemoryKeyValueStore()
+        // sharedEventQueueFor caches its DurableEventQueue in a process-wide (top-level) var --
+        // without resetting it, whichever test runs first would permanently pin every later
+        // test's sharedEventQueueFor(store) call to *that* test's now-stale store instance.
+        resetSharedEventQueueForTests()
+    }
+
+    @After
+    fun tearDown() {
+        resetSharedEventQueueForTests()
     }
 
     // --- migrateLegacyQueues ---------------------------------------------------------------
@@ -316,6 +329,87 @@ class AlarmManagerPluginTest {
         val remaining = queue.drainAll(pipelineReady = true)
         assertEquals(listOf(secondId), remaining.map { it.eventId })
         assertTrue(remaining.none { it.eventId == firstId })
+    }
+
+    // --- sharedEventQueueFor (PR #298 review: background-worker/main-thread queue race) ------
+
+    @Test
+    fun `sharedEventQueueFor returns the same instance on repeated calls against the same store`() {
+        val first = sharedEventQueueFor(store)
+        val second = sharedEventQueueFor(store)
+
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `concurrent callers of sharedEventQueueFor all resolve to one instance, even racing its first construction`() {
+        val threadCount = 16
+        val ready = java.util.concurrent.CyclicBarrier(threadCount)
+        val results = java.util.Collections.synchronizedList(mutableListOf<DurableEventQueue>())
+        val threads = (0 until threadCount).map {
+            Thread {
+                ready.await()
+                results.add(sharedEventQueueFor(store))
+            }
+        }
+
+        threads.forEach { it.start() }
+        threads.forEach { it.join(5_000) }
+
+        assertEquals(threadCount, results.size)
+        assertTrue(
+            "every caller must resolve to the exact same DurableEventQueue instance",
+            results.all { it === results[0] },
+        )
+    }
+
+    @Test
+    fun `a background-executor enqueue racing a main-thread drain-commit loop never loses or resurrects an event`() {
+        // Regression test for the exact race PR #298's review flagged: AlarmReceiver's
+        // background-executor worker enqueuing fired events (the "writer" thread below)
+        // concurrently with markAlarmPipelineReady's main-thread drain (the "reader" thread).
+        // Before the fix, eventQueue(context) constructed a brand new DurableEventQueue on
+        // every single call, so these two call sites held entirely independent instances with
+        // no shared lock between them -- DurableEventQueue's own @Synchronized methods only
+        // lock their own instance's monitor. A drain's stale read-then-write could resurrect an
+        // entry the writer had already committed as delivered, or an enqueue could clobber a
+        // concurrent commit outright. Both threads below call sharedEventQueueFor(store)
+        // themselves (not a pre-fetched reference), mirroring exactly how eventQueue(context)
+        // is invoked fresh at each real call site -- so this would catch a regression back to
+        // "one DurableEventQueue per call" just as readily as it catches a broken lock.
+        val eventCount = 500
+        val delivered = java.util.Collections.synchronizedList(mutableListOf<Int>())
+        val writerDone = java.util.concurrent.atomic.AtomicBoolean(false)
+
+        val writer = Thread {
+            for (i in 0 until eventCount) {
+                sharedEventQueueFor(store).enqueue(TOPIC_FIRED, JSONObject().put("id", i).toString())
+            }
+            writerDone.set(true)
+        }
+        val reader = Thread {
+            while (!writerDone.get() || delivered.size < eventCount) {
+                val queue = sharedEventQueueFor(store)
+                val drained = queue.drainAll(pipelineReady = true)
+                for (envelope in drained) {
+                    delivered.add(JSONObject(envelope.payload).getInt("id"))
+                    queue.commit(setOf(envelope.eventId))
+                }
+            }
+        }.apply { isDaemon = true }
+
+        reader.start()
+        writer.start()
+        writer.join(15_000)
+        reader.join(15_000)
+
+        assertEquals("no event should be lost", eventCount, delivered.size)
+        assertEquals(
+            "no event should be delivered/committed twice (a resurrected envelope)",
+            eventCount,
+            delivered.distinct().size,
+        )
+        assertTrue(sharedEventQueueFor(store).drainAll(pipelineReady = true).isEmpty())
     }
 
     // --- enrichPayloadForDispatch (issue #255 Phase 3A) -----------------------------------------

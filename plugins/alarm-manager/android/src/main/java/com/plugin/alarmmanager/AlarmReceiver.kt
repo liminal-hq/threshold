@@ -34,6 +34,18 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        // Captured synchronously here, before goAsync()/the hand-off to backgroundExecutor --
+        // this must reflect the moment Android actually delivered the broadcast, not whenever
+        // the worker thread happens to get around to running handleAlarmBroadcast(). If an
+        // earlier broadcast or a large durable backlog is still being drained on
+        // backgroundExecutor, that hand-off can lag by an arbitrary amount; letting
+        // recordAndPublishFiredEvent's actualFiredAt default (System.currentTimeMillis())
+        // evaluate on the worker thread would then stamp the fired event with the WORKER's
+        // start time, not the broadcast's. wear-sync's NativeFiredListener / Rust's
+        // alarm:fired listener use actualFiredAt for a 90-second staleness check, so a delayed
+        // worker computing its own timestamp here could make a stale, backlogged broadcast look
+        // artificially fresh (or vice versa) and ring the watch incorrectly.
+        val actualFiredAt = System.currentTimeMillis()
         // goAsync() must be called synchronously here, on the main thread, before any hand-off --
         // it captures the current broadcast's PendingResult. The actual work happens on
         // backgroundExecutor below; pendingResult.finish() runs from that thread once it's done
@@ -45,14 +57,14 @@ class AlarmReceiver : BroadcastReceiver() {
         val appContext = context.applicationContext
         backgroundExecutor.execute {
             try {
-                handleAlarmBroadcast(appContext, intent)
+                handleAlarmBroadcast(appContext, intent, actualFiredAt)
             } finally {
                 pendingResult.finish()
             }
         }
     }
 
-    private fun handleAlarmBroadcast(context: Context, intent: Intent) {
+    private fun handleAlarmBroadcast(context: Context, intent: Intent, actualFiredAt: Long) {
         Log.d("AlarmReceiver", "========== ALARM RECEIVER START ==========")
         Log.d("AlarmReceiver", "Alarm Received! Action: ${intent.action}")
         val alarmId = intent.getIntExtra("ALARM_ID", -1)
@@ -82,7 +94,7 @@ class AlarmReceiver : BroadcastReceiver() {
         // starting -- ringing is this app's one job, and a secondary failure here must degrade to
         // "no native fast-ring / no durable record" rather than "the phone never rings at all".
         try {
-            recordAndPublishFiredEvent(alarmId, isLive) { firedPayload ->
+            recordAndPublishFiredEvent(alarmId, isLive, actualFiredAt) { firedPayload ->
                 AlarmManagerPlugin.notifyAlarmFired(context, alarmId, firedPayload)
             }
         } catch (e: Exception) {
