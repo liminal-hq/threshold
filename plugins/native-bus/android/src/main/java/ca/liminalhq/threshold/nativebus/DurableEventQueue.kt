@@ -12,23 +12,11 @@ import org.json.JSONObject
 private const val TAG = "DurableEventQueue"
 
 /**
- * A generic, reusable "queue events until Rust is up, then drain" log, backed by a
- * single JSON array under one [KeyValueStore] key.
+ * A generic, reusable "queue events until Rust is up, then drain" log, backed by a single JSON array under one [KeyValueStore] key.
  *
- * Unlike [NativeEventBus], this is **not** a singleton -- each plugin that needs durable
- * queuing instantiates its own `DurableEventQueue(store, prefsKey)` with a key distinct
- * from every other plugin's, mirroring `WearSyncQueue`'s one-log-per-plugin shape (see
- * `plugins/wear-sync/.../WearSyncQueue.kt`) rather than `AlarmManagerPlugin`'s older
- * pattern of one separate queue per event *type* within a single plugin. One
- * chronological log per plugin instance is enough: [drainAll] sorts by [Envelope.publishedAt]
- * across every topic that instance has ever enqueued, so callers with several event
- * kinds (the way `AlarmManagerPlugin` has fired/snooze/dismiss/import events today) don't
- * need one `DurableEventQueue` per kind, just distinct `topic` strings on one instance.
+ * Unlike [NativeEventBus], this is **not** a singleton -- each plugin that needs durable queuing instantiates its own `DurableEventQueue(store, prefsKey)` with a key distinct from every other plugin's, mirroring `WearSyncQueue`'s one-log-per-plugin shape (see `plugins/wear-sync/.../WearSyncQueue.kt`) rather than `AlarmManagerPlugin`'s older pattern of one separate queue per event *type* within a single plugin. One chronological log per plugin instance is enough: [drainAll] sorts by [Envelope.publishedAt] across every topic that instance has ever enqueued, so callers with several event kinds (the way `AlarmManagerPlugin` has fired/snooze/dismiss/import events today) don't need one `DurableEventQueue` per kind, just distinct `topic` strings on one instance.
  *
- * Persisted entries have survived across multiple days on real devices, so [drainAll]
- * tolerates individual corrupt/malformed JSON entries (skips just that entry) and
- * unrecognised/future [Envelope] schema versions (skips, doesn't crash) rather than
- * failing the whole drain.
+ * Persisted entries have survived across multiple days on real devices, so [drainAll] tolerates individual corrupt/malformed JSON entries (skips just that entry) and unrecognised/future [Envelope] schema versions (skips, doesn't crash) rather than failing the whole drain.
  */
 class DurableEventQueue(
     private val store: KeyValueStore,
@@ -47,9 +35,7 @@ class DurableEventQueue(
     /**
      * Appends a new entry for [topic] with opaque, caller-defined [payload] JSON.
      *
-     * @param handledNatively tags describing what native code already did with this
-     *   event before it could be handed to Rust (e.g. "vibrated", "notified") -- carried
-     *   through so a later Rust-side handler knows not to redo that work.
+     * @param handledNatively tags describing what native code already did with this event before it could be handed to Rust (e.g. "vibrated", "notified") -- carried through so a later Rust-side handler knows not to redo that work.
      * @return the generated event ID.
      */
     @Synchronized
@@ -71,13 +57,9 @@ class DurableEventQueue(
     }
 
     /**
-     * Returns every persisted entry across every topic, in chronological
-     * [Envelope.publishedAt] order, or an empty list if [pipelineReady] is `false`.
+     * Returns every persisted entry across every topic, in chronological [Envelope.publishedAt] order, or an empty list if [pipelineReady] is `false`.
      *
-     * This does not remove anything from the log -- call [commit] (or [clear]) once the
-     * caller has actually handed the drained entries off successfully, mirroring
-     * `WearSyncQueue`/`AlarmManagerPlugin`'s existing "only drop what was actually
-     * delivered" behaviour rather than assuming delivery always succeeds.
+     * This does not remove anything from the log -- call [commit] (or [clear]) once the caller has actually handed the drained entries off successfully, mirroring `WearSyncQueue`/`AlarmManagerPlugin`'s existing "only drop what was actually delivered" behaviour rather than assuming delivery always succeeds.
      */
     @Synchronized
     fun drainAll(pipelineReady: Boolean): List<Envelope> {
@@ -86,22 +68,24 @@ class DurableEventQueue(
     }
 
     /**
-     * Removes only the entries whose [Envelope.eventId] is in [handledEventIds], leaving
-     * everything else in place for a later retry -- mirrors `AlarmManagerPlugin`'s
-     * existing per-event-type drain, which re-persists whichever items failed to
-     * dispatch and drops only the ones that succeeded.
+     * Removes only the entries whose event ID is in [handledEventIds], leaving everything else in place for a later retry -- mirrors `AlarmManagerPlugin`'s existing per-event-type drain, which re-persists whichever items failed to dispatch and drops only the ones that succeeded. Filters the *raw* persisted JSON by ID (via [extractEventId]) rather than reconstructing the array from [parseEnvelopes]'s output, so an entry that fails full parsing -- e.g. the unrecognised-schema-version case [drainAll] tolerates -- is retained untouched instead of being silently discarded just because it couldn't be committed by its own ID.
      */
     @Synchronized
     fun commit(handledEventIds: Set<String>) {
         if (handledEventIds.isEmpty()) return
-        val remaining = parseEnvelopes(readArray()).filterNot { it.eventId in handledEventIds }
-        writeArray(toJsonArray(remaining))
+        val original = readArray()
+        val retained = JSONArray()
+        for (i in 0 until original.length()) {
+            val raw = original.opt(i)
+            val eventId = (raw as? JSONObject)?.let { extractEventId(it) }
+            if (eventId != null && eventId in handledEventIds) continue
+            retained.put(raw)
+        }
+        writeArray(retained)
     }
 
     /**
-     * Drops every persisted entry unconditionally -- mirrors `WearSyncQueue.drainAll`'s
-     * existing behaviour of clearing the whole log once its caller has taken ownership
-     * of every message it returned.
+     * Drops every persisted entry unconditionally -- mirrors `WearSyncQueue.drainAll`'s existing behaviour of clearing the whole log once its caller has taken ownership of every message it returned.
      */
     @Synchronized
     fun clear() {
@@ -152,6 +136,14 @@ class DurableEventQueue(
         return envelopes
     }
 
+    /**
+     * Pulls just the [KEY_EVENT_ID] field out of a raw persisted entry, without requiring the rest of it to parse into a full [Envelope] -- this is what lets [commit] correctly retain an entry with an unrecognised schema version (or other malformed fields) instead of losing it, while still recognising its ID if that happens to be the one being committed.
+     */
+    private fun extractEventId(obj: JSONObject): String? {
+        val id = obj.optString(KEY_EVENT_ID, "")
+        return id.ifEmpty { null }
+    }
+
     private fun parseHandledNatively(tags: JSONArray?): Set<String> {
         if (tags == null) return emptySet()
         val result = mutableSetOf<String>()
@@ -159,23 +151,6 @@ class DurableEventQueue(
             tags.optString(i, null)?.let { result.add(it) }
         }
         return result
-    }
-
-    private fun toJsonArray(envelopes: List<Envelope>): JSONArray {
-        val array = JSONArray()
-        for (envelope in envelopes) {
-            array.put(
-                JSONObject().apply {
-                    put(KEY_VERSION, SCHEMA_VERSION)
-                    put(KEY_TOPIC, envelope.topic)
-                    put(KEY_PAYLOAD, envelope.payload)
-                    put(KEY_EVENT_ID, envelope.eventId)
-                    put(KEY_PUBLISHED_AT, envelope.publishedAt)
-                    put(KEY_HANDLED_NATIVELY, JSONArray(envelope.handledNatively.toList()))
-                },
-            )
-        }
-        return array
     }
 
     companion object {

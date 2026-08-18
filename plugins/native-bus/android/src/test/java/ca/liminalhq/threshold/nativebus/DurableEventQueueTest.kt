@@ -118,6 +118,22 @@ class DurableEventQueueTest {
     }
 
     @Test
+    fun `commit retains an unparseable future-schema-version entry instead of silently dropping it`() {
+        val array = JSONArray()
+        array.put(envelope(topic = "a", payload = "good", eventId = "id-1", publishedAt = 100))
+        array.put(envelope(topic = "a", payload = "future", eventId = "id-future", publishedAt = 150, version = 99))
+        store.set(PREFS_KEY, array.toString())
+
+        queue.commit(setOf("id-1"))
+
+        // drainAll() can't see the future-version entry (parseEnvelopes still skips it), so
+        // assert directly against the raw persisted JSON that commit() actually rewrote.
+        val persisted = JSONArray(store.get(PREFS_KEY))
+        assertEquals(1, persisted.length())
+        assertEquals("id-future", persisted.getJSONObject(0).getString("eventId"))
+    }
+
+    @Test
     fun `clear drops every persisted entry unconditionally`() {
         queue.enqueue("topic", "one")
         queue.enqueue("topic", "two")
