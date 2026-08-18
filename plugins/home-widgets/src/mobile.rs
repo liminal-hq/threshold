@@ -1,5 +1,4 @@
-// Android bridge: forwards next-alarm snapshots to the Kotlin plugin so the home-screen
-// widget can render them; iOS has no widget surface and is a documented no-op
+// Android bridge forwarding next-alarm snapshots to the Kotlin plugin's widget renderer
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -22,8 +21,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     #[cfg(target_os = "android")]
     let handle = api.register_android_plugin(PLUGIN_IDENTIFIER, "HomeWidgetsPlugin")?;
 
-    // NOTE: iOS has no home-screen widget surface for Threshold today, matching the
-    // rest of the app's iOS-deferred plugins (e.g. predictive-back, os-prefs).
+    // NOTE: iOS has no home-screen widget surface for Threshold today, matching the rest of the app's iOS-deferred plugins (e.g. predictive-back, os-prefs).
     #[cfg(target_os = "ios")]
     let _ = api;
 
@@ -44,8 +42,7 @@ pub struct HomeWidgets<R: Runtime> {
 }
 
 impl<R: Runtime> HomeWidgets<R> {
-    /// Forwards the latest next-alarm snapshot to the Kotlin plugin's
-    /// `updateWidgetSnapshot` handler, flattening it into the widget's wire shape first.
+    /// Forwards the latest next-alarm snapshot to the Kotlin plugin's `updateWidgetSnapshot` handler, flattening it into the widget's wire shape first.
     pub fn update_widget_snapshot(
         &self,
         #[cfg_attr(not(target_os = "android"), allow(unused_variables))]

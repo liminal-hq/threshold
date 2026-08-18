@@ -5,11 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// The next-alarm summary carried by the core `alarm:next-changed` event, as emitted by
-/// the app's scheduler. `alarm` is `None` when no alarm is scheduled; `is24Hour` mirrors
-/// the user's clock-format preference at the time of the change. Deserialize-only: this
-/// struct mirrors a subset of the event's fields, and serde ignores unknown fields by
-/// default, so it stays tolerant of fields this plugin doesn't care about.
+/// The next-alarm summary carried by the core `alarm:next-changed` event, as emitted by the app's scheduler. `alarm` is `None` when no alarm is scheduled; `is24Hour` mirrors the user's clock-format preference at the time of the change. Deserialize-only: this struct mirrors a subset of the event's fields, and serde ignores unknown fields by default, so it stays tolerant of fields this plugin doesn't care about.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NextAlarmSnapshot {
@@ -25,9 +21,7 @@ pub struct NextAlarmInfo {
     pub trigger_at: i64,
 }
 
-/// The flat, Kotlin-bound payload sent to `HomeWidgetsPlugin.updateWidgetSnapshot` --
-/// flattened from [`NextAlarmSnapshot`] because the native widget's remote view binding
-/// reads a single flat object rather than a nested one.
+/// The flat, Kotlin-bound payload sent to `HomeWidgetsPlugin.updateWidgetSnapshot` -- flattened from [`NextAlarmSnapshot`] because the native widget's remote view binding reads a single flat object rather than a nested one.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetSnapshotPayload {

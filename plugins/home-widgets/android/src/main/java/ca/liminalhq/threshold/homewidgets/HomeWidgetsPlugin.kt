@@ -11,8 +11,7 @@ import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.Plugin
 
-// Every field must be nullable with a default -- a non-null default (e.g. `var alarmId: Int
-// = 0`) rejects the JSON `null` Rust sends for "no next alarm" instead of binding it.
+// Every field must be nullable with a default -- a non-null default (e.g. `var alarmId: Int = 0`) rejects the JSON `null` Rust sends for "no next alarm" instead of binding it.
 @InvokeArg
 class WidgetSnapshotArgs {
     var alarmId: Int? = null

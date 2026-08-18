@@ -61,14 +61,20 @@ class NextAlarmWidgetTest {
     }
 
     @Test
-    fun `selects the hero bucket at and above the 180dp threshold`() {
-        assertEquals(WidgetLayoutBucket.HERO, selectWidgetLayoutBucket(180))
-        assertEquals(WidgetLayoutBucket.HERO, selectWidgetLayoutBucket(250))
+    fun `selects the hero bucket at and above both thresholds`() {
+        assertEquals(WidgetLayoutBucket.HERO, selectWidgetLayoutBucket(180, 100))
+        assertEquals(WidgetLayoutBucket.HERO, selectWidgetLayoutBucket(250, 110))
     }
 
     @Test
-    fun `selects the narrow bucket below the 180dp threshold`() {
-        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(179))
-        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(110))
+    fun `selects the narrow bucket below the 180dp width threshold`() {
+        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(179, 110))
+        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(110, 110))
+    }
+
+    @Test
+    fun `selects the narrow bucket below the 100dp height threshold even when wide`() {
+        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(250, 99))
+        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(320, 40))
     }
 }

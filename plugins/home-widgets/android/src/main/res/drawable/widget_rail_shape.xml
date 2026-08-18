@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Base fill colour follows values/ vs values-night/; the empty-state muted tint is applied
-     at runtime via RemoteViews.setInt(..., "setColorFilter", ...) rather than a second drawable. -->
+<!-- Base fill colour follows values/ vs values-night/; the empty state swaps to widget_rail_shape_muted instead of tinting this drawable at runtime. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <solid android:color="@color/widget_rail_colour" />
     <corners android:radius="1.5dp" />

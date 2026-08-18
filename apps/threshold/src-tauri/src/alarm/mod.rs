@@ -63,8 +63,7 @@ pub struct AlarmCoordinator {
     /// opportunistically swept on every `dismiss_lock_for` call, so this doesn't grow
     /// forever the way a plain "every id ever dismissed" map would.
     dismiss_locks: std::sync::Mutex<HashMap<i32, Arc<tokio::sync::Mutex<Option<Instant>>>>>,
-    /// Last-emitted `alarm:next-changed` payload, kept for change-only emission. Outer `None`
-    /// means "never emitted", so the first computation always emits.
+    /// Last-emitted `alarm:next-changed` payload, kept for change-only emission. Outer `None` means "never emitted", so the first computation always emits.
     last_next_alarm: tokio::sync::Mutex<Option<AlarmNextChanged>>,
 }
 
@@ -488,11 +487,13 @@ impl AlarmCoordinator {
     pub async fn emit_next_changed_if_needed<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
         use std::sync::atomic::Ordering;
 
+        // The lock must cover the read-and-compute as well as the compare-emit-store: two overlapping mutations could otherwise each compute, then acquire the lock in the wrong order and let the stale computation emit last.
+        let mut last = self.last_next_alarm.lock().await;
+
         let alarms = self.db.get_all().await?;
         let alarm = compute_next_alarm(&alarms);
 
-        // `is_24_hour` is only meaningful once the frontend has told us -- gate on the
-        // known flag the same way the other widget-adjacent events do.
+        // `is_24_hour` is only meaningful once the frontend has told us -- gate on the known flag the same way the other widget-adjacent events do.
         let is_24_hour = match (
             app.try_state::<crate::TimeFormatKnownState>(),
             app.try_state::<crate::TimeFormatState>(),
@@ -505,7 +506,6 @@ impl AlarmCoordinator {
 
         let event = AlarmNextChanged { alarm, is_24_hour };
 
-        let mut last = self.last_next_alarm.lock().await;
         if last.as_ref() != Some(&event) {
             app.emit("alarm:next-changed", &event)?;
             *last = Some(event);
@@ -801,10 +801,7 @@ fn classify_scheduling_transition(
     }
 }
 
-/// Picks the app-wide next alarm: the earliest trigger among enabled alarms, tie-broken by
-/// the lower id for determinism. No past-trigger filter -- a fired-but-undismissed alarm
-/// legitimately keeps a past trigger until dismissed or snoozed (see `heal_on_launch`), and
-/// it is still the "next" alarm as far as a widget is concerned.
+/// Picks the app-wide next alarm: the earliest trigger among enabled alarms, tie-broken by the lower id for determinism. No past-trigger filter -- a fired-but-undismissed alarm legitimately keeps a past trigger until dismissed or snoozed (see `heal_on_launch`), and it is still the "next" alarm as far as a widget is concerned.
 fn compute_next_alarm(alarms: &[AlarmRecord]) -> Option<NextAlarm> {
     alarms
         .iter()

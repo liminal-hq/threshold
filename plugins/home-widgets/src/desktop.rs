@@ -1,6 +1,4 @@
-// Desktop stub -- Threshold has no home-screen widget surface on desktop, so this
-// plugin's whole purpose (forwarding next-alarm snapshots to a Kotlin widget) is out
-// of scope here
+// Desktop stub for the home-widgets plugin, which has no desktop widget surface
 //
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT

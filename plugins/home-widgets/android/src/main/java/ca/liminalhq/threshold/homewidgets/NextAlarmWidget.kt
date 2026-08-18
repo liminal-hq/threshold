@@ -15,7 +15,6 @@ import android.text.format.DateFormat
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
-import androidx.core.content.ContextCompat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -25,16 +24,19 @@ import org.json.JSONObject
 /** Which pre-built layout a given widget instance's current size should use. */
 enum class WidgetLayoutBucket { HERO, NARROW }
 
-// Below this the 4x2 hero layout's 40sp time no longer fits without clipping; the narrow
-// layout (rail + time only) takes over. Matches the narrow variant's declared minWidth.
-private const val NARROW_LAYOUT_THRESHOLD_DP = 180
+// Below these the 4x2 hero layout's stacked eyebrow/40sp time/label rows no longer fit without clipping; the narrow layout (rail + time only) takes over. The width bound matches the narrow variant's declared minWidth, and the height bound sits between a one-row (~40dp) and two-row (~110dp) placement since vertical resizing is allowed down to a single row.
+private const val NARROW_LAYOUT_WIDTH_THRESHOLD_DP = 180
+private const val NARROW_LAYOUT_HEIGHT_THRESHOLD_DP = 100
 
-fun selectWidgetLayoutBucket(minWidthDp: Int): WidgetLayoutBucket {
-    return if (minWidthDp < NARROW_LAYOUT_THRESHOLD_DP) WidgetLayoutBucket.NARROW else WidgetLayoutBucket.HERO
+fun selectWidgetLayoutBucket(minWidthDp: Int, minHeightDp: Int): WidgetLayoutBucket {
+    return if (minWidthDp < NARROW_LAYOUT_WIDTH_THRESHOLD_DP || minHeightDp < NARROW_LAYOUT_HEIGHT_THRESHOLD_DP) {
+        WidgetLayoutBucket.NARROW
+    } else {
+        WidgetLayoutBucket.HERO
+    }
 }
 
-// "h:mm a" over Java's default locale-sensitive AM/PM symbols so the rendered string always
-// matches the design's "7:14 AM" shape (no locale-dependent "a.m." lowercase/period variants).
+// "h:mm a" over Java's default locale-sensitive AM/PM symbols so the rendered string always matches the design's "7:14 AM" shape (no locale-dependent "a.m." lowercase/period variants).
 private val TIME_FORMAT_12H = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
 private val TIME_FORMAT_24H = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
 
@@ -59,9 +61,9 @@ object NextAlarmWidget {
     private const val PREFS_NAME = "ThresholdWidget"
     private const val KEY_NEXT_ALARM = "next_alarm"
 
-    // AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH default when a host hasn't reported options
-    // yet -- matches the hero layout's own declared minWidth, so an unreported size renders hero.
+    // AppWidgetManager option defaults when a host hasn't reported sizes yet -- both match the hero layout's own declared minimums, so an unreported size renders hero.
     private const val DEFAULT_MIN_WIDTH_DP = 250
+    private const val DEFAULT_MIN_HEIGHT_DP = 110
 
     private const val REQUEST_CODE_EMPTY_STATE = 0
 
@@ -109,7 +111,8 @@ object NextAlarmWidget {
         val snapshot = loadSnapshot(context)
         val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
         val minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, DEFAULT_MIN_WIDTH_DP)
-        val bucket = selectWidgetLayoutBucket(minWidthDp)
+        val minHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, DEFAULT_MIN_HEIGHT_DP)
+        val bucket = selectWidgetLayoutBucket(minWidthDp, minHeightDp)
         appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context, snapshot, bucket))
     }
 
@@ -135,11 +138,8 @@ object NextAlarmWidget {
         views.setTextViewText(R.id.widget_eyebrow, context.getString(R.string.widget_eyebrow))
         views.setTextViewText(R.id.widget_time, context.getString(R.string.widget_empty_state))
         views.setViewVisibility(R.id.widget_label, View.GONE)
-        views.setInt(
-            R.id.widget_rail,
-            "setColorFilter",
-            ContextCompat.getColor(context, R.color.widget_rail_muted_colour),
-        )
+        // Drawable swap rather than a colour filter: RemoteViews may reapply onto the existing hierarchy, and a filter set here would persist into a later scheduled-state render. Resource references also resolve in the launcher's own light/dark configuration.
+        views.setImageViewResource(R.id.widget_rail, R.drawable.widget_rail_shape_muted)
 
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("threshold://home")).apply {
             setPackage(context.packageName)
@@ -161,14 +161,13 @@ object NextAlarmWidget {
         label: String?,
         is24Hour: Boolean?,
     ) {
-        // The widget process can outlive the setting that produced a stored null here (or
-        // never have observed it), so fall back to the OS-wide clock-format preference rather
-        // than guessing a format.
+        // The widget process can outlive the setting that produced a stored null here (or never have observed it), so fall back to the OS-wide clock-format preference rather than guessing a format.
         val resolvedIs24Hour = is24Hour ?: DateFormat.is24HourFormat(context)
         val timeText = formatWidgetTime(triggerAt, resolvedIs24Hour, ZoneId.systemDefault())
 
         views.setTextViewText(R.id.widget_eyebrow, context.getString(R.string.widget_eyebrow))
         views.setTextViewText(R.id.widget_time, timeText)
+        views.setImageViewResource(R.id.widget_rail, R.drawable.widget_rail_shape)
 
         if (label.isNullOrBlank()) {
             views.setViewVisibility(R.id.widget_label, View.GONE)

@@ -17,8 +17,7 @@ class NextAlarmWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    // Fires when the host resizes an instance or first reports its cell size -- re-render so a
-    // drag between the hero and narrow size buckets swaps layout immediately.
+    // Fires when the host resizes an instance or first reports its cell size -- re-render so a drag between the hero and narrow size buckets swaps layout immediately.
     override fun onAppWidgetOptionsChanged(
         context: Context,
         appWidgetManager: AppWidgetManager,

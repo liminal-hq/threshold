@@ -25,8 +25,7 @@ use desktop::HomeWidgets;
 #[cfg(mobile)]
 use mobile::HomeWidgets;
 
-/// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the
-/// home-widgets APIs.
+/// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the home-widgets APIs.
 pub trait HomeWidgetsExt<R: Runtime> {
     fn home_widgets(&self) -> &HomeWidgets<R>;
 }
@@ -37,10 +36,7 @@ impl<R: Runtime, T: Manager<R>> HomeWidgetsExt<R> for T {
     }
 }
 
-/// Initializes the plugin. Has no webview-facing commands -- see `build.rs` -- because
-/// this plugin only pushes data from Rust to a native Android widget; the app's
-/// `AlarmCoordinator` already drives the underlying `alarm:next-changed` event, so the
-/// webview has no reason to talk to this plugin directly.
+/// Initializes the plugin. Has no webview-facing commands -- see `build.rs` -- because this plugin only pushes data from Rust to a native Android widget; the app's `AlarmCoordinator` already drives the underlying `alarm:next-changed` event, so the webview has no reason to talk to this plugin directly.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("home-widgets")
         .setup(|app, api| {
@@ -50,11 +46,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             let home_widgets = desktop::init(app, api)?;
             app.manage(home_widgets);
 
-            // Registered here (the plugin's own setup) rather than the app's setup hook,
-            // so this listener is guaranteed to exist before AlarmCoordinator's
-            // heal_on_launch seeds the initial alarm:next-changed emission -- Tauri runs
-            // plugin setup before the app's own setup closure, and a listener registered
-            // after an event fires never receives it.
+            // Registered here (the plugin's own setup) rather than the app's setup hook, so this listener is guaranteed to exist before AlarmCoordinator's heal_on_launch seeds the initial alarm:next-changed emission -- Tauri runs plugin setup before the app's own setup closure, and a listener registered after an event fires never receives it.
             setup_next_alarm_listener(app.clone());
 
             Ok(())
@@ -62,8 +54,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .build()
 }
 
-/// Listens for the core scheduler's `alarm:next-changed` event and forwards a flattened
-/// snapshot to the Kotlin plugin, in-process -- no webview round-trip required.
+/// Listens for the core scheduler's `alarm:next-changed` event and forwards a flattened snapshot to the Kotlin plugin, in-process -- no webview round-trip required.
 fn setup_next_alarm_listener<R: Runtime>(app: AppHandle<R>) {
     let listener_app = app.clone();
     app.listen("alarm:next-changed", move |event| {
