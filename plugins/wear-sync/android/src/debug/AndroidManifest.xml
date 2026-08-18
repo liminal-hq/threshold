@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only manifest overlay, merged in addition to src/main/AndroidManifest.xml for debug builds only. Spike-only (issue #255 Phase 0): BusInitProvider (in src/debug/java, so it doesn't even compile into a release build) exists purely to prove that a manifest-declared ContentProvider's onCreate() runs before AlarmReceiver.onReceive() on a cold process start, before the later phases of the shared native event bus design depend on that ordering. It is deliberately kept out of release builds via this source-set split, since it does synchronous file I/O and (on API 26-27) private-API reflection on every cold start, which has no business shipping permanently. See docs/spikes/255-contentprovider-spike-protocol.md and BusInitProvider.kt. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name=".BusInitProvider"
+            android:authorities="${applicationId}.wearsync-bus-spike-init"
+            android:exported="false" />
+    </application>
+</manifest>
