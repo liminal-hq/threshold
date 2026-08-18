@@ -49,25 +49,34 @@
   <circle cx="256" cy="396" r="14" fill="#fbbf24" opacity="0.4"/>
   <circle cx="131.15" cy="326.85" r="14" fill="#fbbf24" opacity="0.4"/>
 
-  <!-- DEV ribbon banner, kept within the adaptive-icon safe-zone radius (~186px from
+  <!-- "Dev" ribbon banner, kept within the adaptive-icon safe-zone radius (~186px from
        centre, inside the ~61%-diameter circle every launcher mask shape preserves) so it
-       survives cropping on real devices instead of being masked away at the corner. -->
-  <!-- "DEV" is drawn as plain filled paths/rects rather than an SVG <text> element;
-       <text> needs a system font to be resolvable wherever this gets rasterized
-       (confirmed: it silently renders as nothing at all inside the tauri-dev-mobile
-       container used for real dev builds, even though it renders fine locally), while
-       path/rect geometry always renders identically everywhere. -->
+       survives cropping on real devices instead of being masked away at the corner. The
+       lettering is drawn as plain filled paths/rects rather than an SVG <text> element;
+       <text> needs a system font to be resolvable wherever this gets rasterized (confirmed:
+       it silently renders as nothing at all inside the tauri-dev-mobile container used for
+       real dev builds, even though it renders fine locally), while path/rect geometry always
+       renders identically everywhere. D is drawn as four wall segments (not a filled blob)
+       so it has a genuine open counter instead of reading as a solid shape; e/v sit at
+       x-height on the same baseline as D's cap-height. -->
   <g transform="translate(355 355) rotate(-45)">
     <rect x="-45" y="-17" width="90" height="34" fill="#ef4444"/>
-    <g transform="translate(-20.4 -10) scale(4)" fill="#ffffff">
-      <path d="M0,0 L1.8,0 L2.5,0.5 L2.9,1.3 L2.9,3.7 L2.5,4.5 L1.8,5 L0,5 Z"/>
-      <g transform="translate(3.6 0)">
-        <rect x="0" y="0" width="0.8" height="5"/>
-        <rect x="0" y="0" width="3" height="0.9"/>
-        <rect x="0" y="2.05" width="2.4" height="0.9"/>
-        <rect x="0" y="4.1" width="3" height="0.9"/>
+    <g transform="translate(-15.6 -10) scale(4)" fill="#ffffff">
+      <!-- D (cap height, y 0-5) -->
+      <rect x="0" y="0" width="0.9" height="5"/>
+      <rect x="0" y="0" width="2.4" height="0.9"/>
+      <rect x="0" y="4.1" width="2.4" height="0.9"/>
+      <rect x="1.75" y="0.9" width="0.65" height="3.2"/>
+      <!-- e (x-height, y 2-5) -->
+      <g transform="translate(2.9 0)">
+        <rect x="0" y="2" width="2.2" height="0.7"/>
+        <rect x="0" y="2" width="0.7" height="3"/>
+        <rect x="1.5" y="2" width="0.7" height="1.25"/>
+        <rect x="0" y="3.15" width="2.2" height="0.7"/>
+        <rect x="0" y="4.3" width="1.4" height="0.7"/>
       </g>
-      <path d="M7.2,0 L8.7,5 L10.2,0 L9.5,0 L8.7,3.3 L7.9,0 Z"/>
+      <!-- v (x-height, y 2-5) -->
+      <path d="M5.6,2 L6.7,5 L7.8,2 L7.25,2 L6.7,3.75 L6.15,2 Z"/>
     </g>
   </g>
 </svg>
