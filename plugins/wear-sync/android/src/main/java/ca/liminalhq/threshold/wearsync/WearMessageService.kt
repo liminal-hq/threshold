@@ -51,6 +51,38 @@ internal const val TOPIC_WEAR_ALARM_DISMISS = "wear:alarm:dismiss"
 internal const val TOPIC_WEAR_ALARM_SNOOZE = "wear:alarm:snooze"
 
 /**
+ * Which [NativeEventBus] topic (if any) a watch-originated message at [path] should publish
+ * onto when Rust's pipeline isn't ready to act on it promptly -- `null` for every path with no
+ * native listener (sync/save/delete). Factored out as a pure function of [path] alone (issue
+ * #255 Phase 4B code review) so [onMessageReceived]'s "plugin loaded but pipeline not ready"
+ * branch, and the offline branch's existing `busTopic` arguments, both derive the mapping from
+ * one place instead of repeating the `PATH_ALARM_DISMISS`/`PATH_ALARM_SNOOZE` -> topic pairing.
+ */
+internal fun nativeStopBusTopic(path: String): String? = when (path) {
+    PATH_ALARM_DISMISS -> TOPIC_WEAR_ALARM_DISMISS
+    PATH_ALARM_SNOOZE -> TOPIC_WEAR_ALARM_SNOOZE
+    else -> null
+}
+
+/**
+ * Publishes [data] onto [NativeEventBus] for a watch-originated message at [path] if
+ * [pipelineReady] is `false` -- the "[WearSyncPlugin] instance already loaded, but Rust's
+ * pipeline isn't marked ready yet" half of the reachability fix (issue #255 Phase 4B code
+ * review), factored out of [WearMessageService.onMessageReceived]'s `plugin != null` branch so
+ * it's unit-testable without a live [WearableListenerService] instance, mirroring
+ * [enqueueOfflineWrite]'s existing precedent for the plugin-not-loaded-at-all case.
+ *
+ * A no-op for [path]s with no native listener ([nativeStopBusTopic] returns `null`) or once
+ * [pipelineReady] is `true` -- the normal, fully-booted case, where the message flows to Rust
+ * promptly through the usual [WearSyncPlugin.onWatchMessage] channel and there's nothing left
+ * for this signal to race.
+ */
+internal fun publishNativeStopBusIfPipelineNotReady(path: String, data: String, pipelineReady: Boolean) {
+    if (pipelineReady) return
+    nativeStopBusTopic(path)?.let { topic -> NativeEventBus.publish(topic, data) }
+}
+
+/**
  * Receives messages from the watch via the Wear Data Layer and routes
  * them to [WearSyncPlugin] for forwarding to the Rust sync pipeline.
  *
@@ -88,10 +120,20 @@ class WearMessageService : WearableListenerService() {
         NativeEventLog.log(
             applicationContext,
             TAG,
-            "Message received path=$path, pluginLoaded=${plugin != null}, channelReady=${plugin?.isChannelReady}",
+            "Message received path=$path, pluginLoaded=${plugin != null}, channelReady=${plugin?.isChannelReady}, pipelineReady=${plugin?.isPipelineReady}",
         )
         if (plugin != null) {
-            // Normal path: plugin is loaded, route through Tauri events
+            // Normal path: plugin is loaded, route through Tauri events. But a loaded plugin
+            // instance doesn't by itself mean Rust is ready to act on the message promptly --
+            // load() sets `instance` well before Rust finishes booting, registers its own watch
+            // listeners, and calls markWatchPipelineReady(). If the pipeline isn't ready yet,
+            // this is the same "Rust can't act on this right now" situation the offline branch
+            // below handles for dismiss/snooze via its own busTopic publish -- publish here too
+            // (issue #255 Phase 4B code review), rather than silently only queueing the command
+            // and leaving the native-bus stop signal (and WatchStopListener, which is registered
+            // independently of plugin/Rust state -- see WearRingInitProvider) unreachable for
+            // this whole startup window.
+            publishNativeStopBusIfPipelineNotReady(path, data, plugin.isPipelineReady)
             when (path) {
                 PATH_SYNC_REQUEST,
                 PATH_SAVE_ALARM,

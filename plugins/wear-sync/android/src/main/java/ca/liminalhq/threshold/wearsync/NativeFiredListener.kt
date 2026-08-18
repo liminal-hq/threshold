@@ -8,8 +8,6 @@ package ca.liminalhq.threshold.wearsync
 import android.content.Context
 import android.util.Log
 import ca.liminalhq.threshold.nativebus.NativeEventBus
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 private const val TAG = "NativeFiredListener"
@@ -44,27 +42,23 @@ internal const val STALENESS_WINDOW_MS = 90_000L
  * plus snooze/time-format prefs) -- no Rust involvement needed. See [NativeEventBus]'s KDoc
  * for the threading contract this object's [handle] function must honour: it does only
  * cheap, synchronous work inline (parse, staleness check, toggle check) and hands the actual
- * network I/O off to [scope], returning [TAG_WATCH_RING] once that work is *initiated*, not
- * once it's confirmed delivered -- at-least-once semantics, per the contract doc's decision:
- * stamping the tag after confirmation would risk a crash mid-send leaving the watch silent
- * with no fallback, which is the exact failure this whole design exists to prevent.
+ * network I/O off to [NativeAlarmSerialExecutor], returning [TAG_WATCH_RING] once that work is
+ * *submitted*, not once it's confirmed delivered -- at-least-once semantics, per the contract
+ * doc's decision: stamping the tag after confirmation would risk a crash mid-send leaving the
+ * watch silent with no fallback, which is the exact failure this whole design exists to
+ * prevent.
  *
  * The toggle check specifically has to stay *synchronous* despite that contract, since
  * [handle]'s return value (whether it claims [TAG_WATCH_RING]) has to reflect whether native
- * fan-out is actually disabled -- deferring that decision into [scope] would mean returning
- * the tag optimistically, which would make the Rust-side gate skip its own ring too and drop
- * the ring entirely whenever the toggle is off. [NativeFanOutPrefs] resolves the tension by
- * caching the toggle's value in memory, warmed once by [WearRingInitProvider.onCreate] before
+ * fan-out is actually disabled -- deferring that decision into the submitted task would mean
+ * returning the tag optimistically, which would make the Rust-side gate skip its own ring too
+ * and drop the ring entirely whenever the toggle is off. [NativeFanOutPrefs] resolves the
+ * tension by caching the toggle's value in memory, warmed once by [WearRingInitProvider.onCreate] before
  * this listener is even registered -- see its KDoc -- so by the time [handle] can possibly
  * run, the "synchronous" check is a plain volatile-field read, not a `SharedPreferences` disk
  * hit.
  */
 object NativeFiredListener {
-
-    // A dedicated scope, not WearSyncPlugin's -- this listener can run (and does run, by
-    // design) before any WearSyncPlugin instance exists. See NativeListenerSupport's KDoc for
-    // why this and the registration below are factored out rather than hand-rolled here.
-    private val scope: CoroutineScope = NativeListenerSupport.ioScope()
 
     /** Registers this listener with [NativeEventBus]. Called once from [WearRingInitProvider.onCreate]. */
     fun register(context: Context) {
@@ -93,7 +87,11 @@ object NativeFiredListener {
             return null
         }
 
-        scope.launch {
+        // Submitted through the per-alarm-id serial queue (issue #255 Phase 4B code review),
+        // not a plain scope.launch(Dispatchers.IO) -- see NativeAlarmSerialExecutor's KDoc for
+        // why routing both this send and NativeStopListener's dismiss/snooze send for the same
+        // id through one shared queue is what keeps this one strictly ordered ahead of it.
+        NativeAlarmSerialExecutor.submit(fired.id) {
             try {
                 ringWatch(context, fired.id)
             } catch (e: Exception) {

@@ -8,8 +8,6 @@ package ca.liminalhq.threshold.wearsync
 import android.content.Context
 import android.util.Log
 import ca.liminalhq.threshold.nativebus.NativeEventBus
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 private const val TAG = "NativeStopListener"
@@ -46,12 +44,6 @@ internal const val TOPIC_SNOOZE_REQUESTED = "alarm-manager:snooze-requested"
  */
 object NativeStopListener {
 
-    // A dedicated scope, not WearSyncPlugin's -- same reasoning as NativeFiredListener's: this
-    // listener can run (and does run, by design) before any WearSyncPlugin instance exists. See
-    // NativeListenerSupport's KDoc for why this and the registration below are factored out
-    // rather than hand-rolled here.
-    private val scope: CoroutineScope = NativeListenerSupport.ioScope()
-
     /** Registers this listener with [NativeEventBus]. Called once from [WearRingInitProvider.onCreate]. */
     fun register(context: Context) {
         NativeListenerSupport.subscribe(context, TAG, TOPIC_DISMISS_REQUESTED, ::handleDismiss)
@@ -85,10 +77,10 @@ object NativeStopListener {
     /**
      * The shape [handleDismiss] and [handleSnooze] were duplicating verbatim (issue #255 Phase
      * 4B code review): parse [payload]'s `{id}`, log and bail on anything malformed, otherwise
-     * launch onto [scope] to build the wire payload (via [buildMessagePayload], the one part
-     * that actually differs between dismiss and snooze -- dismiss needs only the id, snooze
-     * also needs the cached snooze length) and send it at [msgPath] via
-     * [sendWatchMessageToConnectedNodes], logging any failure under [logLabel].
+     * submit a task to [NativeAlarmSerialExecutor] to build the wire payload (via
+     * [buildMessagePayload], the one part that actually differs between dismiss and snooze --
+     * dismiss needs only the id, snooze also needs the cached snooze length) and send it at
+     * [msgPath] via [sendWatchMessageToConnectedNodes], logging any failure under [logLabel].
      */
     private fun handleStop(
         context: Context,
@@ -104,7 +96,12 @@ object NativeStopListener {
             return null
         }
 
-        scope.launch {
+        // Submitted through the per-alarm-id serial queue (issue #255 Phase 4B code review),
+        // not a plain scope.launch(Dispatchers.IO) -- the same queue NativeFiredListener's ring
+        // send for this id submits to, so a stop submitted immediately after a fire can never
+        // start (let alone finish) ahead of that fire's own send. See
+        // NativeAlarmSerialExecutor's KDoc for the ordering guarantee this relies on.
+        NativeAlarmSerialExecutor.submit(alarmId) {
             try {
                 val messagePayload = buildMessagePayload(context, alarmId)
                 sendWatchMessageToConnectedNodes(context, msgPath, messagePayload, TAG, logLabel)

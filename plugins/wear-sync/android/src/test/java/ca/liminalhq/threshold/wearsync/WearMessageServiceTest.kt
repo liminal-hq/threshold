@@ -111,4 +111,73 @@ class WearMessageServiceTest {
 
         assertEquals(listOf("/threshold/alarm_dismiss" to "{\"alarmId\":9}"), pending.map { it.path to it.data })
     }
+
+    // ── nativeStopBusTopic ───────────────────────────────────────────
+
+    @Test
+    fun `nativeStopBusTopic maps dismiss and snooze paths to their own topics`() {
+        assertEquals(TOPIC_WEAR_ALARM_DISMISS, nativeStopBusTopic("/threshold/alarm_dismiss"))
+        assertEquals(TOPIC_WEAR_ALARM_SNOOZE, nativeStopBusTopic("/threshold/alarm_snooze"))
+    }
+
+    @Test
+    fun `nativeStopBusTopic returns null for paths with no native listener`() {
+        assertEquals(null, nativeStopBusTopic("/threshold/sync_request"))
+        assertEquals(null, nativeStopBusTopic("/threshold/save_alarm"))
+        assertEquals(null, nativeStopBusTopic("/threshold/delete_alarm"))
+        assertEquals(null, nativeStopBusTopic("/threshold/not_a_real_path"))
+    }
+
+    // ── publishNativeStopBusIfPipelineNotReady (reachability fix, issue #255 Phase 4B code
+    // review: a watch dismiss/snooze arriving after WearSyncPlugin.load() has set `instance`
+    // but before markWatchPipelineReady() has run must still reach NativeEventBus) ──────────
+
+    @Test
+    fun `publishes onto NativeEventBus when the pipeline is not ready, even though this models a loaded plugin instance`() {
+        var receivedPayload: String? = null
+        NativeEventBus.subscribe(TOPIC_WEAR_ALARM_DISMISS) { payload -> receivedPayload = payload; null }
+
+        // pipelineReady = false is exactly the "WearSyncPlugin.instance != null but
+        // markWatchPipelineReady() hasn't run yet" window -- the call site in
+        // WearMessageService.onMessageReceived only reaches this function once `plugin` is
+        // already known non-null, so this parameter alone stands in for that state here.
+        publishNativeStopBusIfPipelineNotReady("/threshold/alarm_dismiss", "{\"alarmId\":7}", pipelineReady = false)
+
+        assertEquals("{\"alarmId\":7}", receivedPayload)
+    }
+
+    @Test
+    fun `publishes the snooze payload onto the snooze topic when the pipeline is not ready`() {
+        var receivedPayload: String? = null
+        NativeEventBus.subscribe(TOPIC_WEAR_ALARM_SNOOZE) { payload -> receivedPayload = payload; null }
+
+        publishNativeStopBusIfPipelineNotReady(
+            "/threshold/alarm_snooze",
+            "{\"alarmId\":7,\"snoozeLengthMinutes\":10}",
+            pipelineReady = false,
+        )
+
+        assertEquals("{\"alarmId\":7,\"snoozeLengthMinutes\":10}", receivedPayload)
+    }
+
+    @Test
+    fun `does not publish once the pipeline is ready -- the normal, fully-booted case`() {
+        var published = false
+        NativeEventBus.subscribe(TOPIC_WEAR_ALARM_DISMISS) { published = true; null }
+
+        publishNativeStopBusIfPipelineNotReady("/threshold/alarm_dismiss", "{\"alarmId\":7}", pipelineReady = true)
+
+        assertTrue(!published)
+    }
+
+    @Test
+    fun `does not publish for a path with no native listener regardless of pipeline readiness`() {
+        var published = false
+        NativeEventBus.subscribe(TOPIC_WEAR_ALARM_DISMISS) { published = true; null }
+        NativeEventBus.subscribe(TOPIC_WEAR_ALARM_SNOOZE) { published = true; null }
+
+        publishNativeStopBusIfPipelineNotReady("/threshold/save_alarm", "{\"alarmId\":7}", pipelineReady = false)
+
+        assertTrue(!published)
+    }
 }

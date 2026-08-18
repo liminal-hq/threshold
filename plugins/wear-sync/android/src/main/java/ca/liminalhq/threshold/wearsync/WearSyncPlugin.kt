@@ -152,6 +152,56 @@ internal fun buildAlarmSnoozePayload(alarmId: Int, snoozeLengthMinutes: Int): By
     return json.toString().toByteArray()
 }
 
+/**
+ * The peek -> deliver-each-via-[deliver] -> commit-only-what-was-delivered sequence
+ * [WearSyncPlugin.drainQueuedMessages] performs, factored out into its own small class (issue
+ * #255 Phase 4B code review, PR #300 finding) so it's unit-testable -- proving two overlapping
+ * [drain] calls don't both observe and redeliver the same uncommitted batch -- without a live
+ * `Activity`/`Channel`/Play Services instance, which [WearSyncPlugin] itself needs to
+ * construct.
+ *
+ * [WearSyncEventQueue.peekAll]/[WearSyncEventQueue.commit] are each individually
+ * `@Synchronized` on their own underlying `DurableEventQueue`, but that only protects each
+ * individual call, not the sequence between them -- the lock is released between peek and
+ * commit. [WearSyncPlugin] calls [drain] from three independent, differently-threaded call
+ * sites ([WearSyncPlugin.onWatchMessage], plus the `setWatchMessageHandler`/
+ * `markWatchPipelineReady` Tauri commands during app boot) with no mutual exclusion between
+ * them otherwise, so two overlapping calls could each peek the same uncommitted batch and
+ * redeliver every message in it to Rust before either commits -- `commit()` itself is
+ * idempotent, so the persisted queue would stay consistent, but Rust would still receive
+ * genuine duplicate deliveries, which can re-anchor a snooze or double-process a dismiss (not
+ * every `AlarmCoordinator` handler is idempotent against a resend).
+ *
+ * `@Synchronized` on [drain] (locking on this [QueueDrainer] instance) closes that gap: a
+ * second overlapping call blocks until the first's peek-deliver-commit sequence has fully
+ * finished. [WearSyncPlugin] holds exactly one [QueueDrainer] per plugin instance (see its
+ * `queueDrainer` field), so every call site synchronizes on the same monitor.
+ *
+ * Deliberately peek-then-commit-after-delivery, not drain-then-deliver: if [deliver] throws
+ * partway through a batch (a stale Channel reference, a JNI failure, whatever), every message
+ * not yet delivered at that point must still be in the queue afterwards so it's retried on the
+ * next drain, not silently lost.
+ */
+internal class QueueDrainer(private val queue: WearSyncEventQueue) {
+
+    @Synchronized
+    fun drain(deliver: (WearSyncEventQueue.QueuedMessage) -> Unit) {
+        val pending = queue.peekAll()
+        if (pending.isEmpty()) return
+
+        Log.i(TAG, "Replaying ${pending.size} queued message(s)")
+        val delivered = mutableSetOf<String>()
+        try {
+            for (message in pending) {
+                deliver(message)
+                delivered.add(message.eventId)
+            }
+        } finally {
+            queue.commit(delivered)
+        }
+    }
+}
+
 @InvokeArg
 class PublishRequest {
     var alarmsJson: String = ""
@@ -210,6 +260,10 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     private val nodeClient by lazy { Wearable.getNodeClient(activity) }
     // Must go through the process-wide singleton, not a fresh instance -- see WearSyncEventQueue.getInstance's KDoc for why a second, independently-constructed instance over the same SharedPreferences file provides no mutual exclusion against this one, or against WearMessageService's own offline-write enqueues.
     private val watchQueue by lazy { WearSyncEventQueue.getInstance(activity) }
+    // One drainer per plugin instance, reused by every drainQueuedMessages() call site -- see
+    // QueueDrainer's own KDoc for why this is what actually closes the overlapping-drain race
+    // (issue #255 Phase 4B code review, PR #300 finding).
+    private val queueDrainer by lazy { QueueDrainer(watchQueue) }
     private var watchMessageChannel: Channel? = null
     @Volatile
     private var watchPipelineReady: Boolean = false
@@ -492,7 +546,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     /**
      * Peeks every queued message and delivers each one to Rust in turn, committing (removing) only the ones that were actually handed to the [Channel] successfully.
      *
-     * Deliberately peek-then-commit-after-delivery rather than drain-then-deliver: if `channel.send()` throws partway through a batch (a stale Channel reference, a JNI failure, whatever), every message not yet delivered at that point must still be in the queue afterwards so it's retried on the next drain, not silently lost.
+     * Delegates the actual peek-deliver-commit sequence, and the mutual exclusion around it, to [queueDrainer] -- see [QueueDrainer]'s own KDoc for why a bare per-call `peekAll()`/`commit()` pair isn't enough on its own to stop two overlapping calls (this method is invoked from three independent, differently-threaded call sites: [onWatchMessage], and the [setWatchMessageHandler]/[markWatchPipelineReady] Tauri commands during app boot) from both redelivering the same uncommitted batch to Rust.
      */
     private fun drainQueuedMessages() {
         if (!watchPipelineReady) return
@@ -502,31 +556,33 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
             return
         }
 
-        val pending = watchQueue.peekAll()
-        if (pending.isEmpty()) return
-
-        Log.i(TAG, "Replaying ${pending.size} queued message(s)")
-        val delivered = mutableSetOf<String>()
-        try {
-            for (message in pending) {
-                val event = JSObject()
-                event.put("path", message.path)
-                event.put("data", message.data)
-                // Stamped in so a same-process dedup pass on the Rust side (issue #255 Phase
-                // 3C) has something to key watch-originated dismiss/snooze messages on, same
-                // as the fired path's eventId -- see WatchMessage::event_id on the Rust side.
-                event.put("eventId", message.eventId)
-                channel.send(event)
-                delivered.add(message.eventId)
-                Log.d(TAG, "Sent watch message to Rust channel: path=${message.path}")
-            }
-        } finally {
-            watchQueue.commit(delivered)
+        queueDrainer.drain { message ->
+            val event = JSObject()
+            event.put("path", message.path)
+            event.put("data", message.data)
+            // Stamped in so a same-process dedup pass on the Rust side (issue #255 Phase
+            // 3C) has something to key watch-originated dismiss/snooze messages on, same
+            // as the fired path's eventId -- see WatchMessage::event_id on the Rust side.
+            event.put("eventId", message.eventId)
+            channel.send(event)
+            Log.d(TAG, "Sent watch message to Rust channel: path=${message.path}")
         }
     }
 
     /** Whether the Kotlin→Rust Channel has been registered and is ready. */
     val isChannelReady: Boolean get() = watchMessageChannel != null
+
+    /**
+     * Whether Rust has finished booting, registered its own watch-event listeners, and called
+     * [markWatchPipelineReady] -- distinct from [isChannelReady], which only reflects that
+     * [setWatchMessageHandler] has registered the Kotlin→Rust [Channel], a step that can (and
+     * normally does) happen first. [WearMessageService] checks this, not just whether `instance`
+     * is non-null, to decide whether a watch-originated dismiss/snooze still needs the
+     * [NativeEventBus] stop signal: [load] sets `instance` well before Rust finishes booting and
+     * calls [markWatchPipelineReady], so gating on instance existence alone left that whole
+     * window unable to reach `WatchStopListener` (issue #255 Phase 4B code review).
+     */
+    val isPipelineReady: Boolean get() = watchPipelineReady
 
     companion object {
         /**
