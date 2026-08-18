@@ -10,10 +10,7 @@ import android.content.Context
 /**
  * A tiny string-keyed, string-valued store.
  *
- * This exists purely so classes like [DurableEventQueue] can be unit tested against an
- * in-memory fake instead of needing Robolectric or instrumentation tests -- this
- * codebase's `test-kotlin-plugins` CI job runs plain JUnit 4 against the host JVM, with
- * no Android framework available.
+ * This exists purely so classes like [DurableEventQueue] can be unit tested against an in-memory fake instead of needing Robolectric or instrumentation tests -- this codebase's `test-kotlin-plugins` CI job runs plain JUnit 4 against the host JVM, with no Android framework available.
  */
 interface KeyValueStore {
     /** Returns the value for [key], or `null` if it has never been set. */
