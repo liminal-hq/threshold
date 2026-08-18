@@ -819,8 +819,26 @@ pub struct AlarmNextChanged {
 	"alarm": { "id": 3, "label": "Weekday Alarm", "triggerAt": 1755500040000 },
 	"is24Hour": true,
 	"theme": {
-		"light": { "fill": "#ffffff", "stroke": "#dfe5ee", "rail": "#002244", "eyebrow": "#b7541e", "time": "#1a1a1a", "label": "#5a6a80", "railMuted": "#aab4c2", "textMuted": "#5a6a80" },
-		"dark": { "fill": "#2a364b", "stroke": "#3e5272", "rail": "#4c8dff", "eyebrow": "#ff8f5d", "time": "#f5f8ff", "label": "#a9bad1", "railMuted": "#3b4c66", "textMuted": "#7f90a8" }
+		"light": {
+			"fill": "#ffffff",
+			"stroke": "#dfe5ee",
+			"rail": "#002244",
+			"eyebrow": "#b7541e",
+			"time": "#1a1a1a",
+			"label": "#5a6a80",
+			"railMuted": "#aab4c2",
+			"textMuted": "#5a6a80"
+		},
+		"dark": {
+			"fill": "#2a364b",
+			"stroke": "#3e5272",
+			"rail": "#4c8dff",
+			"eyebrow": "#ff8f5d",
+			"time": "#f5f8ff",
+			"label": "#a9bad1",
+			"railMuted": "#3b4c66",
+			"textMuted": "#7f90a8"
+		}
 	}
 }
 ```
