@@ -6,10 +6,29 @@
 use std::collections::VecDeque;
 use std::sync::Mutex;
 
-/// Capacity of the recent-eventId ring buffer -- comfortably above the number of events
-/// that could plausibly repeat within one running process's lifetime (see `EventDedup`'s
-/// own docs for exactly what that covers, and what it doesn't).
-const CAPACITY: usize = 32;
+/// Capacity of the recent-eventId ring buffer.
+///
+/// This is deliberately generous rather than "just enough for the common case": a PR #300
+/// review noted that `WearSyncPlugin.drainQueuedMessages()` (Kotlin, `plugins/wear-sync/
+/// android/.../WearSyncPlugin.kt`) has no lock around its own peek-then-deliver-then-commit
+/// sequence, so two overlapping calls to it (e.g. a watch message arriving mid-drain, or
+/// `setWatchMessageHandler`/`markWatchPipelineReady` racing an in-flight `onWatchMessage`
+/// drain) can both peek the same not-yet-committed batch and each redeliver every message
+/// in it to Rust before either commits. When that happens, a buffer sized to "the common
+/// case" risks the earliest entries in a large-enough batch being evicted before their
+/// duplicate copy arrives from the second drain, which would be accepted as a fresh
+/// "first occurrence" -- the exact failure this buffer exists to prevent.
+///
+/// Raising this number is only a mitigation, not the fix: it raises the size of backlog
+/// needed to lose the race, it doesn't remove the race. The real fix belongs in
+/// `drainQueuedMessages()` itself -- serializing its peek+deliver+commit sequence (e.g.
+/// `@Synchronized`, mirroring `NativeEventLog`'s existing use of the same annotation in that
+/// module) so a second overlapping call can't observe the same uncommitted batch the first
+/// one is still delivering, the same "peek-then-deliver-then-commit-only-what-succeeded"
+/// principle already applied one layer down in `WearSyncEventQueue`/`DurableEventQueue`.
+/// That change is Kotlin-side and out of scope for this crate; this constant is kept large
+/// so this buffer stays a meaningful backstop in the meantime.
+const CAPACITY: usize = 256;
 
 /// A small, shared, last-N `eventId` dedup buffer for the six native event listeners
 /// wired up in `lib.rs` (`wear:alarm:dismiss`, `wear:alarm:snooze`,
@@ -132,6 +151,30 @@ mod tests {
         assert!(!dedup.is_duplicate(Some("0")));
         // The most recently seen id from the initial fill hasn't been evicted yet.
         assert!(dedup.is_duplicate(Some(&(CAPACITY - 1).to_string())));
+    }
+
+    /// Regression test for the PR #300 review scenario: two overlapping
+    /// `WearSyncPlugin.drainQueuedMessages()` calls (Kotlin, out of scope for this crate)
+    /// can each peek the same not-yet-committed batch and redeliver every message in it.
+    /// As long as the redelivered batch is no larger than `CAPACITY`, the second copy of
+    /// every id is still caught as a duplicate even when other distinct ids are woven in
+    /// between the two copies -- simulating the two drains' deliveries interleaving on
+    /// their way to Rust rather than arriving back-to-back.
+    #[test]
+    fn interleaved_redelivery_of_a_large_overlapping_batch_is_still_caught() {
+        let dedup = EventDedup::new();
+        let batch: Vec<String> = (0..CAPACITY).map(|i| format!("batch-{i}")).collect();
+
+        // First "drain" delivers the whole batch.
+        for id in &batch {
+            assert!(!dedup.is_duplicate(Some(id)));
+        }
+        // Second "drain" (which raced the first and peeked the same uncommitted batch)
+        // redelivers every id in the same order -- each one must still read as a
+        // duplicate, since the batch didn't exceed CAPACITY.
+        for id in &batch {
+            assert!(dedup.is_duplicate(Some(id)));
+        }
     }
 
     #[test]
