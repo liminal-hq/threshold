@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="128" height="128">
+  <defs>
+    <clipPath id="iconClip">
+      <rect width="24" height="24" rx="5"/>
+    </clipPath>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="24" height="24" rx="5" fill="#1e293b"/>
+
+  <!-- Large clock circle -->
+  <circle cx="12" cy="12" r="9" fill="#334155"/>
+
+  <!-- Threshold range arc (6:00 to 8:00, thinner than V5) -->
+  <path d="M 12 21 A 9 9 0 0 1 4.21 16.5"
+        fill="none"
+        stroke="#fbbf24"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        opacity="0.6"/>
+
+  <!-- 12 o'clock marker -->
+  <rect x="11.2" y="4" width="1.6" height="2.5" rx="0.5" fill="#64748b"/>
+
+  <!-- Hour hand - pointing straight up to 12 -->
+  <line x1="12" y1="12" x2="12" y2="6.5"
+        stroke="#e2e8f0"
+        stroke-width="2.5"
+        stroke-linecap="round"/>
+
+  <!-- Ghost minute hand 1 - at 6:30 -->
+  <line x1="12" y1="12" x2="9.67" y2="20.69"
+        stroke="#fbbf24"
+        stroke-width="2"
+        stroke-linecap="round"
+        opacity="0.3"/>
+
+  <!-- Ghost minute hand 2 - at 7:30 -->
+  <line x1="12" y1="12" x2="5.64" y2="18.36"
+        stroke="#fbbf24"
+        stroke-width="2"
+        stroke-linecap="round"
+        opacity="0.3"/>
+
+  <!-- Solid minute hand - at 7:00 (the current/actual time) -->
+  <line x1="12" y1="12" x2="7.5" y2="19.79"
+        stroke="#fbbf24"
+        stroke-width="2.2"
+        stroke-linecap="round"/>
+
+  <!-- Center dot -->
+  <circle cx="12" cy="12" r="1.5" fill="#fbbf24"/>
+
+  <!-- Small dots at arc endpoints (6:00 and 8:00) -->
+  <circle cx="12" cy="21" r="0.9" fill="#fbbf24" opacity="0.4"/>
+  <circle cx="4.21" cy="16.5" r="0.9" fill="#fbbf24" opacity="0.4"/>
+
+  <!-- DEV ribbon banner, clipped to the icon's rounded-square silhouette. "DEV" is drawn as
+       plain filled paths/rects rather than an SVG <text> element; <text> needs a system
+       font to be resolvable wherever this gets rasterized (confirmed: it silently renders
+       as nothing at all inside the tauri-dev-mobile container used for real dev builds,
+       even though it renders fine locally), while path/rect geometry always renders
+       identically everywhere. -->
+  <g clip-path="url(#iconClip)">
+    <g transform="translate(18.5 18.5) rotate(-45)">
+      <rect x="-9" y="-2.1" width="18" height="4.2" fill="#ef4444"/>
+      <g transform="translate(-3.06 -1.5) scale(0.6)" fill="#ffffff">
+        <path d="M0,0 L1.8,0 L2.5,0.5 L2.9,1.3 L2.9,3.7 L2.5,4.5 L1.8,5 L0,5 Z"/>
+        <g transform="translate(3.6 0)">
+          <rect x="0" y="0" width="0.8" height="5"/>
+          <rect x="0" y="0" width="3" height="0.9"/>
+          <rect x="0" y="2.05" width="2.4" height="0.9"/>
+          <rect x="0" y="4.1" width="3" height="0.9"/>
+        </g>
+        <path d="M7.2,0 L8.7,5 L10.2,0 L9.5,0 L8.7,3.3 L7.9,0 Z"/>
+      </g>
+    </g>
+  </g>
+</svg>
