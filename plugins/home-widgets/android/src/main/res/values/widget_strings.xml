@@ -3,4 +3,7 @@
     <string name="widget_eyebrow">NEXT ALARM</string>
     <string name="widget_empty_state">No alarm set</string>
     <string name="widget_description">Shows Threshold\'s next alarm on your home screen.</string>
+    <string name="widget_cd_scheduled_with_label">Next alarm %1$s, %2$s. Opens Threshold.</string>
+    <string name="widget_cd_scheduled_no_label">Next alarm %1$s. Opens Threshold.</string>
+    <string name="widget_cd_empty">No alarm set. Opens Threshold.</string>
 </resources>

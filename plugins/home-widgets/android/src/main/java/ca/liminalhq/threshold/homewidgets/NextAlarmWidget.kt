@@ -9,6 +9,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.app.PendingIntent
 import android.text.format.DateFormat
@@ -19,17 +20,25 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.ceil
 import org.json.JSONObject
 
 /** Which pre-built layout a given widget instance's current size should use. */
 enum class WidgetLayoutBucket { HERO, NARROW }
 
-// Below these the 4x2 hero layout's stacked eyebrow/40sp time/label rows no longer fit without clipping; the narrow layout (rail + time only) takes over. The width bound matches the narrow variant's declared minWidth, and the height bound sits between a one-row (~40dp) and two-row (~110dp) placement since vertical resizing is allowed down to a single row.
+// Below these (scaled by the launcher's fontScale) the 4x2 hero layout's stacked eyebrow/40sp
+// time/label rows no longer fit without clipping; the narrow layout (rail + time only) takes
+// over. The base width bound matches the narrow variant's declared minWidth at fontScale 1.0, and
+// the base height bound sits between a one-row (~40dp) and two-row (~110dp) placement since
+// vertical resizing is allowed down to a single row. Both scale up with fontScale so a large
+// system font setting still gets the narrow layout's larger text before it would clip in hero.
 private const val NARROW_LAYOUT_WIDTH_THRESHOLD_DP = 180
 private const val NARROW_LAYOUT_HEIGHT_THRESHOLD_DP = 100
 
-fun selectWidgetLayoutBucket(minWidthDp: Int, minHeightDp: Int): WidgetLayoutBucket {
-    return if (minWidthDp < NARROW_LAYOUT_WIDTH_THRESHOLD_DP || minHeightDp < NARROW_LAYOUT_HEIGHT_THRESHOLD_DP) {
+fun selectWidgetLayoutBucket(minWidthDp: Int, minHeightDp: Int, fontScale: Float): WidgetLayoutBucket {
+    val widthThreshold = ceil(NARROW_LAYOUT_WIDTH_THRESHOLD_DP * fontScale).toInt()
+    val heightThreshold = ceil(NARROW_LAYOUT_HEIGHT_THRESHOLD_DP * fontScale).toInt()
+    return if (minWidthDp < widthThreshold || minHeightDp < heightThreshold) {
         WidgetLayoutBucket.NARROW
     } else {
         WidgetLayoutBucket.HERO
@@ -60,6 +69,7 @@ object NextAlarmWidget {
     private const val TAG = "NextAlarmWidget"
     private const val PREFS_NAME = "ThresholdWidget"
     private const val KEY_NEXT_ALARM = "next_alarm"
+    private const val KEY_WIDGET_THEME = "widget_theme"
 
     // AppWidgetManager option defaults when a host hasn't reported sizes yet -- both match the hero layout's own declared minimums, so an unreported size renders hero.
     private const val DEFAULT_MIN_WIDTH_DP = 250
@@ -97,6 +107,68 @@ object NextAlarmWidget {
         }
     }
 
+    // Persists the theme JSON under its own prefs key, separate from the alarm snapshot, and only
+    // when non-null -- theme: null on the wire means "not pushed yet" (the startup seed emission
+    // fires before the webview loads), so a theme-less alarm update must never erase a previously
+    // persisted theme.
+    fun saveTheme(context: Context, themeJson: String?) {
+        if (themeJson == null) {
+            return
+        }
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_WIDGET_THEME, themeJson)
+            .apply()
+    }
+
+    private fun loadTheme(context: Context): WidgetTheme? {
+        val raw = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_WIDGET_THEME, null)
+        return parseWidgetTheme(raw)
+    }
+
+    // The un-themed fallback palette, built from this plugin's own static day/night colour resources. Resolved from the widget-rendering Context's own configuration rather than the launcher's, so this can occasionally show the wrong day/night bucket immediately after a system theme change; in practice the un-themed window is only the interval before the app first pushes a theme.
+    private fun fallbackPalette(context: Context): WidgetThemePalette {
+        return WidgetThemePalette(
+            fill = context.getColor(R.color.widget_card_fill),
+            stroke = context.getColor(R.color.widget_card_stroke),
+            rail = context.getColor(R.color.widget_rail_colour),
+            eyebrow = context.getColor(R.color.widget_eyebrow_colour),
+            time = context.getColor(R.color.widget_time_colour),
+            label = context.getColor(R.color.widget_label_colour),
+            railMuted = context.getColor(R.color.widget_rail_muted_colour),
+            textMuted = context.getColor(R.color.widget_empty_text_colour),
+        )
+    }
+
+    private fun resolveActivePalette(context: Context, theme: WidgetTheme?): WidgetThemePalette {
+        if (theme == null) {
+            return fallbackPalette(context)
+        }
+        val isNightMode = context.resources.configuration.uiMode and
+            Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        return if (isNightMode) theme.dark else theme.light
+    }
+
+    // Applies one resolved palette to every colour-bearing view, unconditionally, on every render.
+    // This is what keeps a colour filter set on a previous render from ever going stale: the
+    // background image, rail, and all text colours are always reassigned from the palette that
+    // matches the CURRENT theme/night state, themed or not, rather than being left alone when a
+    // theme is absent -- RemoteViews would otherwise persist an earlier filter across the next
+    // renderWidget/refreshAll call.
+    private fun applyPalette(views: RemoteViews, palette: WidgetThemePalette, isEmptyState: Boolean) {
+        views.setInt(R.id.widget_background_image, "setColorFilter", palette.fill)
+        views.setTextColor(R.id.widget_eyebrow, palette.eyebrow)
+        views.setTextColor(R.id.widget_label, palette.label)
+        if (isEmptyState) {
+            views.setInt(R.id.widget_rail, "setColorFilter", palette.railMuted)
+            views.setTextColor(R.id.widget_time, palette.textMuted)
+        } else {
+            views.setInt(R.id.widget_rail, "setColorFilter", palette.rail)
+            views.setTextColor(R.id.widget_time, palette.time)
+        }
+    }
+
     /** Re-renders every placed instance of this widget from the persisted snapshot. */
     fun refreshAll(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
@@ -112,7 +184,8 @@ object NextAlarmWidget {
         val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
         val minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, DEFAULT_MIN_WIDTH_DP)
         val minHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, DEFAULT_MIN_HEIGHT_DP)
-        val bucket = selectWidgetLayoutBucket(minWidthDp, minHeightDp)
+        val fontScale = context.resources.configuration.fontScale
+        val bucket = selectWidgetLayoutBucket(minWidthDp, minHeightDp, fontScale)
         appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context, snapshot, bucket))
     }
 
@@ -122,24 +195,25 @@ object NextAlarmWidget {
             WidgetLayoutBucket.NARROW -> R.layout.widget_next_alarm_narrow
         }
         val views = RemoteViews(context.packageName, layoutId)
+        val palette = resolveActivePalette(context, loadTheme(context))
 
         val alarmId = snapshot.alarmId
         val triggerAt = snapshot.triggerAt
         if (alarmId == null || triggerAt == null) {
-            bindEmptyState(context, views)
+            bindEmptyState(context, views, palette)
         } else {
-            bindScheduledState(context, views, alarmId, triggerAt, snapshot.label, snapshot.is24Hour)
+            bindScheduledState(context, views, alarmId, triggerAt, snapshot.label, snapshot.is24Hour, palette)
         }
 
         return views
     }
 
-    private fun bindEmptyState(context: Context, views: RemoteViews) {
+    private fun bindEmptyState(context: Context, views: RemoteViews, palette: WidgetThemePalette) {
         views.setTextViewText(R.id.widget_eyebrow, context.getString(R.string.widget_eyebrow))
         views.setTextViewText(R.id.widget_time, context.getString(R.string.widget_empty_state))
         views.setViewVisibility(R.id.widget_label, View.GONE)
-        // Drawable swap rather than a colour filter: RemoteViews may reapply onto the existing hierarchy, and a filter set here would persist into a later scheduled-state render. Resource references also resolve in the launcher's own light/dark configuration.
-        views.setImageViewResource(R.id.widget_rail, R.drawable.widget_rail_shape_muted)
+        views.setContentDescription(R.id.widget_root, context.getString(R.string.widget_cd_empty))
+        applyPalette(views, palette, isEmptyState = true)
 
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("threshold://home")).apply {
             setPackage(context.packageName)
@@ -160,21 +234,30 @@ object NextAlarmWidget {
         triggerAt: Long,
         label: String?,
         is24Hour: Boolean?,
+        palette: WidgetThemePalette,
     ) {
         // The widget process can outlive the setting that produced a stored null here (or never have observed it), so fall back to the OS-wide clock-format preference rather than guessing a format.
         val resolvedIs24Hour = is24Hour ?: DateFormat.is24HourFormat(context)
         val timeText = formatWidgetTime(triggerAt, resolvedIs24Hour, ZoneId.systemDefault())
+        val hasLabel = !label.isNullOrBlank()
 
         views.setTextViewText(R.id.widget_eyebrow, context.getString(R.string.widget_eyebrow))
         views.setTextViewText(R.id.widget_time, timeText)
-        views.setImageViewResource(R.id.widget_rail, R.drawable.widget_rail_shape)
 
-        if (label.isNullOrBlank()) {
-            views.setViewVisibility(R.id.widget_label, View.GONE)
-        } else {
+        if (hasLabel) {
             views.setTextViewText(R.id.widget_label, label)
             views.setViewVisibility(R.id.widget_label, View.VISIBLE)
+        } else {
+            views.setViewVisibility(R.id.widget_label, View.GONE)
         }
+
+        val contentDescription = if (hasLabel) {
+            context.getString(R.string.widget_cd_scheduled_with_label, timeText, label)
+        } else {
+            context.getString(R.string.widget_cd_scheduled_no_label, timeText)
+        }
+        views.setContentDescription(R.id.widget_root, contentDescription)
+        applyPalette(views, palette, isEmptyState = false)
 
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("threshold://edit/$alarmId")).apply {
             setPackage(context.packageName)

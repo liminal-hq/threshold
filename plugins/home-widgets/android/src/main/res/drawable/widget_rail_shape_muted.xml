@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Empty-state variant of the accent rail. A separate drawable rather than a runtime colour filter: RemoteViews may reapply onto the existing view hierarchy, and a set filter would otherwise persist into the scheduled state. -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/widget_rail_muted_colour" />
-    <corners android:radius="1.5dp" />
-</shape>

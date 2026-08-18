@@ -18,6 +18,7 @@ class WidgetSnapshotArgs {
     var label: String? = null
     var triggerAt: Long? = null
     var is24Hour: Boolean? = null
+    var themeJson: String? = null
 }
 
 @TauriPlugin
@@ -34,6 +35,8 @@ class HomeWidgetsPlugin(private val activity: android.app.Activity) : Plugin(act
                 is24Hour = args.is24Hour,
             ),
         )
+        // themeJson is null both when the event genuinely carried no theme and before the first themed push -- saveTheme is a no-op on null so a theme-less update never erases a previously persisted theme.
+        NextAlarmWidget.saveTheme(activity, args.themeJson)
         NextAlarmWidget.refreshAll(activity)
         invoke.resolve()
     }

@@ -226,10 +226,85 @@ pub struct NextAlarm {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// One light-or-dark colour set for the home-screen widget's eight visual roles, all lowercase `#rrggbb` hex.
+pub struct WidgetThemePalette {
+    pub fill: String,
+    pub stroke: String,
+    pub rail: String,
+    pub eyebrow: String,
+    pub time: String,
+    pub label: String,
+    pub rail_muted: String,
+    pub text_muted: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+/// Light and dark widget palettes computed by the frontend for the active theme (TS owns theme resolution; Rust just stores and relays this).
+pub struct WidgetThemePalettes {
+    pub light: WidgetThemePalette,
+    pub dark: WidgetThemePalette,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 /// Emitted when the app-wide next alarm changes, for home-screen widgets.
 pub struct AlarmNextChanged {
     pub alarm: Option<NextAlarm>,
     pub is_24_hour: Option<bool>,
+    /// `null` means "not pushed yet" (e.g. the seed emission at startup before the webview has applied a theme) -- consumers keep their last stored theme rather than treating `null` as "clear it".
+    pub theme: Option<WidgetThemePalettes>,
+}
+
+#[cfg(test)]
+mod widget_theme_palette_tests {
+    use super::*;
+
+    #[test]
+    fn serialises_to_the_pinned_wire_shape() {
+        let palettes = WidgetThemePalettes {
+            light: WidgetThemePalette {
+                fill: "#ffffff".into(),
+                stroke: "#dfe5ee".into(),
+                rail: "#002244".into(),
+                eyebrow: "#b7541e".into(),
+                time: "#1a1a1a".into(),
+                label: "#5a6a80".into(),
+                rail_muted: "#aab4c2".into(),
+                text_muted: "#5a6a80".into(),
+            },
+            dark: WidgetThemePalette {
+                fill: "#2a364b".into(),
+                stroke: "#3e5272".into(),
+                rail: "#4c8dff".into(),
+                eyebrow: "#ff8f5d".into(),
+                time: "#f5f8ff".into(),
+                label: "#a9bad1".into(),
+                rail_muted: "#3b4c66".into(),
+                text_muted: "#7f90a8".into(),
+            },
+        };
+
+        let json = serde_json::to_string(&palettes).unwrap();
+
+        assert_eq!(
+            json,
+            r##"{"light":{"fill":"#ffffff","stroke":"#dfe5ee","rail":"#002244","eyebrow":"#b7541e","time":"#1a1a1a","label":"#5a6a80","railMuted":"#aab4c2","textMuted":"#5a6a80"},"dark":{"fill":"#2a364b","stroke":"#3e5272","rail":"#4c8dff","eyebrow":"#ff8f5d","time":"#f5f8ff","label":"#a9bad1","railMuted":"#3b4c66","textMuted":"#7f90a8"}}"##
+        );
+    }
+
+    #[test]
+    fn a_null_theme_round_trips_as_explicit_json_null() {
+        let event = AlarmNextChanged {
+            alarm: None,
+            is_24_hour: None,
+            theme: None,
+        };
+
+        let json = serde_json::to_string(&event).unwrap();
+
+        assert_eq!(json, r#"{"alarm":null,"is24Hour":null,"theme":null}"#);
+    }
 }
 
 #[cfg(test)]

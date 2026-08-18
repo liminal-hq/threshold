@@ -32,4 +32,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.25")
     implementation("androidx.core:core-ktx:1.12.0")
     testImplementation("junit:junit:4.13.2")
+    // org.json is provided by the Android runtime but not by plain JUnit -- pulled in explicitly so the
+    // widget theme parsing tests can exercise the same JSONObject parsing path production code uses.
+    testImplementation("org.json:json:20240303")
 }

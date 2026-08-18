@@ -61,20 +61,30 @@ class NextAlarmWidgetTest {
     }
 
     @Test
-    fun `selects the hero bucket at and above both thresholds`() {
-        assertEquals(WidgetLayoutBucket.HERO, selectWidgetLayoutBucket(180, 100))
-        assertEquals(WidgetLayoutBucket.HERO, selectWidgetLayoutBucket(250, 110))
+    fun `selects the hero bucket at and above both thresholds at the baseline font scale`() {
+        assertEquals(WidgetLayoutBucket.HERO, selectWidgetLayoutBucket(180, 100, fontScale = 1.0f))
+        assertEquals(WidgetLayoutBucket.HERO, selectWidgetLayoutBucket(250, 110, fontScale = 1.0f))
     }
 
     @Test
-    fun `selects the narrow bucket below the 180dp width threshold`() {
-        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(179, 110))
-        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(110, 110))
+    fun `selects the narrow bucket below the 180dp width threshold at the baseline font scale`() {
+        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(179, 110, fontScale = 1.0f))
+        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(110, 110, fontScale = 1.0f))
     }
 
     @Test
-    fun `selects the narrow bucket below the 100dp height threshold even when wide`() {
-        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(250, 99))
-        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(320, 40))
+    fun `selects the narrow bucket below the 100dp height threshold even when wide at the baseline font scale`() {
+        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(250, 99, fontScale = 1.0f))
+        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(320, 40, fontScale = 1.0f))
+    }
+
+    @Test
+    fun `selects the narrow bucket when a doubled font scale outgrows the hero-sized cell`() {
+        assertEquals(WidgetLayoutBucket.NARROW, selectWidgetLayoutBucket(250, 110, fontScale = 2.0f))
+    }
+
+    @Test
+    fun `selects the hero bucket when the cell scales up along with a doubled font scale`() {
+        assertEquals(WidgetLayoutBucket.HERO, selectWidgetLayoutBucket(360, 200, fontScale = 2.0f))
     }
 }

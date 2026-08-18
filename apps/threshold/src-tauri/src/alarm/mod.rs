@@ -504,7 +504,18 @@ impl AlarmCoordinator {
             _ => None,
         };
 
-        let event = AlarmNextChanged { alarm, is_24_hour };
+        // Theme state is read after the last_next_alarm lock is already held, and released again
+        // immediately -- keeps lock ordering simple (this fn's own mutex first, then a brief
+        // lock/clone of the theme state) with no risk of the two ever nesting the other way.
+        let theme = app
+            .try_state::<crate::WidgetThemeState>()
+            .and_then(|state| state.0.lock().unwrap().clone());
+
+        let event = AlarmNextChanged {
+            alarm,
+            is_24_hour,
+            theme,
+        };
 
         if last.as_ref() != Some(&event) {
             app.emit("alarm:next-changed", &event)?;

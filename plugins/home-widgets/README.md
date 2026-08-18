@@ -9,14 +9,22 @@ This plugin listens for the core `alarm:next-changed` event (emitted by `AlarmCo
 Incoming core event `alarm:next-changed`:
 
 ```json
-{ "alarm": { "id": 3, "label": "Weekday Alarm", "triggerAt": 1755500040000 } | null, "is24Hour": true | null }
+{
+  "alarm": { "id": 3, "label": "Weekday Alarm", "triggerAt": 1755500040000 } | null,
+  "is24Hour": true | null,
+  "theme": { "light": { "fill": "#ffffff", "...": "..." }, "dark": { "fill": "#2a364b", "...": "..." } } | null
+}
 ```
+
+`theme: null` means "not pushed yet" -- the app's startup seed emission fires before the webview loads its own theme -- not "clear the theme". The Kotlin side keeps its last persisted theme in that case; see `WidgetTheme.kt` and `NextAlarmWidget.saveTheme`.
 
 Outgoing payload to `HomeWidgetsPlugin.updateWidgetSnapshot` (flat, camelCase):
 
 ```json
-{ "alarmId": 3 | null, "label": "…" | null, "triggerAt": … | null, "is24Hour": … | null }
+{ "alarmId": 3 | null, "label": "…" | null, "triggerAt": … | null, "is24Hour": … | null, "themeJson": "{\"light\":{...},\"dark\":{...}}" | null }
 ```
+
+`themeJson` carries the `theme` sub-object serialized to a compact JSON string rather than a nested object -- Kotlin's `@InvokeArg` binding is only proven for flat scalar fields in this codebase. This plugin never interprets the theme's roles; it only deserializes it opaquely in Rust and forwards the exact string to Kotlin, which parses and persists it.
 
 ## No webview surface
 
