@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Hero 4x2 layout. Root is horizontal (rail alongside a vertical text stack) rather than a
-     single vertical LinearLayout -- RemoteViews only supports simple layout containers, and a
+     single vertical LinearLayout - RemoteViews only supports simple layout containers, and a
      left-hand rail beside stacked text needs a horizontal root with a nested vertical group. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Narrow 2x1 layout: rail + time only, no room for the eyebrow/label rows. NextAlarmWidget
-     targets these same view IDs from both layouts -- RemoteViews actions for an ID absent from
+     targets these same view IDs from both layouts - RemoteViews actions for an ID absent from
      the current layout are silently skipped, so the shared binding code stays layout-agnostic. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
