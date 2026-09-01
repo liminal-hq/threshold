@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Narrow 2x1 layout: rail + time only, no room for the eyebrow/label rows. NextAlarmWidget
+     targets these same view IDs from both layouts - RemoteViews actions for an ID absent from
+     the current layout are silently skipped, so the shared binding code stays layout-agnostic.
+     Root is a FrameLayout for the same themed-background-image reason as the hero layout. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/widget_background_stroke"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_background_stroke"
+        android:importantForAccessibility="no"
+        android:contentDescription="@null" />
+
+    <ImageView
+        android:id="@+id/widget_background_fill"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="1dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_background_fill"
+        android:importantForAccessibility="no"
+        android:contentDescription="@null" />
+
+    <!-- 22sp time plus 4dp vertical padding is what lets this layout genuinely fit the declared 40dp one-row minimum resize height at fontScale 1.0. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingVertical="4dp"
+        android:paddingHorizontal="12dp">
+
+        <ImageView
+            android:id="@+id/widget_rail"
+            android:layout_width="3dp"
+            android:layout_height="match_parent"
+            android:src="@drawable/widget_rail_shape"
+            android:importantForAccessibility="no"
+            android:contentDescription="@null" />
+
+        <!-- Uniform autosizing (framework TextView, API 26+, inflated in the launcher) instead of a fixed 22sp: at the declared 110dp minimum width only ~73dp remains for the text after padding, rail, and margin, which a bold 22sp "12:59 PM" cannot fit, so the time shrinks to whatever the host actually grants. Bounded width and height are required for autosizing to engage, hence 0dp+weight and match_parent rather than wrap_content. -->
+        <TextView
+            android:id="@+id/widget_time"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:gravity="center_vertical"
+            android:textSize="22sp"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="12sp"
+            android:autoSizeMaxTextSize="22sp"
+            android:autoSizeStepGranularity="1sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:importantForAccessibility="no"
+            android:textColor="@color/widget_time_colour" />
+    </LinearLayout>
+</FrameLayout>

@@ -26,6 +26,11 @@ pub type TimeFormatKnownState = Arc<AtomicBool>;
 /// unlike the single-threaded JS loop this logic used to run in.
 #[cfg(mobile)]
 pub struct ImportLock(pub tokio::sync::Mutex<()>);
+/// TS-pushed home-screen widget colour palette (both light and dark variants of the active
+/// theme), set via the `set_widget_theme` command on every theme application. `None` until the
+/// frontend has applied a theme at least once -- mirrors `TimeFormatKnownState`'s "not known yet"
+/// gap, except here the gap is represented by the `Option` itself rather than a separate flag.
+pub struct WidgetThemeState(pub std::sync::Mutex<Option<alarm::events::WidgetThemePalettes>>);
 #[cfg(mobile)]
 use tauri_plugin_alarm_manager::AlarmManagerExt;
 #[cfg(mobile)]
@@ -156,6 +161,7 @@ pub fn run() {
         commands::test_watch_ring,
         commands::set_snooze_length,
         commands::set_time_format,
+        commands::set_widget_theme,
         commands::mark_alarm_pipeline_ready,
     ]);
 
@@ -178,7 +184,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_app_management::init())
         .plugin(tauri_plugin_toast::init())
-        .plugin(tauri_plugin_native_bus::init());
+        .plugin(tauri_plugin_native_bus::init())
+        .plugin(tauri_plugin_home_widgets::init());
 
     builder
         .setup(|app| {
@@ -255,6 +262,8 @@ pub fn run() {
             // Time format known flag — false until frontend emits settings-changed(is24h)
             let time_format_known_state: TimeFormatKnownState = Arc::new(AtomicBool::new(false));
             app.manage(time_format_known_state);
+            // Widget theme state — None until the frontend pushes a palette via set_widget_theme
+            app.manage(WidgetThemeState(std::sync::Mutex::new(None)));
 
             // Keep Rust state aligned with frontend settings via event architecture.
             // This powers alarm:fired and wear sync payloads without bespoke invoke calls.
@@ -297,6 +306,9 @@ pub fn run() {
                             .await
                         {
                             log::warn!("settings: failed to trigger wear sync after is24h change: {error}");
+                        }
+                        if let Err(error) = coord.emit_next_changed_if_needed(&handle).await {
+                            log::warn!("settings: failed to refresh next-alarm widget after is24h change: {error}");
                         }
                     }
                 });

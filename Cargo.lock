@@ -4977,6 +4977,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-home-widgets"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "tauri-plugin-log"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5391,6 +5403,7 @@ dependencies = [
  "tauri-plugin-deep-link",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
+ "tauri-plugin-home-widgets",
  "tauri-plugin-log",
  "tauri-plugin-mcp-bridge",
  "tauri-plugin-native-bus",

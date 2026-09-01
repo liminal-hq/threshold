@@ -368,7 +368,7 @@ pub struct AlarmRecord {
 ### Overview
 
 ```
-Event System (10 events across 4 categories)
+Event System (11 events across 5 categories)
 ├── CRUD Events (3) ─────────── UI updates, wear-sync state
 │   ├── alarm:created
 │   ├── alarm:updated
@@ -383,9 +383,12 @@ Event System (10 events across 4 categories)
 │   ├── alarm:dismissed
 │   └── alarm:snoozed
 │
-└── Batch Events (2) ────────── Sync optimization
-    ├── alarms:batch:updated
-    └── alarms:sync:needed
+├── Batch Events (2) ────────── Sync optimization
+│   ├── alarms:batch:updated
+│   └── alarms:sync:needed
+│
+└── Widget Events (1) ───────── Home-screen widget updates
+    └── alarm:next-changed
 ```
 
 ### Event Flow Example (Create Alarm)
@@ -402,7 +405,8 @@ User taps "Save" on EditAlarm screen
 3. Emit events (in order):
    a) alarm:created { alarm, revision: 43 }
    b) alarm:scheduled { id, triggerAt, soundUri, revision: 43 }
-   c) alarms:batch:updated { updatedIds: [7], revision: 43 }
+   c) alarm:next-changed { alarm, is24Hour, theme } (only if the app-wide next alarm changed)
+   d) alarms:batch:updated { updatedIds: [7], revision: 43 }
    ↓
 4. Subscribers react:
    - UI: Add alarm to local store (instant)
@@ -759,6 +763,97 @@ pub enum SyncReason {
     ForceSync,      // User requested
 }
 ```
+
+---
+
+### Widget Events
+
+#### 11. alarm:next-changed
+
+**Purpose:** The app-wide next alarm (earliest `next_trigger` among enabled alarms) changed. Drives the Android home-screen widget via the home-widgets plugin.
+
+**Payload:**
+
+```rust
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NextAlarm {
+    pub id: i32,
+    pub label: Option<String>,
+    pub trigger_at: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetThemePalette {
+    pub fill: String,
+    pub stroke: String,
+    pub rail: String,
+    pub eyebrow: String,
+    pub time: String,
+    pub label: String,
+    pub rail_muted: String,
+    pub text_muted: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetThemePalettes {
+    pub light: WidgetThemePalette,
+    pub dark: WidgetThemePalette,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmNextChanged {
+    pub alarm: Option<NextAlarm>,
+    pub is_24_hour: Option<bool>,
+    pub theme: Option<WidgetThemePalettes>,
+}
+```
+
+**Example:**
+
+```json
+{
+	"alarm": { "id": 3, "label": "Weekday Alarm", "triggerAt": 1755500040000 },
+	"is24Hour": true,
+	"theme": {
+		"light": {
+			"fill": "#ffffff",
+			"stroke": "#dfe5ee",
+			"rail": "#002244",
+			"eyebrow": "#b7541e",
+			"time": "#1a1a1a",
+			"label": "#5a6a80",
+			"railMuted": "#aab4c2",
+			"textMuted": "#5a6a80"
+		},
+		"dark": {
+			"fill": "#2a364b",
+			"stroke": "#3e5272",
+			"rail": "#4c8dff",
+			"eyebrow": "#ff8f5d",
+			"time": "#f5f8ff",
+			"label": "#a9bad1",
+			"railMuted": "#3b4c66",
+			"textMuted": "#7f90a8"
+		}
+	}
+}
+```
+
+`alarm` is `null` when no enabled alarm has a trigger. `is24Hour` is `null` until the frontend has told Rust the phone's time format preference at least once.
+
+`theme` follows the same TS-owned-setting pattern as `is24Hour`: the frontend computes both the light and dark widget palettes for the active theme (static theme, or Material You/system with a wallpaper response) on every theme application, contrast-corrects the eight roles against the fill colour, and pushes them via the `set_widget_theme` command, which Rust stores in `WidgetThemeState` and relays here unchanged.
+
+`theme` is `null` only when nothing has been pushed yet (e.g. the seed emission at startup before the webview has applied a theme) -- consumers must keep their last stored palette in that case rather than treating `null` as "clear the widget's theme".
+
+**Why This Event Exists:**
+
+- Gives the home-widgets plugin a single source of truth for "what should the widget show" without re-deriving it from `alarms:batch:updated` on every subscriber
+- Emitted only when the computed value actually changes, so a widget redraw isn't triggered by unrelated alarm edits (e.g. renaming a disabled alarm)
+- Carries `is24Hour` so the widget can format the trigger time without a second round-trip to settings
 
 ---
 

@@ -3,7 +3,7 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::alarm::events::SyncReason;
+use crate::alarm::events::{SyncReason, WidgetThemePalettes};
 use crate::alarm::{AlarmCoordinator, AlarmInput, AlarmRecord};
 use crate::SnoozeLengthState;
 use crate::TimeFormatKnownState;
@@ -257,6 +257,29 @@ pub async fn set_time_format<R: Runtime>(
         .emit_sync_needed(&app, SyncReason::ForceSync)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+/// Store the widget colour palette computed by the frontend and refresh the next-alarm widget.
+///
+/// Called by the frontend on every theme application (initial load, user selection, Material You
+/// refresh) so `alarm:next-changed` can carry up-to-date colours for the home-screen widget --
+/// TS owns theme resolution end to end, Rust just stores the result and re-runs the existing
+/// change-only emission.
+pub async fn set_widget_theme<R: Runtime>(
+    app: AppHandle<R>,
+    coordinator: State<'_, AlarmCoordinator>,
+    theme: WidgetThemePalettes,
+) -> Result<(), String> {
+    if let Some(state) = app.try_state::<crate::WidgetThemeState>() {
+        *state.0.lock().unwrap() = Some(theme);
+    }
+
+    if let Err(error) = coordinator.emit_next_changed_if_needed(&app).await {
+        log::warn!("set_widget_theme: failed to refresh next-alarm widget: {error}");
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

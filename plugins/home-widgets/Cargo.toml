@@ -1,0 +1,20 @@
+[package]
+name = "tauri-plugin-home-widgets"
+version = "0.1.0"
+authors = ["Threshold"]
+edition = "2021"
+links = "tauri-plugin-home-widgets"
+description = "Android home-screen widget support for Threshold, showing the next alarm"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+tauri = { version = "2.0.0", features = [] }
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4"
+
+[build-dependencies]
+tauri-plugin = { version = "2.0.0", features = ["build"] }

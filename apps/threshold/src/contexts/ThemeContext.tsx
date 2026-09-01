@@ -7,10 +7,12 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline, useMediaQuery } from '@mui/material';
 import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 import { getMaterialYouColours } from 'tauri-plugin-theme-utils-api';
 import { PlatformUtils } from '../utils/PlatformUtils';
 import { SettingsService, Theme as AppTheme } from '../services/SettingsService';
 import { themes, generateSystemTheme, ThemeDefinition, MaterialYouResponse } from '../theme/themes';
+import { computeWidgetTheme } from '../theme/widgetTheme';
 
 interface ThemeContextType {
 	theme: AppTheme;
@@ -107,16 +109,39 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 		return systemPrefersDark;
 	}, [forceDark, theme, systemPrefersDark]);
 
-	// 3. Compute Active Theme Definition
-	const activeThemeDef: ThemeDefinition = useMemo(() => {
+	// 3. Compute both light and dark variants of the active theme -- the widget palette needs
+	// both regardless of which mode the webview itself is currently rendering, and computing
+	// them together here means activeThemeDef below can just pick one instead of the two code
+	// paths (static lookup vs generateSystemTheme) drifting out of sync with each other.
+	const themeVariants = useMemo((): { light: ThemeDefinition; dark: ThemeDefinition } => {
 		if (theme === 'system') {
-			return generateSystemTheme(isDarkMode, useMaterialYou ? materialYouResponse : undefined);
+			const materialYou = useMaterialYou ? materialYouResponse : undefined;
+			return {
+				light: generateSystemTheme(false, materialYou),
+				dark: generateSystemTheme(true, materialYou),
+			};
 		}
 
 		const themeGroup = themes[theme] || themes['deep-night'];
-		// Fallback to light/dark variant
-		return isDarkMode ? (themeGroup as any).dark : (themeGroup as any).light;
-	}, [theme, isDarkMode, useMaterialYou, materialYouResponse]);
+		return { light: (themeGroup as any).light, dark: (themeGroup as any).dark };
+	}, [theme, useMaterialYou, materialYouResponse]);
+
+	// 3b. Compute Active Theme Definition
+	const activeThemeDef: ThemeDefinition = useMemo(
+		() => (isDarkMode ? themeVariants.dark : themeVariants.light),
+		[themeVariants, isDarkMode],
+	);
+
+	// 3c. Push the widget colour palette (both modes) to Rust on every theme application --
+	// initial load, user selection, and Material You refresh all flow through themeVariants
+	// changing. Fire-and-forget: a failed push (e.g. desktop dev, where the widget plugin isn't
+	// relevant) must never break theme application itself.
+	useEffect(() => {
+		const palettes = computeWidgetTheme(themeVariants.light, themeVariants.dark);
+		invoke('set_widget_theme', { theme: palettes }).catch((error) => {
+			console.warn('[ThemeContext] Failed to push widget theme to Rust:', error);
+		});
+	}, [themeVariants]);
 
 	// 4. Inject CSS Variables
 	useEffect(() => {

@@ -3,6 +3,7 @@ members = [
     "apps/threshold/src-tauri",
     "plugins/alarm-manager",
     "plugins/app-management",
+    "plugins/home-widgets",
     "plugins/predictive-back",
     "plugins/wear-sync",
     "plugins/theme-utils",
