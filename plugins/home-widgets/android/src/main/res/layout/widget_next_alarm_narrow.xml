@@ -44,12 +44,19 @@
             android:importantForAccessibility="no"
             android:contentDescription="@null" />
 
+        <!-- Uniform autosizing (framework TextView, API 26+, inflated in the launcher) instead of a fixed 22sp: at the declared 110dp minimum width only ~73dp remains for the text after padding, rail, and margin, which a bold 22sp "12:59 PM" cannot fit, so the time shrinks to whatever the host actually grants. Bounded width and height are required for autosizing to engage, hence 0dp+weight and match_parent rather than wrap_content. -->
         <TextView
             android:id="@+id/widget_time"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:layout_marginStart="10dp"
+            android:gravity="center_vertical"
             android:textSize="22sp"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="12sp"
+            android:autoSizeMaxTextSize="22sp"
+            android:autoSizeStepGranularity="1sp"
             android:textStyle="bold"
             android:singleLine="true"
             android:importantForAccessibility="no"

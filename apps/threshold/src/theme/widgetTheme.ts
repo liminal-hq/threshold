@@ -148,14 +148,13 @@ function paletteForVariant(def: ThemeDefinition, mode: 'light' | 'dark'): Widget
 	const stroke = toOpaqueHex(def.variables['--app-border-colour'] ?? DEFAULT_BORDER[mode], fill);
 
 	const railMuted = toOpaqueHex(DEFAULT_ACTION_DISABLED[mode], fill);
-	const textMuted = toOpaqueHex(DEFAULT_TEXT_DISABLED[mode], fill);
 
 	// Rail echoes the alarm card's own accent rail (primary.main -- see accentRailSx in
 	// alarmCardStyles.ts). Eyebrow uses secondary.main as the closest existing "accent" role,
 	// since there is no dedicated eyebrow semantic elsewhere in the app to borrow from. Time and
-	// label mirror text.primary/text.secondary. All four are pushed to a native surface with no
-	// contrast tooling of its own, so they are corrected for WCAG AA here rather than trusting
-	// each theme's hand-tuned values to still clear it once flattened to a plain hex fill.
+	// label mirror text.primary/text.secondary. Every text-bearing role -- textMuted included, since the empty state renders it in the main time slot -- is pushed to a native surface with no
+	// contrast tooling of its own, so each is corrected for WCAG AA here rather than trusting
+	// a theme's hand-tuned or MUI-default value to still clear it once flattened to a plain hex fill; railMuted is the one deliberate exception, a purely decorative bar whose job is to look dimmed.
 	// ensureContrastAA returns an hsl() string when it has to nudge lightness, so its output is
 	// re-flattened to opaque hex just like the raw theme colours above.
 	const toRoleHex = (raw: string) =>
@@ -165,6 +164,7 @@ function paletteForVariant(def: ThemeDefinition, mode: 'light' | 'dark'): Widget
 	const eyebrow = toRoleHex(def.muiPalette.secondary.main);
 	const time = toRoleHex(def.muiPalette.text.primary);
 	const label = toRoleHex(def.muiPalette.text.secondary ?? DEFAULT_TEXT_SECONDARY[mode]);
+	const textMuted = toRoleHex(DEFAULT_TEXT_DISABLED[mode]);
 
 	return { fill, stroke, rail, eyebrow, time, label, railMuted, textMuted };
 }

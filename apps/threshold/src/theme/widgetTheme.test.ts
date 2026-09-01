@@ -31,6 +31,15 @@ describe('computeWidgetTheme', () => {
 		expect(getContrastRatio(palettes.dark.rail, palettes.dark.fill)).toBeGreaterThanOrEqual(
 			WCAG_AA_NORMAL_TEXT,
 		);
+
+		// textMuted renders in the main time slot in the empty state, so MUI's semi-transparent
+		// disabled default must come out AA-corrected too, not just alpha-flattened.
+		expect(getContrastRatio(palettes.light.textMuted, palettes.light.fill)).toBeGreaterThanOrEqual(
+			WCAG_AA_NORMAL_TEXT,
+		);
+		expect(getContrastRatio(palettes.dark.textMuted, palettes.dark.fill)).toBeGreaterThanOrEqual(
+			WCAG_AA_NORMAL_TEXT,
+		);
 	});
 
 	it('corrects a deliberately low-contrast theme up to WCAG AA', () => {
@@ -51,7 +60,7 @@ describe('computeWidgetTheme', () => {
 
 		for (const mode of ['light', 'dark'] as const) {
 			const palette = palettes[mode];
-			for (const role of ['rail', 'eyebrow', 'time', 'label'] as const) {
+			for (const role of ['rail', 'eyebrow', 'time', 'label', 'textMuted'] as const) {
 				expect(getContrastRatio(palette[role], palette.fill)).toBeGreaterThanOrEqual(
 					WCAG_AA_NORMAL_TEXT,
 				);
