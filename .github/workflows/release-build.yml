@@ -2,8 +2,6 @@ name: Release Build
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -81,28 +79,6 @@ jobs:
             echo "should_release=true" >> "$GITHUB_OUTPUT"
             echo "tag_name=$ref_name" >> "$GITHUB_OUTPUT"
             echo "release_name=Threshold $ref_name" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "$event_name" = "push" ] && [ "$ref_name" = "main" ]; then
-            before_sha="${{ github.event.before }}"
-            if [ -z "$before_sha" ] || ! git cat-file -e "$before_sha" 2>/dev/null; then
-              echo "Cannot resolve previous commit (force-push or unknown history); skipping automatic release detection"
-              echo "should_release=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-
-            changed_files="$(git diff --name-only "$before_sha" "${GITHUB_SHA}")"
-            if echo "$changed_files" | grep -q '^apps/threshold/package.json$'; then
-              version="$(node -p "require('./apps/threshold/package.json').version")"
-              echo "Release candidate merged to main; using tag v$version"
-              echo "should_release=true" >> "$GITHUB_OUTPUT"
-              echo "tag_name=v$version" >> "$GITHUB_OUTPUT"
-              echo "release_name=Threshold v$version" >> "$GITHUB_OUTPUT"
-            else
-              echo "Push to main is not a release merge; skipping release"
-              echo "should_release=false" >> "$GITHUB_OUTPUT"
-            fi
             exit 0
           fi
 

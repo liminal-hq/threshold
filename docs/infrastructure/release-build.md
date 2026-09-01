@@ -29,9 +29,8 @@ The full release flow, from version bump to a draft release sitting in Google Pl
 
 ## Overview
 
-The release workflow runs from three entry points:
+The release workflow runs from two entry points:
 
-- pushes to `main`
 - pushed tags matching `v*`
 - manual runs via `workflow_dispatch` (optional `release_tag` input)
 
@@ -119,10 +118,6 @@ git push origin v0.1.9
 ```
 
 3. Watch `.github/workflows/release-build.yml` in Actions.
-
-### Main push release candidate
-
-On pushes to `main`, the workflow only releases when `apps/threshold/package.json` changed in that push. The tag is derived from that version as `v<version>`.
 
 ### Manual release run
 
