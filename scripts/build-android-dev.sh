@@ -9,6 +9,9 @@
 # so no local Android SDK/NDK setup is needed. gen/android is generated and tracked for
 # the real app's identifier, so this regenerates it for the .dev identifier, builds, then
 # always restores it back to the committed (real-app) state afterward -- even on failure.
+# It also carries a distinct launcher icon (the real Threshold mark plus a small "DEV"
+# ribbon) so it's never mistaken for the real app on a home screen -- see DEV_ICON_MANIFEST
+# below for how that gets stamped on.
 #
 # Builds a single-ABI APK by default (aarch64 -- virtually all modern Android phones) to
 # keep the install small; a "universal" all-ABI debug build easily runs 800MB+ unstripped,
@@ -35,6 +38,18 @@ DEV_CONFIG="{\"identifier\":\"$DEV_IDENTIFIER\",\"productName\":\"Threshold Dev\
 OUT_DIR="${THRESHOLD_DEV_APK_DIR:-$HOME/threshold-dev-builds}"
 GEN_ANDROID="apps/threshold/src-tauri/gen/android"
 TARGET="${THRESHOLD_DEV_TARGET:-aarch64}"
+
+# `tauri icon` has an undocumented side effect: whenever its -o output directory resolves
+# to somewhere inside the Tauri project tree, it also patches any already-initialized
+# mobile platform project's icons in place (gen/android's res/mipmap-* here), in addition
+# to writing the requested output. We rely on that deliberately below to stamp the dev-only
+# "DEV" ribbon icon (threshold-icon-dev.svg / threshold-icon-android-dev.svg at the repo
+# root) onto the freshly-regenerated gen/android, right before building it -- gen/android is
+# already force-restored to HEAD on exit regardless (see restore_gen_android), so mutating it
+# mid-script here is exactly as safe as the identifier/name override above. If -o pointed
+# outside the project tree instead, this patch would silently not happen and the dev build
+# would carry the real production icon with no error -- confirmed empirically, not from docs.
+DEV_ICON_MANIFEST='{"default": "/workspace/threshold-icon-dev.svg", "android_fg": "/workspace/threshold-icon-android-dev.svg"}'
 
 if [ -t 1 ]; then
 	COLOUR_RESET=$'\033[0m'
@@ -86,6 +101,9 @@ docker run --rm \
 		set -e
 		rm -rf '$GEN_ANDROID'
 		pnpm --filter threshold tauri android init --config '$DEV_CONFIG'
+		echo '$DEV_ICON_MANIFEST' > /tmp/threshold-dev-icon-manifest.json
+		pnpm --filter threshold tauri icon /tmp/threshold-dev-icon-manifest.json -o src-tauri/icons-dev-tmp
+		rm -rf apps/threshold/src-tauri/icons-dev-tmp
 		pnpm --filter threshold tauri android build --debug $BUILD_TARGET_ARG --config '$DEV_CONFIG'
 	"
 

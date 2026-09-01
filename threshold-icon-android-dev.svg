@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Dark background - full bleed, no rounded corners -->
+  <rect width="512" height="512" fill="#1e293b"/>
+
+  <!-- Large clock circle - scaled to fit within safe zone with generous padding -->
+  <circle cx="256" cy="256" r="140" fill="#334155"/>
+
+  <!-- Threshold range arc (6:00 to 8:00) -->
+  <path d="M 256 396 A 140 140 0 0 1 131.15 326.85"
+        fill="none"
+        stroke="#fbbf24"
+        stroke-width="39"
+        stroke-linecap="round"
+        opacity="0.6"/>
+
+  <!-- 12 o'clock marker -->
+  <rect x="242.53" y="121.78" width="24.94" height="38.89" rx="7.78" fill="#64748b"/>
+
+  <!-- Hour hand - pointing straight up to 12 -->
+  <line x1="256" y1="256" x2="256" y2="167.78"
+        stroke="#e2e8f0"
+        stroke-width="38.89"
+        stroke-linecap="round"/>
+
+  <!-- Ghost minute hand 1 - at 6:30 -->
+  <line x1="256" y1="256" x2="221.08" y2="391.47"
+        stroke="#fbbf24"
+        stroke-width="31.11"
+        stroke-linecap="round"
+        opacity="0.3"/>
+
+  <!-- Ghost minute hand 2 - at 7:30 -->
+  <line x1="256" y1="256" x2="157.08" y2="354.92"
+        stroke="#fbbf24"
+        stroke-width="31.11"
+        stroke-linecap="round"
+        opacity="0.3"/>
+
+  <!-- Solid minute hand - at 7:00 (the current/actual time) -->
+  <line x1="256" y1="256" x2="186.92" y2="381.56"
+        stroke="#fbbf24"
+        stroke-width="34.22"
+        stroke-linecap="round"/>
+
+  <!-- Centre dot -->
+  <circle cx="256" cy="256" r="23.33" fill="#fbbf24"/>
+
+  <!-- Small dots at arc endpoints (6:00 and 8:00) -->
+  <circle cx="256" cy="396" r="14" fill="#fbbf24" opacity="0.4"/>
+  <circle cx="131.15" cy="326.85" r="14" fill="#fbbf24" opacity="0.4"/>
+
+  <!-- "Dev" ribbon banner, kept within the adaptive-icon safe-zone radius (~186px from
+       centre, inside the ~61%-diameter circle every launcher mask shape preserves) so it
+       survives cropping on real devices instead of being masked away at the corner. The
+       lettering is Liberation Sans Bold's actual "Dev" glyph outlines, pre-converted to a
+       plain filled path (via `inkscape (actions=object-to-path)`) rather than left as an SVG
+       <text> element; <text> needs a system font to be resolvable wherever this gets
+       rasterized, and confirmed silently renders as nothing at all inside the
+       tauri-dev-mobile container used for real dev builds, even though it renders fine
+       locally. Baking in the outlines gets a real sans-serif look with no runtime font
+       dependency. Regenerate by rendering "Dev" at font-size 70 in Liberation Sans Bold and
+       re-running the same inkscape command if the wording/font ever needs to change. -->
+  <g transform="translate(355 355) rotate(-45)">
+    <rect x="-45" y="-17" width="90" height="34" fill="#ef4444"/>
+    <g transform="translate(-27.184 -18.943) scale(0.409481)" fill="#ffffff">
+      <path d="m 47.612305,45.561523 q 0,7.451172 -2.939453,13.022461 -2.905274,5.53711 -8.271485,8.476563 Q 31.069336,70 24.165039,70 H 4.6826172 V 21.84082 H 22.114258 q 12.167969,0 18.833008,6.152344 6.665039,6.118164 6.665039,17.568359 z m -10.151368,0 q 0,-7.758789 -4.033203,-11.826171 -4.033203,-4.101563 -11.518554,-4.101563 h -7.143555 v 32.573242 h 8.544922 q 6.49414,0 10.322265,-4.477539 3.828125,-4.477539 3.828125,-12.167969 z m 33.120118,25.122071 q -8.339844,0 -12.817383,-4.921875 -4.477539,-4.956055 -4.477539,-14.423828 0,-9.160157 4.545898,-14.082032 4.545899,-4.921875 12.885742,-4.921875 7.963868,0 12.167969,5.297852 4.204102,5.263672 4.204102,15.449219 v 0.273437 H 63.369141 q 0,5.400391 1.982421,8.168945 2.016602,2.734375 5.708008,2.734375 5.092774,0 6.425782,-4.409179 l 9.057617,0.786133 Q 82.612305,70.683594 70.581055,70.683594 Z m 0,-32.299805 q -3.383789,0 -5.229493,2.358398 -1.811523,2.358399 -1.914062,6.59668 H 77.792969 Q 77.519531,42.861328 75.639648,40.639648 73.759766,38.383789 70.581055,38.383789 Z M 114.46777,70 H 102.9834 L 89.755859,33.017578 h 10.151368 l 6.459963,20.678711 q 0.51269,1.708984 2.42676,8.544922 0.34179,-1.401367 1.40136,-4.921875 1.05957,-3.520508 7.86133,-24.301758 h 10.04883 z"/>
+    </g>
+  </g>
+</svg>
