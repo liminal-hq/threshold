@@ -6,14 +6,20 @@ on:
   # branch scope -- GitHub Actions caches only fall back current branch -> base branch -> default
   # branch, and with no push-to-main trigger at all, no cache ever existed at that fallback tier.
   # Every brand-new PR branch's first run was a guaranteed full cold compile forever, not just
-  # until some cache warmed up. The lint/typecheck/report jobs below stay pull_request-only via
-  # their own `if:` since they don't populate any cache and add nothing by re-running on merge.
+  # until some cache warmed up. The lint/typecheck jobs below stay pull_request-only via their
+  # own `if:` since they don't populate any cache and add nothing by re-running on merge.
   push:
     branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  actions: read
 
 jobs:
   test-js:
@@ -59,6 +65,13 @@ jobs:
         with:
           name: js-test-results
           path: '**/junit.xml'
+
+      - name: Publish JS/TS Test Results
+        if: always() && github.event_name == 'pull_request'
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          check_name: Threshold JS/TS Tests
+          files: '**/junit.xml'
 
       - name: Lint Code
         run: pnpm format:check
@@ -152,6 +165,13 @@ jobs:
           name: rust-test-results
           path: target/nextest/ci/junit.xml
 
+      - name: Publish Rust Test Results
+        if: always() && github.event_name == 'pull_request'
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          check_name: Threshold Rust Tests
+          files: target/nextest/ci/junit.xml
+
       - name: Rust Format Check
         run: cargo fmt --all -- --check
 
@@ -164,6 +184,8 @@ jobs:
     permissions:
       contents: read
       packages: read
+      checks: write
+      pull-requests: write
     container:
       image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
       options: --user root
@@ -194,12 +216,21 @@ jobs:
           name: kotlin-wear-test-results
           path: apps/threshold-wear/build/test-results/**/*.xml
 
+      - name: Publish Wear Test Results
+        if: always() && github.event_name == 'pull_request'
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          check_name: Threshold Wear Tests
+          files: apps/threshold-wear/build/test-results/**/*.xml
+
   test-kotlin-plugins:
     runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     permissions:
       contents: read
       packages: read
+      checks: write
+      pull-requests: write
     container:
       image: ghcr.io/liminal-hq/tauri-ci-mobile:latest
       options: --user root
@@ -353,55 +384,9 @@ jobs:
           name: kotlin-plugin-test-results
           path: plugins/**/android/build/test-results/**/*.xml
 
-  report:
-    runs-on: ubuntu-24.04
-    if: always() && github.event_name == 'pull_request'
-    needs:
-      [
-        test-js,
-        test-rust,
-        test-kotlin-wear,
-        test-kotlin-plugins,
-        lint-mermaid,
-        check-license-headers,
-      ]
-    permissions:
-      contents: read
-      checks: write
-      actions: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - name: Publish Plugin Test Results
+        if: always() && github.event_name == 'pull_request'
+        uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          submodules: recursive
-
-      - name: Download JS Test Results
-        uses: actions/download-artifact@v8
-        with:
-          name: js-test-results
-          path: test-results/js
-
-      - name: Download Rust Test Results
-        uses: actions/download-artifact@v8
-        with:
-          name: rust-test-results
-          path: test-results/rust
-
-      - name: Download Kotlin Wear Test Results
-        uses: actions/download-artifact@v8
-        with:
-          name: kotlin-wear-test-results
-          path: test-results/kotlin-wear
-
-      - name: Download Kotlin Plugin Test Results
-        uses: actions/download-artifact@v8
-        with:
-          name: kotlin-plugin-test-results
-          path: test-results/kotlin-plugins
-
-      - name: Publish Test Report
-        uses: dorny/test-reporter@v2
-        with:
-          name: Test Results
-          path: test-results/**/*.xml
-          reporter: java-junit
+          check_name: Threshold Plugin Tests
+          files: plugins/**/android/build/test-results/**/*.xml
