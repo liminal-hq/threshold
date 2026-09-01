@@ -78,11 +78,10 @@ class SetAlarmActivity : Activity() {
         // 4. Schedule Native (also persists to SharedPrefs for boot recovery)
         AlarmUtils.scheduleAlarm(this, id, triggerAt, null)
 
-        // 5. Hand off to Rust for real import -- dispatched immediately through the
-        // plugin's Channel if the app is already running and ready, or queued in
-        // SharedPreferences (same convention as the alarm-fired/snooze/dismiss events)
-        // to be drained once the pipeline is ready, since this Activity can be launched
-        // by the OS with the main Tauri process completely cold.
+        // 5. Hand off to Rust for real import -- enqueued into the shared native event log
+        // (same convention as the alarm-fired/snooze/dismiss events) and drained immediately
+        // if the pipeline is already up, or left queued until it becomes ready, since this
+        // Activity can be launched by the OS with the main Tauri process completely cold.
         AlarmManagerPlugin.notifyImportRequested(
             applicationContext,
             id,

@@ -167,6 +167,10 @@ This plugin currently requires no Android permissions. The manifest injection me
 | `wear:alarm:save`   | App layer | Watch wants to toggle alarm |
 | `wear:alarm:delete` | App layer | Watch wants to delete alarm |
 
+## Watch Message Queue
+
+Watch messages that arrive while the Tauri plugin isn't loaded are persisted by `WearSyncEventQueue` (Kotlin), which stores them in native-bus's shared `DurableEventQueue` log rather than the plugin's own bespoke format. As of this change, the queue's on-disk schema migrates once, automatically, from the old `WearSyncQueue` format to the new one; this migration is one-way, so downgrading the app after upgrading past this point would strand any queued messages already migrated into the new format. `RELEASE_NOTES.md` isn't a fit for this note since its entries are written per-version at actual release-tagging time (see `docs/infrastructure/release-build.md`), not per-PR/per-phase.
+
 ## Tests
 
 31 tests across all modules. Run with:

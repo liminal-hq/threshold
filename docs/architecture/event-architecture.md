@@ -61,8 +61,9 @@ This document defines Threshold's **Level 3 Granular Event System with Monotonic
 4. [Event Definitions](#event-definitions)
 5. [Emission Strategy](#emission-strategy)
 6. [Sync Protocol](#sync-protocol)
-7. [Implementation Phases](#implementation-phases)
-8. [Testing Strategy](#testing-strategy)
+7. [Native Event Bus (Android, Issue #255)](#native-event-bus-android-issue-255)
+8. [Implementation Phases](#implementation-phases)
+9. [Testing Strategy](#testing-strategy)
 
 ---
 
@@ -650,6 +651,8 @@ handled directly in `lib.rs`), the watch (`wear:alarm:dismiss`, also handled dir
 in `lib.rs`), the upcoming-notification Dismiss action (TS-invoked), and the in-app
 Ringing screen's own Dismiss button (TS-invoked).
 
+> **Issue #255 Phase 4A/4C note:** since Phase 4A, the in-app Ringing screen's Dismiss button no longer maps to exactly one of the four sources above -- it now fires _two_ of them together. `Ringing.tsx`'s `handleDismiss` threads the real alarm id into `AlarmManagerService.stopRinging(alarmId)`, so the native `AlarmRingingService` Dismiss action path (`alarm-manager:dismiss-requested`) now also carries a real id and fires (closing a prior gap where in-app dismiss produced no native dismiss event at all), in addition to the pre-existing direct `AlarmService.dismiss(id)` TS-invoked call. This relies on `dismiss_alarm` being safe to call twice in a row for the same alarm id -- Phase 4C made that true: a per-alarm-id lock held across the whole read-decide-write-emit sequence, a time-based debounce (not derived from `next_trigger`, since that heuristic broke the legitimate "dismiss upcoming alarm" early-notification case), a monotonic clock, and a debounce marker recorded only after success so a failed attempt can't poison a legitimate retry. In-app **snooze** deliberately does _not_ thread an id through `stopRinging` for the same reason (it would misattribute a snooze as a dismiss), so it isn't affected by this either way.
+
 **Payload:**
 
 ```rust
@@ -1059,6 +1062,110 @@ pub async fn save_alarm_from_watch<R: Runtime>(
         .map_err(|e| e.to_string())
 }
 ```
+
+---
+
+## Native Event Bus (Android, Issue #255)
+
+> **Status: Implemented.** Unlike most of the rest of this document, which was written ahead of implementation and tracks a still-evolving plan, this section documents Android code that is actually built and merged (`plugins/native-bus/`, plus the Kotlin/Rust it wires into `alarm-manager` and `wear-sync`). It is the canonical write-up of the channel-bridge pattern flagged as a documentation gap by issue #209 and the `docs/audits/2026-07-07-repo-audit.md` "Ideas" list — `plugins/native-bus` is the tiny shared Kotlin helper that audit asked for, extracted out of the copy-pasted queue/drain logic that `WearSyncQueue` and `AlarmManagerPlugin`'s four legacy per-type queues had each grown independently.
+
+Every event on this page so far is a **Tauri event**: it only exists once Rust has emitted it, which means it only exists once the Rust runtime has booted. On Android that boot can lag a cold process start by up to ~20 seconds, which is exactly the gap that used to leave the watch silent when an alarm fired while the phone was in active use (issue #254): the phone's own `AlarmReceiver` ran instantly (it's a plain `BroadcastReceiver`), but nothing could tell the watch to ring until Rust caught up.
+
+`plugins/native-bus` exists to close gaps like that one: it lets native Android plugin code talk to _other native Android plugin code_, in-process, without waiting for Rust or the WebView. It has two independent pieces, both under `plugins/native-bus/android/src/main/java/ca/liminalhq/threshold/nativebus/`:
+
+- **`NativeEventBus`** — a process-wide singleton pub/sub bus for the _instant_ fan-out path (e.g. alarm-manager telling wear-sync "an alarm just fired" the moment it happens).
+- **`DurableEventQueue`** — a generic, reusable "persist until Rust is up, then drain" log that each plugin instantiates for itself, for the _durable, guaranteed-delivery_ path to Rust.
+
+These are deliberately separate mechanisms with different guarantees, not two APIs for the same thing: `NativeEventBus.publish()` is fire-and-forget best-effort (an event with no listener, or a listener that hasn't registered yet, is simply dropped), while `DurableEventQueue` is what actually gets an event to Rust reliably, however long Rust takes to boot. A single logical event (e.g. "alarm fired") typically travels down **both** planes at once — see [The fired -> watch-ring flow](#the-fired---watch-ring-flow) below.
+
+### NativeEventBus
+
+`NativeEventBus` (`NativeEventBus.kt`) is a Kotlin `object` — one instance per process, shared automatically by every plugin that imports it, with no explicit wiring needed beyond depending on the `native-bus` Gradle module. `subscribe(topic, listener)` registers a `(payload: String) -> String?` callback; `publish(topic, payload)` invokes every listener registered for that topic, in registration order, and returns the set of non-null tags they returned.
+
+**Threading contract** (from `NativeEventBus.kt`'s own KDoc, the authoritative source):
+
+- `publish()` runs **synchronously, on the calling thread**. It does not post to a background thread, call `goAsync()`, or spawn a coroutine of its own — a caller that needs any of that (most notably a `BroadcastReceiver`) must arrange it itself around the call to `publish()`.
+- This matters concretely for the bus's first real caller, `AlarmReceiver.onReceive()`: it runs on the main thread, and Android enforces a short ANR budget on broadcast delivery. A listener that blocks inside `publish()` — touching disk, calling into Play Services, any I/O at all — eats directly into that budget on every subscriber's behalf and can freeze or ANR the whole app.
+- Every listener registered on the bus must therefore: do only cheap, non-blocking work inline (inspect the payload, decide what to do); hand any blocking work off to its own single-threaded executor or coroutine scope and return immediately, _not_ block waiting for it; and treat a non-null return value ("a tag") as "accepted for async handling", never as "the work is complete" — `publish()` only reports which listeners took ownership of the event, nothing about whether that work has finished.
+- **Failure isolation:** each listener runs inside its own `try`/`catch`. A listener that throws is logged and skipped; it cannot block delivery to the other listeners on the same topic, and the exception never reaches `publish()`'s caller.
+
+### Topic table
+
+| Topic                             | Payload key for the alarm id | Published by                                                                                                                                   | Subscribed by                                                                                                                                                               |
+| --------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `alarm-manager:native-fired`      | `id`                         | `AlarmReceiver` (alarm-manager), always, the instant a live alarm fires                                                                        | wear-sync's `NativeFiredListener` (rings the watch); also durably queued and Channel-dispatched to Rust's `alarm-manager:native-fired` Tauri listener                       |
+| `alarm-manager:dismiss-requested` | `id`                         | `AlarmManagerPlugin.notifyAlarmDismissed` (alarm-manager), on any dismiss origin that reaches `AlarmRingingService`'s `ACTION_DISMISS` handler | wear-sync's `NativeStopListener` (stops the watch's ring); also durably queued and Channel-dispatched to Rust                                                               |
+| `alarm-manager:snooze-requested`  | `id`                         | `AlarmManagerPlugin.notifySnoozeRequested` (alarm-manager), on the notification's Snooze action                                                | wear-sync's `NativeStopListener` (stops the watch's ring); also durably queued and Channel-dispatched to Rust                                                               |
+| `alarm-manager:import-requested`  | `id`                         | _(not published on `NativeEventBus` at all)_                                                                                                   | n/a — only durably queued and Channel-dispatched to Rust; there is no native Kotlin listener for it, so alarm-manager never calls `NativeEventBus.publish()` for this topic |
+| `wear:alarm:dismiss`              | **`alarmId`**                | wear-sync's `WearMessageService`, **only on the offline path** (Rust/the plugin isn't loaded yet)                                              | alarm-manager's `WatchStopListener` (stops the phone's local ringing service)                                                                                               |
+| `wear:alarm:snooze`               | **`alarmId`**                | wear-sync's `WearMessageService`, **only on the offline path**                                                                                 | alarm-manager's `WatchStopListener`                                                                                                                                         |
+
+**Payload key inconsistency (deliberate, disclosed — this already tripped up a reviewer during implementation):** `wear:alarm:dismiss`/`wear:alarm:snooze` key the alarm id as `"alarmId"`, while every other topic in this table keys it as `"id"`. This isn't an oversight to be "fixed" — the two topic pairs come from different wire formats. alarm-manager's topics carry a freshly built `{"id": ...}` JSON object (`AlarmManagerPlugin.notifyAlarmDismissed`/`notifySnoozeRequested`). wear-sync's two topics instead republish the watch's own raw message payload **byte-for-byte, unparsed** — the exact bytes `WearDataLayerClient.sendDismissAlarm`/`sendSnoozeAlarm` sent from the watch, which predates issue #255 and uses `"alarmId"`. Do not assume the two pairs share a payload shape just because they're both dismiss/snooze signals on the same bus — always check which pair you're subscribing to.
+
+Also note that `wear:alarm:dismiss`/`wear:alarm:snooze` are published on `NativeEventBus` **only when the phone-side plugin/Rust hasn't booted yet** (`WearMessageService`'s offline branch, `enqueueOfflineWrite`). When the plugin is already loaded, the message goes straight through the normal Tauri event pipeline (`plugin.onWatchMessage` -> Channel -> Rust emits `wear:alarm:dismiss`/`snooze` itself) with no `NativeEventBus` publish at all — there's no need for the native fast path once Rust is already up and can stop the ringing service itself.
+
+### DurableEventQueue
+
+`DurableEventQueue` (`DurableEventQueue.kt`) is **not** a singleton. Each plugin that needs durable "persist until Rust drains it" delivery instantiates its own `DurableEventQueue(store, prefsKey)`, with a `prefsKey` distinct from every other plugin's -- alarm-manager's `eventQueue(context)` and wear-sync's `WearSyncEventQueue` are two separate instances over two separate `SharedPreferences` keys, both built on the same generic class. This mirrors `WearSyncQueue`'s original one-log-per-plugin shape rather than `AlarmManagerPlugin`'s older pattern of one hand-rolled queue per event _type_ — a plugin with several event kinds (alarm-manager has fired/snooze/dismiss/import) needs only distinct `topic` strings on one `DurableEventQueue` instance, not one queue class per kind.
+
+Each persisted entry is a schema-versioned JSON `Envelope`: `{v, topic, payload, eventId, publishedAt, handledNatively}`. `enqueue()` appends and returns a fresh UUID `eventId`; `drainAll(pipelineReady)` returns every entry across every topic that instance has ever enqueued, sorted by `publishedAt`, or an empty list if the pipeline isn't ready yet; `commit` removes only the entries a caller actually delivered successfully, leaving the rest for a later retry; `clear()` drops everything unconditionally. `drainAll` tolerates individual corrupt JSON entries and unrecognised schema versions by skipping just that entry rather than failing the whole drain — persisted entries have survived across multiple days on real devices, so this durability matters in practice.
+
+**Both plugins migrated onto this class as a one-way step.** alarm-manager's four legacy, independently hand-rolled queues (fired/snooze/dismiss/import) were migrated on first launch into one `DurableEventQueue` log; wear-sync's `WearSyncEventQueue` (the offline watch-message queue) was migrated the same way. Both migrations run once, automatically, the first time the new code loads on a device that has any legacy queue entries — there is no code path back to the old per-type/hand-rolled formats, so an app **downgrade** to a build predating this change would no longer see any events left behind in the new log format (see the `RELEASE_NOTES.md` "Unreleased" note).
+
+### The ContentProvider registration pattern
+
+Both directions rely on their `NativeEventBus` listeners being registered **before any other Android component can run**, including on a cold multi-plugin process start — a listener registered even slightly late would miss the very broadcast it exists to react to. `ContentProvider.onCreate()` is documented to always run before any `Activity`/`Service`/`BroadcastReceiver` callback, which makes it the standard early-init trick (the same one Jetpack, WorkManager, and Firebase rely on), and this codebase uses a dedicated, otherwise-inert `ContentProvider` per plugin purely for that timing guarantee:
+
+- **wear-sync's `WearRingInitProvider`** (issue #255 Phase 3B) registers `NativeFiredListener` and `NativeStopListener`, and warms `NativeFanOutPrefs`' in-memory toggle cache first so the listener's synchronous toggle check never blocks on disk.
+- **alarm-manager's `WatchStopInitProvider`** (issue #255 Phase 4A) registers `WatchStopListener`, the symmetric watch-originated stop.
+
+Both providers declare `android:exported="false"` (no real data, no external caller) and ship in every build — they are not debug-gated, since a cold-process fired event or a cold-process dismiss/snooze needs this path regardless of build type. Both are declared as `<provider>` elements directly in their own plugin's `AndroidManifest.xml` (`plugins/wear-sync/android/src/main/AndroidManifest.xml`, `plugins/alarm-manager/android/src/main/AndroidManifest.xml`) rather than injected via `build.rs` — see the Gotchas entry in the root `CLAUDE.md` and [plugin-manifest-quickstart.md](../plugins/plugin-manifest-quickstart.md), which already says to keep `<service>`/`<receiver>`/`<activity>` elements in the library manifest itself; `<provider>` follows the same rule.
+
+### The `handled_natively` tag and the `"watch-ring"` case
+
+`NativeEventBus.publish()`'s return value (the set of tags listeners reported) is meant to flow all the way to Rust so a Rust-side handler can know a side effect already happened natively and skip redoing it. Concretely, for the fired path:
+
+1. wear-sync's `NativeFiredListener.handle()` returns the tag `"watch-ring"` once it has _initiated_ (not confirmed-delivered) the native watch ring.
+2. That tag is meant to be threaded into the `DurableEventQueue.Envelope.handledNatively` set alarm-manager persists for the same fired event, then into `NativeAlarmFiredPayload.handled_natively` (`plugins/alarm-manager/src/models.rs`, the plugin-local Rust struct that deserializes the raw Channel payload), then finally into `AlarmFired.handled_natively` (`apps/threshold/src-tauri/src/alarm/events.rs`), which is the struct actually broadcast app-wide as `alarm:fired`.
+3. wear-sync's own Rust `alarm:fired` listener (`plugins/wear-sync/src/lib.rs`) reads that field to decide whether to skip `send_alarm_ring`: `should_skip_native_watch_ring` returns `true` (skip) when `handled_natively` contains `"watch-ring"`, **or** when the event is stale (`actual_fired_at` older than `STALENESS_WINDOW_MS` = 90 000 ms, mirrored independently in Kotlin as `NativeFiredListener.STALENESS_WINDOW_MS`).
+
+**In practice, step 2 never actually carries a populated tag.** `AlarmReceiver`'s `recordAndPublishFiredEvent` persists the fired event (calling `AlarmManagerPlugin.notifyAlarmFired`, which durably enqueues it and dispatches it toward Rust) **before** publishing the same payload on `NativeEventBus`:
+
+```kotlin
+persist(firedPayload)                    // durable enqueue + Channel dispatch toward Rust
+return publishAlarmFiredToBus(firedPayload)  // NativeEventBus.publish — returns the tags
+```
+
+This ordering is deliberate, not an oversight: durable-persist-first means a process death between the two steps still leaves Rust with a record that the alarm fired (degraded to "no fast native ring", today's pre-Phase-3 behaviour), rather than losing the fire entirely. The unavoidable consequence is that `persist` runs _before_ this function knows what `NativeEventBus.publish()` is even going to return, so the payload handed to `persist` -- and therefore everything downstream of it, including `AlarmFired.handled_natively` as Rust ultimately sees it — always carries an **empty** `handledNatively`. The `"watch-ring"` tag genuinely exists and is exercised by unit tests (`should_skip_native_watch_ring`'s Kotlin and Rust suites both cover the tag-present case directly), but on the one call path that actually runs in production today, it is structurally never populated. `send_alarm_ring`'s real protection against a redundant ring today comes from the staleness check alone, backstopped by the watch's own ring de-duplication (`WearRingingService` ignores a duplicate ring message for an alarm it's already ringing — see [wear-sync.md](../plugins/wear-sync.md)) rather than from the tag. This is a known, accepted limitation of prioritising durability over the best-effort dedup hint on this synchronous path, not a bug to fix quietly.
+
+### EventDedup: same-process redelivery only
+
+`EventDedup` (`apps/threshold/src-tauri/src/event_dedup.rs`) is a small, shared, in-memory last-32-`eventId` ring buffer (`app.manage()`d once in `lib.rs`'s `setup`) that every one of the six native-originated Tauri listeners checks before acting: `wear:alarm:dismiss`, `wear:alarm:snooze`, `alarm-manager:native-fired`, `alarm-manager:dismiss-requested`, `alarm-manager:snooze-requested`, and `alarm-manager:import-requested`. `skip_duplicate_native_event` (also in `lib.rs`) is the one shared call site every listener uses.
+
+**What it catches:** redelivery of the same `eventId` to the _same running process_ — e.g. two overlapping drain calls racing each other. Without it, a redelivered event re-runs whatever the listener does app-wide (a second dismiss/snooze toast, and for `wear:alarm:snooze` specifically, a second `snoozed_until = now + minutes` computation that silently re-anchors the alarm to a later time — not merely cosmetic).
+
+**What it does NOT catch — read this precisely, it is a real, limited scope, not a general crash-safe dedup:** the buffer lives only in memory and starts empty on every launch. A crash in the narrow window between a successful `DurableEventQueue` drain delivery and that drain's trailing `commit()` call can redeliver the same event on the _next_ launch — but that crash necessarily takes down the very process holding the buffer, so the redelivered event lands in a brand-new, empty `EventDedup` that has never seen its `eventId`. It is structurally unable to catch its own crash-and-restart case. Events with no `eventId` at all (payloads predating this change) always report as "not a duplicate" — there is nothing to key a check on. Persisting this state (e.g. a small SQLite table via `tauri-plugin-sql`, the way `AlarmCoordinator` already owns durable state) so it can actually catch the crash-and-restart case is a deliberate, tracked follow-up — see the issue filed alongside this documentation pass.
+
+### The fired -> watch-ring flow
+
+This is the concrete shape of the two-delivery-planes idea above, and the fix for issue #254:
+
+1. `AlarmReceiver.onReceive()` fires (`goAsync()`'d onto a single background executor so the main thread is never blocked).
+2. It checks `AlarmUtils.isAlarmLive` — a cancelled/deleted alarm never reaches step 3 at all, so the watch can never ring for an alarm this receiver is about to disown.
+3. `recordAndPublishFiredEvent` builds the shared `{id, actualFiredAt}` payload once, calls `persist` (durably enqueues it via `AlarmManagerPlugin.notifyAlarmFired`, and dispatches toward Rust's Channel if it's already registered), **then** publishes the same payload on `NativeEventBus`'s `alarm-manager:native-fired` topic.
+4. If `WearRingInitProvider.onCreate()` has already run (guaranteed on any process where wear-sync is installed, per the ContentProvider pattern above), `NativeFiredListener` is already registered and receives the publish synchronously, in the same call. It checks the developer fan-out toggle and staleness, then hands the actual Play Services send off to its own coroutine scope and returns the `"watch-ring"` tag.
+5. Independently, whenever Rust does boot (already running, or catching up from the durable queue), the app crate's `alarm-manager:native-fired` listener (`lib.rs`) deserialises the payload, checks `EventDedup`, and calls `AlarmCoordinator::report_alarm_fired`, which emits the canonical `alarm:fired` event app-wide.
+6. wear-sync's own `alarm:fired` listener evaluates `should_skip_native_watch_ring` (staleness only, per the tag limitation above) and, if not stale, calls `send_alarm_ring` — which itself is a no-op if no watch node is currently connected (see the Gotchas entry in the root `CLAUDE.md`).
+
+The net effect is that a cold-process fire rings the watch within the native path's latency (no Rust boot on the critical path), while Rust's own record of the fire — and its own, independent ring attempt — still lands correctly once it catches up, with the watch's own ring de-duplication absorbing the redundant message.
+
+### The dismiss/snooze -> stop flow (both directions)
+
+Issue #255 Phase 4 makes this symmetric with the fired path, for both cold-start cases:
+
+**Phone-cold (a notification Dismiss/Snooze tapped before Rust has booted):** `AlarmRingingService`'s notification actions call `AlarmManagerPlugin.notifyAlarmDismissed`/`notifySnoozeRequested`, which durably enqueue toward Rust _and_ publish on `NativeEventBus`'s `alarm-manager:dismiss-requested`/`snooze-requested` topics. wear-sync's `NativeStopListener` (registered by `WearRingInitProvider`, so live before `AlarmRingingService` can post through the channel) receives the publish and sends the corresponding stop message to every connected watch node directly via Play Services — no Rust involvement needed for the physical "stop the watch's ring" side effect. Rust's own DB-level dismiss/re-arm still happens once it catches up via the durable queue, exactly as for the fired path.
+
+**Watch-cold (the watch dismisses/snoozes while the phone's Rust hasn't booted):** `WearMessageService`'s offline branch durably enqueues the watch's raw message _and_ publishes it, byte-for-byte, on `NativeEventBus`'s `wear:alarm:dismiss`/`wear:alarm:snooze` topics (the `"alarmId"`-keyed payloads noted in the topic table above). alarm-manager's `WatchStopListener` (registered by `WatchStopInitProvider`) receives the publish and, if the target alarm id matches whatever is currently ringing locally (`AlarmRingingService.currentlyRingingAlarmId`), calls `context.stopService(...)` directly -- again, the physical "silence the phone" side effect happens with no dependency on Rust. Unlike the fired path, neither `NativeStopListener` nor `WatchStopListener` claims a tag or applies a staleness gate: per issue #255's design, a double-delivered _stop_ signal is benign (the receiving side already safely no-ops a dismiss/snooze for an alarm it isn't actively ringing), so there is no failure mode symmetric to "ring the watch twice" that a tag would need to guard against.
 
 ---
 

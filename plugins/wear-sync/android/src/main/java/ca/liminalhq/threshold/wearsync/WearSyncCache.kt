@@ -16,6 +16,12 @@ private const val KEY_SNOOZE_LENGTH = "cached_snooze_length_minutes"
 private const val KEY_IS_24_HOUR = "cached_is_24_hour"
 private const val KEY_IS_24_HOUR_KNOWN = "cached_is_24_hour_known"
 
+// The canonical "no snooze length known yet" fallback -- matches AlarmSnoozeRequest's/
+// AlarmRingRequest's own default in WearSyncPlugin.kt and NativeStopListener's fallback (issue
+// #255 Phase 4B code review), all three of which reference this constant rather than
+// hand-copying the literal, so there's exactly one place to change it.
+internal const val DEFAULT_SNOOZE_LENGTH_MINUTES = 10
+
 /**
  * Persistent cache of the last-published alarm sync payload.
  *
@@ -41,7 +47,7 @@ object WearSyncCache {
         context: Context,
         alarmsJson: String,
         revision: Long,
-        snoozeLengthMinutes: Int = 10,
+        snoozeLengthMinutes: Int = DEFAULT_SNOOZE_LENGTH_MINUTES,
         is24Hour: Boolean = false,
         is24HourKnown: Boolean = false,
     ) {
@@ -71,7 +77,7 @@ object WearSyncCache {
             return null
         }
         val revision = prefs.getLong(KEY_REVISION, 0)
-        val snoozeLength = prefs.getInt(KEY_SNOOZE_LENGTH, 10)
+        val snoozeLength = prefs.getInt(KEY_SNOOZE_LENGTH, DEFAULT_SNOOZE_LENGTH_MINUTES)
         val is24Hour = prefs.getBoolean(KEY_IS_24_HOUR, false)
         val is24HourKnown = prefs.getBoolean(KEY_IS_24_HOUR_KNOWN, false)
         return Quintuple(json, revision, snoozeLength, is24Hour, is24HourKnown)

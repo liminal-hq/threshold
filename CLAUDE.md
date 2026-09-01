@@ -130,3 +130,34 @@ the full `COMMANDS`-scope rule and the Kotlin `@Command` naming convention (came
   `packages/core/src/types.ts` (ts-rs doesn't generate runtime TS enums, only
   type-only unions, and this codebase relies on `AlarmMode` as a real enum object) —
   keep its variant names in sync with Rust's by hand.
+- `<service>`/`<receiver>`/`<activity>`/`<provider>` elements go directly in a plugin's own
+  `plugins/<name>/android/src/main/AndroidManifest.xml`, per
+  `docs/plugins/plugin-manifest-quickstart.md` — only `<uses-permission>` tags are injected
+  via `build.rs`'s `update_android_manifest()`. The `WearRingInitProvider`/
+  `WatchStopInitProvider` `ContentProvider`s (see
+  `docs/architecture/event-architecture.md`'s Native Event Bus section) are declared this
+  way, not build.rs-injected.
+- `plugins/native-bus` must stay a **direct** dependency of `apps/threshold/src-tauri/Cargo.toml`,
+  not just of the plugins that use it (`alarm-manager`, `wear-sync`). Cargo's
+  `links`/`DEP_*_ANDROID_LIBRARY_PATH` metadata (which `tauri-build` reads to auto-wire a
+  plugin's `android/` directory into the generated Gradle project) only propagates to direct
+  dependents — a transitive dependency through another plugin's Cargo.toml doesn't get
+  native-bus's Kotlin sources into the generated Android project at all.
+- `alarm-manager` and `wear-sync` both migrated their old hand-rolled native event queues
+  onto `plugins/native-bus`'s `DurableEventQueue` — a one-way, automatic migration on first
+  launch. There is no code path back to the old per-type/hand-rolled formats, so downgrading
+  a device to a build predating this change would leave any queued-but-undrained events
+  behind (see `RELEASE_NOTES.md`'s "Unreleased" note).
+- wear-sync's `sendAlarmRing` and the shared `sendWatchMessageToConnectedNodes` helper (used
+  by `NativeFiredListener`/`NativeStopListener` too) silently resolve without sending or
+  queuing anything if no watch node is currently connected — a distinct gap from "Rust
+  hasn't booted yet", and not fixed by any of the native-bus work.
+- The native event bus (`plugins/native-bus`) is Android-only. Its envelope/topic contract
+  is kept platform-neutral by design, but there is no iOS Kotlin/Swift implementation of
+  either `NativeEventBus` or `DurableEventQueue` — iOS alarms/companion sync more broadly
+  aren't implemented yet either.
+- `wear:alarm:dismiss`/`wear:alarm:snooze` key the alarm id as `"alarmId"` on
+  `NativeEventBus` (they republish the watch's own raw wire payload byte-for-byte); every
+  other native-bus topic (`alarm-manager:native-fired`, `dismiss-requested`,
+  `snooze-requested`) keys it as `"id"`. Don't assume the two pairs share a payload shape —
+  this has already caused a code-review mix-up once.

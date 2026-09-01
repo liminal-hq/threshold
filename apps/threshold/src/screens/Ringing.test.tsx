@@ -175,7 +175,8 @@ describe('Ringing Screen Logic', () => {
 
 		// Assert
 		await waitFor(() => {
-			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+			// Threads the real alarm id through (issue #255 Phase 4A) so the native dismiss event carries one, closing the "in-app dismiss produces no native event" gap.
+			expect(alarmManagerService.stopRinging).toHaveBeenCalledWith(1);
 			expect(mockWindow.close).toHaveBeenCalled();
 		});
 		expect(mockWindow.minimize).not.toHaveBeenCalled();
@@ -194,7 +195,7 @@ describe('Ringing Screen Logic', () => {
 
 		// Assert
 		await waitFor(() => {
-			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+			expect(alarmManagerService.stopRinging).toHaveBeenCalledWith(1);
 			expect(appManagementService.minimizeApp).toHaveBeenCalled();
 		});
 		expect(mockWindow.close).not.toHaveBeenCalled();
@@ -223,10 +224,27 @@ describe('Ringing Screen Logic', () => {
 
 		// Assert
 		await waitFor(() => {
-			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+			// No id for the Test Alarm sentinel -- see the dedicated test below for why.
+			expect(alarmManagerService.stopRinging).toHaveBeenCalledWith(undefined);
 			expect(historySpy).toHaveBeenCalled();
 		});
 		expect(mockWindow.minimize).not.toHaveBeenCalled();
+	});
+
+	it('does not thread the Test Alarm sentinel id into the native stopRinging publish', async () => {
+		// The Test Alarm (999) used for in-app sound preview isn't a real DB-backed alarm -- publishing a real native dismiss event for it would durably enqueue and drain an alarm-manager:dismiss-requested event Rust's dismiss listener can never resolve (get_by_id(999) always fails), logging noise on every sound preview. Sound preview must stay a pure local stop, matching its behaviour before alarm ids were threaded through stopRinging (issue #255 Phase 4A).
+		const router = await import('@tanstack/react-router');
+		(router.useParams as any).mockReturnValue({ id: String(SPECIAL_ALARM_IDS.TEST_ALARM) });
+
+		renderWithTheme(<Ringing />);
+
+		const stopBtn = await screen.findByRole('button', { name: /stop alarm/i });
+		fireEvent.click(stopBtn);
+
+		await waitFor(() => {
+			expect(alarmManagerService.stopRinging).toHaveBeenCalled();
+		});
+		expect(alarmManagerService.stopRinging).not.toHaveBeenCalledWith(SPECIAL_ALARM_IDS.TEST_ALARM);
 	});
 
 	it('should snooze and close window on desktop', async () => {

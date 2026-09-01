@@ -23,13 +23,267 @@ import app.tauri.plugin.Channel
 import app.tauri.plugin.Plugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
-import app.tauri.plugin.JSArray
 import android.util.Log
 import androidx.activity.result.ActivityResult
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
+import ca.liminalhq.threshold.nativebus.DurableEventQueue
+import ca.liminalhq.threshold.nativebus.KeyValueStore
+import ca.liminalhq.threshold.nativebus.NativeEventBus
+import ca.liminalhq.threshold.nativebus.SharedPreferencesKeyValueStore
 import org.json.JSONArray
 import org.json.JSONObject
+
+private const val TAG = "AlarmManagerPlugin"
+private const val CALLBACK_PREFS = "AlarmManagerCallbacks"
+
+// Topics are the existing Tauri event names these four channels ultimately emit as (see plugins/alarm-manager/src/mobile.rs) -- reusing them as DurableEventQueue topics means the unified log's contents are self-describing without inventing a second naming scheme. `internal` (not `private`) so this file's JUnit tests can reference the exact same strings rather than duplicating them.
+internal const val TOPIC_FIRED = "alarm-manager:native-fired"
+internal const val TOPIC_SNOOZE = "alarm-manager:snooze-requested"
+internal const val TOPIC_DISMISS = "alarm-manager:dismiss-requested"
+internal const val TOPIC_IMPORT = "alarm-manager:import-requested"
+
+// The single unified log, replacing the four legacy keys below. Same prefs file as the legacy queues (CALLBACK_PREFS) -- only the key, and the fact there's now just one of them, changes.
+internal const val EVENT_LOG_KEY = "event_log"
+
+// Pre-migration queue keys. Only ever read by migrateLegacyQueues(), which removes them once their contents have been folded into EVENT_LOG_KEY -- see that function for the one-time migration this repo's release notes call out.
+internal const val LEGACY_KEY_PENDING_ALARM_EVENTS = "pending_alarm_events"
+internal const val LEGACY_KEY_PENDING_SNOOZE_EVENTS = "pending_snooze_events"
+internal const val LEGACY_KEY_PENDING_DISMISS_EVENTS = "pending_dismiss_events"
+internal const val LEGACY_KEY_PENDING_IMPORT_EVENTS = "pending_import_events"
+
+/**
+ * One-time migration off the four legacy per-type queues (pre-[DurableEventQueue]) onto the unified event log under [EVENT_LOG_KEY] in [store]. Returns the number of entries migrated.
+ *
+ * Production devices have been observed carrying pending entries across multiple days, so this folds any leftovers into the new log -- preserving each entry's own data -- rather than silently dropping them. This is one-way: once the legacy keys are removed here, a downgrade to a build that only knows the old queues would no longer see events left in the new log (see RELEASE_NOTES.md).
+ *
+ * [DurableEventQueue.enqueue] always stamps `publishedAt` from the wall clock, which isn't what we want here -- migrated entries should drain in a sensible relative order (fired events by their own `actualFiredAt`; the others, which never recorded a timestamp, by their original per-queue array position) rather than all colliding on the single instant migration happened to run. Since the public API has no seam for supplying an explicit `publishedAt`, this writes envelopes directly into the log's JSON array using the same "v"/"topic"/"payload"/"eventId"/"publishedAt"/"handledNatively" schema [DurableEventQueue] itself reads (see its KDoc and `DurableEventQueueTest`'s `writeRawEnvelopes` helper for the same technique) -- a deliberate, documented duplication of that private schema, acceptable because it's exercised by this file's own migration tests.
+ *
+ * A standalone function operating purely against [KeyValueStore] (not SharedPreferences/Context directly) so it's unit-testable against an in-memory fake -- mirrors `resolveActiveDays` in `SetAlarmActivity.kt`.
+ */
+internal fun migrateLegacyQueues(store: KeyValueStore): Int {
+    val legacyKeys = listOf(
+        LEGACY_KEY_PENDING_ALARM_EVENTS,
+        LEGACY_KEY_PENDING_SNOOZE_EVENTS,
+        LEGACY_KEY_PENDING_DISMISS_EVENTS,
+        LEGACY_KEY_PENDING_IMPORT_EVENTS,
+    )
+    // The pre-migration drain code these queues replace never removed a legacy key once drained -- it always rewrote the queue back to "[]" instead. So on essentially any device that's ever used alarms, all four legacy keys already exist by the time this runs; a plain non-null check would make this fast path never actually trigger. Parsing each one and checking for a genuinely non-empty array is what actually distinguishes "has real pending data" from "exists but was already drained to empty".
+    if (legacyKeys.none { hasPendingLegacyEntries(store.get(it)) }) return 0
+
+    val envelopes = JSONArray()
+    try {
+        val existing = JSONArray(store.get(EVENT_LOG_KEY) ?: "[]")
+        for (i in 0 until existing.length()) envelopes.put(existing.get(i))
+    } catch (e: Exception) {
+        Log.w(TAG, "Existing event log under '$EVENT_LOG_KEY' was corrupt, discarding it before migration", e)
+    }
+
+    // Fallback publishedAt for legacy entries that never recorded their own timestamp (snooze/dismiss/import): now, offset by each entry's index within its own legacy array. The entries in each legacy array are already in chronological (append) order, so the offset preserves that relative order without every migrated entry colliding on the exact same millisecond.
+    val fallbackBase = System.currentTimeMillis()
+
+    var migratedCount = 0
+    migratedCount += migrateLegacyArray(store, LEGACY_KEY_PENDING_ALARM_EVENTS, TOPIC_FIRED, envelopes) { item, index ->
+        val payload = JSONObject().apply {
+            put("id", item.optInt("id", -1))
+            put("actualFiredAt", item.optLong("actualFiredAt", fallbackBase + index))
+        }
+        val publishedAt = if (item.has("actualFiredAt")) {
+            item.optLong("actualFiredAt", fallbackBase + index)
+        } else {
+            fallbackBase + index
+        }
+        payload to publishedAt
+    }
+    migratedCount += migrateLegacyArray(store, LEGACY_KEY_PENDING_SNOOZE_EVENTS, TOPIC_SNOOZE, envelopes) { item, index ->
+        JSONObject().apply { put("id", item.optInt("id", -1)) } to fallbackBase + index
+    }
+    migratedCount += migrateLegacyArray(store, LEGACY_KEY_PENDING_DISMISS_EVENTS, TOPIC_DISMISS, envelopes) { item, index ->
+        JSONObject().apply { put("id", item.optInt("id", -1)) } to fallbackBase + index
+    }
+    migratedCount += migrateLegacyArray(store, LEGACY_KEY_PENDING_IMPORT_EVENTS, TOPIC_IMPORT, envelopes) { item, index ->
+        val payload = JSONObject().apply {
+            put("id", item.optInt("id", -1))
+            put("hour", item.optInt("hour", 0))
+            put("minute", item.optInt("minute", 0))
+            put("label", item.optString("label", ""))
+            put("activeDays", item.optJSONArray("activeDays") ?: JSONArray())
+            put("triggerAt", item.optLong("triggerAt", 0))
+        }
+        payload to fallbackBase + index
+    }
+
+    // Written as one atomic batch rather than a separate set() + four remove() calls: if the process were killed between them, the next launch would see the new log already holding these entries but the legacy keys still present with their original data, re-trigger migration, and duplicate every entry in the log (each one reported to Rust twice -- e.g. the same alarm fired/dismissed twice). Batching makes that intermediate state unobservable -- either both the log write and all four removals land, or neither does.
+    val sets = if (migratedCount > 0) mapOf(EVENT_LOG_KEY to envelopes.toString()) else emptyMap()
+    store.batch(sets = sets, removes = legacyKeys.toSet())
+    return migratedCount
+}
+
+/**
+ * Whether [raw] (a legacy queue's raw stored value) holds at least one entry worth migrating. `null` (never set) and a parsed-empty array (`"[]"`, or equivalent with whitespace) both mean "nothing to migrate" -- the latter matters because the pre-migration drain code always rewrote a queue back to `"[]"` after draining it rather than removing the key, so a non-null check alone can't tell "never had anything" apart from "already drained". Malformed JSON is treated as "has something" so the real per-key parse in [migrateLegacyArray] (which already tolerates and logs corrupt JSON) is what handles it, rather than this fast-path guard silently skipping a corrupt-but-non-empty legacy queue.
+ */
+private fun hasPendingLegacyEntries(raw: String?): Boolean {
+    if (raw.isNullOrEmpty()) return false
+    return try {
+        JSONArray(raw).length() > 0
+    } catch (e: Exception) {
+        true
+    }
+}
+
+/**
+ * Migrates one legacy queue array (under [legacyKey] in [store]) into [outEnvelopes], skipping entries with no valid `id`. [toPayloadAndPublishedAt] receives each legacy item plus its index within its own legacy array and returns the new-schema payload object and the `publishedAt` to stamp it with. Returns the number of entries migrated.
+ */
+private fun migrateLegacyArray(
+    store: KeyValueStore,
+    legacyKey: String,
+    topic: String,
+    outEnvelopes: JSONArray,
+    toPayloadAndPublishedAt: (item: JSONObject, index: Int) -> Pair<JSONObject, Long>,
+): Int {
+    val raw = store.get(legacyKey) ?: return 0
+    val array = try {
+        JSONArray(raw)
+    } catch (e: Exception) {
+        Log.w(TAG, "Legacy queue under '$legacyKey' was corrupt, dropping it during migration", e)
+        return 0
+    }
+
+    var count = 0
+    for (i in 0 until array.length()) {
+        val item = array.optJSONObject(i) ?: continue
+        val id = item.optInt("id", -1)
+        if (id <= 0) continue
+
+        val (payload, publishedAt) = toPayloadAndPublishedAt(item, i)
+        outEnvelopes.put(
+            JSONObject().apply {
+                put("v", DurableEventQueue.SCHEMA_VERSION)
+                put("topic", topic)
+                put("payload", payload.toString())
+                put("eventId", java.util.UUID.randomUUID().toString())
+                put("publishedAt", publishedAt)
+                put("handledNatively", JSONArray())
+            },
+        )
+        count++
+    }
+    return count
+}
+
+/**
+ * Drains every entry in [queue] (across every topic, in chronological [DurableEventQueue.Envelope.publishedAt] order) and hands each one to [dispatch], which attempts delivery for the given topic/payload and returns whether it succeeded. Each successfully-dispatched entry is committed (removed) from [queue] **immediately**, one at a time, rather than accumulated into a batch and committed once after the whole loop finishes -- see below for why. Anything [dispatch] returns `false` for stays queued for a later retry, mirroring the pre-migration per-type drain/replay behaviour. Returns the number of entries actually dispatched.
+ *
+ * A standalone function (not a method) so it's unit-testable against a real [DurableEventQueue]/in-memory [KeyValueStore] pair, with a fake [dispatch], and no Android framework (Context, Channel) involved at all -- mirrors [migrateLegacyQueues] above.
+ *
+ * Two consequences of this design are intentional, not oversights, per issue #255's Unified design (decision 7: every event flows through the log; drain-now replaces the old two-path split; total order is preserved by draining everything, across all four topics, in chronological order on every call):
+ * - A process kill mid-drain -- after [dispatch] has returned `true` for some entry but before that entry's own [DurableEventQueue.commit] call runs -- can still redeliver *that one* entry on the next launch. Committing per-item (rather than batching every commit until the loop finishes) narrows this window from "every entry dispatched so far in this drain" down to "at most the single entry in flight at the moment of the crash" -- per Phase 3C's review, the in-memory `EventDedup` buffer Rust maintains for exactly this case is itself wiped by the same crash, so it cannot help across a restart; shrinking the window on this side is the most effective mitigation available without persisted cross-restart dedup state (tracked separately, not solved here).
+ * - [enqueueAndDrain] below drains the *entire* cross-topic backlog synchronously on every single event, not just the topic that was just enqueued -- if a large backlog has built up, this could run long enough to threaten `AlarmReceiver.onReceive()`'s ANR budget. Issue #255's Phase 3A closes this by wrapping `onReceive()` in `goAsync()`.
+ */
+internal fun drainAndDispatch(queue: DurableEventQueue, dispatch: (topic: String, payload: String) -> Boolean): Int {
+    val drained = queue.drainAll(pipelineReady = true)
+    if (drained.isEmpty()) return 0
+
+    var handledCount = 0
+    for (envelope in drained) {
+        if (dispatch(envelope.topic, enrichPayloadForDispatch(envelope))) {
+            queue.commit(setOf(envelope.eventId))
+            handledCount++
+        }
+    }
+    return handledCount
+}
+
+/**
+ * Returns [envelope]'s payload as-is, except for [TOPIC_FIRED] where it's enriched with
+ * `eventId` before dispatch -- per docs/architecture/event-architecture.md's Native Event Bus section, this is the
+ * one field Rust's `NativeAlarmFiredPayload` needs that genuinely can't be known until
+ * [DurableEventQueue.enqueue] returns it, so it can't be baked into the payload upfront the way
+ * `handledNatively` is (see [notifyAlarmFired], which writes `handledNatively` directly into the
+ * payload it builds -- by the time [enrichPayloadForDispatch] runs, it's already sitting in
+ * [envelope]'s own payload JSON, so there's nothing left for this function to add for it).
+ * Carries the envelope's own stable ID through to the `alarm-manager:native-fired` Tauri event,
+ * whether this is the immediate post-enqueue drain or a later retry of the same queued entry.
+ * Only [TOPIC_FIRED] gains this field -- the contract only specifies it for the fired event, and
+ * the other three topics' Rust payload structs don't declare it.
+ *
+ * [envelope.payload][DurableEventQueue.Envelope.payload] is always caller-constructed JSON (see
+ * [notifyAlarmFired]), so re-parsing it here should never fail in practice -- the `catch` exists
+ * only to fail safe (dispatch the entry unenriched rather than drop it) if it somehow does.
+ */
+internal fun enrichPayloadForDispatch(envelope: DurableEventQueue.Envelope): String {
+    if (envelope.topic != TOPIC_FIRED) return envelope.payload
+    return try {
+        JSONObject(envelope.payload).apply {
+            put("eventId", envelope.eventId)
+        }.toString()
+    } catch (e: Exception) {
+        Log.w(TAG, "Failed to enrich fired-event payload for eventId ${envelope.eventId}, dispatching unenriched", e)
+        envelope.payload
+    }
+}
+
+/**
+ * Publishes [payload] on [NativeEventBus]'s [topic] and returns the tags any in-process listeners reported handling it with. Factored out of [notifyAlarmDismissed]/[notifySnoozeRequested] (mirrors `AlarmReceiver.publishAlarmFiredToBus`) purely so it's unit-testable without a real [Context] -- unlike [enqueueAndDrain], the durable side of the same call, which needs SharedPreferences.
+ */
+internal fun publishToBus(topic: String, payload: JSONObject): Set<String> =
+    NativeEventBus.publish(topic, payload.toString())
+
+/**
+ * Resolves the alarm id [AlarmManagerPlugin.stopRinging] should stamp onto the `ACTION_DISMISS` intent it sends [AlarmRingingService], from the id the frontend supplied explicitly (see `StopRingingRequest`'s KDoc on the Rust side). Returns `null` (not stampable as an intent extra) for a missing or non-positive id.
+ *
+ * Deliberately does **not** fall back to [AlarmRingingService.currentlyRingingAlarmId] when [explicitAlarmId] is absent, even though that field exists and is read elsewhere ([AlarmManagerPlugin.getCurrentlyRingingAlarm]). `stopRinging` is invoked for both the dismiss ("Stop Alarm") and snooze flows (`AlarmManagerService.stopRinging()` / `snoozeRinging()`, both of which end up here since this command's only job is silencing `AlarmRingingService`, not distinguishing *why*) -- always via the same `ACTION_DISMISS` intent, which `AlarmRingingService.onStartCommand` routes to [AlarmManagerPlugin.notifyAlarmDismissed]. If this fell back to the currently-ringing id for every id-less caller, an in-app **snooze** (which never threads its own id through, exactly because of this) would spuriously produce a real `alarm-manager:dismiss-requested` event and call Rust's `dismiss_alarm` right after the snooze's own `AlarmService.snooze()` write -- `dismiss_alarm` recomputes `next_trigger` relative to whatever is *currently* stored, so this would silently clobber the snooze the user just requested. Only the explicit-id path (issue #255 Phase 4A's in-app "Stop Alarm" button) is safe to wire uniformly; the id-less legacy JS notification-action fallback (`onDismissRinging`/`onSnoozeRinging` in `AlarmManagerService.init()`) stays exactly as inert as it is today.
+ *
+ * A pure function (not reading the companion `@Volatile var` itself) so it's unit-testable without an Android framework -- mirrors [AlarmReceiver]'s `recordAndPublishFiredEvent` taking `isLive` as a parameter rather than resolving it inline.
+ */
+internal fun resolveStopRingingAlarmId(explicitAlarmId: Int?): Int? {
+    return explicitAlarmId?.takeIf { it > 0 }
+}
+
+private fun keyValueStore(context: Context): KeyValueStore = SharedPreferencesKeyValueStore(context, CALLBACK_PREFS)
+
+// Process-wide singleton -- mirrors WearSyncEventQueue.getInstance()'s pattern (see its KDoc)
+// for the same reason: DurableEventQueue's own @Synchronized enqueue/drainAll/commit methods
+// only lock their own instance's monitor, so two independently-constructed instances pointed
+// at the same underlying SharedPreferences key -- as this function used to build fresh on
+// every call, once via notifyAlarmFired/enqueueAndDrain's companion-object call path (reached
+// from AlarmReceiver's background-executor worker thread) and separately via
+// drainQueuedEvents' instance call path (reached from the main thread, e.g.
+// markAlarmPipelineReady) -- provide *no* mutual exclusion against each other. A background
+// enqueue racing a main-thread drain could each read the same pre-write JSON array and then
+// clobber each other's write, including resurrecting an entry the other side had just
+// committed as delivered. Routing every caller through one shared instance makes every
+// enqueue/drainAll/commit call atomic relative to every other, regardless of which thread or
+// which of this plugin's two top-level @Synchronized scopes (Companion vs. instance) it came
+// through.
+@Volatile
+private var sharedEventQueue: DurableEventQueue? = null
+private val eventQueueInitLock = Any()
+
+/**
+ * Returns the process-wide shared [DurableEventQueue] backed by [store], constructing it on
+ * first access (double-checked locking, mirroring wear-sync's `WearSyncEventQueue.getInstance`
+ * shape). [eventQueue] below is the production entry point, supplying the real
+ * Context-backed [SharedPreferencesKeyValueStore]; this Context-free overload exists purely
+ * so tests can exercise the actual singleton-holder logic -- and the concurrency guarantee it
+ * provides -- against an in-memory [KeyValueStore] fake, without needing a real
+ * `android.content.Context` (this module's JUnit tests run on the plain host JVM, no
+ * Robolectric/instrumentation available; see [AlarmManagerPluginTest]).
+ */
+internal fun sharedEventQueueFor(store: KeyValueStore): DurableEventQueue {
+    sharedEventQueue?.let { return it }
+    return synchronized(eventQueueInitLock) {
+        sharedEventQueue ?: DurableEventQueue(store, EVENT_LOG_KEY).also { sharedEventQueue = it }
+    }
+}
+
+/** Test-only: clears the cached singleton so each test starts from a clean slate. */
+internal fun resetSharedEventQueueForTests() {
+    sharedEventQueue = null
+}
+
+private fun eventQueue(context: Context): DurableEventQueue =
+    sharedEventQueueFor(keyValueStore(context.applicationContext))
 
 @InvokeArg
 class ScheduleRequest {
@@ -71,6 +325,12 @@ class ImportEventHandlerArgs {
     lateinit var handler: Channel
 }
 
+@InvokeArg
+class StopRingingArgs {
+    // Null (the default, and what a caller that omits the key entirely gets) means "no explicit id supplied" -- resolveStopRingingAlarmId() leaves the ACTION_DISMISS intent's ALARM_ID extra unset in that case (see its KDoc for why this deliberately does not fall back to AlarmRingingService.currentlyRingingAlarmId). See StopRingingRequest's KDoc on the Rust side for why the key is omitted rather than sent as JSON null.
+    var alarmId: Int? = null
+}
+
 @TauriPlugin
 class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(activity) {
     private var alarmEventChannel: Channel? = null
@@ -81,57 +341,60 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     private var alarmPipelineReady: Boolean = false
 
     companion object {
-        private const val TAG = "AlarmManagerPlugin"
-        private const val CALLBACK_PREFS = "AlarmManagerCallbacks"
-        private const val KEY_PENDING_ALARM_EVENTS = "pending_alarm_events"
-        private const val KEY_PENDING_SNOOZE_EVENTS = "pending_snooze_events"
-        private const val KEY_PENDING_DISMISS_EVENTS = "pending_dismiss_events"
-        private const val KEY_PENDING_IMPORT_EVENTS = "pending_import_events"
-
         @Volatile
         var instance: AlarmManagerPlugin? = null
             private set
 
+        /**
+         * @param firedPayload the shared `{id, actualFiredAt}` payload -- built exactly once by
+         *   the caller (see `AlarmReceiver.recordAndPublishFiredEvent`'s KDoc) and reused here
+         *   rather than re-derived from separate `id`/`actualFiredAt` args, so there's a single
+         *   source of truth for this shape (docs/architecture/event-architecture.md's Native Event Bus section)
+         *   instead of two independent hand-built copies risking silent divergence. Not mutated
+         *   in place -- [handledNatively] is written into a fresh copy -- since the caller may
+         *   still reuse the original for the `NativeEventBus` publish, which must stay exactly
+         *   `{id, actualFiredAt}` per the bus's own contract.
+         * @param handledNatively written directly into the persisted/dispatched payload here
+         *   (rather than late-injected at drain time -- see [enrichPayloadForDispatch], which
+         *   only still needs to inject `eventId`) since it's already known as a plain parameter
+         *   at this point. Only `eventId` genuinely can't be known yet: it doesn't exist until
+         *   [DurableEventQueue.enqueue] (called via [enqueueAndDrain] below) returns it.
+         */
         @Synchronized
-        fun notifyAlarmFired(context: Context, alarmId: Int, actualFiredAt: Long = System.currentTimeMillis()) {
+        fun notifyAlarmFired(
+            context: Context,
+            alarmId: Int,
+            firedPayload: JSONObject,
+            handledNatively: Set<String> = emptySet(),
+        ) {
             if (alarmId <= 0) return
-
-            val plugin = instance
-            if (plugin != null && plugin.dispatchAlarmFiredEvent(alarmId, actualFiredAt)) {
-                Log.d(TAG, "Dispatched native alarm fired immediately: id=$alarmId")
-                return
+            val payload = JSONObject(firedPayload.toString()).apply {
+                put("handledNatively", JSONArray(handledNatively.toList()))
             }
-
-            queueAlarmEvent(context, alarmId, actualFiredAt)
-            Log.i(TAG, "Queued native alarm fired event (plugin/channel not ready): id=$alarmId")
+            enqueueAndDrain(context, TOPIC_FIRED, payload, handledNatively)
         }
 
+        /**
+         * @param alarmId the real alarm id, from the `ACTION_SNOOZE` intent's `ALARM_ID` extra -- as of issue #255 Phase 4A this always comes from the notification's own Snooze action (the one existing caller of `ACTION_SNOOZE`); in-app snooze does not (and deliberately does not) route through this, since `stopRinging`'s single command is shared with dismiss and would misattribute an in-app snooze as a dismiss -- see `resolveStopRingingAlarmId`'s KDoc. A non-positive id is dropped by the guard below.
+         */
         @Synchronized
         fun notifySnoozeRequested(context: Context, alarmId: Int) {
             if (alarmId <= 0) return
-
-            val plugin = instance
-            if (plugin != null && plugin.dispatchSnoozeRequestedEvent(alarmId)) {
-                Log.d(TAG, "Dispatched snooze requested immediately: id=$alarmId")
-                return
-            }
-
-            queueSnoozeEvent(context, alarmId)
-            Log.i(TAG, "Queued snooze requested event (plugin/channel not ready): id=$alarmId")
+            val payload = JSONObject().apply { put("id", alarmId) }
+            enqueueAndDrain(context, TOPIC_SNOOZE, payload)
+            // Fast native fan-out (issue #255 Phase 4A/Part 2.1) -- lets wear-sync's own listener (a sibling worktree) tell the watch to stop instantly, without waiting for Rust to boot. Durable-persist-first, same ordering/reasoning as AlarmReceiver.recordAndPublishFiredEvent for the fired path.
+            publishToBus(TOPIC_SNOOZE, payload)
         }
 
+        /**
+         * @param alarmId the real alarm id, now produced by every dismiss origin that reaches `AlarmRingingService`'s `ACTION_DISMISS` handler -- the notification's own Dismiss action (always had one) and, since issue #255 Phase 4A closed the in-app dismiss gap, the in-app "Stop Alarm" button too (`resolveStopRingingAlarmId`). There is no longer an origin-based special case here: a non-positive id (still possible if genuinely nothing is/was ringing, e.g. the legacy ID-less JS notification-action fallback) is simply dropped by the guard below, uniformly, regardless of where the call came from.
+         */
         @Synchronized
         fun notifyAlarmDismissed(context: Context, alarmId: Int) {
             if (alarmId <= 0) return
-
-            val plugin = instance
-            if (plugin != null && plugin.dispatchDismissRequestedEvent(alarmId)) {
-                Log.d(TAG, "Dispatched dismiss requested immediately: id=$alarmId")
-                return
-            }
-
-            queueDismissEvent(context, alarmId)
-            Log.i(TAG, "Queued dismiss requested event (plugin/channel not ready): id=$alarmId")
+            val payload = JSONObject().apply { put("id", alarmId) }
+            enqueueAndDrain(context, TOPIC_DISMISS, payload)
+            publishToBus(TOPIC_DISMISS, payload)
         }
 
         @Synchronized
@@ -145,75 +408,28 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             triggerAt: Long,
         ) {
             if (id <= 0) return
-
-            val plugin = instance
-            if (plugin != null &&
-                plugin.dispatchImportRequestedEvent(id, hour, minute, label, activeDays, triggerAt)
-            ) {
-                Log.d(TAG, "Dispatched import requested immediately: id=$id")
-                return
-            }
-
-            queueImportEvent(context, id, hour, minute, label, activeDays, triggerAt)
-            Log.i(TAG, "Queued import requested event (plugin/channel not ready): id=$id")
-        }
-
-        @Synchronized
-        private fun queueAlarmEvent(context: Context, alarmId: Int, actualFiredAt: Long) {
-            val prefs = context.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
-            val queue = JSONArray(prefs.getString(KEY_PENDING_ALARM_EVENTS, "[]"))
-            queue.put(JSONObject().apply {
-                put("id", alarmId)
-                put("actualFiredAt", actualFiredAt)
-            })
-            prefs.edit().putString(KEY_PENDING_ALARM_EVENTS, queue.toString()).apply()
-            NativeEventLog.log(context, TAG, "Queued fired event id=$alarmId (queue depth=${queue.length()})")
-        }
-
-        @Synchronized
-        private fun queueSnoozeEvent(context: Context, alarmId: Int) {
-            val prefs = context.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
-            val queue = JSONArray(prefs.getString(KEY_PENDING_SNOOZE_EVENTS, "[]"))
-            queue.put(JSONObject().apply {
-                put("id", alarmId)
-            })
-            prefs.edit().putString(KEY_PENDING_SNOOZE_EVENTS, queue.toString()).apply()
-            NativeEventLog.log(context, TAG, "Queued snooze event id=$alarmId (queue depth=${queue.length()})")
-        }
-
-        @Synchronized
-        private fun queueDismissEvent(context: Context, alarmId: Int) {
-            val prefs = context.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
-            val queue = JSONArray(prefs.getString(KEY_PENDING_DISMISS_EVENTS, "[]"))
-            queue.put(JSONObject().apply {
-                put("id", alarmId)
-            })
-            prefs.edit().putString(KEY_PENDING_DISMISS_EVENTS, queue.toString()).apply()
-            NativeEventLog.log(context, TAG, "Queued dismiss event id=$alarmId (queue depth=${queue.length()})")
-        }
-
-        @Synchronized
-        private fun queueImportEvent(
-            context: Context,
-            id: Int,
-            hour: Int,
-            minute: Int,
-            label: String,
-            activeDays: List<Int>,
-            triggerAt: Long,
-        ) {
-            val prefs = context.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
-            val queue = JSONArray(prefs.getString(KEY_PENDING_IMPORT_EVENTS, "[]"))
-            queue.put(JSONObject().apply {
+            val payload = JSONObject().apply {
                 put("id", id)
                 put("hour", hour)
                 put("minute", minute)
                 put("label", label)
                 put("activeDays", JSONArray(activeDays))
                 put("triggerAt", triggerAt)
-            })
-            prefs.edit().putString(KEY_PENDING_IMPORT_EVENTS, queue.toString()).apply()
-            NativeEventLog.log(context, TAG, "Queued import event id=$id (queue depth=${queue.length()})")
+            }
+            enqueueAndDrain(context, TOPIC_IMPORT, payload)
+        }
+
+        // Every event flows through the log -- there is no separate "dispatch immediately" path any more. When the pipeline is already up and the right channel is registered, drainQueuedEvents() below delivers this same entry within the same call, so the net effect (and latency) matches the old immediate-dispatch path; when it isn't, the entry simply stays in the log until markAlarmPipelineReady() (or a later event of any topic) drains it. See drainAndDispatch()'s KDoc for the two deliberate, forward-referenced (issue #255) consequences of always draining the whole backlog.
+        @Synchronized
+        private fun enqueueAndDrain(
+            context: Context,
+            topic: String,
+            payload: JSONObject,
+            handledNatively: Set<String> = emptySet(),
+        ) {
+            val eventId = eventQueue(context).enqueue(topic, payload.toString(), handledNatively)
+            NativeEventLog.log(context, TAG, "Enqueued '$topic' event $eventId: $payload")
+            instance?.drainQueuedEvents()
         }
     }
 
@@ -221,11 +437,19 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         super.load(webView)
         instance = this
         Log.d(TAG, "Plugin loaded.")
+
+        val migratedCount = migrateLegacyQueues(keyValueStore(activity))
+        if (migratedCount > 0) {
+            Log.i(TAG, "Migrated $migratedCount legacy queued event(s) into the unified event log")
+            NativeEventLog.log(
+                activity,
+                TAG,
+                "Migrated $migratedCount legacy queued event(s) into the unified event log",
+            )
+        }
+
         applyRingingWindowFlags(activity.intent)
-        drainPendingAlarmEvents()
-        drainPendingSnoozeEvents()
-        drainPendingDismissEvents()
-        drainPendingImportEvents()
+        drainQueuedEvents()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -288,9 +512,13 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
     @Command
     fun stopRinging(invoke: Invoke) {
-        Log.d(TAG, "Stopping ringing service via Intent")
+        val args = invoke.parseArgs(StopRingingArgs::class.java)
+        // Issue #255 Phase 4A: stamp the id the frontend supplied explicitly (e.g. the in-app "Stop Alarm" button, which now threads its alarm id all the way through -- see resolveStopRingingAlarmId's KDoc for why this deliberately does NOT fall back to AlarmRingingService.currentlyRingingAlarmId for id-less callers).
+        val alarmId = resolveStopRingingAlarmId(args.alarmId)
+        Log.d(TAG, "Stopping ringing service via Intent for alarm $alarmId")
         val intent = Intent(activity, AlarmRingingService::class.java).apply {
             action = AlarmRingingService.ACTION_DISMISS
+            if (alarmId != null) putExtra("ALARM_ID", alarmId)
         }
         activity.startService(intent)
         // Every path out of the ringing screen (dismiss, snooze, silence-timeout) calls this,
@@ -433,10 +661,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     fun markAlarmPipelineReady(invoke: Invoke) {
         alarmPipelineReady = true
         Log.d(TAG, "Alarm pipeline marked ready")
-        drainPendingAlarmEvents()
-        drainPendingSnoozeEvents()
-        drainPendingDismissEvents()
-        drainPendingImportEvents()
+        drainQueuedEvents()
         invoke.resolve()
     }
 
@@ -474,223 +699,42 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         }
     }
 
-    private fun dispatchSnoozeRequestedEvent(alarmId: Int): Boolean {
-        if (!alarmPipelineReady) return false
-        val channel = snoozeEventChannel ?: return false
-        return try {
-            val event = JSObject().apply {
-                put("id", alarmId)
-            }
-            channel.send(event)
-            true
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to dispatch snooze requested event", e)
-            false
-        }
+    /** Maps a [DurableEventQueue] topic to the Channel Rust registered to receive it. */
+    private fun channelForTopic(topic: String): Channel? = when (topic) {
+        TOPIC_FIRED -> alarmEventChannel
+        TOPIC_SNOOZE -> snoozeEventChannel
+        TOPIC_DISMISS -> dismissEventChannel
+        TOPIC_IMPORT -> importEventChannel
+        else -> null
     }
 
-    private fun dispatchDismissRequestedEvent(alarmId: Int): Boolean {
-        if (!alarmPipelineReady) return false
-        val channel = dismissEventChannel ?: return false
-        return try {
-            val event = JSObject().apply {
-                put("id", alarmId)
-            }
-            channel.send(event)
-            true
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to dispatch dismiss requested event", e)
-            false
-        }
-    }
-
-    private fun dispatchAlarmFiredEvent(alarmId: Int, actualFiredAt: Long): Boolean {
-        if (!alarmPipelineReady) return false
-        val channel = alarmEventChannel ?: return false
-        return try {
-            val event = JSObject().apply {
-                put("id", alarmId)
-                put("actualFiredAt", actualFiredAt)
-            }
-            channel.send(event)
-            true
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to dispatch native alarm fired event", e)
-            false
-        }
-    }
-
-    private fun dispatchImportRequestedEvent(
-        id: Int,
-        hour: Int,
-        minute: Int,
-        label: String,
-        activeDays: List<Int>,
-        triggerAt: Long,
-    ): Boolean {
-        if (!alarmPipelineReady) return false
-        val channel = importEventChannel ?: return false
-        return try {
-            val event = JSObject().apply {
-                put("id", id)
-                put("hour", hour)
-                put("minute", minute)
-                put("label", label)
-                put("activeDays", JSArray(activeDays))
-                put("triggerAt", triggerAt)
-            }
-            channel.send(event)
-            true
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to dispatch import requested event", e)
-            false
-        }
-    }
-
+    /**
+     * Drains every queued event (all topics, chronological arrival order) and dispatches each to the Channel matching its topic. A no-op while [alarmPipelineReady] is `false`.
+     *
+     * This is the single delivery path to Rust: [notifyAlarmFired] and friends always enqueue first and then call this immediately, so when the pipeline is already up this runs in the very same call rather than as a separate "replay later" pass. The actual drain/topic -> outcome bookkeeping lives in [drainAndDispatch]; this just supplies the Android-side dispatch (Channel lookup + send).
+     */
     @Synchronized
-    private fun drainPendingAlarmEvents() {
+    private fun drainQueuedEvents() {
         if (!alarmPipelineReady) return
-        val channel = alarmEventChannel ?: return
-        val prefs = activity.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
-        val rawQueue = prefs.getString(KEY_PENDING_ALARM_EVENTS, "[]") ?: "[]"
-        val queue = JSONArray(rawQueue)
-        if (queue.length() == 0) return
-
-        val remaining = JSONArray()
-        for (i in 0 until queue.length()) {
-            val item = queue.optJSONObject(i) ?: continue
-            val id = item.optInt("id", -1)
-            val actualFiredAt = item.optLong("actualFiredAt", System.currentTimeMillis())
-            if (id <= 0) continue
-
-            try {
-                val event = JSObject().apply {
-                    put("id", id)
-                    put("actualFiredAt", actualFiredAt)
+        val queue = eventQueue(activity)
+        val handledCount = drainAndDispatch(queue) { topic, payload ->
+            val channel = channelForTopic(topic)
+            if (channel == null) {
+                Log.w(TAG, "No channel registered for topic '$topic', leaving event queued")
+                false
+            } else {
+                try {
+                    channel.send(JSObject(payload))
+                    true
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to dispatch queued event (topic '$topic')", e)
+                    false
                 }
-                channel.send(event)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to replay queued native alarm fired event id=$id", e)
-                remaining.put(item)
             }
         }
-
-        prefs.edit().putString(KEY_PENDING_ALARM_EVENTS, remaining.toString()).apply()
-        Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued native alarm fired event(s)")
-        NativeEventLog.log(
-            activity,
-            TAG,
-            "Drained fired events: replayed ${queue.length() - remaining.length()}, remaining ${remaining.length()}",
-        )
-    }
-
-    @Synchronized
-    private fun drainPendingSnoozeEvents() {
-        if (!alarmPipelineReady) return
-        val channel = snoozeEventChannel ?: return
-        val prefs = activity.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
-        val rawQueue = prefs.getString(KEY_PENDING_SNOOZE_EVENTS, "[]") ?: "[]"
-        val queue = JSONArray(rawQueue)
-        if (queue.length() == 0) return
-
-        val remaining = JSONArray()
-        for (i in 0 until queue.length()) {
-            val item = queue.optJSONObject(i) ?: continue
-            val id = item.optInt("id", -1)
-            if (id <= 0) continue
-
-            try {
-                val event = JSObject().apply {
-                    put("id", id)
-                }
-                channel.send(event)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to replay queued snooze requested event id=$id", e)
-                remaining.put(item)
-            }
+        if (handledCount > 0) {
+            Log.i(TAG, "Drained $handledCount queued event(s)")
+            NativeEventLog.log(activity, TAG, "Drained $handledCount queued event(s)")
         }
-
-        prefs.edit().putString(KEY_PENDING_SNOOZE_EVENTS, remaining.toString()).apply()
-        Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued snooze requested event(s)")
-        NativeEventLog.log(
-            activity,
-            TAG,
-            "Drained snooze events: replayed ${queue.length() - remaining.length()}, remaining ${remaining.length()}",
-        )
-    }
-
-    @Synchronized
-    private fun drainPendingDismissEvents() {
-        if (!alarmPipelineReady) return
-        val channel = dismissEventChannel ?: return
-        val prefs = activity.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
-        val rawQueue = prefs.getString(KEY_PENDING_DISMISS_EVENTS, "[]") ?: "[]"
-        val queue = JSONArray(rawQueue)
-        if (queue.length() == 0) return
-
-        val remaining = JSONArray()
-        for (i in 0 until queue.length()) {
-            val item = queue.optJSONObject(i) ?: continue
-            val id = item.optInt("id", -1)
-            if (id <= 0) continue
-
-            try {
-                val event = JSObject().apply {
-                    put("id", id)
-                }
-                channel.send(event)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to replay queued dismiss requested event id=$id", e)
-                remaining.put(item)
-            }
-        }
-
-        prefs.edit().putString(KEY_PENDING_DISMISS_EVENTS, remaining.toString()).apply()
-        Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued dismiss requested event(s)")
-        NativeEventLog.log(
-            activity,
-            TAG,
-            "Drained dismiss events: replayed ${queue.length() - remaining.length()}, remaining ${remaining.length()}",
-        )
-    }
-
-    @Synchronized
-    private fun drainPendingImportEvents() {
-        if (!alarmPipelineReady) return
-        val channel = importEventChannel ?: return
-        val prefs = activity.getSharedPreferences(CALLBACK_PREFS, Context.MODE_PRIVATE)
-        val rawQueue = prefs.getString(KEY_PENDING_IMPORT_EVENTS, "[]") ?: "[]"
-        val queue = JSONArray(rawQueue)
-        if (queue.length() == 0) return
-
-        val remaining = JSONArray()
-        for (i in 0 until queue.length()) {
-            val item = queue.optJSONObject(i) ?: continue
-            val id = item.optInt("id", -1)
-            if (id <= 0) continue
-
-            try {
-                val event = JSObject().apply {
-                    put("id", id)
-                    put("hour", item.optInt("hour", 0))
-                    put("minute", item.optInt("minute", 0))
-                    put("label", item.optString("label", ""))
-                    put("activeDays", item.optJSONArray("activeDays") ?: JSONArray())
-                    put("triggerAt", item.optLong("triggerAt", 0))
-                }
-                channel.send(event)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to replay queued import requested event id=$id", e)
-                remaining.put(item)
-            }
-        }
-
-        prefs.edit().putString(KEY_PENDING_IMPORT_EVENTS, remaining.toString()).apply()
-        Log.i(TAG, "Replayed ${queue.length() - remaining.length()} queued import requested event(s)")
-        NativeEventLog.log(
-            activity,
-            TAG,
-            "Drained import events: replayed ${queue.length() - remaining.length()}, remaining ${remaining.length()}",
-        )
     }
 }

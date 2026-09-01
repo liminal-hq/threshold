@@ -18,6 +18,12 @@ The `wear-sync` plugin synchronises alarm data between the Threshold phone app a
 - **Snooze Duration Sync**: Carries `snoozeLengthMinutes` through the entire publish chain so the watch always has the phone's snooze setting
 - **Ring Deduplication**: Watch-side `WearRingingService` ignores duplicate ring messages for already-ringing alarms
 - **No manual JNI**: Uses Tauri `@Command` / `@InvokeArg` plus `Channel` bridge
+- **Native fired->watch-ring fan-out** (issue #255, fixes #254): `NativeFiredListener` rings
+  the watch directly from native Kotlin the instant an alarm fires, without waiting for Rust
+  to boot — see [Native Event Bus](#native-event-bus-integration) below
+- **Native dismiss/snooze->stop fan-out** (issue #255 Phase 4B): `NativeStopListener` stops
+  the watch's ring the instant the phone's own notification Dismiss/Snooze fires natively,
+  symmetric to the fan-out above
 
 ## Architecture
 
@@ -76,15 +82,19 @@ plugins/wear-sync/
 │   ├── mobile.rs              # Android bridge via Tauri PluginHandle
 │   └── desktop.rs             # No-op stubs for desktop compilation
 ├── android/
-│   ├── build.gradle.kts       # play-services-wearable + coroutines
+│   ├── build.gradle.kts       # play-services-wearable + coroutines + native-bus dependency
 │   └── src/main/
 │       ├── AndroidManifest.xml
 │       └── java/.../wearsync/
-│           ├── WearSyncPlugin.kt      # @TauriPlugin with @Command methods
-│           ├── WearMessageService.kt  # WearableListenerService for incoming
-│           ├── WearSyncService.kt     # Foreground service for offline writes
-│           ├── WearSyncCache.kt       # SharedPreferences helper for offline reads
-│           └── WearSyncQueue.kt       # Persistent queue for offline messages
+│           ├── WearSyncPlugin.kt        # @TauriPlugin with @Command methods
+│           ├── WearMessageService.kt    # WearableListenerService for incoming
+│           ├── WearSyncService.kt       # Foreground service for offline writes
+│           ├── WearSyncCache.kt         # SharedPreferences helper for offline reads
+│           ├── WearSyncEventQueue.kt    # Offline watch-message queue (DurableEventQueue-backed)
+│           ├── WearRingInitProvider.kt  # ContentProvider: registers native listeners pre-boot
+│           ├── NativeFiredListener.kt   # NativeEventBus listener: rings watch on native fire
+│           ├── NativeStopListener.kt    # NativeEventBus listener: stops watch on native dismiss/snooze
+│           └── NativeFanOutPrefs.kt     # Dev toggle for the native fired->watch-ring fan-out
 ├── build.rs
 └── Cargo.toml
 ```
@@ -133,6 +143,44 @@ plugins/wear-sync/
 4. Calls `WearSync::send_alarm_ring()` → Kotlin bridge
 5. `WearSyncPlugin.sendAlarmRing()` sends `/threshold/alarm_ring` message to all connected watches
 6. Watch `DataLayerListenerService.onMessageReceived()` starts `WearRingingService`
+
+**Note:** this Rust-driven path requires Rust to have booted. See Native Event Bus Integration below for the faster, native-only path that closes the ~20s cold-boot gap this alone left open (issue #254).
+
+## Native Event Bus Integration
+
+wear-sync depends on the shared `plugins/native-bus` substrate (`tauri-plugin-native-bus`,
+`implementation(project(":tauri-plugin-native-bus"))` in `android/build.gradle.kts`) for two
+things that need to happen faster than Rust can boot on a cold process start. Full detail,
+including the topic table, the `handled_natively` tag mechanism and its documented
+durability-first limitation, and `EventDedup`'s scope, lives in
+[Event Architecture's Native Event Bus section](../architecture/event-architecture.md#native-event-bus-android-issue-255) --
+this section is the wear-sync-specific summary.
+
+- **`NativeFiredListener`** subscribes to alarm-manager's `alarm-manager:native-fired`
+  `NativeEventBus` topic and rings the watch directly via Play Services the instant an alarm
+  fires — no dependency on Rust or the WebView. This is the actual fix for issue #254 (the
+  watch staying silent for ~20s on a cold fire while the phone was in active use). Gated by a
+  developer-only toggle (`NativeFanOutPrefs`, defaults enabled) so the older, pre-existing
+  Rust `alarm:fired` → `send_alarm_ring` path stays exercisable on demand, and by a 90-second
+  staleness check mirrored independently in Rust (`STALENESS_WINDOW_MS`/`is_stale` in
+  `plugins/wear-sync/src/lib.rs`).
+- **`NativeStopListener`** subscribes to alarm-manager's `alarm-manager:dismiss-requested`/
+  `snooze-requested` topics and sends the matching stop message to every connected watch node
+  the instant the phone's own notification Dismiss/Snooze fires natively — the symmetric
+  fix for the phone-notification-cold direction (issue #255 Phase 4B).
+- **`WearRingInitProvider`**, a `ContentProvider` whose `onCreate()` Android guarantees runs
+  before any other component, registers both listeners (and warms `NativeFanOutPrefs`'
+  in-memory cache) before `AlarmReceiver.onReceive()` or `AlarmRingingService` can ever run,
+  even on a cold multi-plugin process start.
+- **`WearSyncEventQueue`** (the offline watch-message queue) is built on the shared
+  `DurableEventQueue` class from `native-bus`, migrated one-way from the plugin's original
+  hand-rolled `WearSyncQueue` — see the Gotchas entry in the root `CLAUDE.md`.
+- Watch-originated `wear:alarm:dismiss`/`wear:alarm:snooze` are also published on
+  `NativeEventBus` (by `WearMessageService`, **only** on the offline-write path, i.e. when
+  Rust/the plugin hasn't loaded yet), so alarm-manager's own `WatchStopListener` can silence
+  the phone's ringing service without waiting for Rust. These two topics key the alarm id as
+  `"alarmId"`, not `"id"` — see the topic table linked above for why, and don't assume the
+  two directions share a payload shape.
 
 ## Sync Protocol
 
@@ -275,3 +323,5 @@ Run with: `cargo test -p tauri-plugin-wear-sync`
 - [#170](https://github.com/nicholasgasior/threshold/issues/170) — Wear OS Ringing Screen (parent)
 - [#173](https://github.com/nicholasgasior/threshold/issues/173) — Snooze duration sync
 - [#174](https://github.com/nicholasgasior/threshold/issues/174) — Ring deduplication
+- [#254](https://github.com/liminal-hq/threshold/issues/254) — Watch stays silent ~20s on a cold alarm fire (fixed by `NativeFiredListener`)
+- [#255](https://github.com/liminal-hq/threshold/issues/255) — Native event bus, durable queue migration, and symmetric dismiss/snooze stop signals

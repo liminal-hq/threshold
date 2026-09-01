@@ -4,13 +4,14 @@ Specifications and development patterns for Threshold's custom Tauri plugins.
 
 ## Plugin Specs
 
-| Plugin                                | Description                                | Platforms              |
-| ------------------------------------- | ------------------------------------------ | ---------------------- |
-| [alarm-manager](alarm-manager.md)     | Native Android `AlarmManager` integration  | Android, Desktop       |
-| [app-management](app-management.md)   | Mobile lifecycle management (minimise app) | Android, iOS (stubbed) |
-| [os-prefs](os-prefs.md)               | System time format & animation-speed prefs | Android, iOS, Desktop  |
-| [predictive-back](predictive-back.md) | Android predictive-back gesture bridge     | Android                |
-| [wear-sync](wear-sync.md)             | Wear OS Data Layer synchronisation         | Android (Wear OS)      |
+| Plugin                                | Description                                     | Platforms                 |
+| ------------------------------------- | ----------------------------------------------- | ------------------------- |
+| [alarm-manager](alarm-manager.md)     | Native Android `AlarmManager` integration       | Android, Desktop          |
+| [app-management](app-management.md)   | Mobile lifecycle management (minimise app)      | Android, iOS (stubbed)    |
+| [native-bus](native-bus.md)           | Shared native event bus/durable queue substrate | Android (no-op elsewhere) |
+| [os-prefs](os-prefs.md)               | System time format & animation-speed prefs      | Android, iOS, Desktop     |
+| [predictive-back](predictive-back.md) | Android predictive-back gesture bridge          | Android                   |
+| [wear-sync](wear-sync.md)             | Wear OS Data Layer synchronisation              | Android (Wear OS)         |
 
 ## Authoring Patterns
 

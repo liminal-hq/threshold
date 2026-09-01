@@ -116,6 +116,13 @@ pub struct AlarmFired {
     /// Whether the phone time format value is explicitly known.
     #[serde(default = "default_is_24_hour_known")]
     pub is_24_hour_known: bool,
+    /// Side-effect tags a native listener already handled at publish time (e.g.
+    /// `"watch-ring"`), per issue #255's Phase 3 payload contract. `#[serde(default)]` so
+    /// this deserializes cleanly from any payload predating this field -- desktop has no
+    /// native bus at all, so its fired events simply never populate this and get an empty
+    /// `Vec` here, which is expected.
+    #[serde(default)]
+    pub handled_natively: Vec<String>,
 }
 
 fn default_snooze_length() -> i32 {
@@ -202,4 +209,48 @@ pub enum SyncReason {
     Initialize,    // App startup
     Reconnect,     // Watch reconnected
     ForceSync,     // User requested
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn alarm_fired_defaults_handled_natively_when_absent() {
+        // Shape predating issue #255's Phase 3 -- no `handledNatively` key at all, the
+        // exact case desktop (no native bus) and any pre-upgrade queued event hit.
+        let json = r#"{
+            "id": 7,
+            "triggerAt": 1000,
+            "actualFiredAt": 1005,
+            "label": "Wake up",
+            "revision": 3
+        }"#;
+
+        let event: AlarmFired =
+            serde_json::from_str(json).expect("old-shape payload should deserialize");
+
+        assert!(event.handled_natively.is_empty());
+        // The other pre-existing `#[serde(default = ...)]` fields should still fall back too.
+        assert_eq!(event.snooze_length_minutes, 10);
+        assert!(!event.is_24_hour);
+        assert!(!event.is_24_hour_known);
+    }
+
+    #[test]
+    fn alarm_fired_round_trips_handled_natively_when_present() {
+        let json = r#"{
+            "id": 7,
+            "triggerAt": 1000,
+            "actualFiredAt": 1005,
+            "label": "Wake up",
+            "revision": 3,
+            "handledNatively": ["watch-ring"]
+        }"#;
+
+        let event: AlarmFired =
+            serde_json::from_str(json).expect("new-shape payload should deserialize");
+
+        assert_eq!(event.handled_natively, vec!["watch-ring".to_string()]);
+    }
 }

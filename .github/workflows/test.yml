@@ -246,6 +246,7 @@ jobs:
 
           write_kts_settings() {
             local plugin_dir="$1"
+            local extra_includes="${2:-}"
             cat > "${plugin_dir}/settings.gradle.kts" <<EOF
           pluginManagement {
             repositories {
@@ -273,6 +274,7 @@ jobs:
 
           include(":tauri-android")
           project(":tauri-android").projectDir = file("${TAURI_ANDROID_PATH}")
+          ${extra_includes}
           EOF
           }
 
@@ -312,21 +314,37 @@ jobs:
           EOF
           }
 
-          write_kts_settings "plugins/alarm-manager/android"
+          # alarm-manager (Phase 2A) and wear-sync (Phase 2B) of issue #255 both now have a
+          # real `implementation(project(":tauri-plugin-native-bus"))` dependency, so both
+          # isolated settings builds need the matching project include below or their builds
+          # would fail to resolve that reference. Gradle's unqualified `testDebugUnitTest`
+          # selector runs a task in every project in the build graph that has it, so once
+          # more than one plugin's settings includes native-bus, every gradlew invocation
+          # below uses a qualified `:testDebugUnitTest` task path (leading colon) instead --
+          # that runs only the root project's own task (i.e. only whichever plugin `-p`
+          # points at), so native-bus's tests never run redundantly and a native-bus failure
+          # is never misattributed to another plugin's step.
+          NATIVE_BUS_ANDROID_PATH="$(pwd)/plugins/native-bus/android"
+          NATIVE_BUS_INCLUDE="include(\":tauri-plugin-native-bus\")
+          project(\":tauri-plugin-native-bus\").projectDir = file(\"${NATIVE_BUS_ANDROID_PATH}\")"
+
+          write_kts_settings "plugins/alarm-manager/android" "${NATIVE_BUS_INCLUDE}"
           write_kts_settings "plugins/theme-utils/android"
           write_kts_settings "plugins/os-prefs/android"
           write_kts_settings "plugins/predictive-back/android"
-          write_kts_settings "plugins/wear-sync/android"
+          write_kts_settings "plugins/wear-sync/android" "${NATIVE_BUS_INCLUDE}"
+          write_kts_settings "plugins/native-bus/android"
           write_groovy_settings "plugins/app-management/android"
           write_groovy_settings "plugins/toast/android"
 
-          ./apps/threshold-wear/gradlew -p plugins/alarm-manager/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/alarm-manager/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/app-management/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/theme-utils/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/os-prefs/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/predictive-back/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
-          ./apps/threshold-wear/gradlew -p plugins/wear-sync/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/wear-sync/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/toast/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/native-bus/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
 
       - name: Upload Kotlin Test Results
         uses: actions/upload-artifact@v7

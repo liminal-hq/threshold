@@ -33,6 +33,7 @@
 		"predictive-back:default",
 		"os-prefs:default",
 		"theme-utils:default",
+		"wear-sync:default",
 		"dialog:default",
 		"toast:default",
 		"mcp-bridge:default"

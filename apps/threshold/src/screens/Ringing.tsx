@@ -175,7 +175,9 @@ const Ringing: React.FC = () => {
 
 	const handleDismiss = useCallback(async () => {
 		console.log('[Ringing] Dismissing Alarm', alarmId);
-		await alarmManagerService.stopRinging();
+		// Thread the real alarm id through so the native dismiss event (and, in turn, the NativeEventBus fan-out that tells the watch to stop) carries it -- see AlarmManagerService.stopRinging's doc comment (issue #255 Phase 4A). Except for the Test Alarm sentinel (same special-case as closeRingingWindow below): it isn't a real DB-backed alarm, so publishing a real native dismiss event for it would durably enqueue and drain an alarm-manager:dismiss-requested event Rust's listener can never resolve (get_by_id(999) always fails) -- noisy, and a wasted durable-queue write, on every sound preview. stopRinging() with no id keeps sound preview a pure local stop, matching its behaviour before this alarm id was threaded through.
+		const isTestAlarm = alarmId === SPECIAL_ALARM_IDS.TEST_ALARM;
+		await alarmManagerService.stopRinging(isTestAlarm ? undefined : alarmId);
 
 		// Notify backend to dismiss (reschedule)
 		try {

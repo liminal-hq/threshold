@@ -363,6 +363,26 @@ impl AlarmDatabase {
     }
 }
 
+#[cfg(test)]
+impl AlarmDatabase {
+    /// Creates an in-memory database with migrations applied.
+    ///
+    /// For coordinator-level tests in `alarm::mod` that need a real `AlarmDatabase` (not
+    /// just this module's own `pool`-backed unit tests) without a Tauri app data dir.
+    pub(crate) async fn new_in_memory() -> Result<Self> {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await?;
+
+        for migration in migrations() {
+            sqlx::query(migration.sql).execute(&pool).await?;
+        }
+
+        Ok(Self { pool })
+    }
+}
+
 // Helper struct for deserializing SQL rows
 #[derive(sqlx::FromRow)]
 struct AlarmRow {

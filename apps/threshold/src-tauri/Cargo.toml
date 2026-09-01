@@ -24,6 +24,15 @@ tauri-plugin-theme-utils = { path = "../../../plugins/theme-utils" }
 tauri-plugin-app-management = { path = "../../../plugins/app-management" }
 tauri-plugin-wear-sync = { path = "../../../plugins/wear-sync" }
 tauri-plugin-toast = { path = "../../../plugins/toast" }
+# Direct dependency required even though nothing calls `.plugin()` on this crate yet.
+# Cargo's `links`/`DEP_*_ANDROID_LIBRARY_PATH` metadata (which `tauri-build`'s
+# `generate_gradle_files()` reads to auto-add a plugin's `android/` directory to the
+# generated `tauri.settings.gradle`/`app/tauri.build.gradle.kts`) only propagates to
+# direct dependents of this crate, not transitively through alarm-manager/wear-sync. A
+# later phase makes those two plugins depend on native-bus's Kotlin sources via a Gradle
+# project dependency; this direct Cargo dependency is what gets native-bus's `android/`
+# into the generated Android project graph in the first place.
+tauri-plugin-native-bus = { path = "../../../plugins/native-bus" }
 tauri-plugin-deep-link = { version = "2.0.0", features = [] }
 tauri-plugin-log = { version = "2.0.0", features = [] }
 tauri-plugin-notification = { git = "https://github.com/ScottMorris/tauri-plugins-workspace.git", branch = "notification-actions-fix" }
@@ -47,3 +56,6 @@ tauri-plugin-app-events = "0.2"
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ts-rs = "12"
+# "test" feature unlocks tauri::test::mock_app() for coordinator-level tests that need a
+# real AppHandle to call app.emit() through (see alarm/mod.rs's dismiss_alarm tests).
+tauri = { version = "2.10.2", features = ["test"] }
