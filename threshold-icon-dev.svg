@@ -48,7 +48,7 @@
         stroke-width="2.2"
         stroke-linecap="round"/>
 
-  <!-- Center dot -->
+  <!-- Centre dot -->
   <circle cx="12" cy="12" r="1.5" fill="#fbbf24"/>
 
   <!-- Small dots at arc endpoints (6:00 and 8:00) -->
