@@ -41,6 +41,13 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            // Matches the phone dev build's ca.liminalhq.threshold.dev identifier
+            // (scripts/build-android-dev.sh) so both can be installed side-by-side with
+            // their respective release apps and tested as a pair. src/debug/res carries the
+            // distinct "Threshold Dev" name and DEV-ribboned launcher icon.
+            applicationIdSuffix = ".dev"
+        }
     }
 
     compileOptions {

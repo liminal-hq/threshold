@@ -383,6 +383,13 @@ cd apps/threshold-wear
 ./gradlew assembleDebug
 ```
 
+`assembleDebug`/`installDebug` build under applicationId `ca.liminalhq.threshold.dev` (an
+`applicationIdSuffix` on the `debug` build type) with a "Threshold Dev" label and a
+DEV-ribboned launcher icon, so a debug build installs side-by-side with a release install
+on the same watch instead of overwriting it -- mirrors the phone's
+`scripts/build-android-dev.sh` dev identifier, so a phone dev build and a watch debug build
+can be paired and tested together.
+
 Before release builds, update shared phone + Wear versions from the repo root:
 
 ```bash
