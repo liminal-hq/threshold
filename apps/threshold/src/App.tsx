@@ -71,6 +71,14 @@ const App: React.FC = () => {
 			}
 
 			try {
+				// Deliberately sequenced behind the two invokes above (see issue #314):
+				// alarm-manager's queued native-fired events only drain once this fires, so
+				// keeping it webview-driven (rather than moving it into Rust setup beside
+				// wear-sync's own mark_watch_pipeline_ready) means a watch-originated dismiss
+				// that boots the runtime reliably commits before a stale queued fire event
+				// can replay -- AlarmCoordinator::report_alarm_fired's superseded-fire guard
+				// is the actual correctness fix, but this ordering is what makes the guard's
+				// "dismiss lands first" assumption hold in practice, not just in theory.
 				await invoke('mark_alarm_pipeline_ready');
 			} catch (e) {
 				console.warn('[App] Failed to mark alarm pipeline ready:', e);
