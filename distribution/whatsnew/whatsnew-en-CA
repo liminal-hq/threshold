@@ -1,7 +1,6 @@
-🐛 Fixes
-• Fixed the ringing screen sometimes not appearing over the lock screen, with a Settings prompt to fix the underlying permission
-• Reopening the app while an alarm rings now always reaches the ringing screen
-• Fixed a couple of native alarm-sound and event-log bugs
+✨ New
+• Added a home screen widget showing your next alarm
 
-🔧 Developer Settings
-• Added a diagnostics panel showing the status of Android permissions that affect alarm reliability
+🐛 Fixes
+• Fixed the watch sometimes staying silent when an alarm fires while your screen is already on
+• Fixed the watch occasionally ringing a second time right after you dismiss it
