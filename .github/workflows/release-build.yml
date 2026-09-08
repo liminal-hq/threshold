@@ -536,10 +536,7 @@ jobs:
           cp "$wear_aab" "release-assets/android/threshold-wear-v${wear_version_name}-${wear_version_code}.aab"
           cp "$wear_apk" "release-assets/android/threshold-wear-v${wear_version_name}-${wear_version_code}.apk"
 
-          # Phone and Wear R8 mapping files (issue #318 -- phone mapping was previously
-          # skipped here with no documented reason, leaving Play Console unable to
-          # de-obfuscate phone crash/ANR stack traces even though R8 is genuinely enabled
-          # for the phone release build type).
+          # Phone and Wear R8 mapping files (issue #318).
           phone_mapping=$(find apps/threshold/src-tauri/gen/android/app/build/outputs -type f -name "mapping.txt" | sort | head -n1 || true)
           if [ -n "${phone_mapping:-}" ]; then
             cp "$phone_mapping" "release-assets/android/phone-mapping-v${phone_version_name}-${phone_version_code}.txt"
