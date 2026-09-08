@@ -4,3 +4,6 @@
 🐛 Fixes
 • Fixed the watch sometimes staying silent when an alarm fires while your screen is already on
 • Fixed the watch occasionally ringing a second time right after you dismiss it
+
+🔧 Behind the Scenes
+• Crash and ANR reports are now easier for us to diagnose and fix
