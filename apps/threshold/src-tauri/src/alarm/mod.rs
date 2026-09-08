@@ -39,6 +39,18 @@ use tauri::{AppHandle, Emitter, Manager, Runtime};
 /// reopening that PR's scope wasn't worth it here. Tracked as a follow-up: issue #304.
 const DISMISS_DEBOUNCE_WINDOW: Duration = Duration::from_millis(5_000);
 
+/// How far a reported fire's `actual_fired_at` may sit *behind* the alarm's current
+/// `next_trigger` and still be treated as the fire of that same occurrence, rather than a
+/// stale replay of an occurrence `dismiss_alarm`/`snooze_alarm` has already superseded.
+/// On a genuine, still-live fire `next_trigger` still points at (at or slightly before)
+/// the occurrence that just fired; a dismiss advances it to the *next* occurrence and a
+/// snooze reassigns it to a future timestamp, so either one moves `next_trigger` well past
+/// `actual_fired_at`. Wide enough to absorb the gap between the OS alarm actually firing
+/// and this report reaching Rust -- native ringing/watch-mirroring is immediate, but this
+/// event can be queued behind a cold app boot (see issue #314) -- while far shorter than
+/// the minimum realistic gap to a genuinely new occurrence of the same alarm.
+const SUPERSEDED_FIRE_TOLERANCE_MS: i64 = 60_000;
+
 /// Central coordinator for all alarm operations
 pub struct AlarmCoordinator {
     db: AlarmDatabase,
@@ -408,6 +420,21 @@ impl AlarmCoordinator {
         use std::sync::atomic::Ordering;
 
         let alarm = self.db.get_by_id(id).await?;
+
+        // Drop a fire report for an occurrence that dismiss_alarm/snooze_alarm has
+        // already handled -- see issue #314: a native fire event queued behind a cold
+        // app boot can replay into Rust after a watch-originated dismiss for the very
+        // same occurrence has already committed, and without this guard that stale
+        // replay re-triggers `alarm:fired`'s one consumer today (wear-sync's ring
+        // mirror), ringing the watch again after the user already stopped it.
+        if is_superseded_fire(alarm.next_trigger, actual_fired_at) {
+            log::info!(
+                "alarm {id}: dropping superseded fire report (actual_fired_at={actual_fired_at}, next_trigger={:?}) -- already dismissed/snoozed past this occurrence",
+                alarm.next_trigger
+            );
+            return Ok(());
+        }
+
         let revision = self.db.current_revision().await?;
         let trigger_at = alarm.next_trigger.unwrap_or(actual_fired_at);
 
@@ -762,6 +789,25 @@ impl AlarmCoordinator {
 fn is_duplicate_dismiss(last_dismissed_at: Option<Instant>, now: Instant) -> bool {
     last_dismissed_at
         .is_some_and(|last| now.saturating_duration_since(last) < DISMISS_DEBOUNCE_WINDOW)
+}
+
+/// True when the alarm's persisted `next_trigger` shows it has already moved past the
+/// occurrence that fired at `actual_fired_at` -- see `SUPERSEDED_FIRE_TOLERANCE_MS`'s doc
+/// comment for why a "past" fire and a "not yet superseded" fire are told apart by
+/// tolerance rather than exact equality. Pulled out of `report_alarm_fired` as a pure
+/// function, matching `is_duplicate_dismiss` and `classify_scheduling_transition`, so it's
+/// directly unit-testable without a database or `AppHandle`.
+fn is_superseded_fire(next_trigger: Option<i64>, actual_fired_at: i64) -> bool {
+    match next_trigger {
+        // Disabled, or a one-shot alarm with no further occurrence -- this id has
+        // already been dismissed/completed since the occurrence that just (allegedly)
+        // fired.
+        None => true,
+        // A live fire's next_trigger still points at (at or slightly before) the
+        // occurrence that just fired; dismiss/snooze both move it to a later
+        // timestamp, so a gap past the tolerance means this report is stale.
+        Some(next_trigger) => next_trigger > actual_fired_at + SUPERSEDED_FIRE_TOLERANCE_MS,
+    }
 }
 
 /// What, if anything, a mutation should do to an alarm's native schedule. Pulled out of
@@ -1362,6 +1408,64 @@ mod dismiss_idempotency_tests {
         let after_second = coord.db.get_by_id(alarm.id).await.unwrap();
         assert_eq!(after_second.next_trigger, None);
         assert!(after_second.enabled);
+    }
+}
+
+/// Coverage for `is_superseded_fire` (see issue #314): the pure predicate
+/// `report_alarm_fired` uses to drop a fire report that arrived after
+/// `dismiss_alarm`/`snooze_alarm` already handled the occurrence it's reporting.
+#[cfg(test)]
+mod superseded_fire_tests {
+    use super::*;
+
+    #[test]
+    fn not_superseded_when_next_trigger_matches_the_fire_exactly() {
+        let fired_at = 1_000_000;
+        assert!(!is_superseded_fire(Some(fired_at), fired_at));
+    }
+
+    #[test]
+    fn not_superseded_when_next_trigger_is_slightly_behind_the_fire() {
+        // The OS alarm firing a beat after its scheduled trigger is the normal case,
+        // not a stale replay.
+        let fired_at = 1_000_000;
+        assert!(!is_superseded_fire(Some(fired_at - 500), fired_at));
+    }
+
+    #[test]
+    fn not_superseded_within_the_tolerance_window() {
+        let fired_at = 1_000_000;
+        let next_trigger = fired_at + SUPERSEDED_FIRE_TOLERANCE_MS;
+        assert!(!is_superseded_fire(Some(next_trigger), fired_at));
+    }
+
+    #[test]
+    fn superseded_just_past_the_tolerance_window() {
+        let fired_at = 1_000_000;
+        let next_trigger = fired_at + SUPERSEDED_FIRE_TOLERANCE_MS + 1;
+        assert!(is_superseded_fire(Some(next_trigger), fired_at));
+    }
+
+    #[test]
+    fn superseded_after_a_dismiss_advances_next_trigger_to_the_next_occurrence() {
+        // Mirrors dismiss_alarm's real recompute: reference_ms = old next_trigger + 1_000,
+        // then a repeating alarm's next occurrence lands at least a day out.
+        let fired_at = 1_000_000;
+        let next_occurrence = fired_at + 1_000 + 86_400_000;
+        assert!(is_superseded_fire(Some(next_occurrence), fired_at));
+    }
+
+    #[test]
+    fn superseded_after_a_snooze_reassigns_next_trigger_to_the_future() {
+        let fired_at = 1_000_000;
+        let snoozed_until = fired_at + 600_000; // snooze_alarm requires a future timestamp
+        assert!(is_superseded_fire(Some(snoozed_until), fired_at));
+    }
+
+    #[test]
+    fn superseded_when_next_trigger_is_none() {
+        // Disabled, or a one-shot alarm that already exhausted its only occurrence.
+        assert!(is_superseded_fire(None, 1_000_000));
     }
 }
 
