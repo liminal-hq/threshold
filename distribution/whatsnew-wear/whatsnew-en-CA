@@ -1,2 +1,3 @@
-🔧 Behind the Scenes
-• Improved on-device diagnostics to help track down sync and ringing issues faster
+🐛 Fixes
+• Fixed the watch sometimes staying silent when the phone alarm fires while its screen is already on
+• Fixed the watch occasionally ringing again right after being dismissed

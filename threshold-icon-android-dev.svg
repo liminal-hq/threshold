@@ -49,10 +49,15 @@
   <circle cx="256" cy="396" r="14" fill="#fbbf24" opacity="0.4"/>
   <circle cx="131.15" cy="326.85" r="14" fill="#fbbf24" opacity="0.4"/>
 
-  <!-- "Dev" ribbon banner, kept within the adaptive-icon safe-zone radius (~186px from
-       centre, inside the ~61%-diameter circle every launcher mask shape preserves) so it
-       survives cropping on real devices instead of being masked away at the corner. The
-       lettering is Liberation Sans Bold's actual "Dev" glyph outlines, pre-converted to a
+  <!-- "Dev" ribbon banner. The bar deliberately bleeds off the icon's right and bottom
+       edges (half-length 270 from centre, well past the 512px canvas boundary) so it reads
+       as a real corner ribbon rather than a small floating badge - any launcher mask crops
+       the bar's outer ends along with the icon's own square corners, which is fine, since
+       nothing legible lives out there. The "Dev" lettering itself stays anchored at the same
+       (355, 355) point as before, comfortably inside the ~61%-diameter safe-zone circle
+       every adaptive-icon mask shape (Android's worst case being a strict circle) is
+       guaranteed to preserve, so the readable part survives even the most aggressive crop.
+       The lettering is Liberation Sans Bold's actual "Dev" glyph outlines, pre-converted to a
        plain filled path (via `inkscape (actions=object-to-path)`) rather than left as an SVG
        <text> element; <text> needs a system font to be resolvable wherever this gets
        rasterized, and confirmed silently renders as nothing at all inside the
@@ -61,8 +66,8 @@
        dependency. Regenerate by rendering "Dev" at font-size 70 in Liberation Sans Bold and
        re-running the same inkscape command if the wording/font ever needs to change. -->
   <g transform="translate(355 355) rotate(-45)">
-    <rect x="-45" y="-17" width="90" height="34" fill="#ef4444"/>
-    <g transform="translate(-27.184 -18.943) scale(0.409481)" fill="#ffffff">
+    <rect x="-270" y="-20" width="540" height="40" fill="#ef4444"/>
+    <g transform="translate(-31.26 -21.78) scale(0.470903)" fill="#ffffff">
       <path d="m 47.612305,45.561523 q 0,7.451172 -2.939453,13.022461 -2.905274,5.53711 -8.271485,8.476563 Q 31.069336,70 24.165039,70 H 4.6826172 V 21.84082 H 22.114258 q 12.167969,0 18.833008,6.152344 6.665039,6.118164 6.665039,17.568359 z m -10.151368,0 q 0,-7.758789 -4.033203,-11.826171 -4.033203,-4.101563 -11.518554,-4.101563 h -7.143555 v 32.573242 h 8.544922 q 6.49414,0 10.322265,-4.477539 3.828125,-4.477539 3.828125,-12.167969 z m 33.120118,25.122071 q -8.339844,0 -12.817383,-4.921875 -4.477539,-4.956055 -4.477539,-14.423828 0,-9.160157 4.545898,-14.082032 4.545899,-4.921875 12.885742,-4.921875 7.963868,0 12.167969,5.297852 4.204102,5.263672 4.204102,15.449219 v 0.273437 H 63.369141 q 0,5.400391 1.982421,8.168945 2.016602,2.734375 5.708008,2.734375 5.092774,0 6.425782,-4.409179 l 9.057617,0.786133 Q 82.612305,70.683594 70.581055,70.683594 Z m 0,-32.299805 q -3.383789,0 -5.229493,2.358398 -1.811523,2.358399 -1.914062,6.59668 H 77.792969 Q 77.519531,42.861328 75.639648,40.639648 73.759766,38.383789 70.581055,38.383789 Z M 114.46777,70 H 102.9834 L 89.755859,33.017578 h 10.151368 l 6.459963,20.678711 q 0.51269,1.708984 2.42676,8.544922 0.34179,-1.401367 1.40136,-4.921875 1.05957,-3.520508 7.86133,-24.301758 h 10.04883 z"/>
     </g>
   </g>

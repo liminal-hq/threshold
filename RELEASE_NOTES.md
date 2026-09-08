@@ -6,8 +6,54 @@ This document tracks all releases of the Threshold application.
 
 ## Unreleased
 
+---
+
+## Version 0.4.0
+
+**Release Date:** September 8, 2026
+**Status:** Released
+
 > [!NOTE]
-> **Note for whoever writes the release notes for the version that ships this:** `alarm-manager`'s four legacy per-type native event queues (fired/snooze/dismiss/import) and wear-sync's own offline watch-message queue were both migrated on first launch onto the shared `plugins/native-bus` `DurableEventQueue`; the migration is one-way, so an app downgrade to a build predating this change would no longer see any events left behind in the new log format. The same release also fixes issue #254 (the watch staying silent for ~20s on a cold alarm fire) via a native, Rust-independent fired→watch-ring fan-out, and adds the symmetric native dismiss/snooze→stop signal in both directions (phone-cold and watch-cold) — see `docs/architecture/event-architecture.md`'s Native Event Bus section for the full mechanism.
+> This release adds a next-alarm home screen widget, fixes the watch staying silent for ~20s (or longer) when an alarm fires cold with the screen already on, and fixes a follow-on race where the watch could ring a second time right after being dismissed. Both fixes are part of a larger migration of native alarm-fired and dismiss/snooze signals onto a shared, durable native event bus, documented in `docs/architecture/event-architecture.md`'s Native Event Bus section.
+
+### ✨ New Features
+
+**Home Screen Widget**
+
+- Added an Android home screen widget showing the next alarm, in a new `home-widgets` plugin, following the app theme
+
+### 🐛 Bug Fixes
+
+- Fixed the watch staying silent when a phone alarm fires cold and the screen is already on/in active use, via a native, Rust-independent fired→watch-ring fan-out (issue #254)
+- Fixed the watch occasionally ringing a second time right after being dismissed, when a stale queued fire event replayed into Rust after the dismiss had already committed (issue #314)
+- Added the symmetric native dismiss/snooze→stop signal in both directions (phone-cold and watch-cold), so a notification or watch dismiss/snooze stops ringing immediately even before Rust has booted
+- Made `dismiss_alarm` safe to call twice for the same dismiss
+
+### 🛠️ Build and Release
+
+- Migrated `alarm-manager`'s four legacy per-type native event queues (fired/snooze/dismiss/import) and wear-sync's offline watch-message queue onto the shared `plugins/native-bus` `DurableEventQueue`. This migration is one-way: an app downgrade to a build predating this change would no longer see any events left behind in the new log format
+- Added a distinct "DEV" ribbon icon to side-by-side dev builds, on both phone and Wear
+- Warmed `main`'s build caches so new PR branches aren't always cold
+- Publish test results with a dedicated GitHub Actions check per suite
+
+### 📚 Documentation
+
+- Documented the native event bus, durable queue, and native fan-out mechanism
+
+### 📝 Technical Details
+
+**Major PRs Merged:**
+
+- [#307](https://github.com/liminal-hq/threshold/pull/307) - Add an Android next-alarm home screen widget in a new home-widgets plugin
+- [#298](https://github.com/liminal-hq/threshold/pull/298) / [#299](https://github.com/liminal-hq/threshold/pull/299) - Publish fired alarms onto NativeEventBus for instant watch-ring, and ring the watch natively before Rust boots
+- [#301](https://github.com/liminal-hq/threshold/pull/301) / [#302](https://github.com/liminal-hq/threshold/pull/302) - Close the in-app dismiss gap and propagate dismiss/snooze stop signals natively in both directions
+- [#315](https://github.com/liminal-hq/threshold/pull/315) - Drop a stale alarm-fired report that a dismiss or snooze already superseded
+
+**Commit/Contributor Summary (`0.3.0` → `0.4.0`):**
+
+- **Commits:** 72
+- **Merged PRs:** 19
+- **Contributors:** Scott Morris
 
 ---
 
