@@ -536,7 +536,15 @@ jobs:
           cp "$wear_aab" "release-assets/android/threshold-wear-v${wear_version_name}-${wear_version_code}.aab"
           cp "$wear_apk" "release-assets/android/threshold-wear-v${wear_version_name}-${wear_version_code}.apk"
 
-          # Wear mapping only (phone mapping intentionally excluded)
+          # Phone and Wear R8 mapping files (issue #318 -- phone mapping was previously
+          # skipped here with no documented reason, leaving Play Console unable to
+          # de-obfuscate phone crash/ANR stack traces even though R8 is genuinely enabled
+          # for the phone release build type).
+          phone_mapping=$(find apps/threshold/src-tauri/gen/android/app/build/outputs -type f -name "mapping.txt" | sort | head -n1 || true)
+          if [ -n "${phone_mapping:-}" ]; then
+            cp "$phone_mapping" "release-assets/android/phone-mapping-v${phone_version_name}-${phone_version_code}.txt"
+          fi
+
           wear_mapping=$(find apps/threshold-wear/build/outputs -type f -name "mapping.txt" | sort | head -n1 || true)
           if [ -n "${wear_mapping:-}" ]; then
             cp "$wear_mapping" "release-assets/android/wear-mapping-v${wear_version_name}-${wear_version_code}.txt"
@@ -645,8 +653,10 @@ jobs:
         id: play_asset_paths
         run: |
           phone_debug_symbols=$(find release-assets/android -type f -name 'threshold-phone-native-debug-symbols-v*.zip' | sort | head -n1 || true)
+          phone_mapping_file=$(find release-assets/android -type f -name 'phone-mapping-v*.txt' | sort | head -n1 || true)
           wear_mapping_file=$(find release-assets/android -type f -name 'wear-mapping-v*.txt' | sort | head -n1 || true)
           echo "phone_debug_symbols=${phone_debug_symbols}" >> "$GITHUB_OUTPUT"
+          echo "phone_mapping_file=${phone_mapping_file}" >> "$GITHUB_OUTPUT"
           echo "wear_mapping_file=${wear_mapping_file}" >> "$GITHUB_OUTPUT"
 
       # Both Play deploy steps are no-ops (via `if:`) until their secrets/vars are set, so this
@@ -664,6 +674,7 @@ jobs:
           status: draft
           whatsNewDirectory: distribution/whatsnew
           debugSymbols: ${{ steps.play_asset_paths.outputs.phone_debug_symbols }}
+          mappingFile: ${{ steps.play_asset_paths.outputs.phone_mapping_file }}
 
       # Confirmed via Play Console: Wear is a separate release train within the same app listing
       # (ca.liminalhq.threshold), not a separate package -- Play Console's "Internal testing"
