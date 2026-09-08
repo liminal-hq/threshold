@@ -1,3 +1,6 @@
 🐛 Fixes
 • Fixed the watch sometimes staying silent when the phone alarm fires while its screen is already on
 • Fixed the watch occasionally ringing again right after being dismissed
+
+✨ New
+• Added the real Threshold app icon, replacing the placeholder icon

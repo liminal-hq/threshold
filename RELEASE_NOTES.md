@@ -8,6 +8,36 @@ This document tracks all releases of the Threshold application.
 
 ---
 
+## Version 0.4.1
+
+**Release Date:** September 8, 2026
+**Status:** Released
+
+> [!NOTE]
+> This release gives the Wear app its real Threshold branding (replacing Android Studio's stock launcher icon), adds a matching debug/dev build identity to the Wear app so it can be tested side-by-side with a release install and paired with the phone's own dev build, and fixes phone crash/ANR reports in Play Console showing obfuscated stack traces.
+
+### 🐛 Bug Fixes
+
+- Fixed the Wear app shipping Android Studio's stock unbranded launcher icon instead of the real Threshold clock mark
+- Fixed the phone app's R8 mapping file never being collected or uploaded to Play Console, leaving crash/ANR reports there obfuscated
+
+### 🛠️ Build and Release
+
+- Added a debug-only `.dev` application identifier to the Wear app (mirroring the phone's existing dev build), with a distinct "Threshold Dev" label and DEV-ribboned icon, installable side-by-side with a release watch app and paired with the phone's own dev build for testing both together
+
+### 📝 Technical Details
+
+**Major PRs Merged:**
+
+- [#313](https://github.com/liminal-hq/threshold/pull/313) - Brand the Wear app icon and add a matching Dev build identity
+- [#319](https://github.com/liminal-hq/threshold/pull/319) - Collect and upload the phone app's R8 mapping file to Play Console
+
+**Commit/Contributor Summary (`0.4.0` → `0.4.1`):**
+
+- **Contributors:** Scott Morris
+
+---
+
 ## Version 0.4.0
 
 **Release Date:** September 8, 2026
