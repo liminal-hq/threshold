@@ -51,7 +51,7 @@ class WearRingInitProvider : ContentProvider() {
         NativeFanOutPrefs.warm(ctx)
         NativeFiredListener.register(ctx)
         NativeStopListener.register(ctx)
-        Log.d(TAG, "WearRingInitProvider.onCreate() fired, fan-out toggle warmed, listeners registered")
+        nativeLog.d(ctx, TAG, "WearRingInitProvider.onCreate() fired, fan-out toggle warmed, listeners registered")
 
         return true
     }

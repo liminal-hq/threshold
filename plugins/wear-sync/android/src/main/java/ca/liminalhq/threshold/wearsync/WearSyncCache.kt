@@ -6,7 +6,6 @@
 package ca.liminalhq.threshold.wearsync
 
 import android.content.Context
-import android.util.Log
 
 private const val TAG = "WearSyncCache"
 private const val PREFS_NAME = "ThresholdWearSync"
@@ -60,8 +59,11 @@ object WearSyncCache {
             putBoolean(KEY_IS_24_HOUR_KNOWN, is24HourKnown)
             apply()
         }
-        Log.d(TAG, "Cached alarm data at revision $revision (${alarmsJson.length} bytes, snooze=${snoozeLengthMinutes}m, is24h=$is24Hour, is24hKnown=$is24HourKnown)")
-        NativeEventLog.log(context, TAG, "Cached alarm data at revision $revision (${alarmsJson.length} bytes)")
+        nativeLog.d(
+            context,
+            TAG,
+            "Cached alarm data at revision $revision (${alarmsJson.length} bytes, snooze=${snoozeLengthMinutes}m, is24h=$is24Hour, is24hKnown=$is24HourKnown)",
+        )
     }
 
     /**
@@ -73,7 +75,7 @@ object WearSyncCache {
     fun read(context: Context): Quintuple<String, Long, Int, Boolean, Boolean>? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = prefs.getString(KEY_ALARMS_JSON, null) ?: run {
-            NativeEventLog.log(context, TAG, "Cache read requested but empty")
+            nativeLog.d(context, TAG, "Cache read requested but empty")
             return null
         }
         val revision = prefs.getLong(KEY_REVISION, 0)

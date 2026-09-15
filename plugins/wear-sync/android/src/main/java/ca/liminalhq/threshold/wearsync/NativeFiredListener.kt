@@ -95,7 +95,7 @@ object NativeFiredListener {
             try {
                 ringWatch(context, fired.id)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to ring watch natively for id=${fired.id}", e)
+                nativeLog.e(context, TAG, "Failed to ring watch natively for id=${fired.id}", e)
             }
         }
         return TAG_WATCH_RING
@@ -104,7 +104,7 @@ object NativeFiredListener {
     private suspend fun ringWatch(context: Context, alarmId: Int) {
         val cached = WearSyncCache.read(context)
         if (cached == null) {
-            Log.w(TAG, "No cached alarm data available, cannot ring watch natively for id=$alarmId")
+            nativeLog.w(context, TAG, "No cached alarm data available, cannot ring watch natively for id=$alarmId")
             return
         }
         val (alarmsJson, _, snoozeLengthMinutes, is24Hour, is24HourKnown) = cached

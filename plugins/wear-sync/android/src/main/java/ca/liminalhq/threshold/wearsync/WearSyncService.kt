@@ -62,7 +62,7 @@ class WearSyncService : Service() {
         }
 
         val path = intent.getStringExtra(EXTRA_PATH) ?: "unknown"
-        NativeEventLog.log(applicationContext, TAG, "Started for trigger path: $path")
+        nativeLog.d(applicationContext, TAG, "Started for trigger path: $path")
 
         startForegroundNotification()
         bootTauriAndReplay(path)
@@ -136,8 +136,7 @@ class WearSyncService : Service() {
 
                 val plugin = WearSyncPlugin.instance
                 if (plugin != null && plugin.isChannelReady) {
-                    Log.i(TAG, "Plugin ready after ${waited}ms, queued messages should replay (trigger path: $path)")
-                    NativeEventLog.log(
+                    nativeLog.i(
                         applicationContext,
                         TAG,
                         "Plugin ready after ${waited}ms for path=$path -- moving activity to back",
@@ -146,16 +145,10 @@ class WearSyncService : Service() {
                     // Move the activity to the back so the user doesn't see it.
                     plugin.moveActivityToBack()
                 } else {
-                    Log.e(TAG, "Plugin not available after ${waited}ms, giving up on: $path")
-                    NativeEventLog.log(
-                        applicationContext,
-                        TAG,
-                        "Gave up waiting for plugin after ${waited}ms for path=$path",
-                    )
+                    nativeLog.e(applicationContext, TAG, "Gave up waiting for plugin after ${waited}ms for path=$path")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error during Tauri boot and replay", e)
-                NativeEventLog.log(applicationContext, TAG, "Error during Tauri boot and replay: ${e.message}")
+                nativeLog.e(applicationContext, TAG, "Error during Tauri boot and replay", e)
             } finally {
                 stopSelf()
             }

@@ -686,9 +686,18 @@ impl AlarmCoordinator {
                 self.emit_alarm_cancelled(app, alarm.id, reason, revision)
                     .await?;
             }
+            // Deliberately just one `alarm:scheduled` emission, not a cancel-then-schedule
+            // pair -- see issue #322. The native alarm-manager plugin's `schedule()` call
+            // (`AlarmUtils.scheduleAlarm`) reuses the same `PendingIntent` key (`id`), so
+            // `AlarmManager.setAlarmClock()` atomically *replaces* the previous registration;
+            // no separate `cancel()` is needed for a reschedule. The old two-step sequence
+            // instead opened a real window where Android had no alarm registered at all for
+            // this id, and if the second (`schedule`) native call was ever dropped, delayed,
+            // or failed, the alarm stayed unarmed with nothing to indicate it. This also
+            // improves the failure mode: if `schedule()` itself now fails, the *previous*
+            // native registration is left intact rather than the user ending up with no
+            // alarm at all.
             SchedulingTransition::Reschedule => {
-                self.emit_alarm_cancelled(app, alarm.id, CancelReason::Updated, revision)
-                    .await?;
                 self.emit_alarm_scheduled(app, alarm, revision).await?;
             }
             SchedulingTransition::NoOp => {}
@@ -1102,6 +1111,65 @@ mod dismiss_idempotency_tests {
         let after = coord.db.get_by_id(alarm.id).await.unwrap();
         assert_eq!(after.next_trigger, expected_next);
         assert!(after.revision > rev1);
+    }
+
+    /// Regression coverage for issue #322: dismissing a still-enabled recurring alarm is a
+    /// `SchedulingTransition::Reschedule`, which must emit only `alarm:scheduled` -- never
+    /// `alarm:cancelled` -- since `AlarmManager.setAlarmClock()` reusing the same
+    /// `PendingIntent` on the Kotlin side atomically replaces the previous native
+    /// registration. The old cancel-then-schedule sequence left a real window where the
+    /// native alarm was briefly unregistered entirely; if the native alarm-manager plugin
+    /// dropped, delayed, or failed the follow-up `schedule()` call in that window (e.g. the
+    /// app process not being foregrounded, as in the original report), the alarm stayed
+    /// unarmed with no further signal.
+    #[tokio::test]
+    async fn dismissing_a_recurring_alarm_emits_only_alarm_scheduled_not_alarm_cancelled() {
+        use std::sync::Mutex;
+        use tauri::Listener;
+
+        let coord = test_coordinator().await;
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+
+        let now = chrono::Utc::now().timestamp_millis();
+        let past_trigger = now - 60_000;
+
+        let input = repeating_alarm_input();
+        let rev1 = coord.db.next_revision().await.unwrap();
+        let alarm = coord
+            .db
+            .save(input, Some(past_trigger), rev1)
+            .await
+            .unwrap();
+
+        let emitted: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+
+        let scheduled_emitted = emitted.clone();
+        handle.listen("alarm:scheduled", move |_event| {
+            scheduled_emitted
+                .lock()
+                .unwrap()
+                .push("alarm:scheduled".into());
+        });
+        let cancelled_emitted = emitted.clone();
+        handle.listen("alarm:cancelled", move |_event| {
+            cancelled_emitted
+                .lock()
+                .unwrap()
+                .push("alarm:cancelled".into());
+        });
+
+        coord.dismiss_alarm(handle, alarm.id).await.unwrap();
+
+        let events = emitted.lock().unwrap();
+        assert_eq!(
+            events.as_slice(),
+            ["alarm:scheduled"],
+            "a Reschedule (dismiss of a still-enabled recurring alarm) must emit only \
+             alarm:scheduled -- an alarm:cancelled here would round-trip through the native \
+             alarm-manager plugin's cancel(), unregistering the OS alarm with no immediate \
+             guarantee schedule() re-arms it (issue #322)",
+        );
     }
 
     /// Regression coverage for the "dismiss upcoming alarm" notification action

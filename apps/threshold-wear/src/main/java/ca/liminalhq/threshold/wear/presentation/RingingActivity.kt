@@ -11,7 +11,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.text.format.DateFormat
-import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -46,8 +45,7 @@ class RingingActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         if (intent?.action == ACTION_CLOSE_RINGING) {
-            Log.d(TAG, "Received close action in onCreate")
-            NativeEventLog.log(applicationContext, TAG, "Received close action in onCreate")
+            NativeEventLog.d(applicationContext, TAG, "Received close action in onCreate")
             closeRingingTask()
             return
         }
@@ -69,8 +67,11 @@ class RingingActivity : ComponentActivity() {
         }
         val is24HourSource = if (is24HourKnown) "phone-sync" else "watch-default"
 
-        Log.d(TAG, "Ringing activity created for alarm $alarmId ($hour:$minute '$label', is24h=$is24Hour source=$is24HourSource watchDefault=$watchDefaultIs24Hour)")
-        NativeEventLog.log(applicationContext, TAG, "Ringing activity created for alarm id=$alarmId")
+        NativeEventLog.d(
+            applicationContext,
+            TAG,
+            "Ringing activity created for alarm id=$alarmId ($hour:$minute '$label', is24h=$is24Hour source=$is24HourSource watchDefault=$watchDefaultIs24Hour)",
+        )
 
         val app = application as ThresholdWearApp
         val dataLayerClient = app.dataLayerClient
@@ -85,8 +86,7 @@ class RingingActivity : ComponentActivity() {
                     is24Hour = is24Hour,
                     snoozeLengthMinutes = snoozeLength,
                     onStop = {
-                        Log.d(TAG, "Stop pressed for alarm $alarmId")
-                        NativeEventLog.log(applicationContext, TAG, "Stop pressed for alarm id=$alarmId")
+                        NativeEventLog.d(applicationContext, TAG, "Stop pressed for alarm id=$alarmId")
                         stopRingingService()
                         scope.launch {
                             dataLayerClient.sendDismissAlarm(alarmId)
@@ -94,8 +94,7 @@ class RingingActivity : ComponentActivity() {
                         closeRingingTask()
                     },
                     onSnooze = {
-                        Log.d(TAG, "Snooze pressed for alarm $alarmId (${snoozeLength}m)")
-                        NativeEventLog.log(applicationContext, TAG, "Snooze pressed for alarm id=$alarmId (${snoozeLength}m)")
+                        NativeEventLog.d(applicationContext, TAG, "Snooze pressed for alarm id=$alarmId (${snoozeLength}m)")
                         stopRingingService()
                         scope.launch {
                             // Always schedule a local snooze alarm so the
@@ -120,8 +119,7 @@ class RingingActivity : ComponentActivity() {
         setIntent(intent)
 
         if (intent.action == ACTION_CLOSE_RINGING) {
-            Log.d(TAG, "Received close action in onNewIntent")
-            NativeEventLog.log(applicationContext, TAG, "Received close action in onNewIntent")
+            NativeEventLog.d(applicationContext, TAG, "Received close action in onNewIntent")
             closeRingingTask()
         }
     }

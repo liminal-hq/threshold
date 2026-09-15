@@ -35,6 +35,7 @@ android {
 dependencies {
     compileOnly(project(":tauri-android"))
     implementation(project(":tauri-plugin-native-bus"))
+    implementation(project(":tauri-plugin-native-log"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.25")
     implementation("com.google.android.gms:play-services-wearable:18.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

@@ -106,7 +106,7 @@ object NativeStopListener {
                 val messagePayload = buildMessagePayload(context, alarmId)
                 sendWatchMessageToConnectedNodes(context, msgPath, messagePayload, TAG, logLabel)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send $logLabel to watch natively for id=$alarmId", e)
+                nativeLog.e(context, TAG, "Failed to send $logLabel to watch natively for id=$alarmId", e)
             }
         }
         return null

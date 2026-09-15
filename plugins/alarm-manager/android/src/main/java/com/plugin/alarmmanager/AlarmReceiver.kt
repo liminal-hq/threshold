@@ -69,8 +69,7 @@ class AlarmReceiver : BroadcastReceiver() {
         Log.d("AlarmReceiver", "Alarm Received! Action: ${intent.action}")
         val alarmId = intent.getIntExtra("ALARM_ID", -1)
         val soundUri = intent.getStringExtra("ALARM_SOUND_URI")
-        Log.d("AlarmReceiver", "Alarm ID: $alarmId, Sound URI: $soundUri")
-        NativeEventLog.log(context, "AlarmReceiver", "Received alarm id=$alarmId")
+        nativeLog.d(context, "AlarmReceiver", "Received alarm id=$alarmId, soundUri=$soundUri")
 
         // Guard: skip alarms that were cancelled or deleted before this broadcast was processed.
         // cancelAlarm() removes the prefs entry atomically with the AlarmManager cancellation, so
@@ -81,9 +80,8 @@ class AlarmReceiver : BroadcastReceiver() {
         // would let the watch ring for an alarm this receiver is about to disown.
         val isLive = AlarmUtils.isAlarmLive(context, alarmId)
         if (!isLive) {
-            Log.w("AlarmReceiver", "Alarm $alarmId no longer live — skipping fire (deleted/cancelled)")
             Log.d("AlarmReceiver", "========== ALARM RECEIVER END (skipped) ==========")
-            NativeEventLog.log(context, "AlarmReceiver", "Skipped alarm id=$alarmId (no longer live)")
+            nativeLog.w(context, "AlarmReceiver", "Skipped alarm id=$alarmId (no longer live, deleted/cancelled)")
             return
         }
 
@@ -98,7 +96,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 AlarmManagerPlugin.notifyAlarmFired(context, alarmId, firedPayload)
             }
         } catch (e: Exception) {
-            Log.e(
+            nativeLog.e(
+                context,
                 "AlarmReceiver",
                 "Failed to record/publish fired event for alarm $alarmId; ringing proceeds regardless",
                 e,
@@ -128,7 +127,7 @@ class AlarmReceiver : BroadcastReceiver() {
 
         Log.d("AlarmReceiver", "Service started. Notification will launch app via full-screen intent.")
         Log.d("AlarmReceiver", "========== ALARM RECEIVER END ==========")
-        NativeEventLog.log(context, "AlarmReceiver", "Started AlarmRingingService for alarm id=$alarmId")
+        nativeLog.d(context, "AlarmReceiver", "Started AlarmRingingService for alarm id=$alarmId")
     }
 }
 

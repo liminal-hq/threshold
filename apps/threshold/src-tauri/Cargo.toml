@@ -33,6 +33,11 @@ tauri-plugin-toast = { path = "../../../plugins/toast" }
 # project dependency; this direct Cargo dependency is what gets native-bus's `android/`
 # into the generated Android project graph in the first place.
 tauri-plugin-native-bus = { path = "../../../plugins/native-bus" }
+# Same reasoning as native-bus above: a direct dependency here is what gets
+# native-log's `android/` (the shared `NativeEventLog` Kotlin class) into the generated
+# Android project graph, so alarm-manager, wear-sync, app-management, and native-bus can
+# each depend on it as a Gradle project dependency.
+tauri-plugin-native-log = { path = "../../../plugins/native-log" }
 tauri-plugin-home-widgets = { path = "../../../plugins/home-widgets" }
 tauri-plugin-deep-link = { version = "2.0.0", features = [] }
 tauri-plugin-log = { version = "2.0.0", features = [] }

@@ -37,7 +37,7 @@ internal object NativeListenerSupport {
     fun subscribe(context: Context, tag: String, topic: String, handler: (Context, String) -> String?) {
         val appContext = context.applicationContext
         NativeEventBus.subscribe(topic) { payload -> handler(appContext, payload) }
-        Log.d(tag, "Registered native listener for topic '$topic'")
+        nativeLog.d(appContext, tag, "Registered native listener for topic '$topic'")
     }
 }
 

@@ -83,10 +83,19 @@ fn setup_scheduling_listeners<R: Runtime>(app: AppHandle<R>) {
     app.listen("alarm:scheduled", move |event| {
         match serde_json::from_str::<models::ScheduleRequest>(event.payload()) {
             Ok(request) => {
-                if let Err(error) = scheduled_app.state::<AlarmManager<R>>().schedule(request) {
-                    log::error!(
-                        "alarm-manager: failed to schedule from alarm:scheduled event: {error}"
-                    );
+                let id = request.id;
+                let trigger_at = request.trigger_at;
+                match scheduled_app.state::<AlarmManager<R>>().schedule(request) {
+                    Ok(_) => {
+                        log::info!(
+                            "alarm-manager: scheduled native alarm id={id} trigger_at={trigger_at}"
+                        );
+                    }
+                    Err(error) => {
+                        log::error!(
+                            "alarm-manager: failed to schedule from alarm:scheduled event for id={id}: {error}"
+                        );
+                    }
                 }
             }
             Err(error) => {
@@ -99,10 +108,16 @@ fn setup_scheduling_listeners<R: Runtime>(app: AppHandle<R>) {
     app.listen("alarm:cancelled", move |event| {
         match serde_json::from_str::<models::CancelRequest>(event.payload()) {
             Ok(request) => {
-                if let Err(error) = cancelled_app.state::<AlarmManager<R>>().cancel(request) {
-                    log::error!(
-                        "alarm-manager: failed to cancel from alarm:cancelled event: {error}"
-                    );
+                let id = request.id;
+                match cancelled_app.state::<AlarmManager<R>>().cancel(request) {
+                    Ok(_) => {
+                        log::info!("alarm-manager: cancelled native alarm id={id}");
+                    }
+                    Err(error) => {
+                        log::error!(
+                            "alarm-manager: failed to cancel from alarm:cancelled event for id={id}: {error}"
+                        );
+                    }
                 }
             }
             Err(error) => {

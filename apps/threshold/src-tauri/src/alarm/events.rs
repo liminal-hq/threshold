@@ -90,8 +90,13 @@ pub struct AlarmCancelled {
 pub enum CancelReason {
     Disabled, // User toggled off
     Deleted,  // User deleted alarm
-    Updated,  // Rescheduling with new trigger
-    Expired,  // One-time alarm fired
+    // Still enabled but no longer has a resolvable next occurrence (e.g. a WINDOW alarm's
+    // active_days was cleared) -- NOT emitted for a plain trigger-time reschedule (issue
+    // #322): that case classifies as SchedulingTransition::Reschedule, which emits only
+    // alarm:scheduled, since AlarmManager.setAlarmClock() reusing the same PendingIntent
+    // atomically replaces the previous native registration without an explicit cancel.
+    Updated,
+    Expired, // One-time alarm fired
 }
 
 // =========================================================================

@@ -79,8 +79,7 @@ class WearAlarmScheduler(private val context: Context) {
             .toSet()
         saveScheduledIds(scheduledIds)
 
-        Log.d(TAG, "Reconciled: $scheduled scheduled, $cancelled cancelled (${orphanedIds.size} orphaned)")
-        NativeEventLog.log(
+        NativeEventLog.d(
             context,
             TAG,
             "Reconciled fallback schedule: $scheduled scheduled, $cancelled cancelled (${orphanedIds.size} orphaned)",
@@ -96,7 +95,7 @@ class WearAlarmScheduler(private val context: Context) {
     fun schedule(alarm: WatchAlarm) {
         val triggerAt = alarm.nextTrigger ?: return
         if (triggerAt <= System.currentTimeMillis()) {
-            Log.d(TAG, "Skipping alarm ${alarm.id} — trigger time is in the past")
+            NativeEventLog.w(context, TAG, "Skipping alarm ${alarm.id} -- trigger time is in the past")
             return
         }
 
@@ -111,8 +110,11 @@ class WearAlarmScheduler(private val context: Context) {
         val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerAt, showIntent)
         alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
 
-        Log.d(TAG, "Scheduled alarm ${alarm.id} at $triggerAt (${alarm.hour}:${"%02d".format(alarm.minute)} '${alarm.label}')")
-        NativeEventLog.log(context, TAG, "Scheduled fallback alarm id=${alarm.id} at $triggerAt")
+        NativeEventLog.d(
+            context,
+            TAG,
+            "Scheduled fallback alarm id=${alarm.id} at $triggerAt (${alarm.hour}:${"%02d".format(alarm.minute)} '${alarm.label}')",
+        )
     }
 
     /**
@@ -137,8 +139,7 @@ class WearAlarmScheduler(private val context: Context) {
         val ids = getScheduledIds() + alarmId
         saveScheduledIds(ids)
 
-        Log.d(TAG, "Scheduled snooze for alarm $alarmId in ${delayMinutes}m (trigger at $triggerAt)")
-        NativeEventLog.log(context, TAG, "Scheduled fallback snooze id=$alarmId in ${delayMinutes}m")
+        NativeEventLog.d(context, TAG, "Scheduled fallback snooze id=$alarmId in ${delayMinutes}m (trigger at $triggerAt)")
     }
 
     /** Cancel a single alarm by its ID. */
@@ -149,8 +150,7 @@ class WearAlarmScheduler(private val context: Context) {
         val ids = getScheduledIds() - alarmId
         saveScheduledIds(ids)
 
-        Log.d(TAG, "Cancelled alarm $alarmId")
-        NativeEventLog.log(context, TAG, "Cancelled fallback alarm id=$alarmId")
+        NativeEventLog.d(context, TAG, "Cancelled fallback alarm id=$alarmId")
     }
 
     /** Cancel all local alarms for the given list and clear tracked IDs. */
