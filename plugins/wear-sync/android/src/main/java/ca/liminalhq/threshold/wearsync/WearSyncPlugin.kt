@@ -113,7 +113,10 @@ internal suspend fun sendWatchMessageToConnectedNodes(
 ): Int {
     val nodes = nodeClient.connectedNodes.await()
     if (nodes.isEmpty()) {
-        Log.d(tag, "No connected watch nodes — skipping $logLabel notification")
+        // Documented gap (see CLAUDE.md): silently resolves without sending or queuing
+        // anything when no watch is connected -- persisted, not just logcat, so this is
+        // visible in an exported log rather than only discoverable live.
+        nativeLog.w(context, tag, "No connected watch nodes — skipping $logLabel notification")
         return 0
     }
 
@@ -121,7 +124,7 @@ internal suspend fun sendWatchMessageToConnectedNodes(
         messageClient.sendMessage(node.id, path, payload).await()
         Log.d(tag, "Sent $logLabel to watch: ${node.displayName}")
     }
-    NativeEventLog.log(context, tag, "Sent $logLabel to ${nodes.size} node(s)")
+    nativeLog.d(context, tag, "Sent $logLabel to ${nodes.size} node(s)")
     return nodes.size
 }
 
@@ -524,8 +527,7 @@ class WearSyncPlugin(private val activity: Activity) : Plugin(activity) {
     fun moveActivityToBack() {
         activity.runOnUiThread {
             val moved = activity.moveTaskToBack(true)
-            Log.d(TAG, "moveTaskToBack result: $moved")
-            NativeEventLog.log(activity, TAG, "moveActivityToBack called, moveTaskToBack result=$moved")
+            nativeLog.d(activity, TAG, "moveActivityToBack called, moveTaskToBack result=$moved")
         }
     }
 

@@ -40,8 +40,7 @@ class WearSyncEventQueue(private val store: KeyValueStore, private val context: 
             migrateLegacyEntriesIfNeeded()
             delegate.enqueue(topic = path, payload = data)
         }
-        Log.d(TAG, "Enqueued message: path=$path")
-        logToFile("Enqueued message path=$path")
+        log(Log.DEBUG, "Enqueued message: path=$path")
     }
 
     /**
@@ -58,8 +57,7 @@ class WearSyncEventQueue(private val store: KeyValueStore, private val context: 
     fun commit(eventIds: Set<String>) {
         if (eventIds.isEmpty()) return
         synchronized(lock) { delegate.commit(eventIds) }
-        Log.d(TAG, "Drained ${eventIds.size} queued message(s)")
-        logToFile("Drained ${eventIds.size} queued message(s)")
+        log(Log.DEBUG, "Drained ${eventIds.size} queued message(s)")
     }
 
     /**
@@ -77,8 +75,7 @@ class WearSyncEventQueue(private val store: KeyValueStore, private val context: 
         val legacyArray = try {
             JSONArray(legacyRaw)
         } catch (e: Exception) {
-            Log.w(TAG, "Corrupt legacy queue JSON under '$LEGACY_KEY_QUEUE', discarding without migrating", e)
-            logToFile("Corrupt legacy queue JSON, discarding without migrating: ${e.message}")
+            log(Log.WARN, "Corrupt legacy queue JSON under '$LEGACY_KEY_QUEUE', discarding without migrating", e)
             store.remove(LEGACY_KEY_QUEUE)
             return
         }
@@ -93,7 +90,7 @@ class WearSyncEventQueue(private val store: KeyValueStore, private val context: 
         for (i in 0 until legacyArray.length()) {
             val entry = legacyArray.optJSONObject(i)
             if (entry == null) {
-                Log.w(TAG, "Skipping malformed legacy queue entry at index $i (not a JSON object)")
+                log(Log.WARN, "Skipping malformed legacy queue entry at index $i (not a JSON object)")
                 continue
             }
             try {
@@ -109,19 +106,33 @@ class WearSyncEventQueue(private val store: KeyValueStore, private val context: 
                 )
                 migrated++
             } catch (e: Exception) {
-                Log.w(TAG, "Skipping malformed legacy queue entry at index $i: ${e.message}")
+                log(Log.WARN, "Skipping malformed legacy queue entry at index $i: ${e.message}")
             }
         }
 
         // Written as one atomic batch rather than a separate set() + remove(): if the process died between those two calls, the next launch would see the new log already holding these entries but LEGACY_KEY_QUEUE still present with its original data, re-run this migration, and enqueue every legacy entry a second time (with fresh event IDs) -- delivering the same watch action twice. Batching makes that intermediate state unobservable -- either both the log write and the legacy-key removal land, or neither does. Mirrors AlarmManagerPlugin.migrateLegacyQueues's identical fix for the same class of bug.
         store.batch(sets = mapOf(KEY_QUEUE to migratedArray.toString()), removes = setOf(LEGACY_KEY_QUEUE))
-        Log.i(TAG, "Migrated $migrated legacy watch message(s) into the durable event queue")
-        logToFile("Migrated $migrated legacy watch message(s) into the durable event queue")
+        log(Log.INFO, "Migrated $migrated legacy watch message(s) into the durable event queue")
     }
 
-    /** Mirrors the old `WearSyncQueue`'s [NativeEventLog] calls, so field-exported logs still see queue activity. */
-    private fun logToFile(message: String) {
-        context?.let { NativeEventLog.log(it, TAG, message) }
+    /**
+     * Routes through [nativeLog] (both logcat and the durable file) when [context] is available,
+     * falling back to plain [Log] when it isn't -- [context] is nullable only so tests can
+     * construct this class against an in-memory [KeyValueStore] fake without any Android
+     * framework available (see the class KDoc).
+     */
+    private fun log(level: Int, message: String, throwable: Throwable? = null) {
+        val ctx = context
+        if (ctx == null) {
+            Log.println(level, TAG, message)
+            return
+        }
+        when (level) {
+            Log.WARN -> nativeLog.w(ctx, TAG, message, throwable)
+            Log.ERROR -> nativeLog.e(ctx, TAG, message, throwable)
+            Log.INFO -> nativeLog.i(ctx, TAG, message)
+            else -> nativeLog.d(ctx, TAG, message)
+        }
     }
 
     companion object {

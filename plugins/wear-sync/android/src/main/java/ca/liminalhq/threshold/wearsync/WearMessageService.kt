@@ -117,7 +117,7 @@ class WearMessageService : WearableListenerService() {
         }
 
         val plugin = WearSyncPlugin.instance
-        NativeEventLog.log(
+        nativeLog.d(
             applicationContext,
             TAG,
             "Message received path=$path, pluginLoaded=${plugin != null}, channelReady=${plugin?.isChannelReady}, pipelineReady=${plugin?.isPipelineReady}",
@@ -187,7 +187,7 @@ class WearMessageService : WearableListenerService() {
             File(logsDir, WATCH_LOG_FILE_NAME).writeText(content)
             Log.d(TAG, "Wrote watch log (${content.length} chars) to $logsDir")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to write watch log", e)
+            nativeLog.e(applicationContext, TAG, "Failed to write watch log", e)
         }
     }
 
@@ -222,10 +222,9 @@ class WearMessageService : WearableListenerService() {
 
                 val dataItem = dataClient.putDataItem(request.asPutDataRequest()).await()
                 Log.d(TAG, "Published cached data to watch: uri=${dataItem.uri}, revision=$revision")
-                NativeEventLog.log(applicationContext, TAG, "Served offline sync from cache at revision $revision")
+                nativeLog.d(applicationContext, TAG, "Served offline sync from cache at revision $revision")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to publish cached data to watch", e)
-                NativeEventLog.log(applicationContext, TAG, "Failed to publish cached data to watch: ${e.message}")
+                nativeLog.e(applicationContext, TAG, "Failed to publish cached data to watch", e)
             }
         }
     }
@@ -245,8 +244,7 @@ class WearMessageService : WearableListenerService() {
      *   native listener elsewhere in the app can act on immediately.
      */
     private fun handleOfflineWrite(path: String, data: String, busTopic: String? = null) {
-        Log.i(TAG, "Watch write received offline ($path), starting WearSyncService")
-        NativeEventLog.log(applicationContext, TAG, "Offline write received path=$path, starting WearSyncService")
+        nativeLog.i(applicationContext, TAG, "Offline write received path=$path, starting WearSyncService")
         // Must go through the shared singleton, not a fresh instance -- see WearSyncEventQueue.getInstance's KDoc for why a second, independently-constructed instance over the same SharedPreferences file provides no mutual exclusion against WearSyncPlugin's own enqueues.
         enqueueOfflineWrite(WearSyncEventQueue.getInstance(applicationContext), path, data, busTopic)
 
