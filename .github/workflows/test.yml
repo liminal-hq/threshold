@@ -311,6 +311,7 @@ jobs:
 
           write_groovy_settings() {
             local plugin_dir="$1"
+            local extra_includes="${2:-}"
             cat > "${plugin_dir}/settings.gradle" <<EOF
           pluginManagement {
               repositories {
@@ -342,6 +343,7 @@ jobs:
 
           include ':tauri-android'
           project(':tauri-android').projectDir = new File('${TAURI_ANDROID_PATH}')
+          ${extra_includes}
           EOF
           }
 
@@ -359,24 +361,40 @@ jobs:
           NATIVE_BUS_INCLUDE="include(\":tauri-plugin-native-bus\")
           project(\":tauri-plugin-native-bus\").projectDir = file(\"${NATIVE_BUS_ANDROID_PATH}\")"
 
-          write_kts_settings "plugins/alarm-manager/android" "${NATIVE_BUS_INCLUDE}"
+          # native-log (issue #322 cleanup) carries the shared NativeEventLog Kotlin class --
+          # alarm-manager, wear-sync, and app-management all now depend on it as a Gradle
+          # project dependency the same way alarm-manager/wear-sync already depend on
+          # native-bus above, so it needs the same per-settings include (kts flavour for the
+          # two `write_kts_settings` consumers, groovy for app-management's
+          # `write_groovy_settings` one) plus its own isolated settings/build entry.
+          NATIVE_LOG_ANDROID_PATH="$(pwd)/plugins/native-log/android"
+          NATIVE_LOG_INCLUDE="include(\":tauri-plugin-native-log\")
+          project(\":tauri-plugin-native-log\").projectDir = file(\"${NATIVE_LOG_ANDROID_PATH}\")"
+          NATIVE_LOG_INCLUDE_GROOVY="include ':tauri-plugin-native-log'
+          project(':tauri-plugin-native-log').projectDir = new File('${NATIVE_LOG_ANDROID_PATH}')"
+
+          write_kts_settings "plugins/alarm-manager/android" "${NATIVE_BUS_INCLUDE}
+          ${NATIVE_LOG_INCLUDE}"
           write_kts_settings "plugins/theme-utils/android"
           write_kts_settings "plugins/os-prefs/android"
           write_kts_settings "plugins/predictive-back/android"
-          write_kts_settings "plugins/wear-sync/android" "${NATIVE_BUS_INCLUDE}"
+          write_kts_settings "plugins/wear-sync/android" "${NATIVE_BUS_INCLUDE}
+          ${NATIVE_LOG_INCLUDE}"
           write_kts_settings "plugins/native-bus/android"
+          write_kts_settings "plugins/native-log/android"
           write_kts_settings "plugins/home-widgets/android"
-          write_groovy_settings "plugins/app-management/android"
+          write_groovy_settings "plugins/app-management/android" "${NATIVE_LOG_INCLUDE_GROOVY}"
           write_groovy_settings "plugins/toast/android"
 
           ./apps/threshold-wear/gradlew -p plugins/alarm-manager/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
-          ./apps/threshold-wear/gradlew -p plugins/app-management/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/app-management/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/theme-utils/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/os-prefs/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/predictive-back/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/wear-sync/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/toast/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/native-bus/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
+          ./apps/threshold-wear/gradlew -p plugins/native-log/android :testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
           ./apps/threshold-wear/gradlew -p plugins/home-widgets/android testDebugUnitTest -Pandroid.useAndroidX=true --no-daemon
 
       - name: Upload Kotlin Test Results
