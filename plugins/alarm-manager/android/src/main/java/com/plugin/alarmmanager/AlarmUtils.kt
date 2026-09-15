@@ -9,7 +9,6 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 
 object AlarmUtils {
     private const val PREFS_NAME = "ThresholdNative"
@@ -21,7 +20,7 @@ object AlarmUtils {
         triggerAtMillis: Long,
         soundUri: String?
     ) {
-        Log.d(TAG, "Scheduling alarm $id at $triggerAtMillis")
+        nativeLog.d(context, TAG, "Scheduling alarm $id at $triggerAtMillis")
 
         // 1. Save to SharedPreferences for boot recovery
         saveToPrefs(context, id, triggerAtMillis, soundUri)
@@ -46,11 +45,11 @@ object AlarmUtils {
         val info = AlarmManager.AlarmClockInfo(triggerAtMillis, pendingIntent)
         alarmManager.setAlarmClock(info, pendingIntent)
 
-        Log.d(TAG, "Alarm $id scheduled successfully")
+        nativeLog.d(context, TAG, "Alarm $id scheduled successfully")
     }
 
     fun cancelAlarm(context: Context, id: Int) {
-        Log.d(TAG, "Cancelling alarm $id")
+        nativeLog.d(context, TAG, "Cancelling alarm $id")
 
         // 1. Remove from SharedPreferences
         removeFromPrefs(context, id)
@@ -71,7 +70,7 @@ object AlarmUtils {
         alarmManager.cancel(pendingIntent)
         pendingIntent.cancel()
 
-        Log.d(TAG, "Alarm $id cancelled successfully")
+        nativeLog.d(context, TAG, "Alarm $id cancelled successfully")
     }
 
     private fun saveToPrefs(context: Context, id: Int, trigger: Long, soundUri: String?) {

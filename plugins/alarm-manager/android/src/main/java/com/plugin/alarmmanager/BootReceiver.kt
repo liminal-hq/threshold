@@ -15,11 +15,9 @@ private const val TAG = "BootReceiver"
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            Log.d(TAG, "Boot completed, rescheduling alarms")
-
             val alarms = AlarmUtils.loadAllFromPrefs(context)
             val now = System.currentTimeMillis()
-            NativeEventLog.log(context, TAG, "Boot completed, ${alarms.size} alarm(s) to evaluate")
+            nativeLog.d(context, TAG, "Boot completed, ${alarms.size} alarm(s) to evaluate")
 
             var rescheduled = 0
             var expired = 0
@@ -34,7 +32,7 @@ class BootReceiver : BroadcastReceiver() {
                     expired++
                 }
             }
-            NativeEventLog.log(context, TAG, "Boot reschedule complete: $rescheduled rescheduled, $expired expired")
+            nativeLog.d(context, TAG, "Boot reschedule complete: $rescheduled rescheduled, $expired expired")
         }
     }
 }

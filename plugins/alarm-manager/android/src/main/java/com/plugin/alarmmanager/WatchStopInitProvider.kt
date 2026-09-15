@@ -29,7 +29,7 @@ class WatchStopInitProvider : ContentProvider() {
         }
 
         WatchStopListener.register(ctx)
-        Log.d(TAG, "WatchStopInitProvider.onCreate() fired, listener registered")
+        nativeLog.d(ctx, TAG, "WatchStopInitProvider.onCreate() fired, listener registered")
 
         return true
     }

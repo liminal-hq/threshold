@@ -68,8 +68,7 @@ class AlarmRingingService : Service() {
 
         if (intent.action == ACTION_DISMISS) {
             val alarmId = intent.getIntExtra("ALARM_ID", -1)
-            Log.d(TAG, "Dismiss action received for alarm $alarmId")
-            NativeEventLog.log(applicationContext, TAG, "Dismiss action received for alarm id=$alarmId")
+            nativeLog.d(applicationContext, TAG, "Dismiss action received for alarm id=$alarmId")
             AlarmManagerPlugin.notifyAlarmDismissed(applicationContext, alarmId)
             stopSelf()
             return START_NOT_STICKY
@@ -77,8 +76,7 @@ class AlarmRingingService : Service() {
 
         if (intent.action == ACTION_SNOOZE) {
             val alarmId = intent.getIntExtra("ALARM_ID", -1)
-            Log.d(TAG, "Snooze action received for alarm $alarmId")
-            NativeEventLog.log(applicationContext, TAG, "Snooze action received for alarm id=$alarmId")
+            nativeLog.d(applicationContext, TAG, "Snooze action received for alarm id=$alarmId")
             AlarmManagerPlugin.notifySnoozeRequested(applicationContext, alarmId)
             stopSelf()
             return START_NOT_STICKY
@@ -88,8 +86,7 @@ class AlarmRingingService : Service() {
         currentAlarmId = intent.getIntExtra("ALARM_ID", -1)
         currentlyRingingAlarmId = currentAlarmId
 
-        Log.d(TAG, "Starting service for alarm $currentAlarmId with sound $soundUriStr")
-        NativeEventLog.log(applicationContext, TAG, "Ringing service starting for alarm id=$currentAlarmId")
+        nativeLog.d(applicationContext, TAG, "Ringing service starting for alarm id=$currentAlarmId with sound $soundUriStr")
 
         startForegroundNotification(buildLaunchIntent())
         playAudio(soundUriStr)
@@ -100,8 +97,7 @@ class AlarmRingingService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "Service destroying")
-        NativeEventLog.log(applicationContext, TAG, "Ringing service destroying for alarm id=$currentAlarmId")
+        nativeLog.d(applicationContext, TAG, "Ringing service destroying for alarm id=$currentAlarmId")
 
         if (currentlyRingingAlarmId == currentAlarmId) {
             currentlyRingingAlarmId = -1
@@ -191,11 +187,7 @@ class AlarmRingingService : Service() {
             .build()
 
         startForeground(NOTIFICATION_ID, notification)
-        NativeEventLog.log(
-            applicationContext,
-            TAG,
-            "Posted full-screen-intent notification for alarm id=$currentAlarmId",
-        )
+        nativeLog.d(applicationContext, TAG, "Posted full-screen-intent notification for alarm id=$currentAlarmId")
     }
 
     private fun playAudio(uriStr: String?) {
@@ -204,7 +196,7 @@ class AlarmRingingService : Service() {
             try {
                 uri = Uri.parse(uriStr)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse sound URI: $uriStr", e)
+                nativeLog.e(applicationContext, TAG, "Failed to parse sound URI: $uriStr", e)
             }
         }
 
@@ -219,7 +211,7 @@ class AlarmRingingService : Service() {
         }
 
         if (uri == null) {
-             Log.e(TAG, "No sound URI available to play")
+             nativeLog.e(applicationContext, TAG, "No sound URI available to play")
              return
         }
 
@@ -237,7 +229,7 @@ class AlarmRingingService : Service() {
                 start()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to play audio", e)
+            nativeLog.e(applicationContext, TAG, "Failed to play audio", e)
         }
     }
 

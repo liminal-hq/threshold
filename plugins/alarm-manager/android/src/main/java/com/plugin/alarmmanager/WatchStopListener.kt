@@ -47,8 +47,7 @@ object WatchStopListener {
             return null
         }
 
-        Log.d(TAG, "Stopping AlarmRingingService natively for id=$alarmId (watch-originated stop)")
-        NativeEventLog.log(context, TAG, "Stopping ringing natively for id=$alarmId (watch-originated stop)")
+        nativeLog.d(context, TAG, "Stopping AlarmRingingService natively for id=$alarmId (watch-originated stop)")
         context.stopService(Intent(context, AlarmRingingService::class.java))
         return TAG_RINGING_STOPPED
     }

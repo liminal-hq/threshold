@@ -39,6 +39,7 @@ android {
 dependencies {
     compileOnly(project(":tauri-android"))
     implementation(project(":tauri-plugin-native-bus"))
+    implementation(project(":tauri-plugin-native-log"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.25")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.activity:activity:1.8.0")

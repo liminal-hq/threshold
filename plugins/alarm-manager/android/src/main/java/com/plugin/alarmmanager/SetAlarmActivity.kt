@@ -9,7 +9,6 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.provider.AlarmClock
-import android.util.Log
 import java.util.Calendar
 
 // EXTRA_DAYS uses Calendar.SUNDAY(1)..SATURDAY(7); Threshold's activeDays uses 0=Sunday..6=Saturday.
@@ -35,7 +34,7 @@ class SetAlarmActivity : Activity() {
 
         val intent = intent
         if (intent.action == AlarmClock.ACTION_SET_ALARM) {
-            NativeEventLog.log(applicationContext, TAG, "Received SET_ALARM intent")
+            nativeLog.d(applicationContext, TAG, "Received SET_ALARM intent")
             handleSetAlarm(intent)
         }
 
@@ -45,8 +44,7 @@ class SetAlarmActivity : Activity() {
     private fun handleSetAlarm(intent: Intent) {
         // 1. Parse Extras
         if (!intent.hasExtra(AlarmClock.EXTRA_HOUR) || !intent.hasExtra(AlarmClock.EXTRA_MINUTES)) {
-            Log.e(TAG, "Missing HOUR or MINUTES extra")
-            NativeEventLog.log(applicationContext, TAG, "SET_ALARM intent missing HOUR or MINUTES extra, ignored")
+            nativeLog.e(applicationContext, TAG, "SET_ALARM intent missing HOUR or MINUTES extra, ignored")
             return
         }
 
@@ -91,11 +89,7 @@ class SetAlarmActivity : Activity() {
             activeDays,
             triggerAt,
         )
-        NativeEventLog.log(
-            applicationContext,
-            TAG,
-            "Imported alarm id=$id at $hour:$minutes, skipUi=$skipUi",
-        )
+        nativeLog.d(applicationContext, TAG, "Imported alarm id=$id at $hour:$minutes, skipUi=$skipUi")
 
         // 6. Launch App if not skipping UI
         if (!skipUi) {

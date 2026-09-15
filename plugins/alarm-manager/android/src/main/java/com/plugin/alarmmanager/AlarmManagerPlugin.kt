@@ -428,7 +428,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             handledNatively: Set<String> = emptySet(),
         ) {
             val eventId = eventQueue(context).enqueue(topic, payload.toString(), handledNatively)
-            NativeEventLog.log(context, TAG, "Enqueued '$topic' event $eventId: $payload")
+            nativeLog.d(context, TAG, "Enqueued '$topic' event $eventId: $payload")
             instance?.drainQueuedEvents()
         }
     }
@@ -440,12 +440,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         val migratedCount = migrateLegacyQueues(keyValueStore(activity))
         if (migratedCount > 0) {
-            Log.i(TAG, "Migrated $migratedCount legacy queued event(s) into the unified event log")
-            NativeEventLog.log(
-                activity,
-                TAG,
-                "Migrated $migratedCount legacy queued event(s) into the unified event log",
-            )
+            nativeLog.i(activity, TAG, "Migrated $migratedCount legacy queued event(s) into the unified event log")
         }
 
         applyRingingWindowFlags(activity.intent)
@@ -515,7 +510,7 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         val args = invoke.parseArgs(StopRingingArgs::class.java)
         // Issue #255 Phase 4A: stamp the id the frontend supplied explicitly (e.g. the in-app "Stop Alarm" button, which now threads its alarm id all the way through -- see resolveStopRingingAlarmId's KDoc for why this deliberately does NOT fall back to AlarmRingingService.currentlyRingingAlarmId for id-less callers).
         val alarmId = resolveStopRingingAlarmId(args.alarmId)
-        Log.d(TAG, "Stopping ringing service via Intent for alarm $alarmId")
+        nativeLog.d(activity, TAG, "Stopping ringing service via Intent for alarm $alarmId")
         val intent = Intent(activity, AlarmRingingService::class.java).apply {
             action = AlarmRingingService.ACTION_DISMISS
             if (alarmId != null) putExtra("ALARM_ID", alarmId)
@@ -720,21 +715,20 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         val handledCount = drainAndDispatch(queue) { topic, payload ->
             val channel = channelForTopic(topic)
             if (channel == null) {
-                Log.w(TAG, "No channel registered for topic '$topic', leaving event queued")
+                nativeLog.w(activity, TAG, "No channel registered for topic '$topic', leaving event queued")
                 false
             } else {
                 try {
                     channel.send(JSObject(payload))
                     true
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to dispatch queued event (topic '$topic')", e)
+                    nativeLog.w(activity, TAG, "Failed to dispatch queued event (topic '$topic')", e)
                     false
                 }
             }
         }
         if (handledCount > 0) {
-            Log.i(TAG, "Drained $handledCount queued event(s)")
-            NativeEventLog.log(activity, TAG, "Drained $handledCount queued event(s)")
+            nativeLog.i(activity, TAG, "Drained $handledCount queued event(s)")
         }
     }
 }
