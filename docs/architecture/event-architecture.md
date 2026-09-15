@@ -616,7 +616,12 @@ pub struct AlarmCancelled {
 pub enum CancelReason {
     Disabled,   // User toggled off
     Deleted,    // User deleted alarm
-    Updated,    // Rescheduling with new trigger
+    Updated,    // Still enabled but no longer has a resolvable next occurrence (rare --
+                // e.g. active_days cleared). NOT emitted for a plain trigger-time reschedule
+                // (issue #322): that case emits only alarm:scheduled, since setAlarmClock()
+                // reusing the same PendingIntent atomically replaces the previous native
+                // registration -- no separate cancel needed, and this also avoids a window
+                // where the native alarm was briefly unregistered entirely.
     Expired,    // One-time alarm fired
 }
 ```
