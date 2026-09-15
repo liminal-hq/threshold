@@ -38,7 +38,7 @@ class AppManagementPlugin(private val activity: Activity): Plugin(activity) {
         // moving off-thread on its own, same pattern WearSyncPlugin's `scope` uses, so it
         // doesn't add to the UI thread's work on every app-backgrounding gesture either.
         scope.launch {
-            NativeEventLog.log(activity, TAG, "minimizeApp called, moveTaskToBack result=$success")
+            nativeLog.d(activity, TAG, "minimizeApp called, moveTaskToBack result=$success")
         }
     }
 }
