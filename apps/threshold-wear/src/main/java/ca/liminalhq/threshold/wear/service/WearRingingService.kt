@@ -85,14 +85,12 @@ class WearRingingService : Service() {
 
         when (intent.action) {
             ACTION_DISMISS -> {
-                Log.d(TAG, "Dismiss action received")
-                NativeEventLog.log(applicationContext, TAG, "Dismiss action received for alarm id=$currentAlarmId")
+                NativeEventLog.d(applicationContext, TAG, "Dismiss action received for alarm id=$currentAlarmId")
                 stopSelf()
                 return START_NOT_STICKY
             }
             ACTION_SNOOZE -> {
-                Log.d(TAG, "Snooze action received")
-                NativeEventLog.log(applicationContext, TAG, "Snooze action received for alarm id=$currentAlarmId")
+                NativeEventLog.d(applicationContext, TAG, "Snooze action received for alarm id=$currentAlarmId")
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -105,17 +103,11 @@ class WearRingingService : Service() {
         val minute = intent.getIntExtra(EXTRA_ALARM_MINUTE, 0)
         val snoozeLength = intent.getIntExtra(EXTRA_SNOOZE_LENGTH, 10)
 
-        Log.d(TAG, "Starting ringing for alarm $currentAlarmId ($hour:$minute '$label')")
-        NativeEventLog.log(applicationContext, TAG, "Ringing service starting for alarm id=$currentAlarmId")
+        NativeEventLog.d(applicationContext, TAG, "Ringing service starting for alarm id=$currentAlarmId ($hour:$minute '$label')")
 
         val foregroundStarted = startForegroundNotification(hour, minute, label, snoozeLength)
         if (!foregroundStarted) {
-            Log.e(TAG, "Failed to enter foreground; stopping ringing service")
-            NativeEventLog.log(
-                applicationContext,
-                TAG,
-                "Failed to enter foreground for alarm id=$currentAlarmId -- stopping",
-            )
+            NativeEventLog.e(applicationContext, TAG, "Failed to enter foreground for alarm id=$currentAlarmId -- stopping")
             launchRingingActivity(hour, minute, label, snoozeLength)
             stopSelf(startId)
             return START_NOT_STICKY
@@ -129,8 +121,7 @@ class WearRingingService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "Service destroying")
-        NativeEventLog.log(applicationContext, TAG, "Ringing service destroying for alarm id=$currentAlarmId")
+        NativeEventLog.d(applicationContext, TAG, "Ringing service destroying for alarm id=$currentAlarmId")
         ringingAlarmId = -1
         stopAudio()
         stopVibration()
@@ -153,7 +144,7 @@ class WearRingingService : Service() {
             startActivity(intent)
             Log.d(TAG, "Launched ringing activity")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to launch ringing activity", e)
+            NativeEventLog.e(applicationContext, TAG, "Failed to launch ringing activity", e)
         }
     }
 
@@ -227,7 +218,7 @@ class WearRingingService : Service() {
             startForeground(NOTIFICATION_ID, notification)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Unable to start foreground notification for ringing alarm", e)
+            NativeEventLog.e(applicationContext, TAG, "Unable to start foreground notification for ringing alarm", e)
             false
         }
     }
@@ -239,7 +230,7 @@ class WearRingingService : Service() {
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
         if (uri == null) {
-            Log.e(TAG, "No alarm sound URI available")
+            NativeEventLog.e(applicationContext, TAG, "No alarm sound URI available")
             return
         }
 
@@ -257,7 +248,7 @@ class WearRingingService : Service() {
                 start()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to play audio", e)
+            NativeEventLog.e(applicationContext, TAG, "Failed to play audio", e)
         }
     }
 

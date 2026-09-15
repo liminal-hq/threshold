@@ -40,8 +40,7 @@ class WearAlarmReceiver : BroadcastReceiver() {
             return
         }
 
-        Log.d(TAG, "Local alarm fired: id=$alarmId")
-        NativeEventLog.log(context, TAG, "Local (disconnected-fallback) alarm fired id=$alarmId")
+        NativeEventLog.d(context, TAG, "Local (disconnected-fallback) alarm fired id=$alarmId")
 
         // Look up alarm details from the repository
         val app = context.applicationContext as? ThresholdWearApp

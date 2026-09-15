@@ -103,7 +103,7 @@ class DataLayerListenerService : WearableListenerService() {
                 // Re-evaluate fallback alarm scheduling after sync
                 app.connectionMonitor.onAlarmsUpdated()
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to process alarm data", e)
+                NativeEventLog.e(applicationContext, TAG, "Failed to process alarm data", e)
             } finally {
                 // Always resolve the sync status on every exit path from this
                 // per-event block — success, the early `continue` above on a
@@ -116,8 +116,7 @@ class DataLayerListenerService : WearableListenerService() {
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
         val path = messageEvent.path
-        Log.d(TAG, "Message received: $path")
-        NativeEventLog.log(applicationContext, TAG, "Message received path=$path")
+        NativeEventLog.d(applicationContext, TAG, "Message received path=$path")
 
         when (path) {
             PATH_ALARM_RING -> handleAlarmRing(messageEvent)
@@ -144,7 +143,7 @@ class DataLayerListenerService : WearableListenerService() {
                 app.dataLayerClient.sendLogResponse(content)
                 Log.d(TAG, "Sent watch log (${content.length} chars) to phone")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send watch log to phone", e)
+                NativeEventLog.e(applicationContext, TAG, "Failed to send watch log to phone", e)
             }
         }
     }
@@ -161,15 +160,14 @@ class DataLayerListenerService : WearableListenerService() {
 
             // Deduplication: skip if this alarm is already ringing
             if (WearRingingService.ringingAlarmId == alarmId) {
-                Log.d(TAG, "Alarm $alarmId already ringing — ignoring duplicate ring message")
-                NativeEventLog.log(
+                NativeEventLog.d(
                     applicationContext,
                     TAG,
                     "Ring message for alarm id=$alarmId dropped -- already ringing this alarm",
                 )
                 return
             }
-            NativeEventLog.log(applicationContext, TAG, "Ring message for alarm id=$alarmId accepted, starting WearRingingService")
+            NativeEventLog.d(applicationContext, TAG, "Ring message for alarm id=$alarmId accepted, starting WearRingingService")
             val label = json.optString("label", "")
             val hour = json.optInt("hour", 0)
             val minute = json.optInt("minute", 0)
@@ -204,7 +202,7 @@ class DataLayerListenerService : WearableListenerService() {
                 startService(serviceIntent)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to handle alarm ring message", e)
+            NativeEventLog.e(applicationContext, TAG, "Failed to handle alarm ring message", e)
         }
     }
 
@@ -220,7 +218,7 @@ class DataLayerListenerService : WearableListenerService() {
 
             stopRingingOnWatch(WearRingingService.ACTION_DISMISS, alarmId)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to handle alarm dismiss message", e)
+            NativeEventLog.e(applicationContext, TAG, "Failed to handle alarm dismiss message", e)
         }
     }
 
@@ -237,14 +235,13 @@ class DataLayerListenerService : WearableListenerService() {
 
             stopRingingOnWatch(WearRingingService.ACTION_SNOOZE, alarmId)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to handle alarm snooze message", e)
+            NativeEventLog.e(applicationContext, TAG, "Failed to handle alarm snooze message", e)
         }
     }
 
     private fun stopRingingOnWatch(action: String, alarmId: Int) {
         if (WearRingingService.ringingAlarmId == -1) {
-            Log.d(TAG, "Ignoring $action for alarm $alarmId because no alarm is currently ringing")
-            NativeEventLog.log(
+            NativeEventLog.d(
                 applicationContext,
                 TAG,
                 "$action for alarm id=$alarmId dropped -- nothing is currently ringing",
@@ -253,18 +250,14 @@ class DataLayerListenerService : WearableListenerService() {
         }
 
         if (alarmId != -1 && WearRingingService.ringingAlarmId != alarmId) {
-            Log.d(
-                TAG,
-                "Ignoring $action for alarm $alarmId while alarm ${WearRingingService.ringingAlarmId} is ringing",
-            )
-            NativeEventLog.log(
+            NativeEventLog.d(
                 applicationContext,
                 TAG,
                 "$action for alarm id=$alarmId dropped -- alarm id=${WearRingingService.ringingAlarmId} is ringing instead",
             )
             return
         }
-        NativeEventLog.log(applicationContext, TAG, "$action accepted for alarm id=$alarmId")
+        NativeEventLog.d(applicationContext, TAG, "$action accepted for alarm id=$alarmId")
 
         val serviceIntent = Intent(this, WearRingingService::class.java).apply {
             this.action = action

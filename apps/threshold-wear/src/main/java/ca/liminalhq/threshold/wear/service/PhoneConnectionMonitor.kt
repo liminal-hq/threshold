@@ -109,7 +109,7 @@ class PhoneConnectionMonitor(
                 scheduler.reconcile(repository.alarms.value)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to check connectivity", e)
+            NativeEventLog.w(context, TAG, "Failed to check connectivity", e)
             // Don't change state on transient errors — but if initial check
             // failed, assume offline and schedule fallback alarms defensively
             if (!initialCheckDone) {
@@ -125,13 +125,11 @@ class PhoneConnectionMonitor(
 
         if (connected) {
             repository.setSyncStatus(SyncStatus.CONNECTED)
-            Log.i(TAG, "Phone connected — cancelling local fallback alarms")
-            NativeEventLog.log(context, TAG, "Phone connected -- cancelling local fallback alarms")
+            NativeEventLog.i(context, TAG, "Phone connected -- cancelling local fallback alarms")
             scheduler.cancelAll(repository.alarms.value)
         } else {
             repository.setSyncStatus(SyncStatus.OFFLINE)
-            Log.i(TAG, "Phone disconnected — scheduling local fallback alarms")
-            NativeEventLog.log(context, TAG, "Phone disconnected -- scheduling local fallback alarms")
+            NativeEventLog.i(context, TAG, "Phone disconnected -- scheduling local fallback alarms")
             scheduler.reconcile(repository.alarms.value)
         }
     }
