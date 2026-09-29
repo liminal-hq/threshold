@@ -42,6 +42,12 @@ internal const val TOPIC_FIRED = "alarm-manager:native-fired"
 internal const val TOPIC_SNOOZE = "alarm-manager:snooze-requested"
 internal const val TOPIC_DISMISS = "alarm-manager:dismiss-requested"
 internal const val TOPIC_IMPORT = "alarm-manager:import-requested"
+// Dismiss/Snooze taps on the upcoming-alarm reminder notification (issue #325) -- distinct from TOPIC_DISMISS/TOPIC_SNOOZE because the semantics differ in Rust: an upcoming snooze anchors to the alarm's own next trigger rather than to "now", and neither one has a ringing service or watch ring to stop.
+internal const val TOPIC_UPCOMING_DISMISS = "alarm-manager:upcoming-dismiss-requested"
+internal const val TOPIC_UPCOMING_SNOOZE = "alarm-manager:upcoming-snooze-requested"
+
+// Topics whose Rust payload struct declares `eventId`, so `enrichPayloadForDispatch` stamps it on. Rust's `EventDedup` needs it to recognise a redelivered upcoming snooze -- which would otherwise re-anchor the alarm a second time.
+internal val TOPICS_WITH_EVENT_ID = setOf(TOPIC_FIRED, TOPIC_UPCOMING_DISMISS, TOPIC_UPCOMING_SNOOZE)
 
 // The single unified log, replacing the four legacy keys below. Same prefs file as the legacy queues (CALLBACK_PREFS) -- only the key, and the fact there's now just one of them, changes.
 internal const val EVENT_LOG_KEY = "event_log"
@@ -195,7 +201,7 @@ internal fun drainAndDispatch(queue: DurableEventQueue, dispatch: (topic: String
 }
 
 /**
- * Returns [envelope]'s payload as-is, except for [TOPIC_FIRED] where it's enriched with
+ * Returns [envelope]'s payload as-is, except for the [TOPICS_WITH_EVENT_ID] topics where it's enriched with
  * `eventId` before dispatch -- per docs/architecture/event-architecture.md's Native Event Bus section, this is the
  * one field Rust's `NativeAlarmFiredPayload` needs that genuinely can't be known until
  * [DurableEventQueue.enqueue] returns it, so it can't be baked into the payload upfront the way
@@ -204,15 +210,15 @@ internal fun drainAndDispatch(queue: DurableEventQueue, dispatch: (topic: String
  * [envelope]'s own payload JSON, so there's nothing left for this function to add for it).
  * Carries the envelope's own stable ID through to the `alarm-manager:native-fired` Tauri event,
  * whether this is the immediate post-enqueue drain or a later retry of the same queued entry.
- * Only [TOPIC_FIRED] gains this field -- the contract only specifies it for the fired event, and
- * the other three topics' Rust payload structs don't declare it.
+ * Only [TOPICS_WITH_EVENT_ID] gain this field -- the contract specifies it for the fired event and
+ * the two upcoming-reminder events (issue #325); the other topics' Rust payload structs don't declare it.
  *
  * [envelope.payload][DurableEventQueue.Envelope.payload] is always caller-constructed JSON (see
  * [notifyAlarmFired]), so re-parsing it here should never fail in practice -- the `catch` exists
  * only to fail safe (dispatch the entry unenriched rather than drop it) if it somehow does.
  */
 internal fun enrichPayloadForDispatch(envelope: DurableEventQueue.Envelope): String {
-    if (envelope.topic != TOPIC_FIRED) return envelope.payload
+    if (envelope.topic !in TOPICS_WITH_EVENT_ID) return envelope.payload
     return try {
         JSONObject(envelope.payload).apply {
             put("eventId", envelope.eventId)
@@ -326,6 +332,27 @@ class ImportEventHandlerArgs {
 }
 
 @InvokeArg
+class UpcomingDismissEventHandlerArgs {
+    lateinit var handler: Channel
+}
+
+@InvokeArg
+class UpcomingSnoozeEventHandlerArgs {
+    lateinit var handler: Channel
+}
+
+@InvokeArg
+class ScheduleUpcomingArgs {
+    var id: Int = 0
+    // When the reminder should appear (epoch millis) and when the alarm it reminds about will ring -- the latter lets a reminder whose lead time has already passed still post immediately, but never after the alarm itself is due.
+    var notifyAt: Long = 0
+    var triggerAt: Long = 0
+    var title: String = ""
+    var body: String = ""
+    var snoozeLabel: String = "Snooze"
+}
+
+@InvokeArg
 class StopRingingArgs {
     // Null (the default, and what a caller that omits the key entirely gets) means "no explicit id supplied" -- resolveStopRingingAlarmId() leaves the ACTION_DISMISS intent's ALARM_ID extra unset in that case (see its KDoc for why this deliberately does not fall back to AlarmRingingService.currentlyRingingAlarmId). See StopRingingRequest's KDoc on the Rust side for why the key is omitted rather than sent as JSON null.
     var alarmId: Int? = null
@@ -337,6 +364,8 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     private var snoozeEventChannel: Channel? = null
     private var dismissEventChannel: Channel? = null
     private var importEventChannel: Channel? = null
+    private var upcomingDismissEventChannel: Channel? = null
+    private var upcomingSnoozeEventChannel: Channel? = null
     @Volatile
     private var alarmPipelineReady: Boolean = false
 
@@ -395,6 +424,22 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
             val payload = JSONObject().apply { put("id", alarmId) }
             enqueueAndDrain(context, TOPIC_DISMISS, payload)
             publishToBus(TOPIC_DISMISS, payload)
+        }
+
+        /**
+         * The upcoming-alarm reminder's Dismiss action (issue #325). Enqueued durably and drained to Rust like every other native signal, so it lands even if the app process was killed when the notification was tapped. Deliberately not published on [NativeEventBus]: nothing is ringing, so there is no watch ring or ringing service for an in-process listener to stop -- wear-sync learns of the dismissal from Rust's own `alarms:batch:updated` republish.
+         */
+        @Synchronized
+        fun notifyUpcomingDismissRequested(context: Context, alarmId: Int) {
+            if (alarmId <= 0) return
+            enqueueAndDrain(context, TOPIC_UPCOMING_DISMISS, JSONObject().apply { put("id", alarmId) })
+        }
+
+        /** The upcoming-alarm reminder's Snooze action (issue #325). See [notifyUpcomingDismissRequested] for why there is no bus publish. */
+        @Synchronized
+        fun notifyUpcomingSnoozeRequested(context: Context, alarmId: Int) {
+            if (alarmId <= 0) return
+            enqueueAndDrain(context, TOPIC_UPCOMING_SNOOZE, JSONObject().apply { put("id", alarmId) })
         }
 
         @Synchronized
@@ -488,6 +533,30 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
 
         // TODO: Remove this compatibility command once cancellation is fully event-driven.
         AlarmUtils.cancelAlarm(activity, args.id)
+        invoke.resolve()
+    }
+
+    @Command
+    fun scheduleUpcomingNotification(invoke: Invoke) {
+        val args = invoke.parseArgs(ScheduleUpcomingArgs::class.java)
+        UpcomingAlarmNotifier.schedule(
+            activity,
+            UpcomingAlarmNotifier.Reminder(
+                alarmId = args.id,
+                notifyAt = args.notifyAt,
+                triggerAt = args.triggerAt,
+                title = args.title,
+                body = args.body,
+                snoozeLabel = args.snoozeLabel,
+            ),
+        )
+        invoke.resolve()
+    }
+
+    @Command
+    fun cancelUpcomingNotification(invoke: Invoke) {
+        val args = invoke.parseArgs(CancelRequest::class.java)
+        UpcomingAlarmNotifier.cancel(activity, args.id)
         invoke.resolve()
     }
 
@@ -658,6 +727,22 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
     }
 
     @Command
+    fun setUpcomingDismissEventHandler(invoke: Invoke) {
+        val args = invoke.parseArgs(UpcomingDismissEventHandlerArgs::class.java)
+        upcomingDismissEventChannel = args.handler
+        Log.d(TAG, "Upcoming dismiss event handler channel registered")
+        invoke.resolve()
+    }
+
+    @Command
+    fun setUpcomingSnoozeEventHandler(invoke: Invoke) {
+        val args = invoke.parseArgs(UpcomingSnoozeEventHandlerArgs::class.java)
+        upcomingSnoozeEventChannel = args.handler
+        Log.d(TAG, "Upcoming snooze event handler channel registered")
+        invoke.resolve()
+    }
+
+    @Command
     fun markAlarmPipelineReady(invoke: Invoke) {
         alarmPipelineReady = true
         Log.d(TAG, "Alarm pipeline marked ready")
@@ -705,6 +790,8 @@ class AlarmManagerPlugin(private val activity: android.app.Activity) : Plugin(ac
         TOPIC_SNOOZE -> snoozeEventChannel
         TOPIC_DISMISS -> dismissEventChannel
         TOPIC_IMPORT -> importEventChannel
+        TOPIC_UPCOMING_DISMISS -> upcomingDismissEventChannel
+        TOPIC_UPCOMING_SNOOZE -> upcomingSnoozeEventChannel
         else -> null
     }
 

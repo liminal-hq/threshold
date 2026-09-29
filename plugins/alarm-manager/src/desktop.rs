@@ -36,6 +36,19 @@ impl<R: Runtime> AlarmManager<R> {
         Ok(())
     }
 
+    /// The upcoming-alarm reminder is an Android-only native notification (issue #325); the frontend only calls this on mobile, so on desktop it is an accepted no-op.
+    pub fn schedule_upcoming_notification(
+        &self,
+        _payload: ScheduleUpcomingRequest,
+    ) -> crate::Result<()> {
+        Ok(())
+    }
+
+    /// See [`schedule_upcoming_notification`](Self::schedule_upcoming_notification).
+    pub fn cancel_upcoming_notification(&self, _payload: CancelRequest) -> crate::Result<()> {
+        Ok(())
+    }
+
     fn schedule_internal(&self, id: i32, trigger_at: i64) {
         println!("Desktop: Schedule alarm {} for {}", id, trigger_at);
 

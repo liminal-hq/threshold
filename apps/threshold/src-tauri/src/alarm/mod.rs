@@ -27,8 +27,8 @@ use tauri::{AppHandle, Emitter, Manager, Runtime};
 /// Phase 4A/4C), while being far shorter than any realistic gap between two genuinely
 /// separate dismissals of the same repeating alarm (at minimum a day apart) or between a
 /// legitimate "dismiss upcoming" notification action -- which fires up to roughly ten
-/// minutes *before* the alarm rings, see `AlarmManagerService.dismissNextOccurrence` in
-/// the TS layer -- and the alarm's original due time.
+/// minutes *before* the alarm rings, see the `alarm-manager:upcoming-dismiss-requested`
+/// listener in `lib.rs` -- and the alarm's original due time.
 ///
 /// A time-window debounce checked against a monotonic clock is a deliberate,
 /// short-term tradeoff, not the final design: the more correct fix is a shared
@@ -50,6 +50,10 @@ const DISMISS_DEBOUNCE_WINDOW: Duration = Duration::from_millis(5_000);
 /// event can be queued behind a cold app boot (see issue #314) -- while far shorter than
 /// the minimum realistic gap to a genuinely new occurrence of the same alarm.
 const SUPERSEDED_FIRE_TOLERANCE_MS: i64 = 60_000;
+
+/// Floor on how far in the future an upcoming-reminder snooze may land, so the result always
+/// passes `snooze_alarm`'s "must be in the future" validation.
+const UPCOMING_SNOOZE_MIN_LEAD_MS: i64 = 60_000;
 
 /// Central coordinator for all alarm operations
 pub struct AlarmCoordinator {
@@ -276,8 +280,8 @@ impl AlarmCoordinator {
         // next_trigger past this occurrence) from a legitimate *new* dismiss of a
         // still-upcoming occurrence -- which is exactly what the "dismiss upcoming
         // alarm" notification action does: it fires up to roughly ten minutes *before*
-        // the alarm rings, while next_trigger is still in the future (see
-        // `AlarmManagerService.dismissNextOccurrence` in the TS layer). That heuristic
+        // the alarm rings, while next_trigger is still in the future (see the
+        // `alarm-manager:upcoming-dismiss-requested` listener in `lib.rs`). That heuristic
         // silently no-opped legitimate early dismisses, leaving the alarm to ring
         // anyway. Time elapsed since this alarm's *last dismissal*, not the shape of its
         // schedule, is the signal that actually distinguishes "duplicate" from "new".
@@ -400,6 +404,29 @@ impl AlarmCoordinator {
         self.emit_batch_update(app, vec![id], revision).await?;
 
         Ok(())
+    }
+
+    /// Snooze an alarm from its upcoming-alarm reminder notification, before it has rung.
+    ///
+    /// Unlike snoozing a ringing alarm (anchored to "now"), the new trigger is anchored to the
+    /// alarm's own current `next_trigger` -- see [`upcoming_snooze_target`]. Reads that trigger
+    /// here in Rust rather than depending on the frontend to supply it, so the tap works even
+    /// when no webview is running (issue #325).
+    ///
+    /// - `app`: app handle for event emission.
+    /// - `id`: alarm identifier.
+    /// - `minutes`: the user's snooze length.
+    pub async fn snooze_upcoming_alarm<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        id: i32,
+        minutes: i64,
+    ) -> Result<i64> {
+        let now = chrono::Utc::now().timestamp_millis();
+        let alarm = self.db.get_by_id(id).await?;
+        let snoozed_until = upcoming_snooze_target(alarm.next_trigger, now, minutes);
+        self.snooze_alarm(app, id, snoozed_until).await?;
+        Ok(snoozed_until)
     }
 
     /// Report that an alarm fired (lifecycle event only).
@@ -810,6 +837,18 @@ fn is_superseded_fire(next_trigger: Option<i64>, actual_fired_at: i64) -> bool {
     }
 }
 
+/// The new trigger for snoozing a still-upcoming alarm from its reminder notification:
+/// the alarm's own `next_trigger` pushed back by `minutes`, so "snooze 10" on a reminder
+/// shown five minutes early means ten minutes after the alarm was due, not ten from now.
+/// Never earlier than `now` plus [`UPCOMING_SNOOZE_MIN_LEAD_MS`], which also covers an alarm
+/// with no `next_trigger` (anchored to `now`) and a reminder tapped so late that the
+/// anchored time has already passed. Pure, matching `is_superseded_fire`, so it's
+/// unit-testable without a database or `AppHandle`.
+fn upcoming_snooze_target(next_trigger: Option<i64>, now: i64, minutes: i64) -> i64 {
+    let anchor = next_trigger.unwrap_or(now);
+    (anchor + minutes * 60_000).max(now + UPCOMING_SNOOZE_MIN_LEAD_MS)
+}
+
 /// What, if anything, a mutation should do to an alarm's native schedule. Pulled out of
 /// `emit_scheduling_events` as a pure function so it's testable without an `AppHandle`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1105,7 +1144,7 @@ mod dismiss_idempotency_tests {
     }
 
     /// Regression coverage for the "dismiss upcoming alarm" notification action
-    /// (`AlarmManagerService.dismissNextOccurrence` -> `AlarmService.dismiss`), which
+    /// (the native `alarm-manager:upcoming-dismiss-requested` -> `dismiss_alarm`), which
     /// fires up to roughly ten minutes *before* the alarm rings -- while `next_trigger`
     /// is still in the future. An earlier, reverted version of this fix treated "trigger
     /// already in the future" as proof of an already-processed duplicate, which silently
@@ -1466,6 +1505,48 @@ mod superseded_fire_tests {
     fn superseded_when_next_trigger_is_none() {
         // Disabled, or a one-shot alarm that already exhausted its only occurrence.
         assert!(is_superseded_fire(None, 1_000_000));
+    }
+}
+
+/// Coverage for `upcoming_snooze_target`, the anchoring rule the native upcoming-reminder
+/// Snooze action uses (issue #325) -- ported verbatim from the TS `snoozeUpcoming` it
+/// replaces, whose own tests covered these same cases.
+#[cfg(test)]
+mod upcoming_snooze_tests {
+    use super::*;
+
+    const NOW: i64 = 1_800_000_000_000;
+
+    #[test]
+    fn anchors_to_the_alarms_own_next_trigger_not_now() {
+        let next_trigger = NOW + 5 * 60_000;
+        assert_eq!(
+            upcoming_snooze_target(Some(next_trigger), NOW, 10),
+            next_trigger + 10 * 60_000
+        );
+    }
+
+    #[test]
+    fn floors_to_a_minute_from_now_when_the_anchored_time_has_already_passed() {
+        let next_trigger = NOW - 30 * 60_000;
+        assert_eq!(
+            upcoming_snooze_target(Some(next_trigger), NOW, 3),
+            NOW + UPCOMING_SNOOZE_MIN_LEAD_MS
+        );
+    }
+
+    #[test]
+    fn falls_back_to_now_when_the_alarm_has_no_next_trigger() {
+        assert_eq!(upcoming_snooze_target(None, NOW, 10), NOW + 10 * 60_000);
+    }
+
+    #[test]
+    fn always_lands_far_enough_ahead_to_pass_snooze_alarms_future_check() {
+        for minutes in [0, 1, 10] {
+            for next_trigger in [None, Some(NOW - 1), Some(NOW), Some(NOW + 1)] {
+                assert!(upcoming_snooze_target(next_trigger, NOW, minutes) > NOW);
+            }
+        }
     }
 }
 

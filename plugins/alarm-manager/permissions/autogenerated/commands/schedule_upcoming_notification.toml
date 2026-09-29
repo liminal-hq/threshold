@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-schedule-upcoming-notification"
+description = "Enables the schedule_upcoming_notification command without any pre-configured scope."
+commands.allow = ["schedule_upcoming_notification"]
+
+[[permission]]
+identifier = "deny-schedule-upcoming-notification"
+description = "Denies the schedule_upcoming_notification command without any pre-configured scope."
+commands.deny = ["schedule_upcoming_notification"]

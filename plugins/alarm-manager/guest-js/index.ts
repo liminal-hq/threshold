@@ -87,3 +87,28 @@ export async function getCurrentlyRingingAlarm(): Promise<number | null> {
 	);
 	return result.id;
 }
+
+export interface ScheduleUpcomingNotificationRequest {
+	id: number;
+	/** When the reminder should appear, epoch millis. Already-past values post immediately. */
+	notifyAt: number;
+	/** When the alarm being reminded about rings, epoch millis. */
+	triggerAt: number;
+	title: string;
+	body: string;
+	snoozeLabel: string;
+}
+
+/**
+ * Schedules (or replaces) the native upcoming-alarm reminder notification. Its Dismiss/Snooze actions are handled natively and reach Rust directly -- the webview is never involved in the tap (issue #325). Android only; a no-op on desktop.
+ */
+export async function scheduleUpcomingNotification(
+	payload: ScheduleUpcomingNotificationRequest,
+): Promise<void> {
+	await invoke('plugin:alarm-manager|schedule_upcoming_notification', { payload });
+}
+
+/** Cancels the native upcoming-alarm reminder for an alarm, whether still pending or already posted. */
+export async function cancelUpcomingNotification(payload: CancelRequest): Promise<void> {
+	await invoke('plugin:alarm-manager|cancel_upcoming_notification', { payload });
+}

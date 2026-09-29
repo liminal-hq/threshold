@@ -88,7 +88,10 @@ Dismiss/Snooze actions post through the same channel pattern
 in `lib.rs` — mirrors `wear:alarm:dismiss`/`wear:alarm:snooze`, no TS involvement, per the
 Channels rule above. Snooze reads `SnoozeLengthState` (Rust's own copy of the snooze-length
 setting, kept in sync via `set_snooze_length`) rather than depending on TS to compute the
-anchor. The confirmation toast is a separate concern: `AlarmManagerService` listens for
+anchor. The upcoming-alarm reminder (~10 min before an alarm) follows the same rule: it's built natively by
+`UpcomingAlarmNotifier` (not the vendored notification plugin, whose action buttons launch an Activity and can
+drop the tap), and its `alarm-manager:upcoming-dismiss-requested` / `upcoming-snooze-requested` events are handled
+in `lib.rs` too — an upcoming snooze anchors to the alarm's own `next_trigger`, not "now". The confirmation toast is a separate concern: `AlarmManagerService` listens for
 `alarm:snoozed` unconditionally so every snooze source (native, watch, upcoming
 notification, in-app) gets the same toast, rather than each call site publishing its own.
 

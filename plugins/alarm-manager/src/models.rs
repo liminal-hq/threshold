@@ -97,6 +97,38 @@ pub struct NativeDismissRequestedPayload {
     pub id: i32,
 }
 
+/// Request payload for scheduling the upcoming-alarm reminder notification (issue #325). The frontend owns the notification's content (it depends on the 24-hour and snooze-length settings); Kotlin only stores and posts it.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScheduleUpcomingRequest {
+    pub id: i32,
+    /// When the reminder should appear, epoch millis. May already be in the past, in which case it is posted immediately (unless `trigger_at` has passed too).
+    pub notify_at: i64,
+    /// When the alarm being reminded about rings, epoch millis.
+    pub trigger_at: i64,
+    pub title: String,
+    pub body: String,
+    pub snooze_label: String,
+}
+
+/// Payload of `alarm-manager:upcoming-dismiss-requested`: the Dismiss action on the upcoming-alarm reminder. `event_id` is the `DurableEventQueue` envelope's UUID (see `NativeAlarmFiredPayload::event_id`), forwarded so Rust's `EventDedup` can recognise a redelivery.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeUpcomingDismissRequestedPayload {
+    pub id: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_id: Option<String>,
+}
+
+/// Payload of `alarm-manager:upcoming-snooze-requested`: the Snooze action on the upcoming-alarm reminder. See [`NativeUpcomingDismissRequestedPayload`] for `event_id`.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeUpcomingSnoozeRequestedPayload {
+    pub id: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_id: Option<String>,
+}
+
 /// Shared response shape for the plugin's various silently-degrading-permission checks
 /// (full-screen intent, exact alarm scheduling, battery optimization exemption) -- they're
 /// structurally identical, so one type covers all three rather than one per permission.
@@ -145,6 +177,30 @@ mod tests {
 
         assert_eq!(imported.active_days, vec![1, 3, 5]);
         assert_eq!(imported.trigger_at, 1783656000000);
+    }
+
+    #[test]
+    fn upcoming_requested_payloads_carry_the_event_id_through_a_round_trip() {
+        // The Channel handler in mobile.rs deserializes Kotlin's payload and re-emits the struct as a Tauri event, so anything the struct doesn't declare is silently dropped (which is why the older dismiss/snooze payloads never forward their eventId). These two must keep it, or EventDedup can't recognise a redelivered upcoming snooze.
+        let json = r#"{"id": 9, "eventId": "b3f1c2a4-0000-0000-0000-000000000000"}"#;
+        let dismiss: NativeUpcomingDismissRequestedPayload = serde_json::from_str(json).unwrap();
+        let snooze: NativeUpcomingSnoozeRequestedPayload = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            dismiss.event_id.as_deref(),
+            Some("b3f1c2a4-0000-0000-0000-000000000000")
+        );
+        assert_eq!(snooze.event_id, dismiss.event_id);
+        let re_emitted = serde_json::to_string(&snooze).unwrap();
+        assert!(re_emitted.contains("\"eventId\""));
+    }
+
+    #[test]
+    fn upcoming_requested_payloads_tolerate_a_missing_event_id() {
+        // An event queued before eventId was stamped for these topics still deserializes; dedup is then bypassed rather than treating it as a duplicate.
+        let payload: NativeUpcomingSnoozeRequestedPayload =
+            serde_json::from_str(r#"{"id": 3}"#).unwrap();
+        assert_eq!(payload.id, 3);
+        assert_eq!(payload.event_id, None);
     }
 
     #[test]

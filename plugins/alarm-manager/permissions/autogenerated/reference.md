@@ -5,6 +5,8 @@ Default permissions for the alarm-manager plugin
 #### This default permission set includes the following:
 
 - `allow-cancel`
+- `allow-schedule-upcoming-notification`
+- `allow-cancel-upcoming-notification`
 - `allow-pick-alarm-sound`
 - `allow-stop-ringing`
 - `allow-check-full-screen-intent-permission`
@@ -46,6 +48,32 @@ Enables the cancel command without any pre-configured scope.
 <td>
 
 Denies the cancel command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:allow-cancel-upcoming-notification`
+
+</td>
+<td>
+
+Enables the cancel_upcoming_notification command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:deny-cancel-upcoming-notification`
+
+</td>
+<td>
+
+Denies the cancel_upcoming_notification command without any pre-configured scope.
 
 </td>
 </tr>
@@ -254,6 +282,32 @@ Enables the pick_alarm_sound command without any pre-configured scope.
 <td>
 
 Denies the pick_alarm_sound command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:allow-schedule-upcoming-notification`
+
+</td>
+<td>
+
+Enables the schedule_upcoming_notification command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`alarm-manager:deny-schedule-upcoming-notification`
+
+</td>
+<td>
+
+Denies the schedule_upcoming_notification command without any pre-configured scope.
 
 </td>
 </tr>

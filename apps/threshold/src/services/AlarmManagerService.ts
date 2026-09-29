@@ -63,31 +63,6 @@ export class AlarmManagerService {
 				];
 			},
 		);
-
-		alarmNotificationService.registerActionTypeProvider(
-			'upcoming-alarm-actions',
-			(): NotificationActionType[] => {
-				const snoozeLength = SettingsService.getSnoozeLength();
-				const snoozeActionTitle = `Snooze (${snoozeLength}m)`;
-				return [
-					{
-						id: 'upcoming_alarm',
-						actions: [
-							{
-								id: 'dismiss_alarm',
-								title: 'Dismiss alarm',
-								foreground: false,
-							},
-							{
-								id: 'snooze_alarm',
-								title: snoozeActionTitle,
-								foreground: false,
-							},
-						],
-					},
-				];
-			},
-		);
 	}
 
 	async init() {
@@ -139,12 +114,15 @@ export class AlarmManagerService {
 
 				console.log('[AlarmManager] Setting up event listener 4/6: settings-changed...');
 				await listen<{ key?: string; value?: unknown }>('settings-changed', async (event) => {
-					if (event.payload?.key !== 'is24h') return;
+					// Both settings are baked into the upcoming notification's natively-held text
+					// (the time format in its body, the snooze length in its Snooze button label).
+					const key = event.payload?.key;
+					if (key !== 'is24h' && key !== 'snoozeLength') return;
 					if (!PlatformUtils.isMobile()) return;
 
-					console.log('[AlarmManager] Received settings-changed event for is24h');
+					console.log(`[AlarmManager] Received settings-changed event for ${key}`);
 					await this.resyncUpcomingNotifications({
-						reason: 'settings-24h-changed',
+						reason: key === 'is24h' ? 'settings-24h-changed' : 'snooze-length-changed',
 					});
 				});
 				console.log('[AlarmManager] Event listener 4/6 registered.');
@@ -205,15 +183,6 @@ export class AlarmManagerService {
 								console.log('[AlarmManager] Action: Snooze');
 								await this.stopRinging();
 							},
-							onDismissUpcoming: async (alarmId) => {
-								console.log('[AlarmManager] Action: Dismiss upcoming alarm', alarmId);
-								await this.dismissNextOccurrence(alarmId);
-							},
-							onSnoozeUpcoming: async (alarmId, snoozeLength) => {
-								console.log('[AlarmManager] Action: Snooze upcoming alarm', alarmId);
-								await this.snoozeUpcoming(alarmId, snoozeLength);
-								// Toast is published by the alarm:snoozed listener registered in init().
-							},
 						});
 						console.log('[AlarmManager] Notification actions registered.');
 					} catch (e) {
@@ -232,11 +201,6 @@ export class AlarmManagerService {
 		})();
 
 		return this.initPromise;
-	}
-
-	private async dismissNextOccurrence(alarmId: number): Promise<void> {
-		await alarmNotificationService.cancelUpcomingNotification(alarmId);
-		await AlarmService.dismiss(alarmId);
 	}
 
 	private async publishSnoozeToast(payload: {
@@ -303,16 +267,6 @@ export class AlarmManagerService {
 		await AlarmService.snooze(id, snoozedUntil);
 		// No alarmId here -- see stopRinging's doc comment for why.
 		await this.stopRinging();
-	}
-
-	async snoozeUpcoming(id: number, minutes: number) {
-		console.log(`[AlarmManager] Snoozing upcoming alarm ${id} for ${minutes} minutes`);
-		const alarm = await AlarmService.get(id);
-		const anchor = alarm?.nextTrigger ?? Date.now();
-		// Floor ensures the new trigger is always in the future even if the alarm was slow to dismiss.
-		const snoozedUntil = Math.max(Date.now() + 60_000, anchor + minutes * 60_000);
-		await alarmNotificationService.cancelUpcomingNotification(id);
-		await AlarmService.snooze(id, snoozedUntil);
 	}
 
 	private async handleAlarmRing(id: number) {

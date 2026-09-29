@@ -44,7 +44,7 @@ The notification system is intentionally split into three layers:
 - **Owns**
   - Action type provider registry and deduplication.
   - Action callback routing by `actionTypeId` and `actionId`.
-  - Upcoming notification ID translation and schedule/cancel logic.
+  - Upcoming notification schedule/cancel logic. The notification itself is built and posted natively by the alarm-manager plugin (`UpcomingAlarmNotifier`); this service only supplies its settings-dependent text and schedule, plus best-effort cleanup of any notification a pre-#325 build left behind in the vendored plugin.
   - Notification-domain event API (`notifications:*`).
   - Consuming `settings-changed` for notification-facing concerns (`snoozeLength`) and refreshing action registrations.
 - **Does not own**
@@ -78,6 +78,7 @@ The notification system is intentionally split into three layers:
 | `alarm:fired`                        | Rust alarm coordinator                            | wear-sync plugin           | Canonical lifecycle event fan-out                |
 | `settings-changed` (`snoozeLength`)  | `SettingsService`                                 | `AlarmNotificationService` | Rebuild action labels                            |
 | `settings-changed` (`is24h`)         | `SettingsService`                                 | `AlarmManagerService`      | Re-render upcoming-notification text             |
+| `settings-changed` (`snoozeLength`)  | `SettingsService`                                 | `AlarmManagerService`      | Re-render upcoming-notification Snooze label     |
 | `notifications:action-types:refresh` | `AlarmNotificationService`                        | `AlarmNotificationService` | Recompute and register action types              |
 | `notifications:upcoming:resync`      | `AlarmManagerService`, `AlarmNotificationService` | `AlarmManagerService`      | Refresh upcoming notifications (all or targeted) |
 | `notifications:toast`                | Notification/domain services                      | `NotificationToastService` | Present transient confirmation UI                |
@@ -213,4 +214,5 @@ Desktop notification support is intentionally lighter:
 - Desktop can still send notification payloads through plugin APIs where supported.
 - Mobile action type registration and action callbacks are not initialised on desktop.
 - Upcoming notification schedule/cancel operations are mobile-gated in `AlarmNotificationService`.
+- The upcoming notification's Dismiss and Snooze actions never reach the webview: they are native broadcasts handled directly in Rust (see `docs/architecture/event-architecture.md`), so `AlarmNotificationService` only routes the `alarm_trigger` action type.
 - Toast events still flow through `NotificationToastService`, with optional payload-level platform filtering.

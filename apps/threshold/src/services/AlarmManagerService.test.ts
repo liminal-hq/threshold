@@ -199,14 +199,24 @@ describe('AlarmManagerService', () => {
 
 		await service.init();
 
+		// Scheduled natively (issue #325) -- no longer through the vendored notification plugin.
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|schedule_upcoming_notification', {
+			payload: expect.objectContaining({
+				id: 12,
+				notifyAt: nextTrigger - 10 * 60_000,
+				triggerAt: nextTrigger,
+				title: 'Upcoming alarm',
+				body: expect.stringContaining('Weekday alarm'),
+				snoozeLabel: 'Snooze (10m)',
+			}),
+		});
+		expect(sendNotification).not.toHaveBeenCalled();
+		// The previous notification is cleared first, natively and (best-effort) via the legacy plugin path.
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|cancel_upcoming_notification', {
+			payload: { id: 12 },
+		});
 		expect(cancel).toHaveBeenCalledWith([1_000_012]);
 		expect(removeActive).toHaveBeenCalledWith([{ id: 1_000_012 }]);
-		expect(sendNotification).toHaveBeenCalledWith(
-			expect.objectContaining({
-				id: 1_000_012,
-				actionTypeId: 'upcoming_alarm',
-			}),
-		);
 	});
 
 	it('snoozes ringing alarm with now-anchored timestamp and stops ringing (no id -- see stopRinging doc comment)', async () => {
@@ -222,109 +232,6 @@ describe('AlarmManagerService', () => {
 		expect(calledTimestamp).toBeLessThanOrEqual(after + 10 * 60_000);
 		// snoozeRinging deliberately does not thread alarmId through stopRinging -- stopRinging's single native command is shared with dismiss, so doing so would misattribute an in-app snooze as a dismiss (see AlarmManagerService.stopRinging's doc comment).
 		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing', { alarmId: null });
-	});
-
-	it('snoozes upcoming alarm with trigger-anchored timestamp without stopping ringing', async () => {
-		const service = new AlarmManagerService();
-		const nextTrigger = Date.now() + 5 * 60_000;
-		(AlarmService.get as any).mockResolvedValue({ id: 42, nextTrigger });
-
-		await service.snoozeUpcoming(42, 10);
-
-		const [calledId, calledTimestamp] = (AlarmService.snooze as any).mock.calls[0];
-		expect(calledId).toBe(42);
-		// Anchored to nextTrigger + 10 min, with a floor of now + 60s
-		expect(calledTimestamp).toBe(nextTrigger + 10 * 60_000);
-		expect(invoke).not.toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
-	});
-
-	it('dismisses upcoming actions by mapping notification ID to alarm ID', async () => {
-		const service = new AlarmManagerService();
-		let actionCallback: ((notification: any) => Promise<void>) | null = null;
-
-		(PlatformUtils.isMobile as any).mockReturnValue(true);
-		(onAction as any).mockImplementation(async (cb: (notification: any) => Promise<void>) => {
-			actionCallback = cb;
-			return undefined;
-		});
-
-		await service.init();
-		expect(actionCallback).not.toBeNull();
-
-		await actionCallback!({
-			actionId: 'dismiss_alarm',
-			notification: {
-				actionTypeId: 'upcoming_alarm',
-				id: 1_000_009,
-			},
-		});
-
-		expect(AlarmService.dismiss).toHaveBeenCalledWith(9);
-	});
-
-	it('dismisses upcoming actions when Android bridge payload is wrapped', async () => {
-		const service = new AlarmManagerService();
-		let actionCallback: ((notification: any) => Promise<void>) | null = null;
-
-		(PlatformUtils.isMobile as any).mockReturnValue(true);
-		(onAction as any).mockImplementation(async (cb: (notification: any) => Promise<void>) => {
-			actionCallback = cb;
-			return undefined;
-		});
-
-		await service.init();
-		expect(actionCallback).not.toBeNull();
-
-		await actionCallback!([
-			{
-				nameValuePairs: {
-					actionId: 'dismiss_alarm',
-					notification: {
-						nameValuePairs: {
-							actionTypeId: 'upcoming_alarm',
-							id: 1_000_009,
-						},
-					},
-				},
-			},
-		]);
-
-		expect(AlarmService.dismiss).toHaveBeenCalledWith(9);
-	});
-
-	it('snoozes upcoming actions without stopping active ringing', async () => {
-		const service = new AlarmManagerService();
-		let actionCallback: ((notification: any) => Promise<void>) | null = null;
-		const nextTrigger = Date.now() + 10 * 60_000;
-
-		(PlatformUtils.isMobile as any).mockReturnValue(true);
-		(PlatformUtils.getPlatform as any).mockReturnValue('android');
-		(onAction as any).mockImplementation(async (cb: (notification: any) => Promise<void>) => {
-			actionCallback = cb;
-			return undefined;
-		});
-		(AlarmService.get as any).mockResolvedValue({ id: 11, nextTrigger });
-
-		await service.init();
-		expect(actionCallback).not.toBeNull();
-
-		(invoke as any).mockClear();
-		await actionCallback!({
-			actionId: 'snooze_alarm',
-			notification: {
-				actionTypeId: 'upcoming_alarm',
-				id: 1_000_011,
-			},
-		});
-
-		// Upcoming snooze anchors to nextTrigger + snoozeLength
-		const [calledId, calledTimestamp] = (AlarmService.snooze as any).mock.calls[0];
-		expect(calledId).toBe(11);
-		expect(calledTimestamp).toBe(nextTrigger + 10 * 60_000);
-		expect(invoke).not.toHaveBeenCalledWith('plugin:alarm-manager|stop_ringing');
-		// Toast confirmation is a separate reaction to the alarm:snoozed event
-		// (Rust emits it after AlarmService.snooze succeeds) — see the dedicated
-		// 'publishes a snooze confirmation toast' test below.
 	});
 
 	it('clears upcoming notification when alarm starts ringing', async () => {
@@ -362,12 +269,6 @@ describe('AlarmManagerService', () => {
 						expect.objectContaining({ id: 'snooze', title: 'Snooze (10m)' }),
 					]),
 				}),
-				expect.objectContaining({
-					id: 'upcoming_alarm',
-					actions: expect.arrayContaining([
-						expect.objectContaining({ id: 'snooze_alarm', title: 'Snooze (10m)' }),
-					]),
-				}),
 			]),
 		);
 
@@ -386,14 +287,53 @@ describe('AlarmManagerService', () => {
 						expect.objectContaining({ id: 'snooze', title: 'Snooze (15m)' }),
 					]),
 				}),
-				expect.objectContaining({
-					id: 'upcoming_alarm',
-					actions: expect.arrayContaining([
-						expect.objectContaining({ id: 'snooze_alarm', title: 'Snooze (15m)' }),
-					]),
-				}),
 			]),
 		);
+	});
+
+	it('no longer registers an upcoming_alarm action type with the vendored plugin (issue #325)', async () => {
+		const service = new AlarmManagerService();
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+
+		await service.init();
+
+		const registered = (registerActionTypes as any).mock.calls.flatMap(
+			(call: any[]) => call[0] as Array<{ id: string }>,
+		);
+		expect(registered.map((type: { id: string }) => type.id)).toEqual(['alarm_trigger']);
+	});
+
+	it('re-renders the natively-held upcoming Snooze label when snooze length changes', async () => {
+		const service = new AlarmManagerService();
+		(PlatformUtils.isMobile as any).mockReturnValue(true);
+		const nextTrigger = Date.now() + 30 * 60_000;
+
+		(AlarmService.getAll as any).mockResolvedValue([
+			{
+				id: 31,
+				enabled: true,
+				mode: AlarmMode.Fixed,
+				fixedTime: '07:30',
+				activeDays: [1],
+				label: 'Label refresh alarm',
+				nextTrigger,
+				soundUri: null,
+				soundTitle: null,
+			},
+		]);
+
+		localStorageState.set('threshold_snooze_length', '10');
+		await service.init();
+
+		localStorageState.set('threshold_snooze_length', '15');
+		(invoke as any).mockClear();
+		for (const handler of eventListeners.get('settings-changed') ?? []) {
+			await handler({ payload: { key: 'snoozeLength', value: 15 } });
+		}
+
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|schedule_upcoming_notification', {
+			payload: expect.objectContaining({ id: 31, snoozeLabel: 'Snooze (15m)' }),
+		});
 	});
 
 	it('re-syncs upcoming notifications when 24-hour setting changes', async () => {
@@ -417,19 +357,16 @@ describe('AlarmManagerService', () => {
 
 		await service.init();
 
-		(sendNotification as any).mockClear();
+		(invoke as any).mockClear();
 		const settingsChangedHandlers = eventListeners.get('settings-changed') ?? [];
 		expect(settingsChangedHandlers.length).toBeGreaterThan(0);
 		for (const handler of settingsChangedHandlers) {
 			await handler({ payload: { key: 'is24h', value: true } });
 		}
 
-		expect(sendNotification).toHaveBeenCalledWith(
-			expect.objectContaining({
-				id: 1_000_021,
-				actionTypeId: 'upcoming_alarm',
-			}),
-		);
+		expect(invoke).toHaveBeenCalledWith('plugin:alarm-manager|schedule_upcoming_notification', {
+			payload: expect.objectContaining({ id: 21 }),
+		});
 	});
 
 	it('cancels the upcoming notification when alarm:cancelled fires (native cancel is Rust-driven)', async () => {
@@ -477,23 +414,9 @@ describe('AlarmManagerService', () => {
 		expect(invoke).not.toHaveBeenCalledWith('plugin:alarm-manager|cancel', expect.anything());
 	});
 
-	it('snoozeUpcoming floors snoozedUntil to now+60s when nextTrigger+N is in the past', async () => {
-		const service = new AlarmManagerService();
-		// Simulate: alarm originally at T-5m, snooze 3 minutes → T-2m = past
-		const nextTrigger = Date.now() - 5 * 60_000;
-		(AlarmService.get as any).mockResolvedValue({ id: 7, nextTrigger });
-
-		const before = Date.now();
-		await service.snoozeUpcoming(7, 3);
-		const after = Date.now();
-
-		const [, calledTimestamp] = (AlarmService.snooze as any).mock.calls[0];
-		// Floor: must be at least now + 60s
-		expect(calledTimestamp).toBeGreaterThanOrEqual(before + 60_000);
-		expect(calledTimestamp).toBeLessThanOrEqual(after + 60_000 + 100);
-	});
-
-	// Note: the native AlarmRingingService dismiss/snooze actions are handled
+	// Note: the upcoming-alarm reminder's Dismiss/Snooze actions (issue #325) are also
+	// handled entirely in Rust (the alarm-manager:upcoming-*-requested listeners), as are
+	// the native AlarmRingingService dismiss/snooze actions -- both handled
 	// entirely in Rust (apps/threshold-tauri/src/lib.rs's alarm-manager:*-requested
 	// listeners) and never reach TS, so there's nothing to unit-test here for that
 	// path — same as the pre-existing wear:alarm:dismiss/snooze listeners.
