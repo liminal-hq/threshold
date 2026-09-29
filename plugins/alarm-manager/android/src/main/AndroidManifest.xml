@@ -14,6 +14,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Issue #325: the upcoming-alarm reminder's wake-up and its Dismiss/Snooze actions.
+             Actions are broadcasts to this receiver by explicit component (never an Activity),
+             so a tap reaches Rust natively even when the app process is dead. -->
+        <receiver android:name=".UpcomingAlarmReceiver" android:exported="false" />
+
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

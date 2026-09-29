@@ -470,6 +470,22 @@ class AlarmManagerPluginTest {
     }
 
     @Test
+    fun `upcoming dismiss and snooze events are dispatched with their envelope's eventId stamped on (issue 325)`() {
+        // Rust's EventDedup keys on eventId, and an upcoming snooze redelivered without one would re-anchor the alarm a second time.
+        val queue = DurableEventQueue(store, EVENT_LOG_KEY)
+        val dismissId = queue.enqueue(TOPIC_UPCOMING_DISMISS, JSONObject().put("id", 5).toString())
+        val snoozeId = queue.enqueue(TOPIC_UPCOMING_SNOOZE, JSONObject().put("id", 6).toString())
+
+        val dispatched = mutableMapOf<String, JSONObject>()
+        drainAndDispatch(queue) { topic, payload -> dispatched[topic] = JSONObject(payload); true }
+
+        assertEquals(dismissId, dispatched.getValue(TOPIC_UPCOMING_DISMISS).getString("eventId"))
+        assertEquals(5, dispatched.getValue(TOPIC_UPCOMING_DISMISS).getInt("id"))
+        assertEquals(snoozeId, dispatched.getValue(TOPIC_UPCOMING_SNOOZE).getString("eventId"))
+        assertEquals(6, dispatched.getValue(TOPIC_UPCOMING_SNOOZE).getInt("id"))
+    }
+
+    @Test
     fun `enrichPayloadForDispatch falls back to the unmodified payload if it isn't valid JSON`() {
         val malformed = DurableEventQueue.Envelope(
             topic = TOPIC_FIRED,

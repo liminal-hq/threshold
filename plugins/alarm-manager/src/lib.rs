@@ -45,6 +45,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         // by hand in parallel.
         .invoke_handler(tauri::generate_handler![
             commands::cancel,
+            commands::schedule_upcoming_notification,
+            commands::cancel_upcoming_notification,
             commands::pick_alarm_sound,
             commands::stop_ringing,
             commands::check_full_screen_intent_permission,
@@ -123,6 +125,8 @@ mod acl_tests {
     // exact bug fixed in Threshold issue #195).
     const WEBVIEW_COMMANDS: &[&str] = &[
         "cancel",
+        "schedule_upcoming_notification",
+        "cancel_upcoming_notification",
         "pick_alarm_sound",
         "stop_ringing",
         "check_full_screen_intent_permission",

@@ -155,6 +155,68 @@ pub fn init<R: Runtime>(
             },
         )?;
 
+        // Register channels for the upcoming-alarm reminder's Dismiss/Snooze actions (issue
+        // #325). Same pattern as the ringing notification's channels above -- the tap is
+        // built natively (UpcomingAlarmNotifier/UpcomingAlarmReceiver), queued durably, and
+        // arrives here with no webview involved. Reuses the Dismiss/Snooze handler structs
+        // since a bare `{ handler: Channel }` is all Kotlin's args classes expect.
+        let upcoming_dismiss_app_handle = app.clone();
+        handle.run_mobile_plugin::<()>(
+            "setUpcomingDismissEventHandler",
+            DismissEventHandler {
+                handler: Channel::new(move |event| {
+                    let payload = match event {
+                        InvokeResponseBody::Json(payload) => {
+                            serde_json::from_str::<NativeUpcomingDismissRequestedPayload>(&payload)
+                                .ok()
+                        }
+                        _ => None,
+                    };
+
+                    if let Some(payload) = payload {
+                        log::info!(
+                            "alarm-manager: upcoming dismiss requested id={}",
+                            payload.id
+                        );
+                        let _ = upcoming_dismiss_app_handle
+                            .emit("alarm-manager:upcoming-dismiss-requested", &payload);
+                    } else {
+                        log::warn!(
+                            "alarm-manager: failed to parse upcoming dismiss requested payload"
+                        );
+                    }
+                    Ok(())
+                }),
+            },
+        )?;
+
+        let upcoming_snooze_app_handle = app.clone();
+        handle.run_mobile_plugin::<()>(
+            "setUpcomingSnoozeEventHandler",
+            SnoozeEventHandler {
+                handler: Channel::new(move |event| {
+                    let payload = match event {
+                        InvokeResponseBody::Json(payload) => {
+                            serde_json::from_str::<NativeUpcomingSnoozeRequestedPayload>(&payload)
+                                .ok()
+                        }
+                        _ => None,
+                    };
+
+                    if let Some(payload) = payload {
+                        log::info!("alarm-manager: upcoming snooze requested id={}", payload.id);
+                        let _ = upcoming_snooze_app_handle
+                            .emit("alarm-manager:upcoming-snooze-requested", &payload);
+                    } else {
+                        log::warn!(
+                            "alarm-manager: failed to parse upcoming snooze requested payload"
+                        );
+                    }
+                    Ok(())
+                }),
+            },
+        )?;
+
         handle
     };
     // iOS: no native plugin to register (deferred). `api` is otherwise unused here --
@@ -192,6 +254,37 @@ impl<R: Runtime> AlarmManager<R> {
 
     pub fn cancel(&self, payload: CancelRequest) -> crate::Result<()> {
         self.invoke_cancel(payload)
+    }
+
+    /// Schedules (or replaces) the native upcoming-alarm reminder notification for one alarm.
+    pub fn schedule_upcoming_notification(
+        &self,
+        #[cfg_attr(not(target_os = "android"), allow(unused_variables))]
+        payload: ScheduleUpcomingRequest,
+    ) -> crate::Result<()> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
+            .run_mobile_plugin("scheduleUpcomingNotification", payload)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
+    }
+
+    /// Cancels the native upcoming-alarm reminder for one alarm, whether still pending or already posted.
+    pub fn cancel_upcoming_notification(
+        &self,
+        #[cfg_attr(not(target_os = "android"), allow(unused_variables))] payload: CancelRequest,
+    ) -> crate::Result<()> {
+        #[cfg(target_os = "android")]
+        return self
+            .handle
+            .run_mobile_plugin("cancelUpcomingNotification", payload)
+            .map_err(Into::into);
+
+        #[cfg(not(target_os = "android"))]
+        Err(not_implemented_on_ios())
     }
 
     /// Opens Android's system ringtone/sound picker and waits for the user's choice.

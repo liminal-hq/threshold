@@ -15,6 +15,22 @@ pub async fn cancel<R: Runtime>(app: AppHandle<R>, payload: CancelRequest) -> Re
 }
 
 #[command]
+pub async fn schedule_upcoming_notification<R: Runtime>(
+    app: AppHandle<R>,
+    payload: ScheduleUpcomingRequest,
+) -> Result<()> {
+    app.alarm_manager().schedule_upcoming_notification(payload)
+}
+
+#[command]
+pub async fn cancel_upcoming_notification<R: Runtime>(
+    app: AppHandle<R>,
+    payload: CancelRequest,
+) -> Result<()> {
+    app.alarm_manager().cancel_upcoming_notification(payload)
+}
+
+#[command]
 pub async fn pick_alarm_sound<R: Runtime>(
     app: AppHandle<R>,
     options: PickAlarmSoundOptions,

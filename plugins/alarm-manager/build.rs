@@ -8,6 +8,8 @@
 // ACL entirely and must not be listed here.
 const COMMANDS: &[&str] = &[
     "cancel",
+    "schedule_upcoming_notification",
+    "cancel_upcoming_notification",
     "pick_alarm_sound",
     "stop_ringing",
     "check_full_screen_intent_permission",

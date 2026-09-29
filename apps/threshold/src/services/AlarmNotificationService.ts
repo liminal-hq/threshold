@@ -6,12 +6,14 @@
 import {
 	registerActionTypes,
 	onAction,
-	Schedule,
 	cancel,
 	removeActive,
-	sendNotification,
 } from '@tauri-apps/plugin-notification';
 import { emit, listen } from '@tauri-apps/api/event';
+import {
+	cancelUpcomingNotification as cancelUpcomingNotificationNative,
+	scheduleUpcomingNotification as scheduleUpcomingNotificationNative,
+} from 'tauri-plugin-alarm-manager-api';
 import { AlarmMode } from '@threshold/core/types';
 import type { AlarmRecord } from '../types/alarm';
 import { PlatformUtils } from '../utils/PlatformUtils';
@@ -31,8 +33,6 @@ type NotificationActionHandlers = {
 	// 'alarm_trigger' notification action, which has no alarm ID.
 	onDismissRinging: () => Promise<void>;
 	onSnoozeRinging: () => Promise<void>;
-	onDismissUpcoming: (alarmId: number) => Promise<void>;
-	onSnoozeUpcoming: (alarmId: number, snoozeMinutes: number) => Promise<void>;
 };
 
 export type NotificationAction = {
@@ -51,6 +51,7 @@ export type NotificationActionType = {
 export type NotificationUpcomingResyncReason =
 	| 'alarm-batch-updated'
 	| 'settings-24h-changed'
+	| 'snooze-length-changed'
 	| 'manual';
 
 export type NotificationUpcomingResyncEvent = {
@@ -95,11 +96,6 @@ export class AlarmNotificationService {
 		return UPCOMING_NOTIFICATION_ID_OFFSET + alarmId;
 	}
 
-	private getAlarmIdFromUpcomingNotificationId(notificationId: number): number | null {
-		const alarmId = notificationId - UPCOMING_NOTIFICATION_ID_OFFSET;
-		return alarmId > 0 ? alarmId : null;
-	}
-
 	private getUpcomingTitle(alarm: AlarmRecord, is24h: boolean): string {
 		if (alarm.mode === AlarmMode.Window && alarm.windowStart && alarm.windowEnd) {
 			const start = TimeFormatHelper.formatTimeString(alarm.windowStart, is24h);
@@ -121,31 +117,6 @@ export class AlarmNotificationService {
 				await handlers.onDismissRinging();
 			} else if (actionId === 'snooze') {
 				await handlers.onSnoozeRinging();
-			}
-		});
-
-		this.actionTypeHandlers.set('upcoming_alarm', async (actionId, payload) => {
-			const rawId = payload.id;
-			const notificationId =
-				typeof rawId === 'number' ? rawId : Number.parseInt(String(rawId ?? ''), 10);
-			if (Number.isNaN(notificationId)) {
-				console.error('[AlarmNotifications] Upcoming action missing notification ID');
-				return;
-			}
-
-			const alarmId = this.getAlarmIdFromUpcomingNotificationId(notificationId);
-			if (!alarmId) {
-				console.error(`[AlarmNotifications] Invalid upcoming notification ID: ${notificationId}`);
-				return;
-			}
-
-			await this.cancelUpcomingNotification(alarmId);
-
-			if (actionId === 'dismiss_alarm') {
-				await handlers.onDismissUpcoming(alarmId);
-			} else if (actionId === 'snooze_alarm') {
-				const snoozeLength = SettingsService.getSnoozeLength();
-				await handlers.onSnoozeUpcoming(alarmId, snoozeLength);
 			}
 		});
 	}
@@ -273,43 +244,56 @@ export class AlarmNotificationService {
 	async cancelUpcomingNotification(alarmId: number): Promise<void> {
 		if (!PlatformUtils.isMobile()) return;
 
-		const notificationId = this.getUpcomingNotificationId(alarmId);
 		try {
-			await cancel([notificationId]);
+			await cancelUpcomingNotificationNative({ id: alarmId });
 		} catch (e) {
 			console.warn(
-				`[AlarmNotifications] Failed to cancel pending upcoming notification ${notificationId}`,
+				`[AlarmNotifications] Failed to cancel native upcoming notification for alarm ${alarmId}`,
+				e,
+			);
+		}
+
+		// Best-effort cleanup of any upcoming notification a build from before issue #325 left
+		// scheduled or posted through the vendored notification plugin (same notification ID).
+		// Safe to remove once those installs have had a release or two to update.
+		const legacyNotificationId = this.getUpcomingNotificationId(alarmId);
+		try {
+			await cancel([legacyNotificationId]);
+		} catch (e) {
+			console.warn(
+				`[AlarmNotifications] Failed to cancel legacy upcoming notification ${legacyNotificationId}`,
 				e,
 			);
 		}
 
 		try {
-			await removeActive([{ id: notificationId }]);
+			await removeActive([{ id: legacyNotificationId }]);
 		} catch (e) {
 			console.warn(
-				`[AlarmNotifications] Failed to clear active upcoming notification ${notificationId}`,
+				`[AlarmNotifications] Failed to clear legacy upcoming notification ${legacyNotificationId}`,
 				e,
 			);
 		}
 	}
 
+	// The notification itself is built, scheduled, and posted natively (see the alarm-manager
+	// plugin's UpcomingAlarmNotifier), and its Dismiss/Snooze taps go straight to Rust -- TS
+	// only supplies the settings-dependent text and the schedule.
 	async scheduleUpcomingNotification(alarm: AlarmRecord, nextTrigger: number): Promise<void> {
 		if (!PlatformUtils.isMobile()) return;
 
 		await this.cancelUpcomingNotification(alarm.id);
-		const notificationId = this.getUpcomingNotificationId(alarm.id);
-		const notifyAt = nextTrigger - UPCOMING_NOTIFICATION_LEAD_MS;
-		const shouldSendImmediately = notifyAt <= Date.now();
 		const is24h = SettingsService.getIs24h();
 
 		try {
-			await sendNotification({
-				id: notificationId,
+			await scheduleUpcomingNotificationNative({
+				id: alarm.id,
+				// Native posts immediately if this is already in the past.
+				notifyAt: nextTrigger - UPCOMING_NOTIFICATION_LEAD_MS,
+				triggerAt: nextTrigger,
 				title: this.getUpcomingTitle(alarm, is24h),
 				body: this.getUpcomingBody(alarm, nextTrigger, is24h),
-				actionTypeId: 'upcoming_alarm',
-				autoCancel: true,
-				schedule: shouldSendImmediately ? undefined : Schedule.at(new Date(notifyAt), false, true),
+				snoozeLabel: `Snooze (${SettingsService.getSnoozeLength()}m)`,
 			});
 		} catch (e) {
 			console.error(

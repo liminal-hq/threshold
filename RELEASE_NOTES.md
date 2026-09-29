@@ -6,6 +6,10 @@ This document tracks all releases of the Threshold application.
 
 ## Unreleased
 
+### 🐛 Bug Fixes
+
+- Fixed Dismiss and Snooze on the upcoming-alarm reminder notification (shown about ten minutes before an alarm) silently doing nothing, leaving the alarm un-dismissed and the app window open (issue #325). The reminder is now built natively and its buttons are handled directly in Rust, like the ringing notification's, instead of going through the vendored notification plugin's JS action handler
+
 ---
 
 ## Version 0.4.1

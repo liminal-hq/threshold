@@ -641,6 +641,82 @@ pub fn run() {
                 }
             });
 
+            // Dismiss action on the upcoming-alarm reminder notification (issue #325). Built and
+            // handled natively (UpcomingAlarmNotifier/UpcomingAlarmReceiver) instead of through
+            // the vendored notification plugin's JS onAction() path, which could drop the tap
+            // entirely when the app process had been killed -- so, like every other
+            // alarm-critical native signal, it reaches Rust over a Channel with no webview.
+            let upcoming_dismiss_handle = app.handle().clone();
+            app.handle().listen("alarm-manager:upcoming-dismiss-requested", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct UpcomingDismissRequested {
+                    id: i32,
+                    #[serde(default)]
+                    event_id: Option<String>,
+                }
+
+                if let Ok(payload) = serde_json::from_str::<UpcomingDismissRequested>(event.payload()) {
+                    let handle = upcoming_dismiss_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if skip_duplicate_native_event(&handle, payload.event_id.as_deref(), "alarm-manager", "upcoming-dismiss-requested", payload.id) {
+                            return;
+                        }
+
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            if let Err(error) = coord.dismiss_alarm(&handle, payload.id).await {
+                                log::error!(
+                                    "alarm-manager: failed to dismiss upcoming alarm {}: {error}",
+                                    payload.id
+                                );
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Snooze action on the upcoming-alarm reminder notification (issue #325). Reads the
+            // same SnoozeLengthState as the ringing snooze, but anchors the new trigger to the
+            // alarm's own next_trigger rather than to now -- see `upcoming_snooze_target`.
+            let upcoming_snooze_handle = app.handle().clone();
+            app.handle().listen("alarm-manager:upcoming-snooze-requested", move |event| {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct UpcomingSnoozeRequested {
+                    id: i32,
+                    #[serde(default)]
+                    event_id: Option<String>,
+                }
+
+                if let Ok(payload) = serde_json::from_str::<UpcomingSnoozeRequested>(event.payload()) {
+                    let handle = upcoming_snooze_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if skip_duplicate_native_event(&handle, payload.event_id.as_deref(), "alarm-manager", "upcoming-snooze-requested", payload.id) {
+                            return;
+                        }
+
+                        let minutes = handle
+                            .try_state::<SnoozeLengthState>()
+                            .map(|s| s.load(std::sync::atomic::Ordering::Relaxed))
+                            .unwrap_or(10) as i64;
+
+                        if let Some(coord) = handle.try_state::<AlarmCoordinator>() {
+                            match coord.snooze_upcoming_alarm(&handle, payload.id, minutes).await {
+                                Ok(_) => log::info!(
+                                    "alarm-manager: snoozed upcoming alarm {} for {} min",
+                                    payload.id,
+                                    minutes
+                                ),
+                                Err(error) => log::error!(
+                                    "alarm-manager: failed to snooze upcoming alarm {}: {error}",
+                                    payload.id
+                                ),
+                            }
+                        }
+                    });
+                }
+            });
+
             // Native alarm import request from alarm-manager plugin (e.g. Android's "Set
             // Alarm" intent, handled by SetAlarmActivity). Ports the de-dup/staleness
             // logic that used to live in AlarmManagerService.ts's checkImports() -- now

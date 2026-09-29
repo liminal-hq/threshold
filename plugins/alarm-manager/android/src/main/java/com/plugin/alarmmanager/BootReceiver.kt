@@ -35,6 +35,10 @@ class BootReceiver : BroadcastReceiver() {
                 }
             }
             NativeEventLog.log(context, TAG, "Boot reschedule complete: $rescheduled rescheduled, $expired expired")
+
+            // Reboot clears every AlarmManager registration, including the upcoming-alarm reminders'.
+            val reminders = UpcomingAlarmNotifier.restoreAll(context)
+            NativeEventLog.log(context, TAG, "Boot restored $reminders upcoming reminder(s)")
         }
     }
 }
